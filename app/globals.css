@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  background-color: #F4EEE3;
+  color: #2A2620;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+}
+
+::selection {
+  background: #2A2620;
+  color: #F4EEE3;
+}
+
+@layer base {
+  h1, h2, h3 {
+    font-family: var(--font-display), Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer components {
+  .eyebrow {
+    @apply font-mono text-[11px] tracking-eyebrow uppercase text-slate;
+  }
+
+  .rule {
+    @apply h-px w-full bg-rule;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-none border border-ink bg-ink px-6 py-3 font-sans text-sm font-medium text-paper transition hover:bg-ink-soft;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-none border border-ink/30 bg-transparent px-6 py-3 font-sans text-sm font-medium text-ink transition hover:border-ink hover:bg-ink/[0.03];
+  }
+
+  .container-wide {
+    @apply mx-auto w-full max-w-wide px-6 sm:px-8 lg:px-12;
+  }
+}

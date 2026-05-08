@@ -1,0 +1,12 @@
+{
+  "extends": ["next/core-web-vitals"],
+  "ignorePatterns": [
+    "node_modules/",
+    ".next/",
+    "prisma/migrations/",
+    "tests/**"
+  ],
+  "rules": {
+    "react/no-unescaped-entities": "off"
+  }
+}

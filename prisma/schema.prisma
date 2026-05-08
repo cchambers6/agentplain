@@ -1,0 +1,278 @@
+// agentplain Phase 1 — broker-owner-only customer surface.
+// Schema is deliberately small. Phase 2 adds operator overlay + multi-workspace.
+// Phase 3 native adds AGENT role, AgentSeat, DraftReply, Thread.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  BROKER_OWNER
+  AGENT
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  DEACTIVATED
+}
+
+enum WorkspaceTier {
+  HIGH_TOUCH
+  SCALED
+}
+
+enum WorkspaceBillingMode {
+  MANUAL_INVOICE
+  STRIPE_SUBSCRIPTION
+}
+
+enum WorkApprovalKind {
+  COMPLIANCE_FLAG
+  LISTING_RECOMMENDATION
+  BUYER_INQUIRY_REPLY_DRAFT
+  PRICING_RECOMMENDATION
+}
+
+enum WorkApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  AUTO_APPROVED
+  EXPIRED
+}
+
+enum ComplianceSeverity {
+  INFO
+  LOW
+  MEDIUM
+  HIGH
+  BLOCKER
+}
+
+enum ComplianceFlagState {
+  OPEN
+  TRIAGED_KEEP
+  TRIAGED_REWRITE
+  TRIAGED_BLOCK
+  RESOLVED
+}
+
+enum CapabilityProposalState {
+  DRAFT
+  AWAITING_VOICE_BLOCK
+  AWAITING_REVIEW
+  RATIFIED
+  REJECTED
+  SUPERSEDED
+}
+
+model User {
+  id                   String                  @id @default(uuid()) @db.Uuid
+  email                String                  @unique @db.Citext
+  name                 String?
+  isOperator           Boolean                 @default(false)
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  memberships          Membership[]
+  decidedItems         WorkApprovalQueueItem[] @relation("DecidedBy")
+  configuredThresholds WorkThresholdConfig[]   @relation("ConfiguredBy")
+  auditEntriesActor    AuditLog[]              @relation("AuditActor")
+  auditEntriesActAs    AuditLog[]              @relation("AuditActingAs")
+  magicLinkTokens      MagicLinkToken[]
+
+  @@index([email])
+}
+
+model Workspace {
+  id                   String                  @id @default(uuid()) @db.Uuid
+  name                 String
+  slug                 String                  @unique
+  tier                 WorkspaceTier           @default(HIGH_TOUCH)
+  stateCode            String                  @default("GA") @db.VarChar(2)
+  billingMode          WorkspaceBillingMode    @default(MANUAL_INVOICE)
+  stripeCustomerId     String?                 @unique
+  stripeSubscriptionId String?                 @unique
+  tierPriceUsdMonthly  Int? // hundredths of a dollar; populated for manual invoicing
+  settings             Json                    @default("{}")
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  memberships          Membership[]
+  workApprovalItems    WorkApprovalQueueItem[]
+  thresholds           WorkThresholdConfig[]
+  handoffs             HandoffLogEntry[]
+  flags                ComplianceFlag[]
+  capabilityProposals  CapabilityProposal[]
+  invoices             WorkspaceInvoice[]
+  auditEntries         AuditLog[]
+
+  @@index([slug])
+}
+
+model Membership {
+  id          String           @id @default(uuid()) @db.Uuid
+  userId      String           @db.Uuid
+  workspaceId String           @db.Uuid
+  role        Role
+  status      MembershipStatus @default(ACTIVE)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId, role])
+}
+
+// Customer-defined work-execution gating. One config row per workspace+kind.
+model WorkThresholdConfig {
+  id                             String              @id @default(uuid()) @db.Uuid
+  workspaceId                    String              @db.Uuid
+  kind                           WorkApprovalKind
+  requiresApprovalAboveSeverity  ComplianceSeverity?
+  requiresApprovalForActionKinds String[]            @default([])
+  autoApproveWhen                Json?
+  configuredByUserId             String?             @db.Uuid
+  configuredAt                   DateTime            @default(now())
+  workspace                      Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  configuredBy                   User?               @relation("ConfiguredBy", fields: [configuredByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([workspaceId, kind])
+}
+
+// Work-execution decisions only (NEVER capability proposals). Polymorphic via (refTable, refId).
+// Per project_skill_authority_vs_work_authority, customer-controlled, customer-visible.
+model WorkApprovalQueueItem {
+  id              String             @id @default(uuid()) @db.Uuid
+  workspaceId     String             @db.Uuid
+  agentSlug       String
+  kind            WorkApprovalKind
+  refTable        String
+  refId           String
+  payload         Json
+  status          WorkApprovalStatus @default(PENDING)
+  proposedAt      DateTime           @default(now())
+  decidedAt       DateTime?
+  decidedByUserId String?            @db.Uuid
+  decisionReason  String?
+  workspace       Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  decidedBy       User?              @relation("DecidedBy", fields: [decidedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, kind, status])
+}
+
+// Append-only inter-agent handoff log; powers per-listing/per-lead activity feeds.
+model HandoffLogEntry {
+  id                  String    @id @default(uuid()) @db.Uuid
+  workspaceId         String    @db.Uuid
+  fromAgent           String
+  toAgent             String
+  handoffType         String
+  payload             Json
+  relatedSubjectTable String?
+  relatedSubjectId    String?
+  occurredAt          DateTime  @default(now())
+  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, occurredAt])
+  @@index([workspaceId, relatedSubjectTable, relatedSubjectId])
+}
+
+// Workspace-scoped compliance flag (rich data; status mirrors WorkApprovalQueueItem when gated).
+model ComplianceFlag {
+  id                String              @id @default(uuid()) @db.Uuid
+  workspaceId       String              @db.Uuid
+  sourceRecordTable String
+  sourceRecordId    String
+  raisedByAgent     String
+  severity          ComplianceSeverity
+  claim             String
+  rule              String
+  suggestedRewrite  String?
+  state             ComplianceFlagState @default(OPEN)
+  slaDueAt          DateTime?
+  raisedAt          DateTime            @default(now())
+  resolvedAt        DateTime?
+  workspace         Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, state])
+  @@index([workspaceId, slaDueAt])
+}
+
+// Operator-internal mirror of skill-development queue. Notion canonical; this is read-cache.
+// Customer roles never query this table; operator-only RLS policy.
+model CapabilityProposal {
+  id              String                  @id @default(uuid()) @db.Uuid
+  workspaceId     String?                 @db.Uuid // NULL = platform-level
+  notionPageId    String?                 @unique
+  targetAgentSlug String?
+  proposer        String?
+  body            String
+  voiceBlock      String?
+  voiceBlockHash  String?
+  state           CapabilityProposalState @default(DRAFT)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  workspace       Workspace?              @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, state])
+  @@index([state])
+}
+
+// Phase 1 manual invoicing: operator records a Stripe-issued invoice URL against a workspace.
+// Phase 2 self-serve: rows created by webhook from invoice.created/.paid/.failed.
+model WorkspaceInvoice {
+  id               String    @id @default(uuid()) @db.Uuid
+  workspaceId      String    @db.Uuid
+  stripeInvoiceId  String?   @unique
+  amountUsdCents   Int
+  status           String    @default("draft")
+  hostedInvoiceUrl String?
+  pdfUrl           String?
+  periodStart      DateTime?
+  periodEnd        DateTime?
+  issuedAt         DateTime  @default(now())
+  paidAt           DateTime?
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, issuedAt])
+}
+
+// Append-only audit. acting_as_user_id non-null only during operator impersonation (Phase 2+).
+model AuditLog {
+  id             String     @id @default(uuid()) @db.Uuid
+  actorUserId    String?    @db.Uuid
+  actingAsUserId String?    @db.Uuid
+  workspaceId    String?    @db.Uuid
+  action         String
+  targetTable    String?
+  targetId       String?
+  payload        Json?
+  occurredAt     DateTime   @default(now())
+  actor          User?      @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  actingAs       User?      @relation("AuditActingAs", fields: [actingAsUserId], references: [id], onDelete: SetNull)
+  workspace      Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, occurredAt])
+  @@index([actorUserId, occurredAt])
+}
+
+// Magic-link tokens issued for sign-in. Single-use; consumed on verify.
+model MagicLinkToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  tokenHash  String    @unique // sha256 of raw token; raw token never stored
+  purpose    String    @default("sign_in") // sign_in | sign_up | invite_accept
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}

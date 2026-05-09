@@ -51,7 +51,8 @@ export class StripeBillingProvider implements BillingProvider {
     this.client =
       opts.client ??
       new Stripe(opts.secretKey, {
-        apiVersion: opts.apiVersion,
+        // Pinned per feedback_no_silent_vendor_lock — bump deliberately when reviewing changelogs.
+        apiVersion: opts.apiVersion ?? "2026-04-22.dahlia",
       });
     this.webhookSecret = opts.webhookSecret;
     this.prices = opts.prices;

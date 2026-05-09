@@ -1,9 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { ComplianceSeverity, WorkApprovalKind } from "@prisma/client";
+import {
+  withRls,
+  type ComplianceSeverity,
+  type WorkApprovalKind,
+} from "@/lib/db";
 import { requireWorkspaceMember } from "@/lib/auth";
-import { withRls } from "@/lib/db";
 
 const KINDS: WorkApprovalKind[] = [
   "COMPLIANCE_FLAG",

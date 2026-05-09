@@ -7,7 +7,7 @@
 
 import { type NextRequest, NextResponse } from "next/server";
 import { getBillingProvider } from "@/lib/billing";
-import { withSystemContext } from "@/lib/db";
+import { withSystemContext, type DbTransactionClient } from "@/lib/db";
 
 export const runtime = "nodejs"; // Stripe SDK requires Node runtime
 export const dynamic = "force-dynamic";
@@ -24,6 +24,12 @@ interface InvoicePayload {
   period_end?: number;
   paid?: boolean;
   metadata?: Record<string, string>;
+}
+
+export interface StripeWebhookEvent {
+  eventId: string;
+  eventType: string;
+  data: unknown;
 }
 
 const asInvoice = (data: unknown): InvoicePayload => {
@@ -62,7 +68,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    await dispatchEvent(event);
+    await withSystemContext((tx) => dispatchEvent(event, tx));
   } catch (err) {
     console.error("stripe webhook dispatch failed", err);
     // Return 500 so Stripe retries.
@@ -72,98 +78,106 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   return NextResponse.json({ received: true });
 }
 
-async function dispatchEvent(event: {
-  eventId: string;
-  eventType: string;
-  data: unknown;
-}): Promise<void> {
+export async function dispatchEvent(
+  event: StripeWebhookEvent,
+  tx: DbTransactionClient,
+): Promise<void> {
   switch (event.eventType) {
     case "invoice.created":
     case "invoice.finalized":
     case "invoice.paid":
     case "invoice.payment_failed":
     case "invoice.voided":
-      await mirrorInvoice(event);
+      await mirrorInvoice(event, tx);
       break;
     default:
       // Audit-only for events we don't yet handle. Phase 2 adds subscription.*.
-      await withSystemContext((tx) =>
-        tx.auditLog.create({
-          data: {
-            action: "billing.event.received",
-            targetTable: "stripe_event",
-            targetId: event.eventId,
-            payload: { eventType: event.eventType },
-          },
-        }),
-      );
+      await tx.auditLog.create({
+        data: {
+          action: "billing.event.received",
+          targetTable: "stripe_event",
+          targetId: event.eventId,
+          payload: { eventType: event.eventType },
+        },
+      });
   }
 }
 
-async function mirrorInvoice(event: {
-  eventId: string;
-  eventType: string;
-  data: unknown;
-}): Promise<void> {
+export async function mirrorInvoice(
+  event: StripeWebhookEvent,
+  tx: DbTransactionClient,
+): Promise<void> {
   const inv = asInvoice(event.data);
   if (!inv.id || !inv.customer) return;
 
-  await withSystemContext(async (tx) => {
-    const workspace = await tx.workspace.findFirst({
-      where: { stripeCustomerId: inv.customer },
-      select: { id: true },
-    });
+  const workspace = await tx.workspace.findFirst({
+    where: { stripeCustomerId: inv.customer },
+    select: { id: true },
+  });
 
-    if (!workspace) {
-      // We received an invoice for a customer we don't track yet — log and bail.
-      await tx.auditLog.create({
-        data: {
-          action: "billing.event.unmatched_customer",
-          targetTable: "stripe_event",
-          targetId: event.eventId,
-          payload: {
-            eventType: event.eventType,
-            stripeCustomerId: inv.customer,
-          },
-        },
-      });
-      return;
-    }
-
-    await tx.workspaceInvoice.upsert({
-      where: { stripeInvoiceId: inv.id },
-      create: {
-        workspaceId: workspace.id,
-        stripeInvoiceId: inv.id,
-        amountUsdCents: inv.amount_due ?? inv.amount_paid ?? 0,
-        status: inv.status ?? "draft",
-        hostedInvoiceUrl: inv.hosted_invoice_url ?? null,
-        pdfUrl: inv.invoice_pdf ?? null,
-        periodStart: inv.period_start ? new Date(inv.period_start * 1000) : null,
-        periodEnd: inv.period_end ? new Date(inv.period_end * 1000) : null,
-        paidAt: inv.paid ? new Date() : null,
-      },
-      update: {
-        amountUsdCents: inv.amount_due ?? inv.amount_paid ?? 0,
-        status: inv.status ?? "draft",
-        hostedInvoiceUrl: inv.hosted_invoice_url ?? null,
-        pdfUrl: inv.invoice_pdf ?? null,
-        paidAt: inv.paid ? new Date() : null,
-      },
-    });
-
+  if (!workspace) {
+    // Invoice for a customer we don't track yet. Audit it AND record the
+    // dedupe marker keyed by event id — without the marker, every Stripe
+    // retry (up to 72h) writes another `unmatched_customer` row instead of
+    // short-circuiting at the POST-handler dedupe check.
     await tx.auditLog.create({
       data: {
-        workspaceId: workspace.id,
+        action: "billing.event.unmatched_customer",
+        targetTable: "stripe_event",
+        targetId: event.eventId,
+        payload: {
+          eventType: event.eventType,
+          stripeCustomerId: inv.customer,
+        },
+      },
+    });
+    await tx.auditLog.create({
+      data: {
         action: "billing.event.received",
         targetTable: "stripe_event",
         targetId: event.eventId,
         payload: {
           eventType: event.eventType,
-          stripeInvoiceId: inv.id,
-          status: inv.status ?? null,
+          outcome: "unmatched_customer",
         },
       },
     });
+    return;
+  }
+
+  await tx.workspaceInvoice.upsert({
+    where: { stripeInvoiceId: inv.id },
+    create: {
+      workspaceId: workspace.id,
+      stripeInvoiceId: inv.id,
+      amountUsdCents: inv.amount_due ?? inv.amount_paid ?? 0,
+      status: inv.status ?? "draft",
+      hostedInvoiceUrl: inv.hosted_invoice_url ?? null,
+      pdfUrl: inv.invoice_pdf ?? null,
+      periodStart: inv.period_start ? new Date(inv.period_start * 1000) : null,
+      periodEnd: inv.period_end ? new Date(inv.period_end * 1000) : null,
+      paidAt: inv.paid ? new Date() : null,
+    },
+    update: {
+      amountUsdCents: inv.amount_due ?? inv.amount_paid ?? 0,
+      status: inv.status ?? "draft",
+      hostedInvoiceUrl: inv.hosted_invoice_url ?? null,
+      pdfUrl: inv.invoice_pdf ?? null,
+      paidAt: inv.paid ? new Date() : null,
+    },
+  });
+
+  await tx.auditLog.create({
+    data: {
+      workspaceId: workspace.id,
+      action: "billing.event.received",
+      targetTable: "stripe_event",
+      targetId: event.eventId,
+      payload: {
+        eventType: event.eventType,
+        stripeInvoiceId: inv.id,
+        status: inv.status ?? null,
+      },
+    },
   });
 }

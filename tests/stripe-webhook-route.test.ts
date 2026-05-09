@@ -4,7 +4,7 @@ import {
   dispatchEvent,
   mirrorInvoice,
   type StripeWebhookEvent,
-} from "@/app/api/stripe/webhook/route";
+} from "@/lib/billing/webhook-dispatch";
 import type { DbTransactionClient } from "@/lib/db";
 
 // Minimal in-memory tx double — covers only the methods the dispatch path

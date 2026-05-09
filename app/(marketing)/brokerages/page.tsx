@@ -4,9 +4,9 @@ import Section from "@/components/Section";
 import PricingTier from "@/components/PricingTier";
 
 export const metadata: Metadata = {
-  title: "Pilot — agentplain",
+  title: "For brokerages — agentplain",
   description:
-    "A 30-day paid pilot of the agentplain agent fleet. Three tiers, opt-in continuation, written outcome report at day 30.",
+    "High-touch agent platform for small-to-mid brokerages. 30-day paid pilot, custom-tuned fleet, written outcome report at day 30. Three tiers — $1,500 / $2,750 / $4,500.",
 };
 
 const pricing = [
@@ -14,28 +14,27 @@ const pricing = [
     name: "Starter",
     price: "$1,500",
     cadence: "30-day pilot",
-    positioning: "For a single owner-operator brokerage testing the thesis.",
+    positioning: "For an owner-operator brokerage testing the thesis.",
     includes: [
-      "3 agents of your choice from the fleet",
+      "A focused subset of catalog agents tuned to your workflow",
       "Connected to one CRM and one shared inbox",
       "Weekly check-in with the agentplain team",
       "Light-touch implementation (3–5 hours of your time)",
       "Outcome report at day 30",
     ],
     excludes: [
-      "Full 7-agent activation",
-      "Custom workflows",
-      "MLS write integrations",
+      "Custom agent development",
+      "Multi-system integrations beyond CRM and inbox",
     ],
   },
   {
     name: "Standard",
     price: "$2,750",
     cadence: "30-day pilot",
-    positioning: "For most brokerages we work with. Best fit for 5–15 agents.",
+    positioning: "For most brokerages we work with. Best fit for 5–15 producing agents.",
     includes: [
-      "5 agents of your choice from the fleet",
-      "Connected to your CRM, inbox, and one MLS export",
+      "Curated catalog agents tuned to your office",
+      "Connected to your CRM, inbox, and one MLS or transaction system",
       "Bi-weekly working sessions",
       "Production reporting tuned to your KPIs",
       "Compliance review of recent listings",
@@ -45,19 +44,22 @@ const pricing = [
     featured: true,
   },
   {
-    name: "Full Fleet",
+    name: "Full Engagement",
     price: "$4,500",
     cadence: "30-day pilot",
     positioning: "For brokerages serious about pulling owner time out of operations.",
     includes: [
-      "All 7 agents activated",
+      "Full catalog activation tuned to your office",
+      "One custom-built agent for a job the catalog does not cover",
       "CRM, inbox, MLS, accounting export, and one custom system",
       "Weekly sessions with a senior implementer",
       "Custom production-reporting templates for your office",
-      "Recruiter Assistant warm-start with your local agent list",
+      "Recruiting warm-start with your local agent list",
       "Continuation proposal with named monthly rate",
     ],
-    excludes: ["Custom agent development beyond the seven shipped"],
+    excludes: [
+      "More than one custom agent during the pilot (additional builds priced at continuation)",
+    ],
   },
 ];
 
@@ -65,17 +67,17 @@ const timeline = [
   {
     week: "Week 0",
     title: "Kickoff and access",
-    body: "60-minute scoping call. We confirm which agents you want active, which systems they connect to, and who on your team gets the daily summary. Read-only credentials shared. No production changes yet.",
+    body: "60-minute scoping call. We confirm which catalog agents you want active, scope any custom agents to build, and identify which systems they connect to. Read-only credentials shared. No production changes yet.",
   },
   {
     week: "Week 1",
     title: "Quiet observation",
-    body: "Agents run in shadow mode. They draft outputs but do not act. You and your broker review the drafts at the end of the week. We tune for your house style.",
+    body: "Agents run in shadow mode. They draft outputs but do not act. You and your broker review the drafts at the end of the week. We tune for your house style. Custom agents (if scoped) start their first build pass.",
   },
   {
     week: "Week 2–3",
     title: "Live operation",
-    body: "Approved agents go live. They write back to your CRM, draft in your inbox, and surface decisions to the right person. Bi-weekly working session keeps the loop tight.",
+    body: "Approved agents go live. They write back to your CRM, draft in your inbox, and surface decisions to the right person. Bi-weekly working session keeps the loop tight. Custom agents reach pilot-ready and join the fleet.",
   },
   {
     week: "Week 4",
@@ -84,51 +86,76 @@ const timeline = [
   },
 ];
 
-export default function PilotPage() {
+export default function BrokeragesPage() {
   return (
     <>
       <section className="border-b border-rule bg-paper">
         <div className="container-wide py-20 md:py-28">
-          <p className="eyebrow mb-6">Pilot programs</p>
+          <p className="eyebrow mb-6">For brokerages and operators</p>
           <h1 className="max-w-4xl font-display text-5xl leading-[1.05] text-ink md:text-7xl md:leading-[1.02]">
             A 30-day pilot.
             <br />
             <span className="text-signal">Opt-in at the end.</span>
           </h1>
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft md:text-xl">
-            The pilot is a paid, scoped working engagement. You get the agent
-            fleet running on your real workflows for thirty days, a written
-            outcome report at the end, and a continuation proposal with a named
-            monthly rate. Continuation is opt-in. There is no auto-renew.
+            The brokerage tier is a paid scoped engagement. We deploy a
+            curated set of catalog agents into your workspace, build any
+            custom agents the engagement needs, integrate with the systems
+            your office runs on, and run the fleet on your real workflows
+            for 30 days. You get a written outcome report at the end and a
+            continuation proposal with a named monthly rate. Continuation is
+            opt-in. No auto-renew.
           </p>
 
           <div className="mt-10 flex flex-wrap items-center gap-4">
             <a
-              href="mailto:hello@agentplain.com?subject=agentplain%20pilot%20interest"
+              href="mailto:hello@agentplain.com?subject=agentplain%20brokerage%20pilot"
               className="btn-primary"
             >
               Start a pilot
               <span aria-hidden>→</span>
             </a>
-            <Link href="/#fleet" className="btn-secondary">
-              See the fleet
+            <Link href="/platform" className="btn-secondary">
+              How the platform works
               <span aria-hidden>→</span>
             </Link>
           </div>
+
+          <p className="mt-12 max-w-3xl border-t border-rule pt-6 font-display text-3xl leading-snug text-ink md:text-4xl">
+            Run a 25-agent brokerage with five.
+          </p>
+          <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
+            That is the operating bar. The fleet handles enough of the
+            recurring admin that the office stops building headcount around
+            operations and starts building it around production.
+          </p>
         </div>
       </section>
 
       {/* PRICING */}
       <Section
-        id="start"
+        id="pricing"
         eyebrow="Three tiers"
         title="Pick the smallest tier that covers what you want to test."
-        intro="Most brokerages start at Standard. The full fleet is for owners who already know exactly which operational hours they want returned, and who want every agent active on day one."
+        intro="Most brokerages start at Standard. The Full Engagement is for owners who already know exactly which operational hours they want returned, and who want a custom agent shipped during the pilot."
       >
         <div className="grid gap-6 lg:grid-cols-3">
           {pricing.map((tier) => (
             <PricingTier key={tier.name} {...tier} />
           ))}
+        </div>
+
+        <div className="mt-10 max-w-3xl border-t border-rule pt-8">
+          <p className="eyebrow mb-3">What's the same across all three tiers</p>
+          <ul className="grid gap-2 text-[15px] leading-relaxed text-ink-soft sm:grid-cols-2">
+            <li>— Read-only access to your systems by default</li>
+            <li>— Human review on every customer-facing output in week one</li>
+            <li>— Liability for licensed activities stays with your broker</li>
+            <li>— Written outcome report at day 30</li>
+            <li>— Workspace data isolated by row-level security</li>
+            <li>— No data resold, no client list retained for training</li>
+            <li>— You own the work product</li>
+          </ul>
         </div>
       </Section>
 
@@ -174,9 +201,9 @@ export default function PilotPage() {
           <div>
             <h3 className="font-display text-2xl text-ink">From your stack</h3>
             <ul className="mt-4 space-y-3 text-[15px] leading-relaxed text-ink-soft">
-              <li>— Read-only access to your CRM</li>
+              <li>— Read access to the CRM the agents will operate in</li>
               <li>— A shared inbox the fleet can draft into</li>
-              <li>— An MLS export, if Compliance Sentinel is active</li>
+              <li>— An MLS or transaction-system export, if relevant</li>
               <li>— A point of contact for IT questions</li>
             </ul>
           </div>
@@ -195,7 +222,7 @@ export default function PilotPage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <a
-              href="mailto:hello@agentplain.com?subject=agentplain%20pilot%20interest"
+              href="mailto:hello@agentplain.com?subject=agentplain%20brokerage%20pilot"
               className="inline-flex items-center justify-center gap-2 border border-paper bg-paper px-6 py-3 text-sm font-medium text-ink transition hover:bg-paper-deep"
             >
               Start a pilot

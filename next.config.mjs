@@ -2,6 +2,15 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  async redirects() {
+    return [
+      {
+        source: "/pilot",
+        destination: "/brokerages",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

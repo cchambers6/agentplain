@@ -45,12 +45,13 @@ app/
   globals.css               Tailwind + base type styles + utility classes
   (marketing)/
     layout.tsx              Header + Footer
-    page.tsx                home — hero, two surfaces, capabilities, verticals, FAQ
-    platform/page.tsx       capabilities + how the engagement flows
-    brokerages/page.tsx     high-touch tier ($1,500 / $2,750 / $4,500)
-    for-agents/page.tsx     self-serve tier ($49 / mo, $500 / yr)
-    pricing/page.tsx        both tiers, side by side
-    verticals/page.tsx      Realty Pin 1 + roadmap
+    page.tsx                home — hero, ROI proof, comparison, capabilities, paths, verticals
+    capabilities/page.tsx   concrete deliverables, 18 jobs across 6 groups
+    pricing/page.tsx        seat tiers, comparison table, ROI calculator, pricing FAQ
+    brokerages/page.tsx     team-math story for 5/10/25/50 realtor offices
+    for-agents/page.tsx     solo $199 / mo path
+    platform/page.tsx       five capability surfaces + onboarding flow
+    verticals/page.tsx      Realty Pin 1 + named roadmap (mortgage, insurance, pm, title)
     trust/page.tsx          security + honest notes on what we have not certified
     about/page.tsx          thesis, operating model, what we are not
   (product)/                product surface (Phase 1 customer surface)
@@ -59,8 +60,11 @@ components/
   Header.tsx                marketing nav
   Footer.tsx                marketing footer
   Section.tsx               reusable section shell with eyebrow/title/intro
-  AgentCard.tsx             fleet card
-  PricingTier.tsx           pricing card (with "featured" variant)
+  SeatTierTable.tsx         the 6-band per-seat pricing table
+  StackComparison.tsx       "Replaces these tools" comparison
+  RoiCalculator.tsx         live ROI calculator (client component)
+  AgentCard.tsx             fleet card (legacy, currently unused)
+  PricingTier.tsx           pricing card (legacy, currently unused)
   FAQ.tsx                   accordion via <details>
 public/
   favicon.svg               brand mark
@@ -95,21 +99,41 @@ Defined in `tailwind.config.ts`:
 ## Copy invariants (do not paraphrase)
 
 - Tagline: **Intelligence. Rooted in reality.**
-- Brokerage operating bar: **Run a 25-agent brokerage with five.**
-- Brokerage pricing: **$1,500 / $2,750 / $4,500** (30-day pilot)
-- Self-serve pricing: **$49 / mo** or **$500 / yr**
+- Operating bar: **Run a 25-agent brokerage with five.**
+- Per-deal proof: **One extra deal a quarter (2.5% of $400K = $10,000)
+  pays for the year.** Solo breakeven ~73 days; 10+ realtor brokerages
+  break even before week 1.
+- Stack-replaced range: **$510–$1,560 per realtor per month.**
+
+## Pricing — single source of truth
+
+Per-realtor seat pricing. Annual saves two months (10× monthly, not 12×).
+
+| Seats        | Per seat / mo | Per seat / yr |
+| ------------ | ------------- | ------------- |
+| 1 (solo)     | $199          | $1,990        |
+| 2 – 9        | $169          | $1,690        |
+| 10 – 24      | $139          | $1,390        |
+| 25 – 49      | $109          | $1,090        |
+| 50 – 99      | $79           | $790          |
+| 100+         | Enterprise — talk to us |   |
+
+No platform fee. Custom agent builds and custom integration adapters
+are scoped engagements priced per build, not gated tiers.
 
 ## Positioning rules
 
-- Multi-vertical platform. Realty is **Pin 1**, not the whole product.
+- Multi-vertical platform. Realty is **Pin 1**, available now. Mortgage,
+  insurance, property management, title & escrow are roadmap. Do not
+  promise launch dates without a real customer in pilot.
 - Catalog agents + custom agents. Do not claim a small fixed catalog
   size — the catalog grows as agents earn slots.
-- Two surfaces, both real: high-touch brokerage tier and self-serve
-  individual tier. Self-serve is in active build (Phase 3).
-- Custom agents and integrations (data, email, server) are part of the
-  brokerage offer.
+- One pricing model: per realtor seat, scales by team size. Both buyer
+  paths (solo + brokerage) land in the same seat-tier table.
+- Custom agents and integrations are scoped engagements (add-ons),
+  priced per build — not seat-tier features.
 - We do not send outbound on customer's behalf. Agents draft into
-  existing inboxes.
+  existing inboxes; your domain sends.
 - Adapter-based integrations. Marketing should describe patterns, not
   promise specific vendor SDKs.
 

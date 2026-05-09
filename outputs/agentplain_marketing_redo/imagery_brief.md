@@ -1,5 +1,10 @@
 # agentplain marketing — imagery & visual asset brief
 
+> **Updated for the seat-tier pricing model.** Per-seat pricing + ROI
+> calculator + stack comparison are now the spine of the buyer story.
+> Screenshot and diagram priorities below shift to support that.
+
+
 Branch: `feat/agentplain-marketing-redo-positioning`
 Owner: Conner (final approval) · production by named agents below
 

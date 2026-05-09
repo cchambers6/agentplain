@@ -17,11 +17,16 @@ export default function Footer() {
         </div>
 
         <div>
-          <p className="eyebrow mb-4">Platform</p>
+          <p className="eyebrow mb-4">Product</p>
           <ul className="space-y-2 text-sm">
             <li>
+              <Link href="/capabilities" className="text-ink hover:text-signal">
+                Capabilities
+              </Link>
+            </li>
+            <li>
               <Link href="/platform" className="text-ink hover:text-signal">
-                How it works
+                Platform
               </Link>
             </li>
             <li>
@@ -34,30 +39,30 @@ export default function Footer() {
                 Trust &amp; security
               </Link>
             </li>
-            <li>
-              <Link href="/#faq" className="text-ink hover:text-signal">
-                FAQ
-              </Link>
-            </li>
           </ul>
         </div>
 
         <div>
-          <p className="eyebrow mb-4">Use it</p>
+          <p className="eyebrow mb-4">Pricing</p>
           <ul className="space-y-2 text-sm">
             <li>
-              <Link href="/brokerages" className="text-ink hover:text-signal">
-                For brokerages
+              <Link href="/pricing" className="text-ink hover:text-signal">
+                Seat tiers
+              </Link>
+            </li>
+            <li>
+              <Link href="/pricing#calculator" className="text-ink hover:text-signal">
+                ROI calculator
               </Link>
             </li>
             <li>
               <Link href="/for-agents" className="text-ink hover:text-signal">
-                For individual agents
+                For solo realtors
               </Link>
             </li>
             <li>
-              <Link href="/pricing" className="text-ink hover:text-signal">
-                Pricing
+              <Link href="/brokerages" className="text-ink hover:text-signal">
+                For brokerages
               </Link>
             </li>
           </ul>
@@ -69,6 +74,11 @@ export default function Footer() {
             <li>
               <Link href="/about" className="text-ink hover:text-signal">
                 About
+              </Link>
+            </li>
+            <li>
+              <Link href="/#faq" className="text-ink hover:text-signal">
+                FAQ
               </Link>
             </li>
             <li>

@@ -23,12 +23,12 @@ const capabilities = [
   {
     eyebrow: "Capability",
     title: "Custom-built agents",
-    body: "Catalogs cannot cover every operation. When your office has work the catalog does not handle, we build a custom agent for it during the engagement. It becomes part of your workspace, not a one-off script.",
+    body: "Catalogs cannot cover every operation. When your office has work the catalog does not handle, we scope and build a custom agent for it. Custom builds are a separate scoped engagement — priced per build, not gated behind a seat tier. They sit in your workspace alongside catalog agents.",
     bullets: [
-      "Scoped during the kickoff or working sessions",
+      "Scoped engagement, priced per build",
+      "Available on every seat tier — solo or brokerage",
       "Built by us, reviewed with you, deployed into your workspace",
-      "Inherits the same review, audit, and rollback rails",
-      "Available on the brokerage tier; the self-serve tier uses catalog only",
+      "Inherits the same review, audit, and rollback rails as catalog agents",
     ],
   },
   {
@@ -88,8 +88,8 @@ const platformRails = [
     body: "Each vertical has its own compliance configuration — fair-housing language for realty, license-of-record handling, data retention windows. The platform enforces it; the vertical operator sets it.",
   },
   {
-    name: "Billing that ties to outcomes, not seats",
-    body: "Brokerage tier is a paid scoped engagement with an outcome report. Self-serve tier is a fixed monthly that does not bill per agent or per integration. Pricing should not punish you for using the platform.",
+    name: "Pricing that does not punish usage",
+    body: "Per-seat pricing only. Every catalog agent is on every seat at every tier. No per-agent activation fees, no per-integration fees on standard integrations, no platform fee on top. The platform should be cheaper to run as your team gets bigger, not more expensive.",
   },
 ];
 
@@ -163,37 +163,37 @@ export default function PlatformPage() {
         </div>
       </Section>
 
-      {/* HOW AN ENGAGEMENT FLOWS */}
+      {/* HOW ONBOARDING FLOWS */}
       <Section
         tone="deep"
-        eyebrow="How an engagement flows"
-        title="Scope, build, observe, run, report."
+        eyebrow="How onboarding flows"
+        title="Scope, deploy, shadow, run, expand."
       >
         <ol className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
           <Step
             n="01"
             name="Scope"
-            body="60-minute call. We map the operations work you want off your plate, name the catalog agents that fit, and identify any custom agents to build."
+            body="60-minute call. We pick the worst leak first — inbound response, listing turnaround, transaction chase — and name the catalog agents that target it."
           />
           <Step
             n="02"
-            name="Build"
-            body="We deploy the chosen catalog agents into your workspace, wire integrations, and build any custom agents the engagement requires."
+            name="Deploy"
+            body="We light up the chosen catalog agents in your workspace and wire the integrations they need. Read-only by default. Custom builds (if scoped as an add-on) start their first pass."
           />
           <Step
             n="03"
-            name="Observe"
-            body="Week one, agents run in shadow — they draft outputs but do not act. You and your team review the drafts and we tune for your house style."
+            name="Shadow"
+            body="Week one, agents run in shadow — they draft outputs but do not act. You and your team review the drafts. We tune for your house style."
           />
           <Step
             n="04"
             name="Run"
-            body="Approved agents go live with human review on customer-facing outputs. Bi-weekly working sessions tighten the loop."
+            body="Approved agents go live with the compliance gate on every customer-facing output. Bi-weekly working session through month one to tighten the loop."
           />
           <Step
             n="05"
-            name="Report"
-            body="Day-30 outcome report. Tasks handled, leads routed, hours returned. Continuation proposal with a named monthly rate. You decide."
+            name="Expand"
+            body="Light up the rest of the catalog. Add more seats. Scope custom builds for jobs the catalog doesn't cover. The price-per-seat band updates automatically as the team grows."
           />
         </ol>
       </Section>

@@ -2,11 +2,11 @@ import Link from "next/link";
 import Logo from "./Logo";
 
 const navItems = [
-  { href: "/platform", label: "Platform" },
-  { href: "/brokerages", label: "For brokerages" },
-  { href: "/for-agents", label: "For agents" },
-  { href: "/verticals", label: "Verticals" },
+  { href: "/capabilities", label: "Capabilities" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/brokerages", label: "For brokerages" },
+  { href: "/for-agents", label: "For solo" },
+  { href: "/platform", label: "Platform" },
 ];
 
 export default function Header() {
@@ -25,10 +25,10 @@ export default function Header() {
             </Link>
           ))}
           <Link
-            href="/brokerages"
+            href="/pricing#calculator"
             className="rounded-none border border-ink px-4 py-2 text-xs font-medium tracking-wide text-ink transition hover:bg-ink hover:text-paper"
           >
-            Start a pilot
+            Run the math
           </Link>
         </nav>
       </div>

@@ -6,51 +6,51 @@ type FAQItem = {
 const items: FAQItem[] = [
   {
     q: "What is agentplain?",
-    a: "A platform for AI agent fleets that run operations work inside small-to-mid businesses. Two surfaces — a high-touch program for brokerages and operators where we scope, build, and run the fleet for you, and a self-serve app for individual practitioners. Both surfaces use the same underlying agent catalog. Realty is the first vertical we are shipping end-to-end.",
+    a: "A platform for AI agent fleets that run the recurring operations work inside small-to-mid businesses — lead response, listings, marketing, transactions, compliance — using agents that work inside the inbox and CRM your team already uses. Realty is the first vertical we are running end-to-end. Per-seat pricing from $79 to $199 a seat depending on team size.",
   },
   {
-    q: "Is this just ChatGPT with extra steps?",
-    a: "No. ChatGPT is a tool you have to drive. Each agentplain agent is scoped to one job, pre-trained for the vertical it operates in, and connected to the systems where the work actually lives — your CRM, your inbox, your transaction system. They run in the background and surface things you need to decide on.",
+    q: "How is this different from ChatGPT or generic AI tools?",
+    a: "ChatGPT is a tool you have to drive. Each agentplain agent is scoped to one operational job, pre-trained for the vertical it operates in, and connected to the systems where the work actually lives — your CRM, your inbox, your transaction system. They run in the background and surface things you need to decide on.",
+  },
+  {
+    q: "What does my team actually save?",
+    a: "Two lines. First, tooling: the typical realtor stack runs $510–$1,560 per realtor per month across CRM add-ons, lead-gen, listing copy retainers, drip, social schedulers, and transaction management. agentplain replaces the work those tools do. Second, time: most realtors get back 10–15 hours a week from admin work the agents handle. Open the calculator on the pricing page to run your own numbers.",
   },
   {
     q: "Are you only for real-estate brokerages?",
-    a: "Realty is the first vertical we run end-to-end — that is where pilots are running today. The platform is vertical-agnostic; the same operating model extends to other small-to-mid B2B operations with recurring admin. We name new verticals when there is a real customer in pilot, not before.",
-  },
-  {
-    q: "How big is the agent catalog?",
-    a: "Larger than any single customer needs. Each vertical has its own catalog, and we add catalog agents as we run them on real work. A typical brokerage engagement deploys a curated subset of catalog agents tuned to that office, plus any custom agents we build during the pilot.",
+    a: "Realty is the first vertical we run end-to-end — the catalog and integrations are tuned to brokerage operations today. Mortgage, insurance, property management, and title/escrow are on the roadmap. We will name a launch date for any of those once there is a real customer in pilot, not before.",
   },
   {
     q: "Do you build custom agents?",
-    a: "Yes. Custom agents are part of the brokerage tier. If your operation has a job the catalog does not cover, we scope and build the agent for it. It becomes part of your workspace, is versioned, and inherits the same review, audit, and rollback rails as catalog agents.",
+    a: "Yes. Custom agent builds are a scoped engagement on top of seat pricing — priced per build, not gated behind a tier. Same for custom integration adapters when your office runs on an in-house system or a CRM outside our standard adapter set. Most offices never need a custom build; the catalog covers recurring realty work end-to-end.",
   },
   {
     q: "What systems do you integrate with?",
-    a: "We integrate with whatever your team already runs operations in — CRM, email, transaction systems, file storage, internal services. Read-only access by default. Write access is opt-in per integration with explicit human review on customer-facing outputs in week one. The integration patterns are adapter-based; we are not married to a single vendor stack.",
+    a: "Whatever your team already runs operations in — CRM, email, calendar, transaction systems, MLS exports, file storage, internal services. Read-only access by default. Write access is opt-in per integration with explicit human review on customer-facing outputs in the first week. The integration patterns are adapter-based; we are not married to a single vendor stack.",
   },
   {
     q: "Do you send email or SMS on my customers' behalf?",
     a: "No. Agents draft into your existing inbox so the email is sent from your domain by your team. They do not stand up a parallel outbound channel. Same for any other customer-facing communication — agents work inside your tools, your domain, and your sender reputation.",
   },
   {
-    q: "How is this different from existing software?",
-    a: "Most software adds another dashboard for someone to maintain. agentplain takes work off your plate. We do not replace your CRM, your MLS, or your team — we sit on top of them and reduce the number of tabs your office has to keep open.",
+    q: "How does seat pricing work exactly?",
+    a: "Per realtor / licensed agent on your team. The price-per-seat steps down at 2, 10, 25, and 50 seats. Annual saves two months. No platform fee on top. Brokers, admins, and assistants are not separate seats — they are part of the office workflow that the realtor seats already cover. 100+ seats is custom-priced enterprise.",
   },
   {
-    q: "What data do you need access to?",
-    a: "Whatever the agents you select need to do their job, scoped to the smallest workable surface. For most pilots that starts with read-only CRM access, an inbox the agents can draft into, and exports of the workflows we are improving. Nothing changes in your systems unless you approve the change.",
+    q: "Can we start small and add seats?",
+    a: "Yes. Most brokerages start with their highest-producing realtors, prove the math on real deals, and roll out the rest of the office. The seat-tier price-per-seat updates automatically when you cross a band.",
   },
   {
-    q: "What happens after the 30-day brokerage pilot?",
-    a: "You decide whether to continue. The pilot is opt-in to a continuing engagement at the end — no auto-renew. If you keep going, the monthly rate is set per brokerage, scoped to which agents you want active, and can be paused.",
+    q: "What happens if a realtor leaves?",
+    a: "Drop the seat at the end of the billing period — no proration headaches in either direction. On annual, unused seats roll into a credit for the next renewal.",
   },
   {
     q: "Is my data safe?",
-    a: "Customer data stays in your stack. Workspaces are isolated by row-level security in the database. Agents pull what they need to do a task, return a result, and do not retain client lists or transaction records as training data. Liability for licensed activities — anything that requires a real estate or other professional license — stays with you. We do not act as a brokerage.",
+    a: "Customer data stays in your stack. Workspaces are isolated by row-level security in our database. Integration credentials are encrypted at rest. Agents pull what they need to do a task, return a result, and do not retain client lists or transaction records as training data. Liability for licensed activities — anything that requires a real estate or other professional license — stays with you. We do not act as a brokerage.",
   },
   {
     q: "What's the catch?",
-    a: "Two things, honestly. First, this is the early stage of a new product — the agents are real and they work, but they will surface edge cases we have not seen. We pay attention and ship fixes fast. Second, businesses with deeply non-standard workflows take longer to onboard. If you run an unusual stack, we will tell you up front whether the engagement makes sense.",
+    a: "Two things, honestly. First, this is the early stage of a new product — the agents are real and they work, but they will surface edge cases we have not seen. We pay attention and ship fixes fast. Second, businesses with deeply non-standard workflows take longer to onboard. If you run an unusual stack, we will tell you up front whether the math works and how long the integration will take.",
   },
 ];
 

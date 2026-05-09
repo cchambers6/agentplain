@@ -99,12 +99,24 @@ export default function VerticalsPage() {
         tone="deep"
         eyebrow="Roadmap"
         title="Other verticals follow the same operating model."
-        intro="The platform is built so a new vertical means a new catalog and a new integration set, not a new product. We will not name a specific second vertical here until we have a real customer in pilot. The candidates below are directional — operations work that fits the same shape as realty."
+        intro="The platform is built so a new vertical means a new catalog and a new integration set, not a new product. The verticals below are on the roadmap because they share the operating-model fit with realty — small-to-mid offices, recurring admin, tractable integrations, license-of-record patterns we can support. We will name a launch date for any of these once there is a real customer in pilot, not before."
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2">
           <RoadmapVertical
-            name="Adjacent professional services"
-            body="Verticals where small-to-mid offices run on owner time and recurring admin — the same operating-model fit as realty. We will name the second vertical when it has a paying pilot, not before."
+            name="Mortgage"
+            body="Loan-officer offices and small mortgage brokerages. Inbound borrower triage, doc collection, status updates, compliance review on consumer-facing communication, pipeline reporting. Same operating-model fit as realty."
+          />
+          <RoadmapVertical
+            name="Insurance"
+            body="Independent insurance agencies — quoting, renewals, policy-change requests, carrier appetite checking, commission reconciliation. Catalog tuned to E&O posture and the appointed-carrier pattern."
+          />
+          <RoadmapVertical
+            name="Property management"
+            body="Single-family and small-portfolio property managers. Tenant inbound triage, maintenance ticket routing, rent-collection chase, lease renewal cadence, owner reporting."
+          />
+          <RoadmapVertical
+            name="Title & escrow"
+            body="Title companies and escrow operations. File intake, document collection from realtor and lender sides, milestone tracking, closing-day prep, recording follow-up."
           />
           <RoadmapVertical
             name="Custom verticals"

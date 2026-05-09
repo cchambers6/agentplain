@@ -65,11 +65,11 @@ export default function AboutPage() {
               rails — review, audit, isolation, billing — do not.
             </p>
             <p>
-              <span className="text-ink">Two surfaces.</span> A high-touch
-              brokerage tier where we scope, build, and run the fleet for
-              you, and a self-serve tier where individual practitioners pick
-              from the catalog and run it themselves. Same agents
-              underneath. Different sizing.
+              <span className="text-ink">One pricing model.</span>{" "}
+              Per realtor seat, scaling down with team size. Same product on
+              every seat at every tier. The math gets better as the team
+              grows. Custom agents and integrations are scoped engagements
+              priced per build, not gated behind a tier.
             </p>
             <p>
               <span className="text-ink">Multi-vertical from the start.</span>{" "}

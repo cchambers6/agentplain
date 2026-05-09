@@ -47,6 +47,12 @@ export const env = {
   // DB
   databaseUrl: () => required("DATABASE_URL"),
   databasePoolUrl: () => optional("DATABASE_POOL_URL") ?? required("DATABASE_URL"),
+  // Neon direct (non-pooled) connection string. Used by `prisma migrate deploy`
+  // because pooled connections can't run DDL. Production-only required: Preview
+  // may set its own preview-tier Neon branch direct URL if a preview-side
+  // migration path is desired; otherwise leave unset there. Per
+  // feedback_no_prod_secrets_in_dev — never default to DATABASE_URL.
+  databaseUrlDirect: () => required("DATABASE_URL_DIRECT"),
 
   // Resend
   resendApiKey: () => required("RESEND_API_KEY"),

@@ -1,0 +1,33 @@
+#!/usr/bin/env sh
+# Pre-push hook — staleness gate + full-repo lint.
+#
+# Layer 0 (staleness gate): refuse pushes when the branch is too far behind origin/main.
+# Stale-base branches keep tripping Vercel preview lint with errors that are already fixed
+# on main (see ~/.claude/projects/C--agentplain/memory/feedback_code_tasks_rebase_first.md).
+# Threshold is 5 commits — small enough to catch genuinely stale branches (the cases that
+# triggered this rule were 10+ behind), large enough to not nag on every-day work.
+# Emergency escape hatch: SKIP_PREPUSH_REBASE_GATE=1 git push ...
+#
+# Layer 1 (full-repo lint): belt-and-suspenders against the per-file pre-commit pass.
+# Catches cross-file rule violations and bypassed pre-commits.
+# Bypass with `git push --no-verify` only in genuine emergencies; document why in the commit.
+# See outputs/systematic_main_protection/design.md §Layer 1.
+
+# --- Layer 0: staleness gate ---
+if [ "${SKIP_PREPUSH_REBASE_GATE:-0}" != "1" ]; then
+  git fetch origin --quiet
+  THRESHOLD=5
+  BEHIND=$(git rev-list --count HEAD..origin/main 2>/dev/null || echo 0)
+  if [ "$BEHIND" -gt "$THRESHOLD" ]; then
+    echo ""
+    echo "❌ Push blocked: branch is $BEHIND commits behind origin/main."
+    echo "   Rebase before pushing to avoid stale-base CI failures (per feedback_code_tasks_rebase_first.md)."
+    echo "   Run:  git fetch origin && git rebase origin/main"
+    echo "   Or to skip this gate (escape hatch): SKIP_PREPUSH_REBASE_GATE=1 git push ..."
+    echo ""
+    exit 1
+  fi
+fi
+
+# --- Layer 1: lint ---
+npm run lint

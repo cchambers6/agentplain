@@ -8,12 +8,17 @@
 // before a user has a session, so the operator/system identity is the only
 // caller that can read/write User and MagicLinkToken.
 
-import type { Prisma, User, Workspace } from "@prisma/client";
+import type { Prisma, User, Vertical, Workspace } from "@prisma/client";
 import { withSystemContext } from "../db/rls";
 import { env } from "../env";
+import { getVerticalContent } from "../verticals";
 import { getAuthProvider } from "./index";
 import { generateRawToken, hashToken, tokenExpiresAt } from "./token";
 import type { MagicLinkPurpose } from "./types";
+import {
+  verticalSlugFromEnum,
+  verticalTierFromContentTier,
+} from "./vertical-enum";
 
 const slugify = (s: string): string =>
   s
@@ -37,6 +42,8 @@ export interface SignUpInput {
   email: string;
   brokerageName: string;
   ownerName?: string | null;
+  /** One of the canonical 9 verticals (product_spec.md §13.2). */
+  vertical: Vertical;
 }
 
 export interface SignUpResult {
@@ -53,6 +60,17 @@ export async function signUpBrokerOwner(input: SignUpInput): Promise<SignUpResul
   if (brokerageName.length < 2) {
     throw new Error("Brokerage name must be at least 2 characters");
   }
+  // Validate the vertical against main's content registry (lib/verticals).
+  // Translate enum → slug → content → tier so the persistence and marketing
+  // layers stay aligned without a duplicated tier mapping.
+  const verticalSlug = verticalSlugFromEnum(input.vertical);
+  const verticalContent = verticalSlug
+    ? getVerticalContent(verticalSlug)
+    : null;
+  if (!verticalContent) {
+    throw new Error("Pick a vertical to continue");
+  }
+  const verticalTier = verticalTierFromContentTier(verticalContent.tier);
 
   return withSystemContext(async (tx) => {
     const existingUser = await tx.user.findUnique({ where: { email } });
@@ -89,7 +107,12 @@ export async function signUpBrokerOwner(input: SignUpInput): Promise<SignUpResul
       data: {
         name: brokerageName,
         slug,
+        // Phase 1 legacy tier kept on the row; verticalTier drives product
+        // surfaces. Slug→content→tier mapping translates lowercase content
+        // tier to the uppercase Prisma enum.
         tier: "HIGH_TOUCH",
+        verticalTier,
+        vertical: input.vertical,
         billingMode: "MANUAL_INVOICE",
       },
     });
@@ -103,6 +126,12 @@ export async function signUpBrokerOwner(input: SignUpInput): Promise<SignUpResul
       },
     });
 
+    await tx.onboardingState.create({
+      data: {
+        workspaceId: workspace.id,
+      },
+    });
+
     await tx.auditLog.create({
       data: {
         actorUserId: user.id,
@@ -112,7 +141,8 @@ export async function signUpBrokerOwner(input: SignUpInput): Promise<SignUpResul
         targetId: workspace.id,
         payload: {
           via: "self_signup",
-          tier: "HIGH_TOUCH",
+          vertical: input.vertical,
+          verticalTier,
         } satisfies Prisma.InputJsonValue,
       },
     });

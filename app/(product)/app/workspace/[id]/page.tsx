@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { requireWorkspaceMember } from "@/lib/auth";
+import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
 import { withRls } from "@/lib/db";
 import { getBriefingsProvider } from "@/lib/notion";
+import { getVerticalContent } from "@/lib/verticals";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -17,25 +19,46 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
     isOperator: false,
   };
 
-  const [pendingApprovals, openFlags, recentHandoffs] = await Promise.all([
-    withRls(ctx, (tx) =>
-      tx.workApprovalQueueItem.count({
-        where: { workspaceId, status: "PENDING" },
-      }),
-    ),
-    withRls(ctx, (tx) =>
-      tx.complianceFlag.count({
-        where: { workspaceId, state: "OPEN" },
-      }),
-    ),
-    withRls(ctx, (tx) =>
-      tx.handoffLogEntry.findMany({
-        where: { workspaceId },
-        orderBy: { occurredAt: "desc" },
-        take: 6,
-      }),
-    ),
-  ]);
+  const [pendingApprovals, openFlags, recentHandoffs, workspace, onboarding] =
+    await Promise.all([
+      withRls(ctx, (tx) =>
+        tx.workApprovalQueueItem.count({
+          where: { workspaceId, status: "PENDING" },
+        }),
+      ),
+      withRls(ctx, (tx) =>
+        tx.complianceFlag.count({
+          where: { workspaceId, state: "OPEN" },
+        }),
+      ),
+      withRls(ctx, (tx) =>
+        tx.handoffLogEntry.findMany({
+          where: { workspaceId },
+          orderBy: { occurredAt: "desc" },
+          take: 6,
+        }),
+      ),
+      withRls(ctx, (tx) =>
+        tx.workspace.findUnique({
+          where: { id: workspaceId },
+          select: { vertical: true, verticalTier: true },
+        }),
+      ),
+      withRls(ctx, (tx) =>
+        tx.onboardingState.findUnique({ where: { workspaceId } }),
+      ),
+    ]);
+
+  const verticalSlug = workspace
+    ? verticalSlugFromEnum(workspace.vertical)
+    : null;
+  const verticalContent = verticalSlug
+    ? getVerticalContent(verticalSlug)
+    : null;
+  // Phase 1 ships realty live; the other 8 verticals accept signup but the
+  // per-vertical fleet is upstream work (feedback_no_new_verticals_finish_locked).
+  const verticalIsLive = verticalSlug === "real-estate";
+  const onboardingComplete = onboarding?.completedAt != null;
 
   const briefings = await getBriefingsProvider().fetchBriefings({
     workspaceId,
@@ -44,8 +67,51 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
   const briefing = briefings[0] ?? null;
 
   return (
-    <div className="grid gap-10 lg:grid-cols-[2fr_1fr]">
-      <section>
+    <div className="space-y-10">
+      {!onboardingComplete ? (
+        <div className="border border-ink bg-paper-deep p-5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="eyebrow mb-1">Onboarding</p>
+              <p className="text-[15px] leading-relaxed text-ink">
+                Finish workspace setup so your fleet has what it needs to run.
+              </p>
+            </div>
+            <Link
+              href={`/app/workspace/${workspaceId}/onboarding`}
+              className="btn-primary whitespace-nowrap"
+            >
+              Continue onboarding
+              <span aria-hidden>→</span>
+            </Link>
+          </div>
+        </div>
+      ) : null}
+
+      {verticalContent ? (
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-rule pb-4 text-[13px] text-slate-soft">
+          <span className="font-mono text-[11px] tracking-eyebrow uppercase">
+            Vertical
+          </span>
+          <span className="text-ink">{verticalContent.name}</span>
+          <span aria-hidden>·</span>
+          <span className="font-mono text-[11px] tracking-eyebrow uppercase">
+            Tier
+          </span>
+          <span className="text-ink">{workspace?.verticalTier}</span>
+          {!verticalIsLive ? (
+            <>
+              <span aria-hidden>·</span>
+              <span className="text-amber">
+                Per-vertical fleet is initializing — early-access workspace.
+              </span>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="grid gap-10 lg:grid-cols-[2fr_1fr]">
+        <section>
         <p className="eyebrow mb-3">Today's briefing</p>
         {briefing ? (
           <article className="border border-rule bg-paper p-6">
@@ -108,6 +174,7 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
           )}
         </section>
       </aside>
+      </div>
     </div>
   );
 }

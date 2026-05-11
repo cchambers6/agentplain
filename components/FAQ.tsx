@@ -6,23 +6,23 @@ type FAQItem = {
 const items: FAQItem[] = [
   {
     q: "What is agentplain?",
-    a: "A pre-trained fleet of AI agents built for small-to-mid brokerages. Seven agents handle the recurring operational work — listing intake, buyer routing, showings, compliance review, CRM hygiene, production reporting, recruiter prep — so brokerage owners stop spending nights on admin and start spending them on production and recruiting.",
+    a: "A pre-trained fleet of AI agents for professional-services firms — realty first, with mortgage, insurance, property management, title & escrow, recruiting, home services, CPA / tax, law, and RIA on the roadmap. Seven realty agents are scoped for listing intake, buyer routing, showings coordination, compliance review, CRM hygiene, production reporting, and recruiter prep. The fleet is in design partner build today.",
   },
   {
     q: "Is this just ChatGPT with extra steps?",
-    a: "No. ChatGPT is a tool you have to drive. Each agentplain agent is scoped to one job, pre-loaded with brokerage-specific context, and connected to the systems where the work actually lives — your CRM, MLS exports, email inbox. They run in the background and surface things you need to decide on.",
+    a: "No. ChatGPT is a tool you have to drive. Each agentplain agent is scoped to one job and pre-trained on the realty workflow your team already follows. They are designed to run in the background and surface the things you need to decide on, not to wait for prompts.",
   },
   {
     q: "How is this different from existing brokerage software?",
-    a: "Most brokerage software adds another dashboard for someone to maintain. agentplain takes work off your plate. We don't replace your CRM or MLS — we sit on top of them and reduce the number of tabs your team has to keep open.",
+    a: "Most brokerage software adds another dashboard for someone to maintain. agentplain is built to integrate with your CRM, MLS, inbox, and transaction system — then to replace the manual work that lives between them: drafting every email, writing every listing, building every marketing asset, chasing every deadline. You keep your tools.",
   },
   {
     q: "What data do you need access to?",
-    a: "For the pilot: read-only access to your CRM, your shared inbox, and an export of recent listings. Nothing changes in your systems unless you approve the change. We do not need MLS write access, and we do not store contact data outside your stack longer than the pilot requires.",
+    a: "Today, an export of your recent listings, contacts, and inbox folders — uploaded by your team. Coming Q3 2026: OAuth into your CRM and Gmail / Outlook for read-only access. We never need MLS write access, and we don't retain contact data after a workspace closes.",
   },
   {
-    q: "What happens after the 30-day pilot?",
-    a: "You decide whether to continue. The pilot is opt-in to a continuing engagement at the end — there is no auto-renew. If you keep going, the monthly rate is set per brokerage, scoped to which agents you want active, and can be paused.",
+    q: "How does pricing work?",
+    a: "Three tiers, per-seat, month-to-month. The first month is free. Month 2 onward you pay your tier's per-seat rate — Regular $199 → $99, Plus $299 → $199, Max $499 → $299, sliding as seat count grows. Cancel any time from your billing settings.",
   },
   {
     q: "Is my data safe?",
@@ -34,7 +34,7 @@ const items: FAQItem[] = [
   },
   {
     q: "What's the catch?",
-    a: "Two things, honestly. First, this is V0 — the agents are real and they work, but they are early and they will surface edge cases we have not seen. We pay attention and we ship fixes fast. Second, brokerages with deeply non-standard workflows take longer to onboard. If you run an unusual stack, we will tell you up-front whether the pilot makes sense.",
+    a: "Two things, honestly. First, this is V0 — the realty fleet is in design partner build today; first runs with customer data are Q3 2026. Second, brokerages with deeply non-standard workflows take longer to onboard. We'll tell you up-front whether a workspace makes sense.",
   },
 ];
 

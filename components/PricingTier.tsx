@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 type PricingTierProps = {
   name: string;
   price: string;
@@ -58,12 +56,12 @@ export default function PricingTier({
       )}
 
       <div className="mt-auto pt-2">
-        <Link
-          href="/pilot#start"
+        <a
+          href={`mailto:hello@agentplain.com?subject=agentplain%20${encodeURIComponent(name)}%20interest`}
           className={featured ? "btn-primary w-full" : "btn-secondary w-full"}
         >
-          Start a {name.toLowerCase()} pilot
-        </Link>
+          Talk about {name}
+        </a>
       </div>
     </article>
   );

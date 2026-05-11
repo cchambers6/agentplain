@@ -7,16 +7,17 @@
 // raw content files.
 
 /**
- * Tier identifier — must match the Stripe pilot-tier products
- * defined in `project_stripe_both_surfaces.md` and the tier mapping
- * in `project_vertical_tier_mapping.md`.
+ * Tier identifier — must match the per-seat ladder defined in
+ * `project_stripe_both_surfaces.md` (locked 2026-05-09; pilot SKUs deprecated
+ * the same day) and the tier mapping in `project_vertical_tier_mapping.md`.
  *
- * - `regular` → flatsbo-pilot-tier-1 → $1,500 / 30-day pilot (Foundation)
- * - `plus`    → flatsbo-pilot-tier-2 → $2,750 / 30-day pilot (Growth)
- * - `max`     → flatsbo-pilot-tier-3 → $4,500 / 30-day pilot (Scale)
+ * Per-seat ladder (solo → 50–99 seats):
+ * - `regular` → agentplain-regular-monthly → $199 → $99 per seat
+ * - `plus`    → agentplain-plus-monthly    → $299 → $199 per seat
+ * - `max`     → agentplain-max-monthly     → $499 → $299 per seat
  *
- * Per-seat scaled SaaS pricing is uniform across tiers: $49 / seat / month
- * or $500 / seat / year (project_stripe_both_surfaces.md L30).
+ * Month-to-month, first month free, no minimums, no pilot fees.
+ * 100+ seats moves to enterprise terms.
  */
 export type VerticalTier = "regular" | "plus" | "max";
 

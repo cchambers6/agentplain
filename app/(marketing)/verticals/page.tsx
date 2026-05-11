@@ -7,13 +7,13 @@ import { getAllVerticals } from "@/lib/verticals";
 export const metadata: Metadata = {
   title: "Verticals — agentplain",
   description:
-    "agentplain ships into nine locked verticals at three pricing tiers. Real estate is in pilot today; the other eight have ratified ICP fit and committed integration roadmaps.",
+    "agentplain is built for ten locked verticals across three per-seat pricing tiers. Real estate is in design partner build today; the other nine have ratified ICP fit and committed integration roadmaps.",
 };
 
 const TIER_LABEL: Record<string, string> = {
-  regular: "Regular · $1,500",
-  plus: "Plus · $2,750",
-  max: "Max · $4,500",
+  regular: "Regular · $199 → $99 per seat",
+  plus: "Plus · $299 → $199 per seat",
+  max: "Max · $499 → $299 per seat",
 };
 
 export default function VerticalsIndexPage() {
@@ -28,7 +28,7 @@ export default function VerticalsIndexPage() {
         <div className="container-wide py-20 md:py-28">
           <p className="eyebrow mb-6">All verticals</p>
           <h1 className="max-w-4xl font-display text-5xl leading-[1.05] text-ink md:text-7xl md:leading-[1.02]">
-            Nine verticals.
+            Ten verticals.
             <br />
             <span className="text-signal">Three tiers.</span>
           </h1>
@@ -36,15 +36,16 @@ export default function VerticalsIndexPage() {
             Each vertical maps to a tier per
             `project_vertical_tier_mapping.md`. The platform is
             vertical-agnostic by design; the agent catalogs, integrations, and
-            compliance posture per vertical are not.
+            compliance posture per vertical are not. Pricing is per-seat,
+            month-to-month, first month free.
           </p>
         </div>
       </section>
 
       <Section
         eyebrow={TIER_LABEL.regular}
-        title="Regular tier — $1,500 / 30-day pilot."
-        intro="Foundation-tier pilots for SMB owner-operator practices with a focused fleet of 3–5 agents at install."
+        title="Regular tier — $199 → $99 per seat."
+        intro="Foundation per-seat tier for small / mid-size owner-operator practices: real estate, mortgage, insurance, property management, title & escrow, recruiting. Solo seat $199/mo; sliding to $99/mo at 50–99 seats."
       >
         <Grid items={regular} />
       </Section>
@@ -52,16 +53,16 @@ export default function VerticalsIndexPage() {
       <Section
         tone="deep"
         eyebrow={TIER_LABEL.plus}
-        title="Plus tier — $2,750 / 30-day pilot."
-        intro="Growth-tier pilots for practices with deeper integration surface or larger seat counts at install."
+        title="Plus tier — $299 → $199 per seat."
+        intro="Growth per-seat tier for verticals with deeper integration surface or higher per-job value: home services contractors and CPA / tax prep firms. Solo seat $299/mo; sliding to $199/mo at 50–99 seats."
       >
         <Grid items={plus} />
       </Section>
 
       <Section
         eyebrow={TIER_LABEL.max}
-        title="Max tier — $4,500 / 30-day pilot."
-        intro="Scale-tier pilots for high-margin, compliance-heavy practices where the fleet justifies the price ceiling."
+        title="Max tier — $499 → $299 per seat."
+        intro="Scale per-seat tier for high-margin, compliance-heavy practices where billable-hour or fiduciary economics justify the price ceiling: law firms (small / mid-size) and RIA / wealth management. Solo seat $499/mo; sliding to $299/mo at 50–99 seats."
       >
         <Grid items={max} />
       </Section>

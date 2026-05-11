@@ -99,13 +99,13 @@ export const cpa: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "26x",
-    inputCost: "$2,750 / 30-day pilot (Plus tier)",
+    multiplier: "12x",
+    inputCost: "Plus tier · $299 per seat (solo), sliding to $199 per seat (50–99 seats) — first month free",
     outputValue: "$42,000 / yr in tax-season hour reclamation per staff seat",
     math:
-      "Tax season = 80-hour weeks. Doc-chase consumes ~25% of staff hours through 8 weeks (per b2b_vertical_opportunity_analysis_2026-04-27.md §3.4 — \"document chase consumes the front office for 8 weeks a year\"). 0.25 × 80 hours × 8 weeks × $65/hr loaded = $10,400 per staff per season. Add onboarding-letter automation and books-recon reclamation: total ~$42k/yr per staff. A 3-staff firm sees ~$126k/yr in reclamation against $33k/yr in Plus-tier subscription.",
+      "Tax season = 80-hour weeks. Doc-chase consumes ~25% of staff hours through 8 weeks (per b2b_vertical_opportunity_analysis_2026-04-27.md §3.4 — \"document chase consumes the front office for 8 weeks a year\"). 0.25 × 80 hours × 8 weeks × $65/hr loaded = $10,400 per staff per season. Add onboarding-letter automation and books-recon reclamation: total ~$42k/yr per staff against the solo Plus-tier seat at $299/mo ($3,588/yr) = ~12x at one seat. A 3-staff firm sees ~$126k/yr in reclamation against ~$10,764/yr of Plus-tier subscription.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` L13. Doc-chase share cited from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.4. Staff-loading rate is operator-modeled — flagged in capability inbox for primary-research validation. Plus-tier mapping per the task brief; canonical mapping in `project_vertical_tier_mapping.md` STUB.",
+      "Pricing per `project_stripe_both_surfaces.md` (per-seat ladder, locked 2026-05-09). ROI band per `project_pricing_value_anchor.md` (Plus-tier value $4,500–$15,000/mo per seat). Doc-chase share cited from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.4. Staff-loading rate is operator-modeled — flagged in capability inbox for primary-research validation. Plus-tier mapping per `project_vertical_tier_mapping.md`.",
   },
 
   claims: {

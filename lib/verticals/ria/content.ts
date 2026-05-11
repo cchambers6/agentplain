@@ -105,13 +105,13 @@ export const ria: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "32x",
-    inputCost: "$4,500 / 30-day pilot (Max tier)",
+    multiplier: "33x",
+    inputCost: "Max tier · $499 per seat (solo), sliding to $299 per seat (50–99 seats) — first month free",
     outputValue: "$175,000 / yr in advisor-hour reclamation at a 3-advisor practice",
     math:
-      "3 advisors × ~6 hours/week each on prep + recap + comms triage × $300/hr opportunity cost × 50 weeks = $270k/yr opportunity. Capture 65% with the fleet → $175k/yr returned. $4,500/mo subscription ($54k/yr) recovers inside week one. Strong vertical fit per §2 ranking; lower competitive density than law because no fiduciary-aware fleet has shipped at SMB-RIA scale yet.",
+      "3 advisors × ~6 hours/week each on prep + recap + comms triage × $300/hr opportunity cost × 50 weeks = $270k/yr opportunity. Capture 65% with the fleet → $175k/yr returned. Against 3 Max-tier seats at $499/mo solo ($17,964/yr) that's ~10x at three advisors; the same value stream at a 25-advisor practice on the $349 band runs ~33x+. Strong vertical fit per §2 ranking; lower competitive density than law because no fiduciary-aware fleet has shipped at the small-/mid-size-RIA scale yet.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` L13 (mapped to Max tier per task brief). RIA segment economics per `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 (financial advisors, composite 33). Hourly-rate input is operator-modeled — flagged in capability inbox.",
+      "Pricing per `project_stripe_both_surfaces.md` (per-seat ladder, locked 2026-05-09). ROI band per `project_pricing_value_anchor.md` (Max-tier value $8,000–$33,000/mo per seat). RIA segment economics per `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 (financial advisors, composite 33). Hourly-rate input is operator-modeled — flagged in capability inbox.",
   },
 
   claims: {

@@ -98,13 +98,13 @@ export const recruiting: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "30x",
-    inputCost: "$1,500 / 30-day pilot (Regular tier)",
+    multiplier: "23x",
+    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
     outputValue: "$54,000 / yr per recruiter in cycle-time and placement-rate reclamation",
     math:
-      "1 recruiter @ 30% of week on sourcing + outreach drafting (~12 hours) × $75/hr loaded = $46,800/yr in labor reclamation. Add response-rate lift from substantiated outreach (modeled at +20% to placements) → $7k/yr at 2 placements baseline. Pilot recovers at one-recruiter threshold inside month one.",
+      "1 recruiter @ 30% of week on sourcing + outreach drafting (~12 hours) × $75/hr loaded = $46,800/yr in labor reclamation. Add response-rate lift from substantiated outreach (modeled at +20% to placements) → $7k/yr at 2 placements baseline. Total ~$54k/yr per recruiter against the solo Regular-tier seat at $199/mo ($2,388/yr) = ~23x at one recruiter; team-of-10 on the $149 band runs ~30x+ on the same inputs.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` L13. Time-allocation estimates pending primary-research validation — flagged in capability inbox. Response-rate-lift claim is operator-modeled, not customer-attested.",
+      "Pricing per `project_stripe_both_surfaces.md` (per-seat ladder, locked 2026-05-09). ROI band per `project_pricing_value_anchor.md` (Regular-tier value $2,900–$10,600/mo per seat). Time-allocation estimates pending primary-research validation — flagged in capability inbox. Response-rate-lift claim is operator-modeled, not customer-attested.",
   },
 
   claims: {

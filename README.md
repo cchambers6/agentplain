@@ -1,10 +1,10 @@
 # agentplain
 
-Marketing site for **agentplain.com** — a pre-trained AI agent fleet for small-to-mid brokerages.
+Marketing site + customer surface for **agentplain.com** — a pre-trained AI agent fleet for professional-services firms (realty first; mortgage, insurance, property mgmt, title & escrow, recruiting, home services, CPA / tax, law, and RIA on the roadmap).
 
 > Intelligence. Rooted in reality.
 
-Built with Next.js 14 (App Router) + TypeScript + Tailwind. Brand v3 tokens, three pages (homepage, pilot, about), seven-agent fleet section, three-tier pilot pricing ($1,500 / $2,750 / $4,500), and a full FAQ.
+Built with Next.js 14 (App Router) + TypeScript + Tailwind. Editorial brand v3 tokens, marketing pages (home, about, /verticals index, per-vertical landing pages for the 10 locked verticals), seven-agent realty fleet section, three-tier per-seat pricing (Regular $199 → $99, Plus $299 → $199, Max $499 → $299; first month free), and a full FAQ. Pilot pricing SKUs were killed 2026-05-09 per `project_stripe_both_surfaces.md`.
 
 ## Quickstart
 
@@ -33,10 +33,11 @@ npm run start
 
 ```
 app/
-  layout.tsx          fonts + metadata + Header/Footer
-  page.tsx            homepage (hero → pillars → fleet → pricing → FAQ → footer CTA)
-  pilot/page.tsx      pilot detail + tiers + 30-day timeline
-  about/page.tsx      brand story
+  layout.tsx                 fonts + metadata + Header/Footer
+  (marketing)/page.tsx       homepage (hero → pillars → fleet → pricing → FAQ → footer CTA)
+  (marketing)/about/page.tsx brand story
+  (marketing)/verticals/...  tier-grouped index + dynamic per-vertical landing pages
+  (product)/app/...          customer-surface workspace (sign-in / agents / approvals / billing)
   globals.css         Tailwind + base type styles + utility classes
 components/
   Logo.tsx            inline SVG mark + serif wordmark (ink + color variants)
@@ -103,7 +104,7 @@ If you ever need to redo it from scratch:
 
 - Tagline: **Intelligence. Rooted in reality.**
 - Footer CTA: **Run a 25-agent brokerage with five.**
-- Pricing tiers: **$1,500 / $2,750 / $4,500**
+- Pricing tiers (per-seat, month-to-month, first month free): **Regular $199 → $99**, **Plus $299 → $199**, **Max $499 → $299**. Tier ladders are sourced from `project_stripe_both_surfaces.md`. The old pilot SKUs ($1,500 / $2,750 / $4,500) were killed 2026-05-09 — do not re-introduce them.
 
 ## Known limitations
 

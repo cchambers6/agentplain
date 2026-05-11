@@ -2,10 +2,11 @@
 //
 // Single read path for the dynamic `[vertical]/page.tsx` route. New verticals
 // land here AND in `lib/verticals/<slug>/content.ts` — the registry keeps the
-// route from importing 9 files individually.
+// route from importing 10 files individually.
 //
-// Per `feedback_no_new_verticals_finish_locked.md`: this list is locked at 9.
-// Adding a tenth requires a memory ratification, not a code change.
+// Per `project_vertical_tier_mapping.md`: this list is locked at 10 active
+// verticals (Regular: 6, Plus: 2, Max: 2). Medical is parked. Adding an
+// eleventh requires a memory ratification, not a code change.
 
 import type { VerticalContent, VerticalTier } from "./types";
 

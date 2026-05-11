@@ -128,13 +128,13 @@ export const realEstate: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "23x",
-    inputCost: "$2,750 / 30-day pilot (Growth pricing tier — 11–20 agents)",
+    multiplier: "26x",
+    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
     outputValue: "$5,300 saved/mo at the broker-owner level alone",
     math:
-      "8–12 owner-hours/week on coordination work × $120/hr blended (owner-as-producer opportunity cost) × 4.3 weeks = $4,128–$6,192/mo. Midpoint $5,160. Conservative annualized: $61,920/yr returned to producing. Pilot recovers its cost in ~9 working days at midpoint.",
+      "8–12 owner-hours/week on coordination work × $120/hr blended (owner-as-producer opportunity cost) × 4.3 weeks = $4,128–$6,192/mo. Midpoint $5,160. Against the solo Regular-tier seat ($199/mo) the broker-owner alone recovers cost in the first working week and runs ~26x ROI. Conservative annualized: $61,920/yr returned to producing.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` L13 + `realty_vertical_spec_v1_2026-05-03.md` §1. Coordination-hour ranges per `agentplain_positioning.md` L33. Owner-hour opportunity cost is a 2026-05-08 internal assumption pending primary-research validation — flagged in capability inbox.",
+      "Pricing per `project_stripe_both_surfaces.md` (per-seat ladder, locked 2026-05-09; pilot SKUs deprecated same day). Value math per `project_pricing_value_anchor.md` (Regular-tier value range $2,900–$10,600/mo per seat). Realty-specific inputs per `realty_vertical_spec_v1_2026-05-03.md` §1. Coordination-hour ranges per `agentplain_positioning.md` L33. Owner-hour opportunity cost is a 2026-05-08 internal assumption pending primary-research validation — flagged in capability inbox.",
   },
 
   claims: {

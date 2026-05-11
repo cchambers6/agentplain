@@ -99,13 +99,13 @@ export const mortgage: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "15x",
-    inputCost: "$1,500 / 30-day pilot (Regular tier)",
+    multiplier: "9x",
+    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
     outputValue: "$22,000 / yr per LO seat in cycle-time reclamation",
     math:
-      "Avg LO closes 3–5 loans/month; doc-chase delay averages 5 days/file. Cycle-time compression of 2 days/file × 4 files/mo × $250 avg gross margin/day-of-float = $24k/yr per LO. Inputs are conservative; storm-cycle and high-volume teams see materially more. Pilot recovers in ~3 weeks at midpoint.",
+      "Avg LO closes 3–5 loans/month; doc-chase delay averages 5 days/file. Cycle-time compression of 2 days/file × 4 files/mo × $250 avg gross margin/day-of-float = ~$24k/yr per LO. Against the solo Regular-tier seat ($199/mo, $2,388/yr) that's ~9x at one seat; teams sliding to $99/seat at 50+ LOs run ~20x+ on the same inputs. Storm-cycle and high-volume teams see materially more.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` L13. Loan-cycle and doc-chase reference points pending primary-research validation — flagged in capability inbox. Sales-cycle compression mechanism modeled on the roofing-supplement analog in `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3.",
+      "Pricing per `project_stripe_both_surfaces.md` (per-seat ladder, locked 2026-05-09). Value math per `project_pricing_value_anchor.md` (Regular-tier ROI range 15x–107x). Loan-cycle and doc-chase reference points pending primary-research validation — flagged in capability inbox. Sales-cycle compression mechanism modeled on the roofing-supplement analog in `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3.",
   },
 
   claims: {

@@ -1,0 +1,140 @@
+import type { VerticalContent } from "../types";
+
+// Source: `b2b_vertical_opportunity_analysis_2026-04-27.md` roadmap note +
+// `agentplain_positioning.md` listing title/escrow as adjacent. No Phase 0
+// product_spec.md JTBD table — draft:true and capability-inbox flagged.
+
+export const titleEscrow: VerticalContent = {
+  slug: "title-escrow",
+  name: "Title & escrow",
+  tier: "regular",
+
+  hero: {
+    eyebrow: "Roadmap vertical · Regular tier",
+    headline: "The fleet for the local title agency.",
+    valueProp:
+      "agentplain REPLACES the file-intake and document-collection scramble, INTEGRATES with your title production system and the realtor/lender source documents, and AUGMENTS the closer's read on every closing-day prep packet.",
+  },
+
+  metaTitle: "agentplain for title and escrow — local title agencies and closing offices",
+  metaDescription:
+    "An agentic fleet for the 3–20 person title and escrow operation. File intake from realtor + lender channels, milestone tracking, closing-day prep, recording follow-up, and CFPB-aware customer communication — coordinated across SoftPro, RamQuest, Qualia, and your underwriter portals.",
+
+  jtbdTables: [
+    {
+      role: "Owner / managing escrow officer",
+      draft: true,
+      rows: [
+        {
+          job: "Know which files are at risk of missing closing",
+          when: "Daily, mid-day",
+          today: "Walk the office, ask the closing team",
+          withAgentplain:
+            "File-status board — every file with current bottleneck (title cure / lender doc / payoff / wire)",
+        },
+        {
+          job: "Triage an underwriter requirement",
+          when: "Reactive, time-sensitive",
+          today: "Email forward + verbal handoff",
+          withAgentplain:
+            "Underwriter-requirement agent drafts the cure plan, routes to the right desk, logs the response",
+        },
+        {
+          job: "Review CFPB-sensitive customer communications",
+          when: "Pre-close",
+          today: "Closer-by-closer judgment, no consistent review",
+          withAgentplain:
+            "Compliance agent reviews every customer-facing draft; flags before send",
+        },
+      ],
+    },
+    {
+      role: "Escrow officer / closer",
+      draft: true,
+      rows: [
+        {
+          job: "Open a new file from a realtor or lender intake",
+          when: "Inbound, all day",
+          today: "Manual data entry from PDF and email",
+          withAgentplain:
+            "Intake agent parses the source documents, drafts the file in your title system for one-click confirm",
+        },
+        {
+          job: "Chase missing documents from realtor + lender",
+          when: "Continuous through the cycle",
+          today: "Phone tag + reactive email",
+          withAgentplain:
+            "Doc-chase agent runs the cadence per channel, escalates only when stuck",
+        },
+        {
+          job: "Prepare the closing packet",
+          when: "T-2 / T-1 of every closing",
+          today: "Manual checklist, hand-built packet",
+          withAgentplain:
+            "Closing-prep agent drafts the packet against the file state; closer reviews the exceptions",
+        },
+      ],
+    },
+    {
+      role: "Post-closer / recording clerk",
+      draft: true,
+      rows: [
+        {
+          job: "Coordinate recording across counties",
+          when: "Day-of / day-after close",
+          today: "Per-county portal navigation by hand",
+          withAgentplain:
+            "Recording agent prepares the package per county schema; clerk submits and logs the return",
+        },
+      ],
+    },
+  ],
+
+  roi: {
+    multiplier: "16x",
+    inputCost: "$1,500 / 30-day pilot (Regular tier)",
+    outputValue: "$24,000 / yr per closer in cycle-time reclamation",
+    math:
+      "Average closer handles 30–50 files/month. File-intake automation saves ~45 minutes/file. 40 files × 0.75 hours × $40/hr × 12 months = $14,400/yr per closer. Closing-prep automation saves another ~30 minutes/file = ~$9,600/yr. Total ~$24k/yr per closer; pilot recovers at single-closer threshold within month one.",
+    citation:
+      "Pricing per `project_stripe_both_surfaces.md` L13. Time-per-file estimates pending primary-research validation — flagged in capability inbox. Closer compensation midpoint based on US BLS 2024 SOC 13-2072 (loan officers and related) — flagged as operator-modeled.",
+  },
+
+  claims: {
+    replace: [
+      "Manual file intake from realtor and lender PDFs",
+      "Reactive document chase across realtor + lender channels",
+      "Hand-built closing-prep packets — replaced by drafted packets",
+      "Per-county recording portal navigation — drafted submissions for clerk to confirm",
+    ],
+    integrate: [
+      "SoftPro (title production)",
+      "RamQuest (title production)",
+      "Qualia (title production)",
+      "ResWare (title production)",
+      "Underwriter portals — Fidelity, First American, Old Republic, Stewart",
+      "Outlook + Microsoft 365 Graph",
+      "County recording portals (varies)",
+    ],
+    augment: [
+      "Closer review on every customer-facing communication — CFPB-aware draft",
+      "Title-cure planning — drafted with chain-of-title evidence cited",
+      "Underwriter-requirement routing — drafts cite the requirement number, never invent",
+      "Wire-fraud guard — every wire instruction draft cross-checked against verified-channel data",
+    ],
+  },
+
+  integrations: {
+    shipped: [],
+    planned: [
+      { name: "SoftPro", category: "Title production" },
+      { name: "RamQuest", category: "Title production" },
+      { name: "Qualia", category: "Title production" },
+      { name: "ResWare", category: "Title production" },
+      { name: "Underwriter portals (top 4)", category: "Underwriter" },
+      { name: "Outlook + M365 Graph", category: "Email + calendar" },
+      { name: "County recording portals", category: "Recording" },
+    ],
+    plannedWindow: "Q3 2026",
+  },
+};

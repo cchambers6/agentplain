@@ -1,0 +1,149 @@
+import type { VerticalContent } from "../types";
+
+// Sources: `b2b_vertical_opportunity_analysis_2026-04-27.md` (insurance §3.2
+// is the structural analog — same recurring-admin density, same compliance
+// posture, same per-portal integration set with carriers replaced by
+// wholesale lenders and AUS systems). Phase 0 product_spec.md has no
+// mortgage JTBD table yet — draft:true and capability-inbox flagged.
+
+export const mortgage: VerticalContent = {
+  slug: "mortgage",
+  name: "Mortgage brokerages",
+  tier: "regular",
+
+  hero: {
+    eyebrow: "Roadmap vertical · Regular tier",
+    headline: "The fleet for the independent loan-officer office.",
+    valueProp:
+      "agentplain REPLACES the document-chase that drowns every loan file, INTEGRATES with your LOS, wholesale lender portals, and DU/LP, and AUGMENTS the loan officer's read on every borrower interaction and TRID-sensitive disclosure.",
+  },
+
+  metaTitle: "agentplain for mortgage brokerages — independent loan-officer offices",
+  metaDescription:
+    "An agentic fleet for the 2–10 loan-officer independent mortgage brokerage. Borrower triage, document collection, status updates, RESPA/TRID-aware compliance review on consumer-facing communication, and pipeline reporting — coordinated across Encompass, Calyx Point, LendingPad, and Optimal Blue.",
+
+  jtbdTables: [
+    {
+      role: "Owner / branch manager",
+      draft: true,
+      rows: [
+        {
+          job: "Know which files are stalled and why",
+          when: "Morning open",
+          today: "Walk LO desks, ping the processor",
+          withAgentplain:
+            "Pipeline view — every file with current bottleneck (doc gap / VOE / UW condition / appraisal)",
+        },
+        {
+          job: "Triage a regulatory inquiry on a recent disclosure",
+          when: "Reactive, time-sensitive",
+          today: "Pull the file, retrace the disclosure clock by hand",
+          withAgentplain:
+            "Per-file activity feed — every TRID-clock-relevant event timestamped and audit-logged",
+        },
+        {
+          job: "See LO production vs. plan",
+          when: "Weekly",
+          today: "Manual LOS export → spreadsheet",
+          withAgentplain: "Production-reporter agent drafts the weekly read",
+        },
+      ],
+    },
+    {
+      role: "Loan officer",
+      draft: true,
+      rows: [
+        {
+          job: "Run inbound borrower triage",
+          when: "All day, every day",
+          today: "Phone tag + reactive email",
+          withAgentplain:
+            "Inbound agent classifies intent, attaches lead context, drafts first-touch in <2 minutes",
+        },
+        {
+          job: "Chase a borrower for missing documents",
+          when: "Continuous through the pipeline",
+          today: "Manual reminders, lose 3–7 days per file",
+          withAgentplain:
+            "Doc-chase agent runs the cadence, drafts the borrower-facing note, escalates only when stuck",
+        },
+        {
+          job: "Update a borrower on status mid-pipeline",
+          when: "Twice a week per active file",
+          today: "Borrower calls you — reactive",
+          withAgentplain:
+            "Status agent drafts the update on every milestone; LO signs and sends from their own system",
+        },
+      ],
+    },
+    {
+      role: "Processor",
+      draft: true,
+      rows: [
+        {
+          job: "Build the document checklist for a new file",
+          when: "Day 1 of every file",
+          today: "Pull the LOS template, customize by hand",
+          withAgentplain:
+            "Onboarding agent builds the checklist scoped to loan type + occupancy + property type",
+        },
+        {
+          job: "Reconcile UW conditions back to the file",
+          when: "After every UW review",
+          today: "Translate condition language, route to LO",
+          withAgentplain:
+            "Conditions agent drafts the borrower-facing translation + the doc list to close it",
+        },
+      ],
+    },
+  ],
+
+  roi: {
+    multiplier: "15x",
+    inputCost: "$1,500 / 30-day pilot (Regular tier)",
+    outputValue: "$22,000 / yr per LO seat in cycle-time reclamation",
+    math:
+      "Avg LO closes 3–5 loans/month; doc-chase delay averages 5 days/file. Cycle-time compression of 2 days/file × 4 files/mo × $250 avg gross margin/day-of-float = $24k/yr per LO. Inputs are conservative; storm-cycle and high-volume teams see materially more. Pilot recovers in ~3 weeks at midpoint.",
+    citation:
+      "Pricing per `project_stripe_both_surfaces.md` L13. Loan-cycle and doc-chase reference points pending primary-research validation — flagged in capability inbox. Sales-cycle compression mechanism modeled on the roofing-supplement analog in `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3.",
+  },
+
+  claims: {
+    replace: [
+      "Manual doc-chase across the pipeline — automated cadence with drafted borrower notes",
+      "Template-and-customize per-file checklist building — replaced by a loan-type-aware draft",
+      "Reactive status communication — replaced by milestone-triggered drafts",
+      "Spreadsheet-driven production reporting — replaced by weekly drafted reads",
+    ],
+    integrate: [
+      "Encompass (ICE Mortgage Technology) — LOS",
+      "Calyx Point — LOS",
+      "LendingPad — LOS",
+      "Optimal Blue — pricing engine",
+      "DU / LP (Fannie / Freddie AUS)",
+      "Wholesale lender portals — UWM, Rocket Pro TPO, Pennymac, AmeriHome, and 10+ regional",
+      "Outlook + Microsoft 365 Graph",
+    ],
+    augment: [
+      "LO review on every borrower-facing draft — the agent drafts, the LO signs",
+      "TRID-clock-relevant events logged with timestamps the broker-of-record can defend",
+      "UW-condition translation — borrower-facing language drafted from the raw condition text",
+      "Pipeline forecasting — drafted with file-level evidence, not rolled-up wishfulness",
+    ],
+  },
+
+  integrations: {
+    shipped: [],
+    planned: [
+      { name: "Encompass", category: "LOS" },
+      { name: "Calyx Point", category: "LOS" },
+      { name: "LendingPad", category: "LOS" },
+      { name: "Optimal Blue", category: "Pricing engine" },
+      { name: "DU / LP", category: "AUS" },
+      { name: "Wholesale lender portals", category: "Lender" },
+      { name: "Outlook + M365 Graph", category: "Email + calendar" },
+      { name: "Total Expert", category: "Marketing CRM" },
+    ],
+    plannedWindow: "Q3 2026",
+  },
+};

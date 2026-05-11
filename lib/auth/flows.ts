@@ -9,6 +9,7 @@
 // caller that can read/write User and MagicLinkToken.
 
 import type { Prisma, User, Vertical, Workspace } from "@prisma/client";
+import { provisionTrialSubscriptionSafe } from "../billing/provisioning";
 import { withSystemContext } from "../db/rls";
 import { env } from "../env";
 import { getVerticalContent } from "../verticals";
@@ -72,7 +73,7 @@ export async function signUpBrokerOwner(input: SignUpInput): Promise<SignUpResul
   }
   const verticalTier = verticalTierFromContentTier(verticalContent.tier);
 
-  return withSystemContext(async (tx) => {
+  const created = await withSystemContext(async (tx) => {
     const existingUser = await tx.user.findUnique({ where: { email } });
     if (existingUser) {
       const existingBrokerOwnerMembership = await tx.membership.findFirst({
@@ -149,6 +150,23 @@ export async function signUpBrokerOwner(input: SignUpInput): Promise<SignUpResul
 
     return { user, workspace };
   });
+
+  // Provision Stripe Customer + trialing Subscription AFTER the DB
+  // commits. Network IO doesn't belong inside the workspace tx, and
+  // per feedback_max_friction_reduction_for_trials signup must not
+  // block on a Stripe outage — the helper swallows failures into an
+  // audit row that the trial-expiration cron / billing page surface.
+  await provisionTrialSubscriptionSafe(
+    {
+      workspaceId: created.workspace.id,
+      workspaceName: created.workspace.name,
+      email,
+      verticalTier,
+    },
+    { id: created.workspace.id },
+  );
+
+  return created;
 }
 
 export interface RequestMagicLinkInput {

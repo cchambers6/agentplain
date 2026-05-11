@@ -1,4 +1,10 @@
 // Billing boundary entry point. One swap point.
+//
+// Stripe Prices are resolved by `lookup_key` via the setup script — see
+// `scripts/stripe/setup-products.ts` + `docs/billing/SETUP.md`. The
+// agentplain repo holds zero hardcoded Price ids (per
+// feedback_no_quick_fixes — the right fix is lookup_key resolution, not
+// 15 brittle env vars).
 
 import { env } from "../env";
 import { StripeBillingProvider } from "./stripe-provider";
@@ -18,14 +24,6 @@ export function getBillingProvider(): BillingProvider {
       cached = new StripeBillingProvider({
         secretKey: env.stripeSecretKey(),
         webhookSecret: env.stripeWebhookSecret(),
-        prices: {
-          tier_1_monthly: env.stripePriceTier1(),
-          tier_2_monthly: env.stripePriceTier2(),
-          tier_3_monthly: env.stripePriceTier3(),
-          tier_1_annual: env.stripePriceTier1Annual(),
-          tier_2_annual: env.stripePriceTier2Annual(),
-          tier_3_annual: env.stripePriceTier3Annual(),
-        },
       });
       break;
   }
@@ -38,12 +36,20 @@ export function __setBillingProviderForTests(p: BillingProvider | null): void {
 
 export type {
   BillingProvider,
-  BillingTier,
-  BillingCadence,
+  CancelSubscriptionInput,
+  CreateCheckoutSessionInput,
+  CreateCheckoutSessionResult,
   CreateCustomerInput,
   CreateCustomerResult,
   CreateInvoiceInput,
   CreateInvoiceResult,
+  CreatePortalSessionInput,
+  CreatePortalSessionResult,
+  CreateSubscriptionInput,
+  CreateSubscriptionResult,
+  ProviderSubscriptionStatus,
+  RetrieveSubscriptionResult,
+  UpdateSubscriptionInput,
   VerifyWebhookInput,
   VerifyWebhookResult,
 } from "./types";

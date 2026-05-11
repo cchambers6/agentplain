@@ -59,15 +59,16 @@ export const env = {
   resendFromEmail: () =>
     optional("RESEND_FROM_EMAIL") ?? "agentplain <noreply@agentplain.com>",
 
-  // Stripe
+  // Stripe — Prices resolved by lookup_key (see lib/pricing/tiers.ts +
+  // scripts/stripe/setup-products.ts). No per-tier Price-id env vars.
   stripeSecretKey: () => required("STRIPE_SECRET_KEY"),
   stripeWebhookSecret: () => required("STRIPE_WEBHOOK_SECRET"),
-  stripePriceTier1: () => required("STRIPE_PRICE_TIER_1"),
-  stripePriceTier2: () => required("STRIPE_PRICE_TIER_2"),
-  stripePriceTier3: () => required("STRIPE_PRICE_TIER_3"),
-  stripePriceTier1Annual: () => optional("STRIPE_PRICE_TIER_1_ANNUAL"),
-  stripePriceTier2Annual: () => optional("STRIPE_PRICE_TIER_2_ANNUAL"),
-  stripePriceTier3Annual: () => optional("STRIPE_PRICE_TIER_3_ANNUAL"),
+
+  // Inngest — trial-expiration cron + future skill scheduling. Local dev
+  // mode auto-detects the dev server and signing is a no-op; production
+  // needs both keys set.
+  inngestEventKey: () => optional("INNGEST_EVENT_KEY"),
+  inngestSigningKey: () => optional("INNGEST_SIGNING_KEY"),
 
   // Notion
   notionApiKey: () => required("NOTION_API_KEY"),

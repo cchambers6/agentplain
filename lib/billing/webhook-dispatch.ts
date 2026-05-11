@@ -1,27 +1,35 @@
 // Stripe webhook dispatch logic. Lives outside the route file because
-// Next.js App Router rejects non-standard exports from `route.ts` — keeping
-// the dispatch here also gives tests a clean import target without binding
-// to a route module.
+// Next.js App Router rejects non-standard exports from `route.ts`. Keeping
+// it here also gives tests a clean import target without binding to a
+// route module.
 //
-// Per project_stripe_both_surfaces: every billing event mirrors to AuditLog
-// with payload-redacted-for-PII metadata. We only persist provider-side ids
-// + amounts + status — no card data.
+// Idempotency strategy (per the brief): every inbound Stripe event id
+// is inserted into `BillingEvent` with `stripeEventId @unique`. The
+// route handler short-circuits if `findUnique({stripeEventId})` returns
+// a hit, AND every dispatch path runs the insert inside the same DB
+// transaction so a partial failure leaves no half-state. AuditLog
+// continues to carry a cross-cutting summary for the operator audit
+// (engineering_plan §5.2), but BillingEvent is the typed, per-
+// subscription timeline.
+//
+// Per project_stripe_both_surfaces: never persist card data. Stripe
+// holds payment-method ids; we hold only ids + amounts + status.
 
+import type {
+  Prisma,
+  SeatBand as PrismaSeatBand,
+  SubscriptionStatus as PrismaSubscriptionStatus,
+  WorkspaceVerticalTier,
+} from "@prisma/client";
+import {
+  lookupKeyFor,
+  seatBandForSeats,
+  type TierName,
+  TIER_ORDER,
+} from "@/lib/pricing/tiers";
 import type { DbTransactionClient } from "@/lib/db";
-
-interface InvoicePayload {
-  id?: string;
-  customer?: string;
-  amount_due?: number;
-  amount_paid?: number;
-  status?: string;
-  hosted_invoice_url?: string;
-  invoice_pdf?: string;
-  period_start?: number;
-  period_end?: number;
-  paid?: boolean;
-  metadata?: Record<string, string>;
-}
+import { subscriptionStatusFromProvider } from "./provisioning";
+import type { ProviderSubscriptionStatus } from "./types";
 
 export interface StripeWebhookEvent {
   eventId: string;
@@ -29,26 +37,39 @@ export interface StripeWebhookEvent {
   data: unknown;
 }
 
-const asInvoice = (data: unknown): InvoicePayload => {
-  if (!data || typeof data !== "object" || !("object" in data)) return {};
-  const obj = (data as { object?: InvoicePayload }).object ?? {};
-  return obj as InvoicePayload;
-};
+// =====================================================================
+// Dispatch entry point
+// =====================================================================
 
 export async function dispatchEvent(
   event: StripeWebhookEvent,
   tx: DbTransactionClient,
 ): Promise<void> {
   switch (event.eventType) {
+    case "customer.subscription.created":
+    case "customer.subscription.updated":
+    case "customer.subscription.trial_will_end":
+      await syncSubscription(event, tx);
+      break;
+    case "customer.subscription.deleted":
+      await markSubscriptionDeleted(event, tx);
+      break;
     case "invoice.created":
     case "invoice.finalized":
     case "invoice.paid":
+    case "invoice.payment_succeeded":
     case "invoice.payment_failed":
     case "invoice.voided":
       await mirrorInvoice(event, tx);
       break;
     default:
-      // Audit-only for events we don't yet handle. Phase 2 adds subscription.*.
+      // Audit-only for events we don't yet handle. Future handlers
+      // (e.g. setup_intent.succeeded for the add-payment-method flow)
+      // join here.
+      await recordBillingEvent(event, tx, {
+        workspaceId: null,
+        subscriptionId: null,
+      });
       await tx.auditLog.create({
         data: {
           action: "billing.event.received",
@@ -60,12 +81,244 @@ export async function dispatchEvent(
   }
 }
 
+// =====================================================================
+// Subscription events
+// =====================================================================
+
+interface SubscriptionPayload {
+  id?: string;
+  customer?: string | { id?: string };
+  status?: string;
+  trial_end?: number;
+  current_period_end?: number;
+  cancel_at_period_end?: boolean;
+  default_payment_method?: string | { id?: string } | null;
+  items?: {
+    data?: Array<{
+      quantity?: number;
+      price?: {
+        id?: string;
+        lookup_key?: string | null;
+      };
+    }>;
+  };
+  metadata?: Record<string, string>;
+}
+
+const asSubscription = (data: unknown): SubscriptionPayload => {
+  if (!data || typeof data !== "object" || !("object" in data)) return {};
+  return ((data as { object?: SubscriptionPayload }).object ?? {}) as SubscriptionPayload;
+};
+
+async function syncSubscription(
+  event: StripeWebhookEvent,
+  tx: DbTransactionClient,
+): Promise<void> {
+  const sub = asSubscription(event.data);
+  const stripeSubscriptionId = sub.id;
+  const stripeCustomerId =
+    typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
+  if (!stripeSubscriptionId || !stripeCustomerId) {
+    // Malformed payload — log to BillingEvent so we can debug, but no
+    // sub upsert is possible.
+    await recordBillingEvent(event, tx, {
+      workspaceId: null,
+      subscriptionId: null,
+    });
+    return;
+  }
+
+  const workspace = await tx.workspace.findFirst({
+    where: { stripeCustomerId },
+    select: { id: true, verticalTier: true },
+  });
+  if (!workspace) {
+    await recordBillingEvent(event, tx, {
+      workspaceId: null,
+      subscriptionId: null,
+    });
+    await tx.auditLog.create({
+      data: {
+        action: "billing.event.unmatched_customer",
+        targetTable: "stripe_event",
+        targetId: event.eventId,
+        payload: {
+          eventType: event.eventType,
+          stripeCustomerId,
+        },
+      },
+    });
+    return;
+  }
+
+  const item = sub.items?.data?.[0];
+  const seats = item?.quantity ?? 1;
+  const lookupKey = item?.price?.lookup_key ?? null;
+  const tierFromKey = tierFromLookupKey(lookupKey);
+  const seatBandFromKey = seatBandFromLookupKey(lookupKey);
+
+  const verticalTier: WorkspaceVerticalTier = tierFromKey
+    ? verticalTierEnumFromTier(tierFromKey)
+    : workspace.verticalTier;
+  const seatBand: PrismaSeatBand = seatBandFromKey
+    ? seatBandFromKey
+    : seatBandForSeats(seats);
+
+  const status: PrismaSubscriptionStatus = subscriptionStatusFromProvider(
+    (sub.status as ProviderSubscriptionStatus) ?? "active",
+  );
+
+  const trialEndsAt = epochToDate(sub.trial_end);
+  const currentPeriodEnd = epochToDate(sub.current_period_end);
+  const cancelAtPeriodEnd = sub.cancel_at_period_end ?? false;
+  const defaultPaymentMethodId =
+    typeof sub.default_payment_method === "string"
+      ? sub.default_payment_method
+      : sub.default_payment_method?.id ?? null;
+
+  const existing = await tx.subscription.findUnique({
+    where: { stripeSubscriptionId },
+    select: { id: true },
+  });
+
+  const upserted = await tx.subscription.upsert({
+    where: { stripeSubscriptionId },
+    create: {
+      workspaceId: workspace.id,
+      stripeSubscriptionId,
+      stripeCustomerId,
+      tier: verticalTier,
+      seatBand,
+      seats,
+      status,
+      trialEndsAt,
+      currentPeriodEnd,
+      cancelAtPeriodEnd,
+      defaultPaymentMethodId,
+    },
+    update: {
+      tier: verticalTier,
+      seatBand,
+      seats,
+      status,
+      trialEndsAt,
+      currentPeriodEnd,
+      cancelAtPeriodEnd,
+      defaultPaymentMethodId,
+    },
+  });
+
+  // Update Workspace pointers + flip billingMode the first time we see
+  // a subscription, so the Phase 1 high-touch rows transition cleanly.
+  await tx.workspace.update({
+    where: { id: workspace.id },
+    data: {
+      stripeSubscriptionId,
+      billingMode: "STRIPE_SUBSCRIPTION",
+    },
+  });
+
+  await recordBillingEvent(event, tx, {
+    workspaceId: workspace.id,
+    subscriptionId: upserted.id,
+  });
+
+  await tx.auditLog.create({
+    data: {
+      workspaceId: workspace.id,
+      action: existing
+        ? "billing.subscription.updated"
+        : "billing.subscription.created",
+      targetTable: "Subscription",
+      targetId: stripeSubscriptionId,
+      payload: {
+        eventType: event.eventType,
+        status,
+        seats,
+        tier: verticalTier,
+        seatBand,
+      } satisfies Prisma.InputJsonValue,
+    },
+  });
+}
+
+async function markSubscriptionDeleted(
+  event: StripeWebhookEvent,
+  tx: DbTransactionClient,
+): Promise<void> {
+  const sub = asSubscription(event.data);
+  const stripeSubscriptionId = sub.id;
+  if (!stripeSubscriptionId) {
+    await recordBillingEvent(event, tx, {
+      workspaceId: null,
+      subscriptionId: null,
+    });
+    return;
+  }
+
+  const existing = await tx.subscription.findUnique({
+    where: { stripeSubscriptionId },
+    select: { id: true, workspaceId: true },
+  });
+  if (!existing) {
+    await recordBillingEvent(event, tx, {
+      workspaceId: null,
+      subscriptionId: null,
+    });
+    return;
+  }
+
+  await tx.subscription.update({
+    where: { stripeSubscriptionId },
+    data: { status: "CANCELED", cancelAtPeriodEnd: false },
+  });
+  await recordBillingEvent(event, tx, {
+    workspaceId: existing.workspaceId,
+    subscriptionId: existing.id,
+  });
+  await tx.auditLog.create({
+    data: {
+      workspaceId: existing.workspaceId,
+      action: "billing.subscription.deleted",
+      targetTable: "Subscription",
+      targetId: stripeSubscriptionId,
+      payload: { eventType: event.eventType },
+    },
+  });
+}
+
+// =====================================================================
+// Invoice events (Phase 1 path, retained + extended)
+// =====================================================================
+
+interface InvoicePayload {
+  id?: string;
+  customer?: string;
+  subscription?: string;
+  amount_due?: number;
+  amount_paid?: number;
+  status?: string;
+  hosted_invoice_url?: string;
+  invoice_pdf?: string;
+  period_start?: number;
+  period_end?: number;
+  paid?: boolean;
+  metadata?: Record<string, string>;
+}
+
+const asInvoice = (data: unknown): InvoicePayload => {
+  if (!data || typeof data !== "object" || !("object" in data)) return {};
+  return ((data as { object?: InvoicePayload }).object ?? {}) as InvoicePayload;
+};
+
 export async function mirrorInvoice(
   event: StripeWebhookEvent,
   tx: DbTransactionClient,
 ): Promise<void> {
   const inv = asInvoice(event.data);
-  if (!inv.id || !inv.customer) return;
+  if (!inv.id || !inv.customer) {
+    return;
+  }
 
   const workspace = await tx.workspace.findFirst({
     where: { stripeCustomerId: inv.customer },
@@ -73,10 +326,6 @@ export async function mirrorInvoice(
   });
 
   if (!workspace) {
-    // Invoice for a customer we don't track yet. Audit it AND record the
-    // dedupe marker keyed by event id — without the marker, every Stripe
-    // retry (up to 72h) writes another `unmatched_customer` row instead of
-    // short-circuiting at the POST-handler dedupe check.
     await tx.auditLog.create({
       data: {
         action: "billing.event.unmatched_customer",
@@ -88,16 +337,9 @@ export async function mirrorInvoice(
         },
       },
     });
-    await tx.auditLog.create({
-      data: {
-        action: "billing.event.received",
-        targetTable: "stripe_event",
-        targetId: event.eventId,
-        payload: {
-          eventType: event.eventType,
-          outcome: "unmatched_customer",
-        },
-      },
+    await recordBillingEvent(event, tx, {
+      workspaceId: null,
+      subscriptionId: null,
     });
     return;
   }
@@ -124,6 +366,33 @@ export async function mirrorInvoice(
     },
   });
 
+  // Side-effect on Subscription state for the dunning-relevant events.
+  if (inv.subscription) {
+    const sub = await tx.subscription.findUnique({
+      where: { stripeSubscriptionId: inv.subscription },
+      select: { id: true, status: true },
+    });
+    if (sub) {
+      let nextStatus: PrismaSubscriptionStatus | null = null;
+      if (event.eventType === "invoice.payment_succeeded") {
+        nextStatus = sub.status === "TRIALING" ? sub.status : "ACTIVE";
+      } else if (event.eventType === "invoice.payment_failed") {
+        nextStatus = "PAST_DUE";
+      }
+      if (nextStatus && nextStatus !== sub.status) {
+        await tx.subscription.update({
+          where: { stripeSubscriptionId: inv.subscription },
+          data: { status: nextStatus },
+        });
+      }
+    }
+  }
+
+  await recordBillingEvent(event, tx, {
+    workspaceId: workspace.id,
+    subscriptionId: await subscriptionIdForStripeId(tx, inv.subscription),
+  });
+
   await tx.auditLog.create({
     data: {
       workspaceId: workspace.id,
@@ -137,4 +406,78 @@ export async function mirrorInvoice(
       },
     },
   });
+}
+
+// =====================================================================
+// Helpers
+// =====================================================================
+
+async function recordBillingEvent(
+  event: StripeWebhookEvent,
+  tx: DbTransactionClient,
+  link: { workspaceId: string | null; subscriptionId: string | null },
+): Promise<void> {
+  // stripeEventId @unique on the column gives us idempotency at the DB
+  // level. The route handler short-circuits before we get here on most
+  // duplicates; this `upsert` defends against the race where two
+  // webhook deliveries arrive simultaneously.
+  await tx.billingEvent.upsert({
+    where: { stripeEventId: event.eventId },
+    create: {
+      stripeEventId: event.eventId,
+      type: event.eventType,
+      workspaceId: link.workspaceId,
+      subscriptionId: link.subscriptionId,
+      payload: (event.data ?? {}) as Prisma.InputJsonValue,
+    },
+    update: {},
+  });
+}
+
+async function subscriptionIdForStripeId(
+  tx: DbTransactionClient,
+  stripeSubscriptionId: string | undefined,
+): Promise<string | null> {
+  if (!stripeSubscriptionId) return null;
+  const sub = await tx.subscription.findUnique({
+    where: { stripeSubscriptionId },
+    select: { id: true },
+  });
+  return sub?.id ?? null;
+}
+
+function epochToDate(seconds: number | null | undefined): Date | null {
+  if (!seconds) return null;
+  return new Date(seconds * 1000);
+}
+
+function tierFromLookupKey(key: string | null | undefined): TierName | null {
+  if (!key) return null;
+  for (const tier of TIER_ORDER) {
+    if (key.startsWith(`agentplain_${tier}_seats_`)) return tier;
+  }
+  return null;
+}
+
+function seatBandFromLookupKey(
+  key: string | null | undefined,
+): PrismaSeatBand | null {
+  if (!key) return null;
+  // Match every (tier, band) shape we issue via lookupKeyFor().
+  for (const tier of TIER_ORDER) {
+    for (const band of [
+      "SEATS_1",
+      "SEATS_2_9",
+      "SEATS_10_24",
+      "SEATS_25_49",
+      "SEATS_50_99",
+    ] as const) {
+      if (key === lookupKeyFor(tier, band)) return band;
+    }
+  }
+  return null;
+}
+
+function verticalTierEnumFromTier(t: TierName): WorkspaceVerticalTier {
+  return t === "regular" ? "REGULAR" : t === "plus" ? "PLUS" : "MAX";
 }

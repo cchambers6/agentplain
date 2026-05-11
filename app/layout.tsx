@@ -25,12 +25,12 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "agentplain — Intelligence. Rooted in reality.",
   description:
-    "A pre-trained AI agent fleet for SMB brokerages. Quietly handles the operations work that pulls owners away from production and recruiting.",
+    "A pre-trained AI agent fleet for professional-services firms. Realty first; mortgage, insurance, property mgmt, title & escrow, recruiting, home services, CPA / tax, law, and RIA on the roadmap.",
   metadataBase: new URL("https://agentplain.com"),
   openGraph: {
     title: "agentplain",
     description:
-      "Intelligence. Rooted in reality. A pre-trained AI agent fleet for small-to-mid brokerages.",
+      "Intelligence. Rooted in reality. A pre-trained AI agent fleet for professional-services firms — realty first.",
     url: "https://agentplain.com",
     siteName: "agentplain",
     type: "website",

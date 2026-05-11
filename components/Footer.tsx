@@ -11,7 +11,8 @@ export default function Footer() {
             Intelligence. Rooted in reality.
           </p>
           <p className="mt-3 max-w-sm text-sm text-slate-soft">
-            A pre-trained agent fleet for small-to-mid brokerages.
+            A pre-trained agent fleet for professional-services firms — realty
+            first.
           </p>
         </div>
 
@@ -19,8 +20,8 @@ export default function Footer() {
           <p className="eyebrow mb-4">Product</p>
           <ul className="space-y-2 text-sm">
             <li>
-              <Link href="/pilot" className="text-ink hover:text-signal">
-                Pilot programs
+              <Link href="/#pricing" className="text-ink hover:text-signal">
+                Pricing
               </Link>
             </li>
             <li>
@@ -61,7 +62,12 @@ export default function Footer() {
           <p className="font-mono tracking-wide">
             © {new Date().getFullYear()} agentplain
           </p>
-          <p className="font-mono tracking-wide">v0 · pilot phase</p>
+          <p className="font-mono tracking-wide">v0 · design partner phase</p>
+        </div>
+        <div className="container-wide pb-5 text-xs text-slate-soft">
+          <p className="font-mono tracking-wide">
+            site reflects current product capabilities; updated 2026-05-11
+          </p>
         </div>
       </div>
     </footer>

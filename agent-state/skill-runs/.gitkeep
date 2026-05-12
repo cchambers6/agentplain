@@ -1,0 +1,5 @@
+# Skill-run JSONL logs are written here by `lib/skills/runner.ts`.
+# This file exists to keep the directory in git before the first
+# WebhookEvent processes — the runner creates the JSONL files on
+# demand. Per `feedback_cold_start_safe_agents.md`: the runner does
+# NOT assume the directory exists; it `mkdir -p`s on every run.

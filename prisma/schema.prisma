@@ -130,6 +130,42 @@ enum CapabilityProposalState {
   SUPERSEDED
 }
 
+// Integration provider taxonomy. GOOGLE = Gmail + Calendar (Phase 1 ships
+// Gmail only). M365 (Outlook + Graph) follows in a separate PR once the
+// Google path is validated on Conner's dogfood inbox. New providers added
+// only after the existing one passes the functional acceptance bar per
+// feedback_integration_acceptance_is_functional.
+enum IntegrationProvider {
+  GOOGLE
+  M365
+}
+
+// Credential lifecycle states. ACTIVE = tokens valid and refresh-eligible.
+// EXPIRED = access token past expiry AND refresh attempt has not yet
+// succeeded; refresh cron tries each fire. REVOKED = customer revoked the
+// grant on the provider side (detected when refresh returns invalid_grant).
+// ERROR = a non-recoverable provider response (e.g. provider returned 4xx
+// other than 401, or a malformed token payload).
+enum IntegrationCredentialStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+  ERROR
+}
+
+// Webhook subscription lifecycle. ACTIVE = subscription created and not
+// near expiry. EXPIRING = within 24h of expires_at; renewal cron picks it
+// up. EXPIRED = past expires_at, renewal failed. RENEWAL_FAILED = last
+// renewal attempt returned a provider error; cron will retry. UNSUBSCRIBED
+// = explicit unsubscribe by operator action.
+enum WebhookSubscriptionStatus {
+  ACTIVE
+  EXPIRING
+  EXPIRED
+  RENEWAL_FAILED
+  UNSUBSCRIBED
+}
+
 model User {
   id                   String                  @id @default(uuid()) @db.Uuid
   email                String                  @unique @db.Citext
@@ -148,36 +184,38 @@ model User {
 }
 
 model Workspace {
-  id                   String                  @id @default(uuid()) @db.Uuid
-  name                 String
-  slug                 String                  @unique
+  id                     String                  @id @default(uuid()) @db.Uuid
+  name                   String
+  slug                   String                  @unique
   // Phase 1 audience tier (legacy). See WorkspaceTier comment.
-  tier                 WorkspaceTier           @default(HIGH_TOUCH)
+  tier                   WorkspaceTier           @default(HIGH_TOUCH)
   // Canonical per-seat tier (product_spec.md §13.1). Drives pricing, gating,
   // and the marketing/[vertical] CTAs. Required on every workspace; defaults
   // REGULAR so existing Phase 1 realty workspaces backfill cleanly.
-  verticalTier         WorkspaceVerticalTier   @default(REGULAR)
+  verticalTier           WorkspaceVerticalTier   @default(REGULAR)
   // Vertical the workspace operates in. Required, defaults REAL_ESTATE for
   // Phase 1 backfill. Spec §13.2 lines 444–453.
-  vertical             Vertical                @default(REAL_ESTATE)
-  stateCode            String                  @default("GA") @db.VarChar(2)
-  billingMode          WorkspaceBillingMode    @default(MANUAL_INVOICE)
-  stripeCustomerId     String?                 @unique
-  stripeSubscriptionId String?                 @unique
-  tierPriceUsdMonthly  Int? // hundredths of a dollar; populated for manual invoicing
-  settings             Json                    @default("{}")
-  createdAt            DateTime                @default(now())
-  updatedAt            DateTime                @updatedAt
-  memberships          Membership[]
-  workApprovalItems    WorkApprovalQueueItem[]
-  thresholds           WorkThresholdConfig[]
-  handoffs             HandoffLogEntry[]
-  flags                ComplianceFlag[]
-  capabilityProposals  CapabilityProposal[]
-  invoices             WorkspaceInvoice[]
-  auditEntries         AuditLog[]
-  onboardingState      OnboardingState?
-  subscription         Subscription?
+  vertical               Vertical                @default(REAL_ESTATE)
+  stateCode              String                  @default("GA") @db.VarChar(2)
+  billingMode            WorkspaceBillingMode    @default(MANUAL_INVOICE)
+  stripeCustomerId       String?                 @unique
+  stripeSubscriptionId   String?                 @unique
+  tierPriceUsdMonthly    Int? // hundredths of a dollar; populated for manual invoicing
+  settings               Json                    @default("{}")
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  memberships            Membership[]
+  workApprovalItems      WorkApprovalQueueItem[]
+  thresholds             WorkThresholdConfig[]
+  handoffs               HandoffLogEntry[]
+  flags                  ComplianceFlag[]
+  capabilityProposals    CapabilityProposal[]
+  invoices               WorkspaceInvoice[]
+  auditEntries           AuditLog[]
+  onboardingState        OnboardingState?
+  subscription           Subscription?
+  integrationCredentials IntegrationCredential[]
+  webhookSubscriptions   WebhookSubscription[]
 
   @@index([slug])
   @@index([vertical])
@@ -395,6 +433,132 @@ model AuditLog {
 
   @@index([workspaceId, occurredAt])
   @@index([actorUserId, occurredAt])
+}
+
+// External-system OAuth credential. One row per (workspace, provider, account).
+// Tokens are encrypted at rest via lib/security/encryption.ts (AES-256-GCM,
+// v1 format). The raw access_token / refresh_token NEVER appear in this
+// table or in logs — only the v1:iv:tag:ciphertext blobs.
+//
+// Status taxonomy (IntegrationCredentialStatus):
+//   ACTIVE   — tokens valid; refresh path healthy.
+//   EXPIRED  — access token past expires_at; refresh has not yet succeeded.
+//   REVOKED  — customer revoked grant on the provider side. Detected when
+//              refresh returns invalid_grant (Google) or AADSTS70000 (M365).
+//   ERROR    — provider returned a non-recoverable error; operator triage.
+//
+// Per project_living_portable_architecture + feedback_no_silent_vendor_lock:
+// provider-specific calls live in lib/integrations/<provider>/. This table
+// is provider-neutral on its face; the provider column says which adapter
+// owns the row.
+model IntegrationCredential {
+  id                    String                      @id @default(uuid()) @db.Uuid
+  workspaceId           String                      @db.Uuid
+  provider              IntegrationProvider
+  /// Provider-specific account identifier (Google: sub claim from id_token /
+  /// "me" identifier; M365: oid claim). Stable across logins; immutable.
+  accountId             String
+  /// Provider-reported email at consent time. Used for the operator UI label
+  /// only — authorization decisions read accountId.
+  accountEmail          String
+  /// AES-256-GCM ciphertext of the OAuth access_token.
+  accessTokenEncrypted  String
+  /// AES-256-GCM ciphertext of the OAuth refresh_token. NULL only for short-
+  /// lived flows that never returned one (shouldn't happen for Google with
+  /// access_type=offline + prompt=consent).
+  refreshTokenEncrypted String?
+  /// Granted OAuth scopes, as the provider returned them. Stored verbatim so
+  /// scope drift is observable.
+  scopes                String[]                    @default([])
+  /// UTC instant the current access token expires. Renewal threshold:
+  /// refresh when expires_at is within 5 minutes.
+  expiresAt             DateTime
+  /// UTC instant of the most recent successful refresh. NULL until first
+  /// refresh succeeds.
+  lastRefreshedAt       DateTime?
+  status                IntegrationCredentialStatus @default(ACTIVE)
+  createdAt             DateTime                    @default(now())
+  updatedAt             DateTime                    @updatedAt
+  workspace             Workspace                   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  webhookSubscriptions  WebhookSubscription[]
+
+  @@unique([workspaceId, provider, accountId])
+  @@index([workspaceId, provider])
+  @@index([status, expiresAt])
+}
+
+// Live webhook subscription on the provider side. For Google Gmail this is
+// a users.watch result; for M365 it'd be a Graph subscription. Each
+// subscription belongs to exactly one IntegrationCredential — that's the
+// credential whose tokens authenticated the watch call.
+//
+// Renewal model (Gmail): users.watch returns historyId + expiration (7 days
+// per https://developers.google.com/workspace/gmail/api/guides/push as of
+// 2026-05-11). Renewal = re-call users.watch before expiration; reuses the
+// same topic. The cron in lib/inngest/functions/integration-renewal-sweep.ts
+// sweeps rows with expires_at < now() + 24h and re-watches.
+model WebhookSubscription {
+  id                      String                    @id @default(uuid()) @db.Uuid
+  workspaceId             String                    @db.Uuid
+  integrationCredentialId String                    @db.Uuid
+  provider                IntegrationProvider
+  /// Provider-side subscription identifier. For Gmail this is the historyId
+  /// from users.watch (the cursor for subsequent users.history.list calls).
+  /// For Graph this is the Subscription.id GUID.
+  subscriptionId          String
+  /// The resource being watched. For Gmail: the user's "me" mailbox (we
+  /// store the account email here for readability). For Graph: the resource
+  /// path (e.g. "/me/messages").
+  resource                String
+  /// UTC instant the subscription expires. Gmail caps at 7 days from
+  /// users.watch call.
+  expiresAt               DateTime
+  /// The push notification URL Pub/Sub posts to. For Gmail this is the
+  /// Pub/Sub subscription's push endpoint (our app/api/webhooks/google/route).
+  /// For Graph this is the notificationUrl on Graph subscription create.
+  notificationUrl         String
+  /// UTC instant of the most recent successful renewal. NULL until first
+  /// renewal succeeds (the row is created with this NULL on subscribe).
+  lastRenewedAt           DateTime?
+  status                  WebhookSubscriptionStatus @default(ACTIVE)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  workspace               Workspace                 @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  credential              IntegrationCredential     @relation(fields: [integrationCredentialId], references: [id], onDelete: Cascade)
+  events                  WebhookEvent[]
+
+  @@index([workspaceId, provider])
+  @@index([status, expiresAt])
+  @@index([integrationCredentialId])
+}
+
+// Append-only webhook event audit. Every inbound Pub/Sub push lands a row
+// here BEFORE any processing kicks off — write + ACK happens inside the
+// 30-second Pub/Sub ACK deadline; the Inngest event handler picks up the
+// row asynchronously. Per feedback_verify_after_create: the renewal cron
+// and the value-loop skills in PR-C read this table (single source of
+// truth) rather than the in-memory request body.
+//
+// `processed` flips true when the consuming skill in PR-C finishes its
+// pass over the message. PR-B leaves it false and writes nothing further;
+// PR-C closes the loop.
+model WebhookEvent {
+  id             String              @id @default(uuid()) @db.Uuid
+  subscriptionId String              @db.Uuid
+  /// The decoded Pub/Sub message payload as JSON. For Gmail this is the
+  /// {emailAddress, historyId} envelope from Pub/Sub. Raw payload retained
+  /// for replay + audit; never trimmed.
+  rawPayload     Json
+  receivedAt     DateTime            @default(now())
+  processed      Boolean             @default(false)
+  processedAt    DateTime?
+  /// Last error string from a processing attempt. NULL while processed is
+  /// false-and-untried. Populated when a PR-C consumer fails.
+  error          String?
+  subscription   WebhookSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId, receivedAt])
+  @@index([processed, receivedAt])
 }
 
 // Magic-link tokens issued for sign-in. Single-use; consumed on verify.

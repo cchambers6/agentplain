@@ -19,6 +19,8 @@
   "dependencies": {
     "@notionhq/client": "^5.20.0",
     "@prisma/client": "^6.19.3",
+    "google-auth-library": "^9.15.1",
+    "googleapis": "^144.0.0",
     "inngest": "^4.2.6",
     "iron-session": "^8.0.4",
     "next": "14.2.18",

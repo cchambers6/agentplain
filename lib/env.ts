@@ -85,4 +85,16 @@ export const env = {
       .map((e) => e.trim().toLowerCase())
       .filter(Boolean);
   },
+
+  // Google integration (PR-B Gmail OAuth + Pub/Sub).
+  // Setup steps live in docs/operator-integrations-setup.md. Per
+  // feedback_no_prod_secrets_in_dev: use a dev-tier Google Cloud Project
+  // in .env.local; production values in Vercel Production only.
+  googleOAuthClientId: () => optional("GOOGLE_OAUTH_CLIENT_ID"),
+  googleOAuthClientSecret: () => optional("GOOGLE_OAUTH_CLIENT_SECRET"),
+  googlePubsubTopic: () => optional("GOOGLE_PUBSUB_TOPIC"),
+  gmailWebhookOidcAudience: () => optional("GMAIL_WEBHOOK_OIDC_AUDIENCE"),
+  gmailWebhookServiceAccountEmail: () =>
+    optional("GMAIL_WEBHOOK_SERVICE_ACCOUNT_EMAIL"),
+  encryptionKey: () => required("ENCRYPTION_KEY"),
 };

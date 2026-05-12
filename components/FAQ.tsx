@@ -46,7 +46,7 @@ const items: FAQItem[] = [
   },
   {
     q: "Why should anyone believe you?",
-    a: "Four things. (1) We run the same fleet model on ourselves to build the product — the brokerage in production today running ~35 cron-fired agents is the v0 of what we sell. (2) Outside counsel is reviewing the per-vertical compliance corpus. (3) Every claim on this site cites a memory rule we can show you. (4) Every agent action is visible in the workspace — nothing happens behind the curtain.",
+    a: "Four things. (1) We run the same fleet model on ourselves to build the product — the brokerage in production today running ~35 cron-fired agents is a working precursor of what we sell. (2) Outside counsel is reviewing the per-vertical compliance corpus. (3) Every claim on this site cites a memory rule we can show you. (4) Every agent action is visible in the workspace — nothing happens behind the curtain.",
   },
   {
     q: "Is my data safe?",

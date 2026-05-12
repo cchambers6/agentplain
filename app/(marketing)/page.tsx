@@ -58,7 +58,7 @@ const uniques = [
   },
   {
     label: "Built BY agents",
-    body: "The same fleet model we sell builds our own product. The pattern works because we run it on ourselves — a brokerage in production today running ~35 cron-fired agents on daily ops is the v0 we productized.",
+    body: "The same fleet model we sell builds our own product. The pattern works because we run it on ourselves — a brokerage in production today running ~35 cron-fired agents on daily ops is the working precursor we productized.",
   },
   {
     label: "Compliance-first",
@@ -71,7 +71,7 @@ const uniques = [
 const proof = [
   {
     label: "Eat our own cooking",
-    body: "agentplain is built BY a fleet of agents, not a human engineering team. The brokerage running in production today is the v0 of this model — the pattern is real, not theoretical.",
+    body: "agentplain is built BY a fleet of agents, not a human engineering team. The brokerage running in production today is the working precursor of this model — the pattern is real, not theoretical.",
     cite: "project_agentplain_built_by_agents.md",
   },
   {

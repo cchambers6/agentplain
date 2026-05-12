@@ -5,15 +5,15 @@ import { getAllVerticals } from "@/lib/verticals";
 
 // Marketing footer. Brand tokens only.
 // Four-column layout: brand / Verticals / Product / Company.
-// A bottom strip carries the status line (last-updated, build version).
 // Per project_brand_locked.md the wordmark stays lowercase and the tagline
 // `tokens.tagline` is the only top-line subhead allowed.
 //
-// "Last updated" is set at compile time via the BUILD_TIME envvar (Vercel
-// sets VERCEL_GIT_COMMIT_DATE on every build; we fall back to the workspace
-// date for local dev). This avoids the SSR hydration warning that
-// `new Date().toLocaleDateString()` introduced previously.
-const LAST_UPDATED = "2026-05-11";
+// The footer bottom strip carries © + brand-summary line ONLY. Internal
+// product-development metadata (build version, "v0", "status: build",
+// last-updated dates) is banned from customer surfaces per
+// ~/.claude/projects/C--agentplain/memory/feedback_everything_tells_a_story.md
+// — it doesn't answer any visitor's question and surfaces internal language
+// to people who don't know what an agent is yet.
 
 export default function Footer() {
   const verticals = getAllVerticals();
@@ -117,10 +117,7 @@ export default function Footer() {
         <div className="container-wide flex flex-col gap-2 py-5 text-xs text-mute sm:flex-row sm:items-center sm:justify-between">
           <p className="font-mono tracking-wide">© 2026 agentplain</p>
           <p className="font-mono tracking-wide">
-            {tokens.version} · 10 verticals · 3 tiers
-          </p>
-          <p className="font-mono tracking-wide">
-            status: build · last updated {LAST_UPDATED}
+            10 verticals · 3 per-seat tiers · first month free
           </p>
         </div>
       </div>

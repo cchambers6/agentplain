@@ -94,10 +94,10 @@ export default function AboutPage() {
             <p>
               The brokerage running in production today — ~35 cron-fired
               agents covering lead intake, listing coordination, contracts,
-              CRM hygiene, recruiting — is the v0 of this model. We've been
-              running the pattern on ourselves long enough to know it works,
-              and long enough to know where the human still has to decide.
-              agentplain productizes that.
+              CRM hygiene, recruiting — is the working precursor of this
+              model. We've been running the pattern on ourselves long enough
+              to know it works, and long enough to know where the human still
+              has to decide. agentplain productizes that.
             </p>
           </div>
         </div>
@@ -171,9 +171,8 @@ export default function AboutPage() {
             {tokens.tagline}
           </h2>
           <p className="mt-6 max-w-2xl text-paper/75">
-            First month free across every tier. Month-to-month. Cancel
-            anytime. By month two, the fleet has either earned its seat or it
-            hasn&apos;t.
+            First month free. Month-to-month. Cancel anytime. By month two,
+            the fleet has either earned its seat or it hasn&apos;t.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Link

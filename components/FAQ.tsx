@@ -38,15 +38,15 @@ const items: FAQItem[] = [
   },
   {
     q: "How does pricing work?",
-    a: "Three tiers, per-seat, month-to-month. Regular: $199 → $99 (solo to 50–99 seats). Plus: $299 → $199. Max: $499 → $299. First month free across every tier. Month 2 onward, you pay your tier's per-seat rate. Cancel anytime from your billing settings. No annual contract, no pilot fees, no setup charges.",
+    a: "One plan, per-seat, month-to-month. $199 solo, sliding to $179 (2–9 seats), $149 (10–24), $119 (25–49), $99 (50–99). First month free. Month 2 onward you pay your seat band's rate. Cancel anytime from your billing settings. No annual contract, no pilot fees, no setup charges. Anything beyond plug-and-play — bespoke compliance, white-label, dedicated success, 100+ seats — is a Custom engagement scoped per customer on /custom.",
   },
   {
     q: "What's the ROI math?",
-    a: "Value delivered per practitioner runs $2,900–$10,600/mo on the Regular tier, $4,500–$15,000/mo on Plus, $8,000–$33,000/mo on Max — hours saved × your productive-hour rate, plus mistakes avoided, plus deals closed faster. Against per-seat subscription cost, the ROI range across all three tiers is 15x to 110x. Run your own numbers in the calculator on the pricing section.",
+    a: "Value delivered per practitioner runs $2,900–$10,600/mo — hours saved × your productive-hour rate, plus mistakes avoided, plus deals closed faster. Against the $199 → $99 per-seat subscription cost, the typical ROI multiple is 15x to 110x. Run your own numbers in the calculator on the pricing page.",
   },
   {
     q: "Why should anyone believe you?",
-    a: "Four things. (1) We run the same fleet model on ourselves to build the product — the brokerage in production today running ~35 cron-fired agents is the v0 of what we sell. (2) Outside counsel is reviewing the per-vertical compliance corpus. (3) Every claim on this site cites a memory rule we can show you. (4) Every agent action is visible in the workspace — nothing happens behind the curtain.",
+    a: "Four things. (1) We run the same fleet model on ourselves to build the product — the brokerage in production today running ~35 cron-fired agents is a working precursor of what we sell. (2) Outside counsel is reviewing the per-vertical compliance corpus. (3) Every claim on this site cites a memory rule we can show you. (4) Every agent action is visible in the workspace — nothing happens behind the curtain.",
   },
   {
     q: "Is my data safe?",

@@ -17,9 +17,10 @@ export default function VerticalCta({
           Run your {content.name.toLowerCase()} practice on the fleet.
         </h2>
         <p className="mt-6 max-w-2xl text-paper/75">
-          First month free across every tier. Month-to-month from day one — no
-          annual contract, no auto-renew. The fleet drafts; you decide what
-          ships. Cancel anytime from your billing settings.
+          First month free. Month-to-month from day one — no annual contract,
+          no auto-renew. The fleet drafts; you decide what ships. Cancel
+          anytime from your billing settings. Need more depth than Regular
+          covers plug-and-play? We scope per customer — build with us.
         </p>
         <div className="mt-10 flex flex-wrap gap-4">
           <Link
@@ -29,14 +30,12 @@ export default function VerticalCta({
             Start free trial
             <span aria-hidden>→</span>
           </Link>
-          <a
-            href={`mailto:hello@agentplain.com?subject=${encodeURIComponent(
-              `agentplain — ${content.name}`,
-            )}`}
+          <Link
+            href="/custom"
             className="inline-flex items-center justify-center gap-2 border border-paper/40 bg-transparent px-6 py-3 text-sm font-medium text-paper transition hover:border-paper"
           >
-            Talk to the operator
-          </a>
+            Build with us
+          </Link>
         </div>
       </div>
     </section>

@@ -19,25 +19,17 @@ import { tokens } from "@/lib/brand/tokens";
 //
 // Sources for every concrete claim are footnoted with their memory file.
 
-const tierTeasers = [
-  {
-    tier: "Regular",
-    perSeat: "$199 → $99",
-    summary:
-      "Real estate, mortgage, insurance, property management, title & escrow, recruiting.",
-  },
-  {
-    tier: "Plus",
-    perSeat: "$299 → $199",
-    summary:
-      "Home services contractors and CPA / tax firms — deeper integration surface and higher per-job value.",
-  },
-  {
-    tier: "Max",
-    perSeat: "$499 → $299",
-    summary:
-      "Law firms and RIA / wealth practices — compliance-heavy work where billable-hour or fiduciary economics back the ceiling.",
-  },
+// Per-seat ladder from `project_stripe_both_surfaces.md` (simplified
+// 2026-05-12 — single productized tier; anything beyond Regular routes to
+// /custom). The five-band ladder is the only pricing surface on the homepage;
+// 3-column tier comparisons are banned per the same rule because they imply
+// Plus/Max are buyable, and they aren't.
+const ladderBands = [
+  { band: "Solo (1 seat)", price: "$199" },
+  { band: "2–9 seats", price: "$179" },
+  { band: "10–24 seats", price: "$149" },
+  { band: "25–49 seats", price: "$119" },
+  { band: "50–99 seats", price: "$99" },
 ];
 
 // Q4 — what makes agentplain unique. Five points pulled verbatim from the
@@ -58,7 +50,7 @@ const uniques = [
   },
   {
     label: "Built BY agents",
-    body: "The same fleet model we sell builds our own product. The pattern works because we run it on ourselves — a brokerage in production today running ~35 cron-fired agents on daily ops is the v0 we productized.",
+    body: "The same fleet model we sell builds our own product. The pattern works because we run it on ourselves — a brokerage in production today running ~35 cron-fired agents on daily ops is the working precursor we productized.",
   },
   {
     label: "Compliance-first",
@@ -71,7 +63,7 @@ const uniques = [
 const proof = [
   {
     label: "Eat our own cooking",
-    body: "agentplain is built BY a fleet of agents, not a human engineering team. The brokerage running in production today is the v0 of this model — the pattern is real, not theoretical.",
+    body: "agentplain is built BY a fleet of agents, not a human engineering team. The brokerage running in production today is the working precursor of this model — the pattern is real, not theoretical.",
     cite: "project_agentplain_built_by_agents.md",
   },
   {
@@ -81,7 +73,7 @@ const proof = [
   },
   {
     label: "ROI math, not vibes",
-    body: "Value math anchored at $2,900–$10,600/mo per practitioner against $99–$499/mo subscription — 15x to 110x ROI range, every claim traceable to a memory rule.",
+    body: "Value math anchored at $2,900–$10,600/mo per practitioner against $99–$199/mo per-seat subscription — typical ROI multiple 15x to 110x, every claim traceable to a memory rule.",
     cite: "project_pricing_value_anchor.md",
   },
   {
@@ -144,9 +136,9 @@ export default function HomePage() {
                   <span className="font-display">{v.name}</span>
                   <span
                     aria-hidden
-                    className="font-mono text-[10px] tracking-eyebrow uppercase text-mute group-hover:text-clay"
+                    className="font-mono text-[10px] tracking-eyebrow text-mute group-hover:text-clay"
                   >
-                    {v.tier} →
+                    →
                   </span>
                 </Link>
               ))}
@@ -317,39 +309,53 @@ export default function HomePage() {
         tone="deep"
         eyebrow="Pricing + ROI"
         title="Affordable access to enterprise-grade tools."
-        intro="That's the vision — and the calculator below is the math. Per-seat subscription, month-to-month from day one, first month free across all three tiers. Enter your own hours and hourly rate; the ROI multiple is yours to audit."
+        intro="That's the vision — and the calculator below is the math. One plan, per-seat, month-to-month, first month free. Enter your own hours and hourly rate; the ROI multiple is yours to audit."
       >
         <RoiCalculator />
 
-        <div className="mt-10 grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-3">
-          {tierTeasers.map((t) => (
-            <div key={t.tier} className="bg-paper p-6 md:p-7">
-              <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
-                {t.tier} tier
+        <div className="mt-10 grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-5">
+          {ladderBands.map((row) => (
+            <div key={row.band} className="bg-paper p-5">
+              <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                {row.band}
               </p>
-              <p className="mt-2 font-display text-3xl leading-none text-ink">
-                {t.perSeat}
+              <p className="mt-3 font-display text-3xl leading-none text-ink">
+                {row.price}
               </p>
-              <p className="mt-2 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-                per seat · solo → 50-99 seats
-              </p>
-              <p className="mt-4 text-[14px] leading-relaxed text-ink-soft">
-                {t.summary}
+              <p className="mt-1 text-[12px] leading-relaxed text-mute">
+                per seat / mo
               </p>
             </div>
           ))}
         </div>
 
-        <div className="mt-10 max-w-3xl border-t border-rule pt-8">
-          <p className="eyebrow mb-3">What&apos;s the same across all three tiers</p>
-          <ul className="grid gap-2 text-[15px] leading-relaxed text-ink-soft sm:grid-cols-2">
-            <li>— First month free; month-to-month after</li>
-            <li>— Human review on every customer-facing output</li>
-            <li>— Liability for licensed activities stays with you</li>
-            <li>— Weekly outcome digest</li>
-            <li>— No data resold, no client list retained</li>
-            <li>— You own the work product</li>
-          </ul>
+        <div className="mt-10 grid gap-8 md:grid-cols-[2fr_1fr]">
+          <div className="max-w-prose">
+            <p className="eyebrow mb-3">What ships with every seat</p>
+            <ul className="grid gap-2 text-[15px] leading-relaxed text-ink-soft sm:grid-cols-2">
+              <li>— First month free; month-to-month after</li>
+              <li>— Human review on every customer-facing output</li>
+              <li>— Liability for licensed activities stays with you</li>
+              <li>— Weekly outcome digest</li>
+              <li>— No data resold, no client list retained</li>
+              <li>— You own the work product</li>
+            </ul>
+          </div>
+
+          <div className="border-l border-rule pl-6">
+            <p className="eyebrow mb-3">Need more depth?</p>
+            <p className="text-[15px] leading-relaxed text-ink-soft">
+              Bespoke compliance corpus, white-label, dedicated success,
+              custom integration, 100+ seats — anything Regular doesn&apos;t
+              cover plug-and-play, we scope as a Custom engagement.
+            </p>
+            <Link
+              href="/custom"
+              className="mt-4 inline-flex items-center gap-2 text-ink underline"
+            >
+              Build with us →
+            </Link>
+          </div>
         </div>
       </Section>
 
@@ -402,9 +408,9 @@ export default function HomePage() {
             </span>
           </p>
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-paper/75">
-            First month free across every tier. Month-to-month from day one.
-            Cancel anytime. By the time you'd pay for month two, the fleet has
-            either earned its seat or it hasn't.
+            First month free. Month-to-month from day one. Cancel anytime. By
+            the time you&apos;d pay for month two, the fleet has either earned
+            its seat or it hasn&apos;t.
           </p>
 
           <div className="mt-10 flex flex-wrap gap-4">

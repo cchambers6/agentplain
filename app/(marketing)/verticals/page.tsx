@@ -7,20 +7,18 @@ import { getAllVerticals } from "@/lib/verticals";
 export const metadata: Metadata = {
   title: "Verticals — agentplain",
   description:
-    "agentplain is built for ten locked verticals across three per-seat pricing tiers. Real estate is in design partner build today; the other nine have ratified ICP fit and committed integration roadmaps.",
+    "agentplain is built for ten locked verticals. One per-seat plan ($199 → $99) covers every vertical plug-and-play; anything beyond is a Custom engagement we scope per customer.",
 };
 
-const TIER_LABEL: Record<string, string> = {
-  regular: "Regular · $199 → $99 per seat",
-  plus: "Plus · $299 → $199 per seat",
-  max: "Max · $499 → $299 per seat",
-};
+// Verticals index page. Anchored to the simplified pricing model per
+// `project_stripe_both_surfaces.md` (locked 2026-05-12 — single productized
+// tier; anything beyond Regular routes to /custom). Per
+// `feedback_everything_tells_a_story.md`, every element earns its place;
+// the 3-tier section grid (deleted 2026-05-12) implied Plus/Max were
+// productized buyable surfaces, which they are not.
 
 export default function VerticalsIndexPage() {
   const all = getAllVerticals();
-  const regular = all.filter((v) => v.tier === "regular");
-  const plus = all.filter((v) => v.tier === "plus");
-  const max = all.filter((v) => v.tier === "max");
 
   return (
     <>
@@ -39,35 +37,40 @@ export default function VerticalsIndexPage() {
             the recurring ops, the human keeps the relationships.
           </p>
           <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-mute">
-            Affordable access · per-seat · month-to-month · first month free
-            across every tier.
+            One per-seat plan covers every vertical. $199 solo sliding to $99
+            at 50+ seats. First month free. Month-to-month.
           </p>
         </div>
       </section>
 
       <Section
-        eyebrow={TIER_LABEL.regular}
-        title="Regular tier — $199 → $99 per seat."
-        intro="Foundation per-seat tier for small / mid-size owner-operator practices: real estate, mortgage, insurance, property management, title & escrow, recruiting. Solo seat $199/mo; sliding to $99/mo at 50–99 seats."
+        eyebrow="The ten"
+        title="Pick your vertical."
+        intro="Every vertical lands at the same Regular per-seat plan. Vertical-aware compliance corpus, JTBD tables, and integration roadmap are scoped per vertical — the price isn't."
       >
-        <Grid items={regular} />
+        <Grid items={all} />
       </Section>
 
       <Section
         tone="deep"
-        eyebrow={TIER_LABEL.plus}
-        title="Plus tier — $299 → $199 per seat."
-        intro="Growth per-seat tier for verticals with deeper integration surface or higher per-job value: home services contractors and CPA / tax prep firms. Solo seat $299/mo; sliding to $199/mo at 50–99 seats."
+        eyebrow="Need more depth?"
+        title="When Regular doesn't cover it, we scope custom."
+        intro="Bespoke compliance corpus, white-label, dedicated success, custom integration to a tool that isn't on the roadmap, 100+ seats. Anything that needs more than plug-and-play, we scope per customer."
       >
-        <Grid items={plus} />
-      </Section>
-
-      <Section
-        eyebrow={TIER_LABEL.max}
-        title="Max tier — $499 → $299 per seat."
-        intro="Scale per-seat tier for high-margin, compliance-heavy practices where billable-hour or fiduciary economics justify the price ceiling: law firms (small / mid-size) and RIA / wealth management. Solo seat $499/mo; sliding to $299/mo at 50–99 seats."
-      >
-        <Grid items={max} />
+        <div className="border border-rule bg-paper p-8 md:p-10">
+          <p className="eyebrow mb-3">Custom engagement</p>
+          <p className="max-w-3xl text-[15px] leading-relaxed text-ink-soft">
+            Starts at $5K. Typical scope $5K–$15K plus $200–$500/mo
+            maintenance. Scoping call, written spec, 4–6 week build, handoff,
+            ongoing maintenance. No surprise charges.
+          </p>
+          <Link
+            href="/custom"
+            className="mt-5 inline-flex items-center gap-2 text-ink underline"
+          >
+            Build with us →
+          </Link>
+        </div>
       </Section>
     </>
   );

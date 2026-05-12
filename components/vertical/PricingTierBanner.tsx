@@ -1,41 +1,27 @@
+import Link from "next/link";
 import Section from "@/components/Section";
 import type { VerticalTier } from "@/lib/verticals/types";
 
-// Pricing per `project_stripe_both_surfaces.md` (three-tier per-seat ladder,
-// pilot SKUs deprecated 2026-05-09). Each tier has a per-seat ladder that
-// slides by seat count; first month is free across all three tiers.
-const TIER_LADDER: Record<
-  VerticalTier,
-  {
-    name: string;
-    solo: string;
-    floor: string;
-    floorBand: string;
-  }
-> = {
-  regular: {
-    name: "Regular",
-    solo: "$199",
-    floor: "$99",
-    floorBand: "50–99 seats",
-  },
-  plus: {
-    name: "Plus",
-    solo: "$299",
-    floor: "$199",
-    floorBand: "50–99 seats",
-  },
-  max: {
-    name: "Max",
-    solo: "$499",
-    floor: "$299",
-    floorBand: "50–99 seats",
-  },
-};
+// Pricing surface on a vertical landing page. Anchored to the single
+// productized Regular tier per `project_stripe_both_surfaces.md` (simplified
+// 2026-05-12 — Plus/Max are no longer surfaced; anything beyond Regular
+// routes to /custom).
+//
+// The `tier` prop is kept in the API surface for backward-compat with the
+// per-vertical content schema (`lib/verticals/types.ts`), but it does NOT
+// drive different UI per vertical anymore — every vertical lands at Regular.
+// Schema-side Plus/Max remain valid (the Tier enum on disk is unchanged) so
+// that future productization doesn't require a schema migration.
 
-export default function PricingTierBanner({ tier }: { tier: VerticalTier }) {
-  const active = TIER_LADDER[tier];
+const LADDER = [
+  { band: "Solo (1 seat)", price: "$199" },
+  { band: "2–9 seats", price: "$179" },
+  { band: "10–24 seats", price: "$149" },
+  { band: "25–49 seats", price: "$119" },
+  { band: "50–99 seats", price: "$99" },
+];
 
+export default function PricingTierBanner(_props: { tier?: VerticalTier }) {
   return (
     <Section
       id="pricing"
@@ -43,82 +29,45 @@ export default function PricingTierBanner({ tier }: { tier: VerticalTier }) {
       eyebrow="Pricing"
       title={
         <>
-          {active.name} tier · per seat ·{" "}
-          <span className="text-clay">{active.solo}</span> sliding to{" "}
-          <span className="text-clay">{active.floor}</span>
+          Per-seat ·{" "}
+          <span className="text-clay">$199</span> solo, sliding to{" "}
+          <span className="text-clay">$99</span> at 50+ seats
         </>
       }
-      intro="Three tiers, per seat, month-to-month. First month is free across every tier. Card on file at sign-up, month 1 = $0, month 2 onward at your tier's per-seat rate. Cancel any time."
+      intro="One plan. Plug-and-play. First month is free; card on file at sign-up; month 1 = $0, month 2 onward at your seat band's rate. Cancel any time. Affordable access to enterprise-grade tools — that's the vision."
     >
-      <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-3">
-        <Cell
-          label="Regular"
-          solo="$199"
-          floor="$99"
-          band="50–99 seats"
-          active={tier === "regular"}
-        />
-        <Cell
-          label="Plus"
-          solo="$299"
-          floor="$199"
-          band="50–99 seats"
-          active={tier === "plus"}
-        />
-        <Cell
-          label="Max"
-          solo="$499"
-          floor="$299"
-          band="50–99 seats"
-          active={tier === "max"}
-        />
+      <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-5">
+        {LADDER.map((row) => (
+          <div key={row.band} className="bg-paper p-5">
+            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+              {row.band}
+            </p>
+            <p className="mt-3 font-display text-3xl leading-none text-ink">
+              {row.price}
+            </p>
+            <p className="mt-1 text-[12px] leading-relaxed text-mute">
+              per seat / mo
+            </p>
+          </div>
+        ))}
       </div>
 
-      <p className="mt-8 max-w-3xl font-mono text-[12px] leading-relaxed text-mute">
-        Source: `project_stripe_both_surfaces.md` (per-seat ladder; pilot SKUs
-        deprecated 2026-05-09). Tier mapping per
-        `project_vertical_tier_mapping.md`. 100+ seats moves to enterprise terms.
+      <div className="mt-8 max-w-3xl border-t border-rule pt-6">
+        <p className="text-[15px] leading-relaxed text-ink-soft">
+          Need something the standard fleet doesn&apos;t do? Bespoke compliance
+          corpus, white-label, dedicated success, custom integration, 100+
+          seats?{" "}
+          <Link href="/custom" className="text-ink underline">
+            Build with us →
+          </Link>
+        </p>
+      </div>
+
+      <p className="mt-6 max-w-3xl font-mono text-[12px] leading-relaxed text-mute">
+        Source: <code className="text-[12px]">project_stripe_both_surfaces.md</code>
+        {" "}
+        (per-seat ladder; simplified to single-tier surfacing 2026-05-12).
       </p>
     </Section>
-  );
-}
-
-function Cell({
-  label,
-  solo,
-  floor,
-  band,
-  active,
-}: {
-  label: string;
-  solo: string;
-  floor: string;
-  band: string;
-  active: boolean;
-}) {
-  const border = active ? "ring-2 ring-inset ring-clay" : "";
-  return (
-    <div className={`bg-paper ${border} p-7`}>
-      <p
-        className={`font-mono text-[11px] tracking-eyebrow uppercase ${
-          active ? "text-clay" : "text-mute"
-        }`}
-      >
-        {label}
-        {active && " · this vertical"}
-      </p>
-      <p className="mt-4 font-display text-3xl leading-none text-ink md:text-4xl">
-        {solo}
-      </p>
-      <p className="mt-2 text-[13px] leading-relaxed text-mute">
-        per seat · solo (1 seat)
-      </p>
-      <p className="mt-4 font-display text-2xl leading-none text-ink-soft">
-        {floor}
-      </p>
-      <p className="mt-2 text-[13px] leading-relaxed text-mute">
-        per seat · {band}
-      </p>
-    </div>
   );
 }

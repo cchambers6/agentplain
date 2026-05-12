@@ -150,4 +150,15 @@ export const cpa: VerticalContent = {
     ],
     plannedWindow: "Q4 2026",
   },
+
+  valueLoopExample: {
+    scenario:
+      "March 17, 5:42pm. Eight days to the corporate-return deadline. 23 clients still missing documents.",
+    before:
+      "Open every TaxDome client file, run the missing-doc checklist, draft individual chase emails ('still need your K-1, your auto-mileage log, your fixed-asset additions...'), keep a running list of who's responded. ~6 hours per evening through deadline week.",
+    after:
+      "The fleet ran the missing-doc checklist across all 23 files, drafted 23 individualized chase emails citing the specific missing items, identified the 4 clients on filing extensions and skipped them, and queued the messages in the partner's review tray.",
+    outcome:
+      "The partner reviews 19 drafts in 35 minutes. By March 18 noon, 17 clients have responded. The partner spends the eight days advising on close cases, not chasing receipts.",
+  },
 };

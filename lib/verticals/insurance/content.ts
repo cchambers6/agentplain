@@ -154,4 +154,15 @@ export const insurance: VerticalContent = {
     ],
     plannedWindow: "Q3 2026",
   },
+
+  valueLoopExample: {
+    scenario:
+      "Renewal week. 47 commercial accounts hit their 60-day renewal window on Monday.",
+    before:
+      "Manually pull each policy in EZLynx, rerate against current carrier appetites, flag the accounts most likely to non-renew or get hit with a premium hike, draft retention outreach for each. ~3 days of producer time.",
+    after:
+      "The fleet rerated all 47 against current pricing, flagged the 9 highest non-renewal risks with a one-line reason each, drafted retention notes in the agency's voice, and queued them for review. Carrier-appetite mismatches are surfaced before the renewal deadline.",
+    outcome:
+      "Three days of work compresses to one morning of review. The producer handles relationships; the fleet handles the rerating.",
+  },
 };

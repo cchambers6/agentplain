@@ -12,7 +12,7 @@ export const realEstate: VerticalContent = {
   tier: "regular",
 
   hero: {
-    eyebrow: "Pin 1 · in pilot · Regular tier",
+    eyebrow: "Regular tier · live with design partners",
     headline: "The operating layer behind the independent brokerage.",
     valueProp:
       "agentplain REPLACES the 8–12 weekly hours a broker-owner spends on coordination work, INTEGRATES with Follow Up Boss, dotloop, FMLS, GAMLS, and Outlook, and AUGMENTS the broker-of-record's review on every customer-facing draft.",
@@ -175,5 +175,16 @@ export const realEstate: VerticalContent = {
       { name: "QuickBooks Online", category: "Accounting" },
     ],
     plannedWindow: "Q3 2026",
+  },
+
+  valueLoopExample: {
+    scenario:
+      "Sarah's counter-offer lands Tuesday 9:14pm. She wakes Wednesday at 6:30am.",
+    before:
+      "Open dotloop, pull the counter, scan the buyer's agent thread, find three comparable closings in MLS, draft a response in Outlook. ~45 minutes before her first showing.",
+    after:
+      "The fleet has already drafted the counter-offer response, summarized the buyer's agent's response history across this transaction, and surfaced three comparable closings within the last 30 days. Sarah reviews, edits one number, signs and sends from dotloop.",
+    outcome:
+      "Four minutes instead of forty-five. The fleet drafts; Sarah's broker-of-record review stays in place; dotloop sends.",
   },
 };

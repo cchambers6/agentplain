@@ -7,6 +7,7 @@ import {
 } from "@/lib/verticals";
 
 import VerticalHero from "@/components/vertical/VerticalHero";
+import ValueLoopExample from "@/components/vertical/ValueLoopExample";
 import JtbdTables from "@/components/vertical/JtbdTables";
 import RoiAnchor from "@/components/vertical/RoiAnchor";
 import ClaimsTriadGrid from "@/components/vertical/ClaimsTriadGrid";
@@ -45,6 +46,12 @@ export default function VerticalPage({
   return (
     <>
       <VerticalHero content={content} />
+      {content.valueLoopExample ? (
+        <ValueLoopExample
+          example={content.valueLoopExample}
+          verticalName={content.name}
+        />
+      ) : null}
       <JtbdTables tables={content.jtbdTables} />
       <RoiAnchor roi={content.roi} />
       <ClaimsTriadGrid claims={content.claims} />

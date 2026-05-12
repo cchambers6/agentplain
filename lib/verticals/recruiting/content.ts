@@ -144,4 +144,15 @@ export const recruiting: VerticalContent = {
     ],
     plannedWindow: "Q3 2026",
   },
+
+  valueLoopExample: {
+    scenario:
+      "Tuesday morning: a senior backend role just opened at a client. Goal — five qualified candidates in pipeline by Friday.",
+    before:
+      "Source on LinkedIn Recruiter, qualify against the JD, draft individualized opening messages, log everything in Bullhorn, follow up the ones who reply. ~12 hours across the week.",
+    after:
+      "The fleet sourced 40 candidates against the JD, enriched them through Apollo, ranked the top 12 by stated-skill match + employer history, drafted 12 substantiated openers (each citing a specific reason from the candidate's record), and queued them for the recruiter's review.",
+    outcome:
+      "The recruiter reviews 12 drafts in 40 minutes, sends 9, and books 5 calls by Friday. The 12 hours becomes 90 minutes.",
+  },
 };

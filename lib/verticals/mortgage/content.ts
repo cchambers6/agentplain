@@ -146,4 +146,15 @@ export const mortgage: VerticalContent = {
     ],
     plannedWindow: "Q3 2026",
   },
+
+  valueLoopExample: {
+    scenario:
+      "Marcus's borrower texts at 11:47pm — 'Rates dropped again, can we relock?'",
+    before:
+      "Pull the loan file in Encompass, check current pricing in Optimal Blue, model the relock cost, draft a comparison email, run the numbers a second time before sending. ~30 minutes on a phone before bed.",
+    after:
+      "The fleet pulls the loan, runs a relock comparison against current pricing, drafts a borrower-ready email with the new monthly payment and the cost-to-relock, and queues it for Marcus's review. The borrower's full thread is summarized at the top.",
+    outcome:
+      "Marcus approves in two taps the next morning. Optimal Blue executes the relock; the borrower keeps the rate without a midnight phone call.",
+  },
 };

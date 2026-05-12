@@ -311,13 +311,14 @@ function ConnectIntegration({
 
       <div className="border border-rule bg-paper-deep p-4 text-[13px] leading-relaxed text-ink-soft">
         <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
-          Phase 1 note
+          What "easy" looks like
         </p>
         <p className="mt-2">
-          Self-serve OAuth lands {plannedWindow}. Today the agentplain team
-          wires your first integration during the onboarding call — reply to
-          our welcome email or click <em>Skip for now</em> to keep moving. The
-          fleet works on manually-entered data while we wire it up.
+          One-click read-only OAuth where it's live. Where it's not yet, the
+          agentplain team wires the connection during your welcome call —
+          reply to the welcome email or click <em>Skip for now</em> to keep
+          moving. The fleet drafts against manually-entered data in the
+          meantime; nothing about the workspace blocks on a connector.
         </p>
       </div>
     </div>

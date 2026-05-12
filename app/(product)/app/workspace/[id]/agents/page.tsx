@@ -41,12 +41,12 @@ export default async function AgentsPage({ params }: PageProps) {
     <div>
       <p className="eyebrow mb-3">Your fleet</p>
       <h1 className="font-display text-3xl text-ink">
-        Seven agents. Each one scoped to one job.
+        Your fleet — each capability scoped to one job.
       </h1>
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
-        Click an agent for its daily loops, recent activity, and the work it
-        has surfaced for review. Enabling and disabling agents is an operator
-        action in Phase 1; reach out if your fleet needs to change.
+        Click any capability for its daily loops, recent activity, and the
+        work it has surfaced for review. Enabling and disabling capabilities
+        is an operator action today; reach out if your fleet should change.
       </p>
 
       <div className="mt-8 grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-3">

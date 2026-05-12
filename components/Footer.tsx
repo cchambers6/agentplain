@@ -26,8 +26,8 @@ export default function Footer() {
             {tokens.tagline}
           </p>
           <p className="mt-3 max-w-sm text-sm text-mute">
-            A pre-trained AI agent fleet for professional-services firms —
-            realty first, nine more on the roadmap.
+            An AI ops fleet for professional services firms. Built for ten
+            verticals — pick yours.
           </p>
         </div>
 
@@ -116,7 +116,7 @@ export default function Footer() {
         <div className="container-wide flex flex-col gap-2 py-5 text-xs text-mute sm:flex-row sm:items-center sm:justify-between">
           <p className="font-mono tracking-wide">© 2026 agentplain</p>
           <p className="font-mono tracking-wide">
-            {tokens.version} · design partner phase
+            {tokens.version} · 10 verticals · 3 tiers
           </p>
           <p className="font-mono tracking-wide">
             status: build · last updated {LAST_UPDATED}

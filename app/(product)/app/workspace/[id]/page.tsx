@@ -163,13 +163,12 @@ function WelcomeStrip({
       <p className="eyebrow mb-2">{greeting}, {firstName}</p>
       <h1 className="font-display text-3xl leading-tight text-ink md:text-4xl">
         {verticalContent
-          ? verticalWelcomeLine(verticalContent)
-          : "Your workspace, ready for the day."}
+          ? `Today's work, ${verticalContent.name.toLowerCase()} edition.`
+          : "Today's work, ready for review."}
       </h1>
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
-        {verticalContent
-          ? verticalContent.hero.valueProp
-          : "The fleet drafts in the background and surfaces work for your review here."}
+        The fleet drafted overnight. You decide what ships. Approve, edit, or
+        reject — your existing tools send.
       </p>
 
       <div className="mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[12px] text-mute">
@@ -224,13 +223,6 @@ function greetingForTimeOfDay(): string {
   if (h < 17) return "Afternoon";
   if (h < 21) return "Evening";
   return "Late";
-}
-
-function verticalWelcomeLine(content: VerticalContent): string {
-  // Pull the headline from the registry. Strip trailing period (we'll add
-  // our own framing punctuation) so it reads as a continuation, not a
-  // verbatim marketing line.
-  return content.hero.headline;
 }
 
 // ─── Section: What's running now ────────────────────────────────────────────

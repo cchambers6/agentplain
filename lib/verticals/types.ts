@@ -100,11 +100,35 @@ export interface IntegrationsSection {
 }
 
 /**
+ * A single concrete value-loop example — the day-in-the-life scenario the
+ * mission rule (`project_agentplain_mission_and_positioning.md`) requires on
+ * every vertical landing page: "one concrete example of the value loop."
+ *
+ * Shape is intentionally compact:
+ * - `scenario` — one-line setup describing the moment (timestamp + actor)
+ * - `before` — what the practitioner did today, in their own systems
+ * - `after`  — what the fleet drafts before the practitioner opens the laptop
+ * - `outcome` — the time / money / friction-reduction this delivers
+ *
+ * Optional today because it was added after the initial 10 content files.
+ * Treat as required for new verticals; populate retroactively on the existing
+ * 10 in the same PR that introduces this type.
+ */
+export interface ValueLoopExample {
+  scenario: string;
+  before: string;
+  after: string;
+  outcome: string;
+}
+
+/**
  * Top-level shape for one vertical's landing page.
  *
  * Renderer contract: every field is required except `jtbdTables[*].draft`
- * (defaults false) and `integration.note`. An empty array is a deliberate
- * statement; null/undefined fields are a content bug.
+ * (defaults false), `integration.note`, and `valueLoopExample` (added in a
+ * later content pass — present on all 10 active verticals, optional for new
+ * additions during their draft phase). An empty array is a deliberate
+ * statement; null/undefined fields on required keys are a content bug.
  */
 export interface VerticalContent {
   /** URL slug — must match the directory name under `lib/verticals/`. */
@@ -135,4 +159,12 @@ export interface VerticalContent {
   claims: ClaimsTriad;
 
   integrations: IntegrationsSection;
+
+  /**
+   * Day-in-the-life value-loop example. Required by
+   * `project_agentplain_mission_and_positioning.md` for every customer-facing
+   * vertical surface; optional in the type for backward-compat with the
+   * initial 10-vertical content drop.
+   */
+  valueLoopExample?: ValueLoopExample;
 }

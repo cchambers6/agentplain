@@ -10,6 +10,7 @@ export const ria: VerticalContent = {
   slug: "ria",
   name: "RIA practices",
   tier: "max",
+  missionSubject: "RIAs and wealth advisors",
 
   hero: {
     eyebrow: "Max tier · fiduciary-aware fleet",
@@ -152,5 +153,16 @@ export const ria: VerticalContent = {
       { name: "Outlook + M365 Graph", category: "Email + calendar" },
     ],
     plannedWindow: "Q1 2027",
+  },
+
+  valueLoopExample: {
+    scenario:
+      "Q1 quarterly review cycle. 87 client portfolios to discuss, 87 prep packets to assemble.",
+    before:
+      "Pull each client's positions in Wealthbox + custodian, run the planning model in eMoney, draft a one-page review summary with the highlights and risks, build the agenda, schedule the call. ~90 minutes per packet × 87 clients.",
+    after:
+      "The fleet pulled positions, ran the planning models, drafted 87 one-page review packets with portfolio drift highlighted, surfaced the 11 clients with planning-assumption changes worth raising, and queued the scheduling. SEC archiveable; every claim cites the source.",
+    outcome:
+      "The advisor reviews 87 drafts in two mornings instead of three weeks. Calls happen on schedule; the advisor walks in with prep, not catch-up.",
   },
 };

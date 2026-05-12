@@ -9,6 +9,7 @@ export const propertyManagement: VerticalContent = {
   slug: "property-management",
   name: "Property management",
   tier: "regular",
+  missionSubject: "property managers and management companies",
 
   hero: {
     eyebrow: "Roadmap vertical · Regular tier",
@@ -144,5 +145,16 @@ export const propertyManagement: VerticalContent = {
       { name: "Twilio Voice (inbound triage receiver)", category: "Telephony — inbound only" },
     ],
     plannedWindow: "Q3 2026",
+  },
+
+  valueLoopExample: {
+    scenario:
+      "Friday 4:53pm. Tenant maintenance request — water heater leaking, unit 4B.",
+    before:
+      "Triage in Buildium, check the work-order history, message the vendor, message the owner, schedule the visit, follow up Monday. ~25 minutes of inbox ping-pong over the weekend.",
+    after:
+      "The fleet classified the request as urgent water damage, pulled unit 4B's three prior plumbing tickets, drafted the vendor dispatch message, drafted the owner notification with the likely cost band, and proposed a Saturday morning slot. Everything queued for the property manager's review.",
+    outcome:
+      "One review, three approvals, one Saturday visit. The manager spends the weekend on owners and tenants, not on coordination.",
   },
 };

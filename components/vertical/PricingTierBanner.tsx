@@ -38,6 +38,7 @@ export default function PricingTierBanner({ tier }: { tier: VerticalTier }) {
 
   return (
     <Section
+      id="pricing"
       tone="deep"
       eyebrow="Pricing"
       title={

@@ -12,6 +12,7 @@ export const homeServices: VerticalContent = {
   slug: "home-services",
   name: "Home services",
   tier: "plus",
+  missionSubject: "home services contractors",
 
   hero: {
     eyebrow: "Recommended Product 3 · Plus tier",
@@ -150,5 +151,16 @@ export const homeServices: VerticalContent = {
       { name: "QuickBooks Online", category: "Accounting" },
     ],
     plannedWindow: "Q4 2026",
+  },
+
+  valueLoopExample: {
+    scenario:
+      "Hailstorm Tuesday night. The phone rings 73 times before Wednesday lunch.",
+    before:
+      "Triage every call, qualify the storm-damage leads, dispatch crews to the highest-margin ones, draft homeowner intake forms, scope insurance estimates, follow up on the ones still deciding. Office manager is on the phone 8 hours straight.",
+    after:
+      "The fleet classified every inbound by storm-zone proximity + roof age, prioritized 41 high-margin leads, drafted intake replies for each with a measurement window from EagleView, queued crew dispatch routes, and surfaced the 14 estimates that need Xactimate scoping. All ranked by close probability.",
+    outcome:
+      "The office manager runs a one-hour review block. Crews dispatch by 1pm. The other 39 leads get drafted follow-up the next morning — none drop.",
   },
 };

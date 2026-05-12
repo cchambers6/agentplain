@@ -12,6 +12,7 @@ export const law: VerticalContent = {
   slug: "law",
   name: "Law firms",
   tier: "max",
+  missionSubject: "law firms and solo practitioners",
 
   hero: {
     eyebrow: "Max tier · narrow competitive window",
@@ -155,5 +156,16 @@ export const law: VerticalContent = {
       { name: "Outlook + M365 Graph", category: "Email + calendar" },
     ],
     plannedWindow: "Q1 2027",
+  },
+
+  valueLoopExample: {
+    scenario:
+      "Civil litigation matter. Discovery production due Friday — 4,200 documents to review and categorize.",
+    before:
+      "Three associates split the review, two days of doc-by-doc privilege and responsiveness coding, partner spot-checks the borderline calls, paralegal builds the privilege log. ~60 billable hours, of which maybe 8 are real judgment.",
+    after:
+      "The fleet ran first-pass responsiveness + privilege coding against the matter's index, flagged 312 borderline calls, drafted the privilege log entries, and cross-referenced against the firm's prior-matter privilege index. Every borderline call cites the rule.",
+    outcome:
+      "Associates review the 312 borderline calls, partner spot-checks 30. Production ships Friday morning. The 60 hours becomes 14 — the 14 spent on actual judgment, not page-by-page coding.",
   },
 };

@@ -1,216 +1,342 @@
 import Link from "next/link";
 import Section from "@/components/Section";
-import AgentCard from "@/components/AgentCard";
-import PricingTier from "@/components/PricingTier";
 import FAQ from "@/components/FAQ";
+import RoiCalculator from "@/components/RoiCalculator";
+import { getAllVerticals, getVerticalContent } from "@/lib/verticals";
+import { tokens } from "@/lib/brand/tokens";
 
-const agents = [
+// Marketing home.
+//
+// Required to answer ALL 9 questions per
+// `project_agentplain_mission_and_positioning.md` (Q1–Q9). Banned framings
+// enforced in this file:
+//   - no specific agent count ("the fleet" is the unit; counts belong to spec docs)
+//   - no real-estate-only on page 1 (all 10 verticals named upfront)
+//   - no "pilot pricing" framing (killed per project_stripe_both_surfaces.md)
+//   - no "AI assistant" framing
+//   - no "automate everything" / "replace your team" framings
+//   - no "coming soon" without date/qualification
+//
+// Sources for every concrete claim are footnoted with their memory file.
+
+const tierTeasers = [
   {
-    index: "01",
-    name: "Listing Coordinator",
-    description:
-      "Walks a new listing from intake form to a draft package your broker reviews before MLS submission. Drafts copy, lists likely-missing disclosures, and flags fair-housing language. In design — first runs Q3 2026.",
+    tier: "Regular",
+    perSeat: "$199 → $99",
+    summary:
+      "Real estate, mortgage, insurance, property management, title & escrow, recruiting.",
   },
   {
-    index: "02",
-    name: "Buyer Inquiry Router",
-    description:
-      "Classifies inbound buyer inquiries by intent and attaches context for the right human in your office. Routes by your rules, not by a free-text prompt. Inbox + CRM connectors — coming Q3 2026.",
+    tier: "Plus",
+    perSeat: "$299 → $199",
+    summary:
+      "Home services contractors and CPA / tax firms — deeper integration surface and higher per-job value.",
   },
   {
-    index: "03",
-    name: "Showing Scheduler",
-    description:
-      "Drafts showing-coordination messages for the buyer, the buyer's agent, and the listing agent. Tracks the back-and-forth and surfaces conflicts for a human reviewer — your existing scheduling tool sends and confirms.",
-  },
-  {
-    index: "04",
-    name: "Compliance Sentinel",
-    description:
-      "Reviews customer-facing drafts and listing copy for fair-housing language, disclosure gaps, and broker-of-record requirements. Surfaces issues before they reach the consumer.",
-  },
-  {
-    index: "05",
-    name: "CRM Hygiene",
-    description:
-      "Drafts a weekly CRM-hygiene digest: likely duplicates, phone/address normalization candidates, and stale records to retire. Your operator applies the changes inside your CRM. CRM integration — coming Q3 2026.",
-  },
-  {
-    index: "06",
-    name: "Production Reporter",
-    description:
-      "Drafts production reports — agent-by-agent, week over week — from the activity data you export. Variance commentary written by the agent, reviewed by you. Direct CRM/MLS data pull — coming Q3 2026.",
-  },
-  {
-    index: "07",
-    name: "Recruiter Assistant",
-    description:
-      "Researches local agents who fit your brokerage profile, drafts outbound openers, and tracks the pipeline. The recruiting work owners say they will do and rarely have time for.",
+    tier: "Max",
+    perSeat: "$499 → $299",
+    summary:
+      "Law firms and RIA / wealth practices — compliance-heavy work where billable-hour or fiduciary economics back the ceiling.",
   },
 ];
 
-const pricing = [
+// Q4 — what makes agentplain unique. Five points pulled verbatim from the
+// mission rule (Vertical-aware / Control / Integrates / Built BY agents /
+// Compliance-first).
+const uniques = [
   {
-    name: "Regular",
-    price: "$199",
-    cadence: "per seat · month-to-month",
-    positioning:
-      "For realty, mortgage, insurance, property management, title & escrow, and recruiting.",
-    includes: [
-      "Per-seat ladder: $199 (solo) sliding to $99 (50–99 seats)",
-      "Month-to-month from day one — no annual contract",
-      "First month free across all three tiers",
-      "Weekly outcome digest: leads routed, listings prepped, hours returned",
-      "Human review on every customer-facing output",
-    ],
-    excludes: [
-      "Live OAuth into CRM, inbox, and MLS (coming Q3 2026)",
-      "Compliance-grade gates beyond fair-housing/RESPA basics",
-    ],
+    label: "Vertical-aware",
+    body: "A real-estate agentplain knows MLS workflows, fair-housing copy, broker-of-record rules. A CPA agentplain knows tax-prep deadlines and e-file conventions. Each vertical ships with its own JTBD table and compliance corpus — generic AI tools don't.",
   },
   {
-    name: "Plus",
-    price: "$299",
-    cadence: "per seat · month-to-month",
-    positioning:
-      "For home-services contractors (HVAC, roofing, plumbing) and CPA / tax-prep firms.",
-    includes: [
-      "Per-seat ladder: $299 (solo) sliding to $199 (50–99 seats)",
-      "Month-to-month from day one — no annual contract",
-      "First month free across all three tiers",
-      "Vertical-specific drafting prompts and review checklists",
-      "Human review on every customer-facing output",
-    ],
-    excludes: [
-      "Live OAuth into CRM, inbox, and MLS (coming Q3 2026)",
-      "On-site implementation",
-    ],
-    featured: true,
+    label: "You stay in control",
+    body: "The fleet drafts and proposes; it never auto-sends, never moves money, never makes commitments. Every customer-facing output queues for your review. Your existing CRM and inbox handle every send.",
   },
   {
-    name: "Max",
-    price: "$499",
-    cadence: "per seat · month-to-month",
-    positioning:
-      "For small / mid-size law firms and RIA / wealth-management practices.",
-    includes: [
-      "Per-seat ladder: $499 (solo) sliding to $299 (50–99 seats)",
-      "Month-to-month from day one — no annual contract",
-      "First month free across all three tiers",
-      "Compliance archive (SEC/FINRA-style retention) on the roadmap",
-      "Human review on every customer-facing output",
-    ],
-    excludes: [
-      "Live OAuth into CRM, inbox, and MLS (coming Q3 2026)",
-      "Custom agent development beyond the realty fleet",
-    ],
+    label: "Integrates, not replaces",
+    body: "Sits on top of the tools you already pay for — your CRM, your inbox, your transaction system, your accounting. No migration. The fleet replaces the manual work that lives between them.",
+  },
+  {
+    label: "Built BY agents",
+    body: "The same fleet model we sell builds our own product. The pattern works because we run it on ourselves — a brokerage in production today running ~35 cron-fired agents on daily ops is the v0 we productized.",
+  },
+  {
+    label: "Compliance-first",
+    body: "Per-vertical compliance corpus, counsel-reviewed (TCPA, RESPA, fair-housing for realty; analog corpuses for the other nine). Not bolted on after the marketing site went up.",
+  },
+];
+
+// Q6 — proof points. Each item must cite a memory rule or a concrete artifact.
+// "Why should anyone believe us?"
+const proof = [
+  {
+    label: "Eat our own cooking",
+    body: "agentplain is built BY a fleet of agents, not a human engineering team. The brokerage running in production today is the v0 of this model — the pattern is real, not theoretical.",
+    cite: "project_agentplain_built_by_agents.md",
+  },
+  {
+    label: "Counsel-reviewed corpus",
+    body: "Outside counsel is reviewing the broker-of-record term sheet, GA TCPA + RESPA compliance corpus. When counsel returns we'll name them publicly; until then the corpus is gated, not vapor.",
+    cite: "project_counsel_engaged.md",
+  },
+  {
+    label: "ROI math, not vibes",
+    body: "Value math anchored at $2,900–$10,600/mo per practitioner against $99–$499/mo subscription — 15x to 110x ROI range, every claim traceable to a memory rule.",
+    cite: "project_pricing_value_anchor.md",
+  },
+  {
+    label: "Open feedback loop",
+    body: "Every agent action is visible in the workspace. Nothing happens behind the curtain — handoffs, drafts, compliance flags, all auditable inside the product.",
+    cite: "project_no_outbound_architecture.md",
   },
 ];
 
 export default function HomePage() {
+  // All ten verticals named on page 1 per the mission rule. Real estate is
+  // one of ten — never the only one mentioned upfront.
+  const verticals = getAllVerticals();
+  const realEstateExample = getVerticalContent("real-estate")?.valueLoopExample;
+
   return (
     <>
-      {/* HERO */}
+      {/* HERO — wordmark + tagline + locked mission line + all 10 verticals */}
       <section className="border-b border-rule bg-paper">
-        <div className="container-wide pb-24 pt-20 md:pb-32 md:pt-28">
-          <p className="eyebrow mb-6">v0 · design partner phase · realty first</p>
-          <h1 className="max-w-4xl font-display text-5xl leading-[1.05] text-ink sm:text-6xl md:text-[5.5rem] md:leading-[1.02]">
-            Intelligence.
-            <br />
-            <span className="text-clay">Rooted in reality.</span>
+        <div className="container-wide pb-24 pt-20 md:pb-28 md:pt-24">
+          {/* Wordmark-and-tagline lockup. The wordmark is rendered by the
+              header logo above; this hero echoes the brand thesis line. */}
+          <p className="font-display text-base leading-snug text-clay md:text-lg">
+            {tokens.tagline}
+          </p>
+          <h1 className="mt-6 max-w-[58rem] font-display text-4xl leading-[1.08] text-ink sm:text-5xl md:text-[4.5rem] md:leading-[1.04]">
+            We lift up{" "}
+            <span className="text-clay">local businesses</span> by doing the
+            work that takes their time and money away from the people they
+            serve.
           </h1>
-          <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft md:text-xl">
-            agentplain is a pre-trained AI agent fleet for professional-services
-            firms — realty first. Seven agents are scoped for the operational
-            work that keeps owners awake: listing intake, buyer routing,
-            compliance review, CRM hygiene, production reporting, recruiting.
-            The fleet is in design partner build today; first runs with customer
-            data are scheduled for Q3 2026.
+          <p className="mt-8 max-w-3xl text-lg leading-relaxed text-ink-soft md:text-xl">
+            {tokens.wordmark} is a fleet of capable AI partners that runs
+            inside your business. The fleet reads from your email, calendar,
+            CRM, and documents, categorizes what's important, drafts what
+            you'd otherwise type, schedules what needs scheduling, and
+            coordinates across threads. You stay in control: the fleet drafts
+            and proposes; you approve and send.
+          </p>
+          {/* Supporting copy from Conner's first-pass mission articulation —
+              preserved per the canonical rule as useful supporting framing. */}
+          <p className="mt-4 max-w-3xl text-[15px] leading-relaxed text-mute">
+            More relationship building. More of the work you enjoy. Less of
+            the work that takes your time and money away from the people you
+            serve.
           </p>
 
-          <div className="mt-10 flex flex-wrap items-center gap-4">
-            <Link href="/about" className="btn-primary">
-              How it works
-              <span aria-hidden>→</span>
-            </Link>
-            <a
-              href="mailto:hello@agentplain.com?subject=Book%20a%20call"
-              className="btn-secondary"
-            >
-              Book a call
-              <span aria-hidden>→</span>
-            </a>
+          {/* All 10 verticals as a chip row */}
+          <div className="mt-10">
+            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+              Built for ten kinds of local business — pick yours
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {verticals.map((v) => (
+                <Link
+                  key={v.slug}
+                  href={`/${v.slug}`}
+                  className="group inline-flex items-center gap-2 border border-rule bg-paper px-3 py-2 text-sm text-ink transition hover:border-ink hover:bg-paper-deep"
+                >
+                  <span className="font-display">{v.name}</span>
+                  <span
+                    aria-hidden
+                    className="font-mono text-[10px] tracking-eyebrow uppercase text-mute group-hover:text-clay"
+                  >
+                    {v.tier} →
+                  </span>
+                </Link>
+              ))}
+            </div>
           </div>
 
-          <div className="mt-16 grid max-w-3xl gap-6 border-t border-rule pt-8 sm:grid-cols-3">
-            <Stat label="Agents in design (realty fleet)" value="7" />
-            <Stat label="First month" value="Free" />
-            <Stat label="Vertical at v0" value="Realty" />
+          <div className="mt-10 flex flex-wrap items-center gap-4">
+            <Link href="/app/sign-up" className="btn-primary">
+              Start free trial
+              <span aria-hidden>→</span>
+            </Link>
+            <Link href="#how" className="btn-secondary">
+              See how it works
+              <span aria-hidden>→</span>
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* WHAT AGENTPLAIN DOES */}
+      {/* Q1 — Why do we exist? */}
       <Section
-        eyebrow="What agentplain does"
-        title="A small fleet, doing the work professional-services firms keep deferring."
-        intro="Three things, on purpose. We integrate with the CRM, MLS, and inbox you already pay for — we don't ask you to migrate. Then we replace the manual work that lives between them. No new dashboard for your team to maintain."
+        eyebrow="Why we exist"
+        title="Local business owners spend most of their week on the work they don't love."
+        intro="Email triage, copying data between tools, drafting boilerplate, scheduling, status updates — 60–70% of the week, in most surveys. The work that built the business in the first place — client relationships, judgment calls, growing the book — gets the leftover time."
       >
-        <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-3">
-          <Pillar
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
+          <div className="bg-paper p-8 md:p-10">
+            <p className="font-mono text-[11px] tracking-eyebrow text-mute">
+              The status quo
+            </p>
+            <p className="mt-4 max-w-prose text-[15px] leading-relaxed text-ink-soft">
+              The CRM nags. The compliance flag fires after the draft goes out.
+              The lead routes to whoever opens the inbox first. The production
+              report happens twice a year because nobody has time. The owner
+              answers everything because nobody else can keep the threads
+              straight.
+            </p>
+          </div>
+          <div className="bg-paper p-8 md:p-10">
+            <p className="font-mono text-[11px] tracking-eyebrow text-clay">
+              The inversion agentplain delivers
+            </p>
+            <p className="mt-4 max-w-prose text-[15px] leading-relaxed text-ink">
+              The fleet does the systematic work. The practitioner does the
+              relationship work. Solo practitioners compete on operational
+              depth. Mid-size firms compete on agility. The leveling effect is
+              the long-term thesis.
+            </p>
+          </div>
+        </div>
+      </Section>
+
+      {/* Q3 — What is the app + Q5 How easy is it to use? */}
+      <Section
+        id="how"
+        tone="deep"
+        eyebrow="How it works"
+        title="Three steps. Then the fleet drafts every morning."
+        intro="Sign up free, pick your vertical, connect your first tool — Gmail, Outlook, your CRM — and see the fleet's first drafts within minutes. No setup wizards that span days; no implementation services package."
+      >
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-3">
+          <Step
             number="01"
-            title="A pre-trained agent fleet"
-            body="Each agent is scoped to one operational job. Realty agents arrive trained on brokerage workflows, fair-housing language, and the systems brokerages actually use. No prompt engineering required from your team."
+            title="Pick your vertical."
+            body="Each of the ten verticals ships with its own JTBD table, integration list, and compliance corpus. No prompt engineering, no per-customer custom build."
           />
-          <Pillar
+          <Step
             number="02"
-            title="Quiet operations"
-            body="The fleet drafts in the inbox you already pay for and queues updates back to your CRM, every output gated by your human review. We don't send outbound on your behalf — drafts surface to you; your existing system sends. CRM + inbox integrations — coming Q3 2026."
+            title="Connect your tools."
+            body="Read-only OAuth into the CRM, inbox, calendar, and accounting tools you already use. The fleet watches what's there — you stay in control. 60 seconds, not a project."
           />
-          <Pillar
+          <Step
             number="03"
-            title="Measured outcomes"
-            body="First month is free across all three tiers. A weekly outcome digest: leads routed, listings prepped, compliance flags surfaced, hours returned. No vanity metrics."
+            title="The fleet drafts; you decide."
+            body="Every customer-facing output queues for your review. Approve, edit, or reject. Your existing systems send. The fleet never reaches the consumer on its own."
           />
         </div>
       </Section>
 
-      {/* AGENT FLEET */}
+      {/* Q4 — What makes agentplain unique */}
       <Section
-        id="fleet"
-        tone="deep"
-        eyebrow="The fleet · v0"
-        title="Seven agents. Each one scoped to one job."
-        intro="We start narrow on purpose. Each agent does one operational task well, with the human review steps that brokerage compliance requires. The list grows when an agent earns its slot, not before."
+        eyebrow="What makes us different"
+        title="Five things you won't get from a generic AI tool."
+        intro="Each point is a commitment, not a slogan. Generic AI is horizontal — agentplain is built per-vertical, with the integration depth and compliance posture each one needs."
       >
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {agents.map((a) => (
-            <AgentCard
-              key={a.name}
-              index={a.index}
-              name={a.name}
-              description={a.description}
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-3">
+          {uniques.map((u, i) => (
+            <UniqueCard
+              key={u.label}
+              number={String(i + 1).padStart(2, "0")}
+              label={u.label}
+              body={u.body}
             />
           ))}
         </div>
-        <p className="mt-10 max-w-2xl text-sm leading-relaxed text-mute">
-          v0 fleet covers the realty vertical. The other nine verticals on our
-          roadmap — mortgage, insurance, property management, title &amp;
-          escrow, recruiting, home services, CPA / tax, law, and RIA — light up
-          after realty hits functional acceptance.
-        </p>
       </Section>
 
-      {/* PRICING */}
+      {/* Concrete value-loop example (real-estate sample, with a deep link to
+          every other vertical's example). */}
+      {realEstateExample ? (
+        <Section
+          tone="deep"
+          eyebrow="A day in the life"
+          title="What the fleet drafts before you open the laptop."
+          intro="One concrete example. The scenario, what a practitioner does today, what changes after the fleet lands. Every vertical page carries its own version."
+        >
+          <div className="border border-rule bg-paper p-6 md:p-10">
+            <p className="font-mono text-[11px] tracking-eyebrow text-clay">
+              Real estate · solo agent
+            </p>
+            <p className="mt-4 max-w-3xl font-display text-2xl leading-snug text-ink md:text-3xl md:leading-snug">
+              {realEstateExample.scenario}
+            </p>
+            <div className="mt-10 grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
+              <div className="bg-paper p-6 md:p-7">
+                <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                  Today
+                </p>
+                <p className="mt-3 text-[15px] leading-relaxed text-ink-soft">
+                  {realEstateExample.before}
+                </p>
+              </div>
+              <div className="bg-paper p-6 md:p-7">
+                <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+                  With agentplain
+                </p>
+                <p className="mt-3 text-[15px] leading-relaxed text-ink">
+                  {realEstateExample.after}
+                </p>
+              </div>
+            </div>
+            <div className="mt-8 border-l-2 border-clay pl-5">
+              <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+                Outcome
+              </p>
+              <p className="mt-2 max-w-3xl text-[15px] leading-relaxed text-ink">
+                {realEstateExample.outcome}
+              </p>
+            </div>
+            <div className="mt-10 border-t border-rule pt-6 text-[13px] text-mute">
+              <p>
+                Not in real estate?{" "}
+                <Link href="/verticals" className="text-ink underline">
+                  See the day-in-the-life example for your vertical →
+                </Link>
+              </p>
+            </div>
+          </div>
+        </Section>
+      ) : null}
+
+      {/* Q6 — Why should anyone believe us? */}
+      <Section
+        eyebrow="Rooted in reality"
+        title="Here's what we mean by &lsquo;rooted in reality.&rsquo;"
+        intro="Four things we can point at today. Not magic, not pixie dust — real product, real operators, real outcomes. We don't claim 'built for X' without the per-vertical compliance corpus + JTBD tables; we don't claim 'integrates with X' without the value-loop demo. The bar is functional, not marketing."
+      >
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule lg:grid-cols-2">
+          {proof.map((p) => (
+            <ProofCard key={p.label} {...p} />
+          ))}
+        </div>
+      </Section>
+
+      {/* Q7 — How do we think about ROI? — interactive calculator */}
       <Section
         id="pricing"
-        eyebrow="Pricing — three tiers, per seat"
-        title="Three tiers. Per seat. First month free."
-        intro="Month-to-month from day one. Card on file at sign-up, month 1 = $0, month 2 onward at your tier's per-seat rate. Cancel anytime from your billing settings."
+        tone="deep"
+        eyebrow="Pricing + ROI"
+        title="Affordable access to enterprise-grade tools."
+        intro="That's the vision — and the calculator below is the math. Per-seat subscription, month-to-month from day one, first month free across all three tiers. Enter your own hours and hourly rate; the ROI multiple is yours to audit."
       >
-        <div className="grid gap-6 lg:grid-cols-3">
-          {pricing.map((tier) => (
-            <PricingTier key={tier.name} {...tier} />
+        <RoiCalculator />
+
+        <div className="mt-10 grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-3">
+          {tierTeasers.map((t) => (
+            <div key={t.tier} className="bg-paper p-6 md:p-7">
+              <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+                {t.tier} tier
+              </p>
+              <p className="mt-2 font-display text-3xl leading-none text-ink">
+                {t.perSeat}
+              </p>
+              <p className="mt-2 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                per seat · solo → 50-99 seats
+              </p>
+              <p className="mt-4 text-[14px] leading-relaxed text-ink-soft">
+                {t.summary}
+              </p>
+            </div>
           ))}
         </div>
 
@@ -219,7 +345,7 @@ export default function HomePage() {
           <ul className="grid gap-2 text-[15px] leading-relaxed text-ink-soft sm:grid-cols-2">
             <li>— First month free; month-to-month after</li>
             <li>— Human review on every customer-facing output</li>
-            <li>— Liability for licensed activities stays with your broker</li>
+            <li>— Liability for licensed activities stays with you</li>
             <li>— Weekly outcome digest</li>
             <li>— No data resold, no client list retained</li>
             <li>— You own the work product</li>
@@ -227,7 +353,34 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* FAQ */}
+      {/* Q8 — How do we think about the future of work? + Q9 — Why now? */}
+      <Section
+        eyebrow="Where we're going"
+        title={
+          <>
+            Local businesses can thrive through access to{" "}
+            <span className="text-clay">
+              affordable, best-in-class tools and services.
+            </span>
+          </>
+        }
+        intro="That's the vision. AI doesn't replace local business owners; it changes WHICH parts of the job they do. Local businesses have been over-rotated toward administrative work for two decades — CRMs, scheduling, compliance, status reports. The judgment work gets squeezed."
+      >
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
+          <Card
+            number="Q8"
+            title="The future of work"
+            body="agentplain inverts the ratio. The fleet handles the systematic work; the human gets back to client relationships, deal architecture, advisory. Solo practitioners compete with mid-size firms on operational depth. Mid-size firms compete with enterprise on agility. Affordable access to the same operational depth that used to require an enterprise budget — that's the leveling effect."
+          />
+          <Card
+            number="Q9"
+            title="Why now"
+            body="Models got good enough in 2025 to do real categorization, drafting, scheduling on real-world data — not benchmarks. Vendor APIs (Gmail, Outlook, every major CRM) stabilized enough to build multi-tenant integrations. Compliance frameworks (TCPA, GLBA) are clear enough to build per-vertical corpuses against. Early enough to define the category, late enough that the tech actually works."
+          />
+        </div>
+      </Section>
+
+      {/* FAQ — Q2/Q3/Q4/Q5/Q6 follow-ups in one place */}
       <Section
         id="faq"
         tone="deep"
@@ -237,33 +390,37 @@ export default function HomePage() {
         <FAQ />
       </Section>
 
-      {/* FOOTER CTA */}
+      {/* CLOSING CTA — locked mission line, no realty-only framing */}
       <section className="border-b border-rule bg-ink text-paper">
         <div className="container-wide py-24 md:py-32">
-          <p className="eyebrow mb-6 text-paper/60">The thesis, plainly</p>
-          <p className="max-w-3xl font-display text-4xl leading-[1.1] md:text-6xl md:leading-[1.05]">
-            Run a 25-agent brokerage with five.
+          <p className="eyebrow mb-6 text-paper/60">{tokens.tagline}</p>
+          <p className="max-w-3xl font-display text-3xl leading-[1.15] md:text-5xl md:leading-[1.08]">
+            We lift up local businesses by doing the work that takes their
+            time and money{" "}
+            <span className="block mt-4 text-paper/70">
+              away from the people they serve.
+            </span>
           </p>
-          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-paper/75">
-            That is what we are building toward. The first month is free —
-            by the time you decide to keep paying, the fleet has either earned
-            its seat or it has not.
+          <p className="mt-8 max-w-2xl text-lg leading-relaxed text-paper/75">
+            First month free across every tier. Month-to-month from day one.
+            Cancel anytime. By the time you'd pay for month two, the fleet has
+            either earned its seat or it hasn't.
           </p>
 
           <div className="mt-10 flex flex-wrap gap-4">
-            <a
-              href="mailto:hello@agentplain.com?subject=agentplain%20interest"
+            <Link
+              href="/app/sign-up"
               className="inline-flex items-center justify-center gap-2 border border-paper bg-paper px-6 py-3 text-sm font-medium text-ink transition hover:bg-paper-deep"
             >
-              Talk to us
+              Start free trial
               <span aria-hidden>→</span>
-            </a>
-            <a
-              href="mailto:hello@agentplain.com"
+            </Link>
+            <Link
+              href="/verticals"
               className="inline-flex items-center justify-center gap-2 border border-paper/40 bg-transparent px-6 py-3 text-sm font-medium text-paper transition hover:border-paper"
             >
-              hello@agentplain.com
-            </a>
+              See all ten verticals
+            </Link>
           </div>
         </div>
       </section>
@@ -271,18 +428,77 @@ export default function HomePage() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Step({
+  number,
+  title,
+  body,
+}: {
+  number: string;
+  title: string;
+  body: string;
+}) {
   return (
-    <div>
-      <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-        {label}
+    <div className="bg-paper p-8 md:p-10">
+      <p className="font-mono text-[11px] tracking-eyebrow text-clay">
+        {number}
       </p>
-      <p className="mt-1 font-display text-3xl text-ink">{value}</p>
+      <h3 className="mt-4 font-display text-xl leading-tight text-ink md:text-2xl">
+        {title}
+      </h3>
+      <p className="mt-3 text-[15px] leading-relaxed text-ink-soft">{body}</p>
     </div>
   );
 }
 
-function Pillar({
+function UniqueCard({
+  number,
+  label,
+  body,
+}: {
+  number: string;
+  label: string;
+  body: string;
+}) {
+  return (
+    <div className="flex flex-col bg-paper p-7 md:p-8">
+      <div className="flex items-baseline gap-3">
+        <p className="font-mono text-[11px] tracking-eyebrow text-clay">
+          {number}
+        </p>
+        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+          {label}
+        </p>
+      </div>
+      <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">{body}</p>
+    </div>
+  );
+}
+
+function ProofCard({
+  label,
+  body,
+  cite,
+}: {
+  label: string;
+  body: string;
+  cite: string;
+}) {
+  return (
+    <div className="flex flex-col bg-paper p-7 md:p-8">
+      <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+        {label}
+      </p>
+      <p className="mt-4 max-w-prose text-[15px] leading-relaxed text-ink-soft">
+        {body}
+      </p>
+      <p className="mt-5 border-t border-rule pt-4 font-mono text-[11px] leading-relaxed text-mute">
+        Source: <code className="text-[11px]">{cite}</code>
+      </p>
+    </div>
+  );
+}
+
+function Card({
   number,
   title,
   body,

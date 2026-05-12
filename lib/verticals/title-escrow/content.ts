@@ -8,6 +8,7 @@ export const titleEscrow: VerticalContent = {
   slug: "title-escrow",
   name: "Title & escrow",
   tier: "regular",
+  missionSubject: "title and escrow agencies",
 
   hero: {
     eyebrow: "Roadmap vertical · Regular tier",
@@ -136,5 +137,16 @@ export const titleEscrow: VerticalContent = {
       { name: "County recording portals", category: "Recording" },
     ],
     plannedWindow: "Q3 2026",
+  },
+
+  valueLoopExample: {
+    scenario:
+      "Closing is 9am Thursday. Wednesday 5pm a buyer's lender flags a payoff discrepancy.",
+    before:
+      "Pull the title file in SoftPro, find the prior payoff, re-request from the lender, draft the wire instructions update, notify the buyer's agent, the seller's agent, and the lender, then chase confirmations until 8pm. ~90 minutes.",
+    after:
+      "The fleet identified the discrepancy at 5:04pm, pulled the original payoff, drafted the lender re-request, drafted the agent + buyer notifications with the new figure, and queued the SoftPro update. All four messages are waiting in the closer's review queue at 5:08pm.",
+    outcome:
+      "The closer ships four reviewed messages before 5:30pm. Thursday's closing happens on schedule.",
   },
 };

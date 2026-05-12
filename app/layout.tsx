@@ -29,12 +29,12 @@ export const metadata: Metadata = {
     template: `${tokens.wordmark} — %s`,
   },
   description:
-    "A pre-trained AI agent fleet for professional-services firms. Realty first; mortgage, insurance, property mgmt, title & escrow, recruiting, home services, CPA / tax, law, and RIA on the roadmap.",
+    "agentplain lifts up local businesses by doing the work that takes their time and money away from the people they serve. A fleet of capable AI partners across ten verticals — real estate, mortgage, insurance, property management, title & escrow, recruiting, home services, CPA / tax, law, and RIA. Intelligence rooted in reality.",
   metadataBase: new URL("https://agentplain.com"),
   openGraph: {
     title: tokens.wordmark,
     description:
-      "Intelligence. Rooted in reality. A pre-trained AI agent fleet for professional-services firms — realty first.",
+      "We lift up local businesses by doing the work that takes their time and money away from the people they serve. Intelligence rooted in reality.",
     url: "https://agentplain.com",
     siteName: tokens.wordmark,
     type: "website",

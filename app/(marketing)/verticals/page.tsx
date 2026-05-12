@@ -30,14 +30,17 @@ export default function VerticalsIndexPage() {
           <h1 className="max-w-4xl font-display text-5xl leading-[1.05] text-ink md:text-7xl md:leading-[1.02]">
             Ten verticals.
             <br />
-            <span className="text-clay">Three tiers.</span>
+            <span className="text-clay">Different ops. Same value loop.</span>
           </h1>
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft md:text-xl">
-            Each vertical maps to a tier per
-            `project_vertical_tier_mapping.md`. The platform is
-            vertical-agnostic by design; the agent catalogs, integrations, and
-            compliance posture per vertical are not. Pricing is per-seat,
-            month-to-month, first month free.
+            Each vertical-aware fleet lifts up local businesses by doing the
+            work that takes their time and money away from the people they
+            serve. Different domain rules, same pattern: the fleet handles
+            the recurring ops, the human keeps the relationships.
+          </p>
+          <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-mute">
+            Affordable access · per-seat · month-to-month · first month free
+            across every tier.
           </p>
         </div>
       </section>

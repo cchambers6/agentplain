@@ -8,10 +8,11 @@ import {
 } from "@/lib/onboarding/steps";
 
 describe("onboarding state machine", () => {
-  it("has three canonical steps in order", () => {
+  it("has four canonical steps in order", () => {
     assert.deepEqual(STEP_ORDER, [
       "confirm_details",
       "connect_integration",
+      "set_preferences",
       "done",
     ]);
   });
@@ -28,6 +29,7 @@ describe("onboarding state machine", () => {
   it("isStepId rejects non-canonical strings", () => {
     assert.equal(isStepId("confirm_details"), true);
     assert.equal(isStepId("connect_integration"), true);
+    assert.equal(isStepId("set_preferences"), true);
     assert.equal(isStepId("done"), true);
     assert.equal(isStepId("garbage"), false);
     assert.equal(isStepId(""), false);
@@ -36,9 +38,10 @@ describe("onboarding state machine", () => {
     assert.equal(isStepId(42), false);
   });
 
-  it("nextStepAfter advances linearly", () => {
+  it("nextStepAfter advances linearly through the three input steps", () => {
     assert.equal(nextStepAfter("confirm_details"), "connect_integration");
-    assert.equal(nextStepAfter("connect_integration"), "done");
+    assert.equal(nextStepAfter("connect_integration"), "set_preferences");
+    assert.equal(nextStepAfter("set_preferences"), "done");
   });
 
   it("nextStepAfter(done) stays at done", () => {

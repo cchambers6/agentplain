@@ -171,9 +171,8 @@ export default function AboutPage() {
             {tokens.tagline}
           </h2>
           <p className="mt-6 max-w-2xl text-paper/75">
-            First month free across every tier. Month-to-month. Cancel
-            anytime. By month two, the fleet has either earned its seat or it
-            hasn&apos;t.
+            First month free. Month-to-month. Cancel anytime. By month two,
+            the fleet has either earned its seat or it hasn&apos;t.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Link

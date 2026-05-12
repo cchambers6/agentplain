@@ -65,8 +65,13 @@ export default function Footer() {
               </Link>
             </li>
             <li>
-              <Link href="/#pricing" className="text-ink hover:text-clay">
+              <Link href="/pricing" className="text-ink hover:text-clay">
                 Pricing
+              </Link>
+            </li>
+            <li>
+              <Link href="/custom" className="text-ink hover:text-clay">
+                Build with us
               </Link>
             </li>
             <li>

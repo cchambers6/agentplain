@@ -54,14 +54,14 @@ export default function VerticalHero({
             <span aria-hidden>→</span>
           </Link>
           <Link href="#pricing" className="btn-secondary">
-            See {content.tier} tier pricing
+            See pricing
             <span aria-hidden>→</span>
           </Link>
         </div>
 
         <div className="mt-14 grid max-w-3xl gap-6 border-t border-rule pt-8 sm:grid-cols-3">
           <Stat label="ROI multiplier" value={content.roi.multiplier} />
-          <Stat label="Tier" value={titleCase(content.tier)} />
+          <Stat label="Per seat" value="$199 → $99" />
           <Stat
             label="Integrations planned"
             value={String(content.integrations.planned.length)}
@@ -81,8 +81,4 @@ function Stat({ label, value }: { label: string; value: string }) {
       <p className="mt-1 font-display text-3xl text-ink">{value}</p>
     </div>
   );
-}
-
-function titleCase(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }

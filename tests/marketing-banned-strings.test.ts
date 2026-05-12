@@ -32,7 +32,9 @@ const SURFACE_FILES: string[] = [
 ];
 
 // Banned literal substrings. The flagged stat block + the V0/MVP/pilot
-// framings Conner banned 2026-05-11.
+// framings Conner banned 2026-05-11, plus the Plus/Max tier customer-surface
+// ban locked 2026-05-12 per `project_stripe_both_surfaces.md` (simplified
+// pricing model — Plus/Max stay schema-ready but are not surfaced).
 const BANNED_LITERALS: string[] = [
   "AGENTS IN THE FLEET",
   "PILOT LENGTH",
@@ -48,6 +50,20 @@ const BANNED_LITERALS: string[] = [
   "smart insights",
   "AI-powered",
   "machine learning",
+  // Plus/Max tier customer-surface bans (simplified pricing 2026-05-12).
+  // The literal "Plus tier" / "Max tier" is the call-out; bare "Plus" /
+  // "Max" appear in unrelated copy ("plus mistakes avoided") so we use the
+  // specific 2-word forms here.
+  "Plus tier",
+  "Max tier",
+  "Plus: $299",
+  "Max: $499",
+  "$299 → $199",
+  "$499 → $299",
+  "three tiers",
+  "Three tiers",
+  "across every tier",
+  "across all three tiers",
 ];
 
 // Banned regex patterns. Case-insensitive, word-boundary anchored.

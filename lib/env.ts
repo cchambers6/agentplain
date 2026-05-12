@@ -97,4 +97,10 @@ export const env = {
   gmailWebhookServiceAccountEmail: () =>
     optional("GMAIL_WEBHOOK_SERVICE_ACCOUNT_EMAIL"),
   encryptionKey: () => required("ENCRYPTION_KEY"),
+
+  // Custom-inquiry destination. Submissions from `/custom`'s contact form
+  // are emailed to this address. Defaults to the public hello@ inbox so
+  // dev/preview submissions don't silently disappear when the var is unset.
+  customInquiryTo: () =>
+    optional("CUSTOM_INQUIRY_TO") ?? "hello@agentplain.com",
 };

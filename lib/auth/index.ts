@@ -69,3 +69,4 @@ export {
   type AuthorizedSession,
   type MembershipAssertion,
 } from "./server";
+export { withWorkspace, type WorkspaceContext } from "./with-workspace";

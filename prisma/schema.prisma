@@ -23,9 +23,39 @@ enum MembershipStatus {
   DEACTIVATED
 }
 
+// Legacy Phase 1 tier — pre-§13 audience-tier framing (Spec lines 117–149).
+// Kept on Workspace for backward-compat with shipped Phase 1 invoices / billing
+// modes. New product surfaces read Workspace.verticalTier instead. Slated for
+// drop in Phase 2 alongside the migration plan in §13.7 of product_spec.md.
 enum WorkspaceTier {
   HIGH_TOUCH
   SCALED
+}
+
+// agentplain — nine launch verticals. Mirrors project_vertical_tier_mapping
+// and product_spec.md §13.2. Medical practices intentionally excluded per
+// feedback_no_new_verticals_finish_locked (reactivate when a HIPAA customer
+// asks). Adding a vertical requires a memory-tracked decision.
+enum Vertical {
+  REAL_ESTATE
+  MORTGAGE
+  INSURANCE
+  PROPERTY_MANAGEMENT
+  TITLE_ESCROW
+  RECRUITING
+  HOME_SERVICES
+  CPA
+  LAW
+  RIA
+}
+
+// Per-seat tier ladder ratified 2026-05-09. Supersedes WorkspaceTier above.
+// Pricing in lib/pricing/tiers.ts; mapping verticals→tiers in lib/verticals.
+// product_spec.md §13.1 lines 420–441.
+enum WorkspaceVerticalTier {
+  REGULAR
+  PLUS
+  MAX
 }
 
 enum WorkspaceBillingMode {
@@ -94,7 +124,15 @@ model Workspace {
   id                   String                  @id @default(uuid()) @db.Uuid
   name                 String
   slug                 String                  @unique
+  // Phase 1 audience tier (legacy). See WorkspaceTier comment.
   tier                 WorkspaceTier           @default(HIGH_TOUCH)
+  // Canonical per-seat tier (product_spec.md §13.1). Drives pricing, gating,
+  // and the marketing/[vertical] CTAs. Required on every workspace; defaults
+  // REGULAR so existing Phase 1 realty workspaces backfill cleanly.
+  verticalTier         WorkspaceVerticalTier   @default(REGULAR)
+  // Vertical the workspace operates in. Required, defaults REAL_ESTATE for
+  // Phase 1 backfill. Spec §13.2 lines 444–453.
+  vertical             Vertical                @default(REAL_ESTATE)
   stateCode            String                  @default("GA") @db.VarChar(2)
   billingMode          WorkspaceBillingMode    @default(MANUAL_INVOICE)
   stripeCustomerId     String?                 @unique
@@ -111,8 +149,25 @@ model Workspace {
   capabilityProposals  CapabilityProposal[]
   invoices             WorkspaceInvoice[]
   auditEntries         AuditLog[]
+  onboardingState      OnboardingState?
 
   @@index([slug])
+  @@index([vertical])
+}
+
+// Per-workspace onboarding wizard state. 1:1 with Workspace. Seeded on signup.
+// completedSteps is an array of step ids (e.g. ["confirm_details",
+// "connect_integration"]); currentStep is the next step id to render.
+// product_spec.md §3.2 BO-5 (initial setup), §8.1 (onboarding-to-first-value).
+model OnboardingState {
+  id             String    @id @default(uuid()) @db.Uuid
+  workspaceId    String    @unique @db.Uuid
+  currentStep    String    @default("confirm_details")
+  completedSteps Json      @default("[]")
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 model Membership {

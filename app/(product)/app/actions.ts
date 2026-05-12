@@ -13,6 +13,8 @@ import {
   clearSession,
   type SessionPayload,
 } from "@/lib/auth";
+import { verticalEnumFromSlug } from "@/lib/auth/vertical-enum";
+import { getVerticalContent } from "@/lib/verticals";
 
 const formString = (form: FormData, key: string): string => {
   const v = form.get(key);
@@ -34,9 +36,25 @@ export async function signUpAction(
   const email = formString(form, "email");
   const brokerageName = formString(form, "brokerageName");
   const ownerName = formString(form, "ownerName") || null;
+  const verticalSlug = formString(form, "vertical").toLowerCase();
+  // Validate via main's content registry — the slug must exist there for the
+  // marketing/[vertical] page, the JTBD tables, the ROI anchor, etc. Slug →
+  // Prisma enum mapping happens at this single boundary (lib/auth/vertical-enum).
+  if (!getVerticalContent(verticalSlug)) {
+    return { ok: false, error: "Pick a vertical to continue" };
+  }
+  const verticalEnum = verticalEnumFromSlug(verticalSlug);
+  if (!verticalEnum) {
+    return { ok: false, error: "Pick a vertical to continue" };
+  }
 
   try {
-    await signUpBrokerOwner({ email, brokerageName, ownerName });
+    await signUpBrokerOwner({
+      email,
+      brokerageName,
+      ownerName,
+      vertical: verticalEnum,
+    });
   } catch (err) {
     return { ok: false, error: errorMessage(err) };
   }

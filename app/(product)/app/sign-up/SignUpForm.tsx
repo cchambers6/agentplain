@@ -5,7 +5,20 @@ import { signUpAction, type ActionResult } from "../actions";
 
 const initial: ActionResult = { ok: false };
 
-export function SignUpForm() {
+export interface VerticalOption {
+  slug: string;
+  name: string;
+}
+
+export function SignUpForm({
+  verticals,
+  defaultVerticalSlug,
+}: {
+  /** Server-rendered to avoid pulling the marketing content bundle into the client. */
+  verticals: VerticalOption[];
+  /** Pre-selected vertical slug from /(marketing)/[vertical] → /app/sign-up?vertical=… */
+  defaultVerticalSlug?: string;
+}) {
   const [state, formAction] = useFormState<ActionResult, FormData>(
     signUpAction,
     initial,
@@ -21,8 +34,12 @@ export function SignUpForm() {
 
   return (
     <form action={formAction} className="space-y-4">
+      <VerticalField
+        verticals={verticals}
+        defaultValue={defaultVerticalSlug ?? "real-estate"}
+      />
       <Field
-        label="Brokerage name"
+        label="Brokerage / firm name"
         name="brokerageName"
         required
         placeholder="Acme Realty"
@@ -47,6 +64,35 @@ export function SignUpForm() {
       ) : null}
       <Submit />
     </form>
+  );
+}
+
+function VerticalField({
+  verticals,
+  defaultValue,
+}: {
+  verticals: VerticalOption[];
+  defaultValue: string;
+}) {
+  return (
+    <label className="block text-sm">
+      <span className="font-mono text-[11px] tracking-eyebrow uppercase text-slate">
+        Vertical
+      </span>
+      <select
+        name="vertical"
+        required
+        defaultValue={defaultValue}
+        className="mt-1 block w-full border border-rule bg-paper px-3 py-2 text-[15px] text-ink outline-none focus:border-ink"
+      >
+        {verticals.map((v) => (
+          <option key={v.slug} value={v.slug}>
+            {v.name}
+            {v.slug === "real-estate" ? "" : " — early access"}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

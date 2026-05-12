@@ -1,9 +1,16 @@
-// Stripe webhook receiver. Phase 1 mirrors the events we care about into
-// WorkspaceInvoice; full self-serve subscription wiring is Phase 2.
+// Stripe webhook receiver.
 //
-// Dispatch logic lives in `lib/billing/webhook-dispatch.ts` — the route here
-// only handles signature verification, idempotency short-circuit, and the
-// HTTP response shape.
+// Idempotency strategy: every inbound event id is inserted into
+// `BillingEvent` (stripeEventId @unique). The route short-circuits with
+// 200 if the row already exists — Stripe retries non-2xx for up to 72h
+// and duplicates are expected. Dispatch runs inside a $transaction so
+// the BillingEvent insert + the domain-state mutation are atomic.
+//
+// Dispatch logic lives in `lib/billing/webhook-dispatch.ts`. The route
+// here only handles signature verification, idempotency short-circuit,
+// and the HTTP response shape. Per feedback_no_silent_vendor_lock this
+// file never imports `stripe` directly — the verify call goes through
+// the BillingProvider abstraction.
 
 import { type NextRequest, NextResponse } from "next/server";
 import { getBillingProvider } from "@/lib/billing";
@@ -32,10 +39,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // Idempotency: short-circuit on duplicate event ids — Stripe retries.
+  // Idempotency short-circuit. The actual record-and-dispatch happens
+  // inside the transaction below; this check just avoids re-running
+  // the handler when a duplicate arrives.
   const seen = await withSystemContext((tx) =>
-    tx.auditLog.findFirst({
-      where: { action: "billing.event.received", targetId: event.eventId },
+    tx.billingEvent.findUnique({
+      where: { stripeEventId: event.eventId },
+      select: { id: true },
     }),
   );
   if (seen) {

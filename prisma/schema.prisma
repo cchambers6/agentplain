@@ -63,6 +63,33 @@ enum WorkspaceBillingMode {
   STRIPE_SUBSCRIPTION
 }
 
+// Per-seat subscription lifecycle. Mirrors Stripe's subscription.status
+// taxonomy 1:1 so webhook payloads upsert without translation. PAUSED is
+// intentionally omitted — Phase 2 doesn't expose pause-collection on
+// agentplain's surface (project_stripe_both_surfaces lines 78–80).
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  CANCELED
+  UNPAID
+}
+
+// Seat-band axis for the per-seat ladder. Five self-serve bands; the 100+
+// "enterprise" row in the canonical table is handled out-of-band via a
+// custom build engagement (project_stripe_both_surfaces lines 17–26 + 57–59).
+// The enum value is also the Stripe lookup_key suffix so the pricing table,
+// the Stripe Prices, and the Subscription row share one stable identifier.
+enum SeatBand {
+  SEATS_1
+  SEATS_2_9
+  SEATS_10_24
+  SEATS_25_49
+  SEATS_50_99
+}
+
 enum WorkApprovalKind {
   COMPLIANCE_FLAG
   LISTING_RECOMMENDATION
@@ -150,9 +177,60 @@ model Workspace {
   invoices             WorkspaceInvoice[]
   auditEntries         AuditLog[]
   onboardingState      OnboardingState?
+  subscription         Subscription?
 
   @@index([slug])
   @@index([vertical])
+}
+
+// Phase 2 per-seat subscription. One row per workspace at most.
+// Created at signup with a 30-day trial; status flips via webhook.
+// Workspace.stripeCustomerId / .stripeSubscriptionId are the FK columns
+// (kept as Strings on Workspace for Phase 1 back-compat); this model is
+// the typed accessor for everything else. project_stripe_both_surfaces.
+model Subscription {
+  id                     String                @id @default(uuid()) @db.Uuid
+  workspaceId            String                @unique @db.Uuid
+  stripeSubscriptionId   String                @unique
+  stripeCustomerId       String
+  tier                   WorkspaceVerticalTier
+  seatBand               SeatBand
+  seats                  Int                   @default(1)
+  status                 SubscriptionStatus
+  trialEndsAt            DateTime?
+  currentPeriodEnd       DateTime?
+  cancelAtPeriodEnd      Boolean               @default(false)
+  defaultPaymentMethodId String?
+  /// Last value seen so cron warnings don't double-fire. Set by the
+  /// trial-expiration cron when it emits a 7/3/1-day notice.
+  lastTrialWarningDays   Int?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  workspace              Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  events                 BillingEvent[]
+
+  @@index([status])
+  @@index([trialEndsAt])
+  @@index([stripeCustomerId])
+}
+
+// Append-only billing-event audit. One row per inbound Stripe event id;
+// the @@unique on stripeEventId enforces idempotency at the database
+// layer so retries are a true no-op. AuditLog continues to receive a
+// summary row for cross-cutting audit (engineering_plan §5.2), but
+// BillingEvent is the typed history view scoped to one subscription.
+model BillingEvent {
+  id             String        @id @default(uuid()) @db.Uuid
+  subscriptionId String?       @db.Uuid
+  workspaceId    String?       @db.Uuid
+  type           String
+  stripeEventId  String        @unique
+  payload        Json
+  receivedAt     DateTime      @default(now())
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([subscriptionId, receivedAt])
+  @@index([workspaceId, receivedAt])
 }
 
 // Per-workspace onboarding wizard state. 1:1 with Workspace. Seeded on signup.

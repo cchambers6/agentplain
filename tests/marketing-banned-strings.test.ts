@@ -20,6 +20,14 @@ const REPO_ROOT = join(__dirname, "..");
 
 // Customer-facing surfaces only. The (product) and (operator) layers are
 // behind auth and have their own rules; we don't gate them here.
+//
+// Vertical content files (`lib/verticals/*/content.ts`) are scanned too —
+// they ship the customer-visible hero, ROI math, claims triad, integrations
+// list, and value-loop example for every vertical page, and were the source
+// of the 2026-05-12 banned-framing bleed (Plus/Max tier surfacing in
+// hero.eyebrow and roi.inputCost). The vertical-content-polish PR
+// (feat/agentplain-vertical-content-polish, 2026-05-12) extended this test
+// to keep that regression from coming back.
 const SURFACE_FILES: string[] = [
   ...walk(join(REPO_ROOT, "app", "(marketing)")),
   join(REPO_ROOT, "components", "Header.tsx"),
@@ -29,6 +37,7 @@ const SURFACE_FILES: string[] = [
   join(REPO_ROOT, "components", "Section.tsx"),
   ...walk(join(REPO_ROOT, "components", "brand")),
   ...walk(join(REPO_ROOT, "components", "vertical")),
+  ...walkVerticalContent(join(REPO_ROOT, "lib", "verticals")),
 ];
 
 // Banned literal substrings. The flagged stat block + the V0/MVP/pilot
@@ -150,6 +159,38 @@ function walk(dir: string): string[] {
       out.push(...walk(full));
     } else if (/\.(ts|tsx)$/.test(name) && !/\.test\.tsx?$/.test(name)) {
       out.push(full);
+    }
+  }
+  return out;
+}
+
+// Narrowly walk `lib/verticals/` and collect ONLY the per-vertical
+// `content.ts` files. The registry (`index.ts`) and the `types.ts` schema
+// definitions are excluded because their JS comments legitimately
+// reference banned framings (e.g. "pilot SKUs deprecated", "Phase 0
+// product_spec") as documentation of the rule itself — they don't render
+// to customers and the comment-stripping in `stripComments` only handles
+// JS comments inside the file, not file-level documentation.
+function walkVerticalContent(dir: string): string[] {
+  let entries: string[];
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return [];
+  }
+  const out: string[] = [];
+  for (const name of entries) {
+    const full = join(dir, name);
+    const s = statSync(full);
+    if (s.isDirectory()) {
+      const contentFile = join(full, "content.ts");
+      try {
+        if (statSync(contentFile).isFile()) {
+          out.push(contentFile);
+        }
+      } catch {
+        // No content.ts in this subdirectory — skip silently.
+      }
     }
   }
   return out;

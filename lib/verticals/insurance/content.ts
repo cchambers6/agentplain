@@ -15,7 +15,7 @@ export const insurance: VerticalContent = {
   missionSubject: "insurance brokers and agencies",
 
   hero: {
-    eyebrow: "Tied #1 vertical fit · Regular tier",
+    eyebrow: "Built for independent P&C agencies",
     headline: "The fleet for the independent P&C agency.",
     valueProp:
       "agentplain REPLACES the CSR hours spent on certificates of insurance and renewal prep, INTEGRATES with your AMS, comparative rater, and 8–15 carrier portals, and AUGMENTS the producer's read on every renewal proposal and claims update.",

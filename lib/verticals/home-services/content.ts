@@ -4,7 +4,12 @@ import type { VerticalContent } from "../types";
 // composite 34, the recommended trades pick) and §4 (trades-cluster
 // analysis). "Home services" here is the broad trades category — roofing,
 // HVAC, plumbing, electrical, GC remodel, landscaping. The fleet shape is
-// closest to roofing because that is the analyzed Product-3 candidate.
+// closest to roofing because that is the most-analyzed trades candidate.
+//
+// Pricing: surfaces as Regular tier per `project_stripe_both_surfaces.md`
+// (simplified 2026-05-12 — single productized tier; storm-cycle / supplement
+// depth and white-label route to /custom). The `tier: "plus"` field below is
+// schema-only and is NOT surfaced on the customer page.
 //
 // JTBD draft:true — no Phase 0 product_spec.md table. Capability-inbox flagged.
 
@@ -15,7 +20,7 @@ export const homeServices: VerticalContent = {
   missionSubject: "home services contractors",
 
   hero: {
-    eyebrow: "Recommended Product 3 · Plus tier",
+    eyebrow: "Built for residential trades operations",
     headline: "The fleet for the residential trades operation.",
     valueProp:
       "agentplain REPLACES the lead-source juggle and the insurance-supplement scramble, INTEGRATES with AccuLynx, JobNimbus, CompanyCam, EagleView, and the carrier adjuster channels, and AUGMENTS the owner's read on every estimate, supplement, and homeowner-facing reply.",
@@ -104,13 +109,13 @@ export const homeServices: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "14x",
-    inputCost: "Plus tier · $299 per seat (solo), sliding to $199 per seat (50–99 seats) — first month free",
+    multiplier: "21x",
+    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
     outputValue: "$50,000+ / yr in supplement reclamation alone at a storm-heavy shop",
     math:
-      "Per `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3: \"This single agent [insurance supplement] saves $50K+/yr at a storm-heavy shop.\" Against the solo Plus-tier seat at $299/mo ($3,588/yr) that single value stream is ~14x at one seat. Stack on cycle-time compression (estimate-to-contract velocity), reduced lead leakage across HomeAdvisor / Angi / LSA / GBP, and back-office reclamation — total is materially higher than $50k for shops doing $5–25M/yr.",
+      "Per `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3: \"This single agent [insurance supplement] saves $50K+/yr at a storm-heavy shop.\" Against the solo Regular-tier seat at $199/mo ($2,388/yr) that single value stream alone is ~21x at one seat. Stack on cycle-time compression (estimate-to-contract velocity), reduced lead leakage across HomeAdvisor / Angi / LSA / GBP, and back-office reclamation — total is materially higher than $50k for shops doing $5–25M/yr. Anything that needs bespoke compliance, white-label, or 100+ seats routes to /custom.",
     citation:
-      "Supplement-savings claim cited verbatim from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3. Pricing per `project_stripe_both_surfaces.md` (per-seat ladder, locked 2026-05-09). ROI band per `project_pricing_value_anchor.md` (Plus-tier value $4,500–$15,000/mo per seat). Plus-tier mapping per `project_vertical_tier_mapping.md`.",
+      "Supplement-savings claim cited verbatim from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3. Pricing per `project_stripe_both_surfaces.md` (single Regular tier, simplified 2026-05-12; per-seat ladder $199→$99). ROI band per `project_pricing_value_anchor.md` (Regular-tier ROI range 15x–107x).",
   },
 
   claims: {

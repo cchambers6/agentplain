@@ -13,7 +13,7 @@ export const realEstate: VerticalContent = {
   missionSubject: "realtors and brokerages",
 
   hero: {
-    eyebrow: "Regular tier · live with design partners",
+    eyebrow: "Built for independent real-estate brokerages",
     headline: "The operating layer behind the independent brokerage.",
     valueProp:
       "agentplain REPLACES the 8–12 weekly hours a broker-owner spends on coordination work, INTEGRATES with Follow Up Boss, dotloop, FMLS, GAMLS, and Outlook, and AUGMENTS the broker-of-record's review on every customer-facing draft.",
@@ -135,7 +135,7 @@ export const realEstate: VerticalContent = {
     math:
       "8–12 owner-hours/week on coordination work × $120/hr blended (owner-as-producer opportunity cost) × 4.3 weeks = $4,128–$6,192/mo. Midpoint $5,160. Against the solo Regular-tier seat ($199/mo) the broker-owner alone recovers cost in the first working week and runs ~26x ROI. Conservative annualized: $61,920/yr returned to producing.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (per-seat ladder, locked 2026-05-09; pilot SKUs deprecated same day). Value math per `project_pricing_value_anchor.md` (Regular-tier value range $2,900–$10,600/mo per seat). Realty-specific inputs per `realty_vertical_spec_v1_2026-05-03.md` §1. Coordination-hour ranges per `agentplain_positioning.md` L33. Owner-hour opportunity cost is a 2026-05-08 internal assumption pending primary-research validation — flagged in capability inbox.",
+      "Pricing per `project_stripe_both_surfaces.md` (per-seat ladder, simplified to single Regular tier 2026-05-12; first month free). Value math per `project_pricing_value_anchor.md` (Regular-tier value range $2,900–$10,600/mo per seat). Realty-specific inputs per `realty_vertical_spec_v1_2026-05-03.md` §1. Coordination-hour ranges per `agentplain_positioning.md` L33. Owner-hour opportunity cost is a 2026-05-08 internal assumption pending primary-research validation — flagged in capability inbox.",
   },
 
   claims: {
@@ -148,7 +148,7 @@ export const realEstate: VerticalContent = {
     integrate: [
       "Follow Up Boss (read + write — P1, ~3 days)",
       "dotloop (read + write — P1, ~3–5 days)",
-      "FMLS + GAMLS (read-only feed for any Georgia pilot)",
+      "FMLS + GAMLS (read-only feed for Georgia markets)",
       "Microsoft 365 Graph — calendar + email (per-agent OAuth)",
       "Google Calendar + Workspace email",
       "QuickBooks Online (production-reporter dependency)",

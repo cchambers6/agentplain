@@ -44,23 +44,23 @@ export default async function CompliancePage({ params }: PageProps) {
             <li key={f.id} className="p-5">
               <div className="flex items-baseline justify-between gap-4">
                 <div>
-                  <p className="font-mono text-[11px] tracking-eyebrow uppercase text-slate-soft">
+                  <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
                     {f.severity} · {f.rule}
                   </p>
                   <p className="mt-1 text-[15px] text-ink">{f.claim}</p>
                 </div>
-                <span className="font-mono text-[11px] uppercase text-slate-soft">
+                <span className="font-mono text-[11px] uppercase text-mute">
                   {f.slaDueAt
                     ? `due ${new Date(f.slaDueAt).toLocaleString()}`
                     : "no SLA"}
                 </span>
               </div>
               {f.suggestedRewrite ? (
-                <p className="mt-3 border-l-2 border-signal bg-paper-deep p-3 text-[14px] leading-relaxed text-ink-soft">
+                <p className="mt-3 border-l-2 border-moss bg-paper-deep p-3 text-[14px] leading-relaxed text-ink-soft">
                   {f.suggestedRewrite}
                 </p>
               ) : null}
-              <p className="mt-3 text-[13px] text-slate-soft">
+              <p className="mt-3 text-[13px] text-mute">
                 Source: {f.sourceRecordTable}:{f.sourceRecordId} · raised by{" "}
                 <span className="font-mono">{f.raisedByAgent}</span>
               </p>

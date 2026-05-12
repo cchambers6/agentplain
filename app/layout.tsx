@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Inter, JetBrains_Mono } from "next/font/google";
+import { Source_Serif_4, Inter, JetBrains_Mono } from "next/font/google";
+import { tokens } from "@/lib/brand/tokens";
 import "./globals.css";
 
-const display = Cormorant_Garamond({
+const display = Source_Serif_4({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   variable: "--font-display",
@@ -23,24 +24,24 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "agentplain — Intelligence. Rooted in reality.",
+  title: {
+    default: `${tokens.wordmark} — ${tokens.tagline}`,
+    template: `${tokens.wordmark} — %s`,
+  },
   description:
     "A pre-trained AI agent fleet for professional-services firms. Realty first; mortgage, insurance, property mgmt, title & escrow, recruiting, home services, CPA / tax, law, and RIA on the roadmap.",
   metadataBase: new URL("https://agentplain.com"),
   openGraph: {
-    title: "agentplain",
+    title: tokens.wordmark,
     description:
       "Intelligence. Rooted in reality. A pre-trained AI agent fleet for professional-services firms — realty first.",
     url: "https://agentplain.com",
-    siteName: "agentplain",
+    siteName: tokens.wordmark,
     type: "website",
   },
   robots: {
     index: true,
     follow: true,
-  },
-  icons: {
-    icon: "/favicon.svg",
   },
 };
 

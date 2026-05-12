@@ -20,13 +20,13 @@ export default function PricingTier({
   return (
     <article
       className={`flex h-full flex-col border bg-paper p-7 ${
-        featured ? "border-ink shadow-[6px_6px_0_0_#5F8060]" : "border-rule"
+        featured ? "border-ink shadow-[6px_6px_0_0_#B65D3A]" : "border-rule"
       }`}
     >
       <div className="mb-6">
         <p className="eyebrow mb-3">{name}</p>
         <p className="font-mono text-4xl text-ink md:text-5xl">{price}</p>
-        <p className="mt-1 font-mono text-[11px] tracking-eyebrow uppercase text-slate-soft">
+        <p className="mt-1 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
           {cadence}
         </p>
       </div>
@@ -38,7 +38,7 @@ export default function PricingTier({
       <ul className="mb-6 space-y-3 text-[15px] leading-relaxed text-ink-soft">
         {includes.map((item) => (
           <li key={item} className="flex gap-3">
-            <span aria-hidden className="mt-2 h-px w-3 shrink-0 bg-signal" />
+            <span aria-hidden className="mt-2 h-px w-3 shrink-0 bg-clay" />
             <span>{item}</span>
           </li>
         ))}
@@ -47,7 +47,7 @@ export default function PricingTier({
       {excludes && excludes.length > 0 && (
         <div className="mb-6 border-t border-rule pt-5">
           <p className="eyebrow mb-3">Not included</p>
-          <ul className="space-y-2 text-sm text-slate-soft">
+          <ul className="space-y-2 text-sm text-mute">
             {excludes.map((item) => (
               <li key={item}>— {item}</li>
             ))}

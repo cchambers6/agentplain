@@ -29,7 +29,7 @@ function RoleTable({ table }: { table: JtbdRoleTable }) {
           {table.role}
         </h3>
         {table.draft && (
-          <span className="inline-flex items-center gap-2 border border-amber/40 bg-amber/10 px-3 py-1 font-mono text-[11px] tracking-eyebrow text-amber">
+          <span className="inline-flex items-center gap-2 border border-flag/40 bg-flag/10 px-3 py-1 font-mono text-[11px] tracking-eyebrow text-flag">
             [DRAFT — needs vertical-CEO review]
           </span>
         )}
@@ -66,7 +66,7 @@ function RoleTable({ table }: { table: JtbdRoleTable }) {
 
 function Th({ children }: { children: React.ReactNode }) {
   return (
-    <th className="px-5 py-3 font-mono text-[11px] tracking-eyebrow uppercase text-slate">
+    <th className="px-5 py-3 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
       {children}
     </th>
   );
@@ -84,7 +84,7 @@ function Td({
   const color = emphasized
     ? "text-ink"
     : muted
-    ? "text-slate-soft"
+    ? "text-mute"
     : "text-ink-soft";
   const weight = emphasized ? "font-medium" : "font-normal";
   return (

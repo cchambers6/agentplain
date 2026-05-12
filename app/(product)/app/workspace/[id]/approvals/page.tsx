@@ -32,7 +32,7 @@ export default async function ApprovalsPage({ params }: PageProps) {
       </p>
 
       {items.length === 0 ? (
-        <p className="mt-8 border border-rule bg-paper p-5 text-[15px] text-slate-soft">
+        <p className="mt-8 border border-rule bg-paper p-5 text-[15px] text-mute">
           Nothing in the queue. New items appear when the fleet flags
           something above your threshold.
         </p>
@@ -42,14 +42,14 @@ export default async function ApprovalsPage({ params }: PageProps) {
             <li key={item.id} className="p-5">
               <div className="flex items-baseline justify-between gap-4">
                 <div>
-                  <p className="font-mono text-[11px] tracking-eyebrow uppercase text-slate-soft">
+                  <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
                     {item.kind} · {item.agentSlug}
                   </p>
                   <p className="mt-1 text-[15px] text-ink">
                     {item.refTable}:{item.refId}
                   </p>
                 </div>
-                <span className="font-mono text-[11px] uppercase text-slate-soft">
+                <span className="font-mono text-[11px] uppercase text-mute">
                   {new Date(item.proposedAt).toLocaleString()}
                 </span>
               </div>

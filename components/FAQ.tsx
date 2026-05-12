@@ -52,7 +52,7 @@ export default function FAQ() {
             </span>
             <span
               aria-hidden
-              className="font-mono text-xl text-slate-soft transition group-open:rotate-45"
+              className="font-mono text-xl text-mute transition group-open:rotate-45"
             >
               +
             </span>

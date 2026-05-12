@@ -1,23 +1,35 @@
 // Onboarding state machine.
 //
-// Three-step Phase 1 wizard per the customer-surface shell task:
-//   1. confirm_details — confirm workspace name + vertical + tier
-//   2. connect_integration — placeholder; the actual integrations live in
-//      a separate workstream. Phase 1 onboarding offers a "skip for now"
-//      path so signup-to-first-value doesn't block on tool connection
-//      (spec §10 open question #3 — optional connections at Phase 1).
-//   3. done — wizard complete; OnboardingState.completedAt set.
+// Three-step Phase 1 wizard per the customer-surface task:
+//   1. confirm_details      — confirm workspace name + vertical + tier
+//   2. connect_integration  — first tool connection (read-only OAuth on
+//                             arrival; today the customer surface offers
+//                             "skip for now" so signup-to-first-value never
+//                             blocks on integration plumbing, per spec §10
+//                             open question #3 — optional connections at
+//                             Phase 1).
+//   3. set_preferences      — drafting tone, categorization defaults, and
+//                             calendar window. UI-stub at Phase 1; the
+//                             backend wiring lives in a later workstream,
+//                             and the onboarding form persists nothing
+//                             beyond the step completion.
+//   4. done                 — wizard complete; OnboardingState.completedAt set.
 //
 // The state machine is intentionally linear (no branching) for Phase 1.
 // Adding a step = add to ORDER and to STEP_META.
 
 import type { OnboardingState } from "@prisma/client";
 
-export type StepId = "confirm_details" | "connect_integration" | "done";
+export type StepId =
+  | "confirm_details"
+  | "connect_integration"
+  | "set_preferences"
+  | "done";
 
 export const STEP_ORDER: readonly StepId[] = [
   "confirm_details",
   "connect_integration",
+  "set_preferences",
   "done",
 ];
 
@@ -41,11 +53,18 @@ export const STEP_META: Record<StepId, StepMeta> = {
     index: 2,
     label: "Connect your first integration",
     description:
-      "Hook up your CRM, MLS, AMS, ATS, or accounting system so the fleet has something to read. Optional in Phase 1.",
+      "Hook up the CRM, MLS, AMS, ATS, or accounting tool the fleet should read from. Optional at Phase 1 — you can skip and wire it up later.",
+  },
+  set_preferences: {
+    id: "set_preferences",
+    index: 3,
+    label: "Set your preferences",
+    description:
+      "Drafting tone, categorization defaults, calendar window. The fleet uses these to keep drafts in your voice and on your schedule.",
   },
   done: {
     id: "done",
-    index: 3,
+    index: 4,
     label: "Workspace ready",
     description: "The 9am block runs tomorrow.",
   },

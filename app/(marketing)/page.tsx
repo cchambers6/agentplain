@@ -3,6 +3,8 @@ import Section from "@/components/Section";
 import AgentCard from "@/components/AgentCard";
 import PricingTier from "@/components/PricingTier";
 import FAQ from "@/components/FAQ";
+import { getAllVerticals } from "@/lib/verticals";
+import { tokens } from "@/lib/brand/tokens";
 
 const agents = [
   {
@@ -107,7 +109,30 @@ const pricing = [
   },
 ];
 
+// REPLACE / INTEGRATE / AUGMENT — three-pillar framing per
+// project_replace_integrate_augment.md. Each per-vertical landing page expands
+// this triad with vertical-specific claims via ClaimsTriadGrid; the home page
+// presents the platform-level frame.
+const triad = [
+  {
+    label: "Replace",
+    headline: "Work the fleet takes off your desk.",
+    body: "8–12 hours/week of broker-owner coordination work — lead routing, listing-intake follow-up, showing scheduling, recruiting outreach, monthly reports — drafted by the fleet before it hits your inbox.",
+  },
+  {
+    label: "Integrate",
+    headline: "Sits on top of the tools you already pay for.",
+    body: "Follow Up Boss, dotloop, FMLS / GAMLS, Microsoft 365 Graph, Google Workspace, QuickBooks. No migration, no second dashboard. Read-only at first; CRM + inbox writes — coming Q3 2026.",
+  },
+  {
+    label: "Augment",
+    headline: "Your broker-of-record still signs.",
+    body: "The Compliance Sentinel pre-checks every customer-facing draft. The Recruiting agent drafts the opener. The Production Reporter writes the variance commentary. The human signs every output that leaves your firm.",
+  },
+];
+
 export default function HomePage() {
+  const verticals = getAllVerticals();
   return (
     <>
       {/* HERO */}
@@ -120,57 +145,75 @@ export default function HomePage() {
             <span className="text-clay">Rooted in reality.</span>
           </h1>
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft md:text-xl">
-            agentplain is a pre-trained AI agent fleet for professional-services
-            firms — realty first. Seven agents are scoped for the operational
-            work that keeps owners awake: listing intake, buyer routing,
-            compliance review, CRM hygiene, production reporting, recruiting.
-            The fleet is in design partner build today; first runs with customer
-            data are scheduled for Q3 2026.
+            {tokens.wordmark} is a pre-trained AI agent fleet for
+            professional-services firms — realty first. Seven agents are scoped
+            for the operational work that keeps owners awake: listing intake,
+            buyer routing, compliance review, CRM hygiene, production reporting,
+            recruiting. The fleet is in design partner build today; first runs
+            with customer data are scheduled for Q3 2026.
           </p>
 
           <div className="mt-10 flex flex-wrap items-center gap-4">
-            <Link href="/about" className="btn-primary">
-              How it works
+            <Link href="/app/sign-up" className="btn-primary">
+              Start free trial
               <span aria-hidden>→</span>
             </Link>
-            <a
-              href="mailto:hello@agentplain.com?subject=Book%20a%20call"
-              className="btn-secondary"
-            >
-              Book a call
+            <Link href="/verticals" className="btn-secondary">
+              See all ten verticals
               <span aria-hidden>→</span>
-            </a>
+            </Link>
           </div>
 
           <div className="mt-16 grid max-w-3xl gap-6 border-t border-rule pt-8 sm:grid-cols-3">
-            <Stat label="Agents in design (realty fleet)" value="7" />
+            <Stat label="Verticals on the roadmap" value="10" />
             <Stat label="First month" value="Free" />
-            <Stat label="Vertical at v0" value="Realty" />
+            <Stat label="Live vertical at v0" value="Realty" />
           </div>
         </div>
       </section>
 
-      {/* WHAT AGENTPLAIN DOES */}
+      {/* REPLACE / INTEGRATE / AUGMENT */}
       <Section
-        eyebrow="What agentplain does"
-        title="A small fleet, doing the work professional-services firms keep deferring."
-        intro="Three things, on purpose. We integrate with the CRM, MLS, and inbox you already pay for — we don't ask you to migrate. Then we replace the manual work that lives between them. No new dashboard for your team to maintain."
+        eyebrow="What agentplain does, and doesn't"
+        title="Replace. Integrate. Augment."
+        intro="A small fleet doing the work professional-services firms keep deferring. Three columns, on purpose. Every entry is a specific commitment — no marketing fog."
       >
-        <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-3">
-          <Pillar
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule lg:grid-cols-3">
+          {triad.map((p, i) => (
+            <Triad
+              key={p.label}
+              number={String(i + 1).padStart(2, "0")}
+              label={p.label}
+              headline={p.headline}
+              body={p.body}
+            />
+          ))}
+        </div>
+      </Section>
+
+      {/* HOW IT WORKS */}
+      <Section
+        id="how"
+        tone="deep"
+        eyebrow="How it works"
+        title="Three steps. Then the fleet drafts every morning."
+        intro="Onboarding takes ten minutes. After that, the fleet works in the background and surfaces drafts to you on your schedule — your existing CRM and inbox send."
+      >
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-3">
+          <Step
             number="01"
-            title="A pre-trained agent fleet"
-            body="Each agent is scoped to one operational job. Realty agents arrive trained on brokerage workflows, fair-housing language, and the systems brokerages actually use. No prompt engineering required from your team."
+            title="Pick your vertical."
+            body="Each of the ten verticals ships with its own pre-trained agent catalog, JTBD table, and integration list. No prompt engineering."
           />
-          <Pillar
+          <Step
             number="02"
-            title="Quiet operations"
-            body="The fleet drafts in the inbox you already pay for and queues updates back to your CRM, every output gated by your human review. We don't send outbound on your behalf — drafts surface to you; your existing system sends. CRM + inbox integrations — coming Q3 2026."
+            title="Connect your tools."
+            body="Read-only OAuth into the CRM, inbox, and accounting system you already pay for. The fleet reads what's there — we don't ask you to migrate."
           />
-          <Pillar
+          <Step
             number="03"
-            title="Measured outcomes"
-            body="First month is free across all three tiers. A weekly outcome digest: leads routed, listings prepped, compliance flags surfaced, hours returned. No vanity metrics."
+            title="The fleet drafts; you decide."
+            body="Every customer-facing output queues for your review. Approve, edit, or reject. Your existing system sends. The fleet never reaches the consumer on its own."
           />
         </div>
       </Section>
@@ -178,7 +221,6 @@ export default function HomePage() {
       {/* AGENT FLEET */}
       <Section
         id="fleet"
-        tone="deep"
         eyebrow="The fleet · v0"
         title="Seven agents. Each one scoped to one job."
         intro="We start narrow on purpose. Each agent does one operational task well, with the human review steps that brokerage compliance requires. The list grows when an agent earns its slot, not before."
@@ -199,6 +241,44 @@ export default function HomePage() {
           escrow, recruiting, home services, CPA / tax, law, and RIA — light up
           after realty hits functional acceptance.
         </p>
+      </Section>
+
+      {/* VERTICAL GRID */}
+      <Section
+        id="verticals"
+        tone="deep"
+        eyebrow="Verticals · ten on the roadmap"
+        title="Built for ten professional-services verticals."
+        intro="Each vertical maps to a tier — Regular, Plus, or Max — per project_vertical_tier_mapping.md. Real estate is in pilot today; the other nine carry ratified ICP fit and committed integration roadmaps."
+      >
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {verticals.map((v) => (
+            <Link
+              key={v.slug}
+              href={`/${v.slug}`}
+              className="group flex flex-col bg-paper p-6 transition hover:bg-paper-deep"
+            >
+              <p className="font-mono text-[10px] tracking-eyebrow uppercase text-clay">
+                {v.tier}
+              </p>
+              <p className="mt-3 font-display text-xl leading-tight text-ink">
+                {v.name}
+              </p>
+              <p className="mt-auto pt-6 inline-flex items-center gap-2 font-mono text-[10px] tracking-eyebrow text-mute group-hover:text-clay">
+                Read page <span aria-hidden>→</span>
+              </p>
+            </Link>
+          ))}
+        </div>
+        <div className="mt-10">
+          <Link
+            href="/verticals"
+            className="btn-secondary"
+          >
+            See all ten with tier breakdown
+            <span aria-hidden>→</span>
+          </Link>
+        </div>
       </Section>
 
       {/* PRICING */}
@@ -245,24 +325,24 @@ export default function HomePage() {
             Run a 25-agent brokerage with five.
           </p>
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-paper/75">
-            That is what we are building toward. The first month is free —
-            by the time you decide to keep paying, the fleet has either earned
-            its seat or it has not.
+            That is what we are building toward. The first month is free — by
+            the time you decide to keep paying, the fleet has either earned its
+            seat or it has not.
           </p>
 
           <div className="mt-10 flex flex-wrap gap-4">
-            <a
-              href="mailto:hello@agentplain.com?subject=agentplain%20interest"
+            <Link
+              href="/app/sign-up"
               className="inline-flex items-center justify-center gap-2 border border-paper bg-paper px-6 py-3 text-sm font-medium text-ink transition hover:bg-paper-deep"
             >
-              Talk to us
+              Start free trial
               <span aria-hidden>→</span>
-            </a>
+            </Link>
             <a
-              href="mailto:hello@agentplain.com"
+              href="mailto:hello@agentplain.com?subject=agentplain%20interest"
               className="inline-flex items-center justify-center gap-2 border border-paper/40 bg-transparent px-6 py-3 text-sm font-medium text-paper transition hover:border-paper"
             >
-              hello@agentplain.com
+              Talk to the operator
             </a>
           </div>
         </div>
@@ -282,7 +362,36 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Pillar({
+function Triad({
+  number,
+  label,
+  headline,
+  body,
+}: {
+  number: string;
+  label: string;
+  headline: string;
+  body: string;
+}) {
+  return (
+    <div className="flex flex-col bg-paper p-8 md:p-10">
+      <div className="flex items-baseline gap-3">
+        <p className="font-mono text-[11px] tracking-eyebrow text-clay">
+          {number}
+        </p>
+        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+          {label}
+        </p>
+      </div>
+      <h3 className="mt-4 font-display text-2xl leading-tight text-ink md:text-3xl">
+        {headline}
+      </h3>
+      <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">{body}</p>
+    </div>
+  );
+}
+
+function Step({
   number,
   title,
   body,
@@ -296,10 +405,10 @@ function Pillar({
       <p className="font-mono text-[11px] tracking-eyebrow text-clay">
         {number}
       </p>
-      <h3 className="mt-4 font-display text-2xl leading-tight text-ink md:text-3xl">
+      <h3 className="mt-4 font-display text-xl leading-tight text-ink md:text-2xl">
         {title}
       </h3>
-      <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">{body}</p>
+      <p className="mt-3 text-[15px] leading-relaxed text-ink-soft">{body}</p>
     </div>
   );
 }

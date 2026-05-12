@@ -37,7 +37,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
             defaultVerticalSlug={defaultVerticalSlug}
           />
         </div>
-        <p className="mt-8 text-sm text-slate-soft">
+        <p className="mt-8 text-sm text-mute">
           Already have an account?{" "}
           <Link href="/app/sign-in" className="text-ink underline">
             Sign in

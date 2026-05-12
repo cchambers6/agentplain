@@ -89,7 +89,7 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
       ) : null}
 
       {verticalContent ? (
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-rule pb-4 text-[13px] text-slate-soft">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-rule pb-4 text-[13px] text-mute">
           <span className="font-mono text-[11px] tracking-eyebrow uppercase">
             Vertical
           </span>
@@ -102,7 +102,7 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
           {!verticalIsLive ? (
             <>
               <span aria-hidden>·</span>
-              <span className="text-amber">
+              <span className="text-flag">
                 Per-vertical fleet is initializing — early-access workspace.
               </span>
             </>
@@ -117,7 +117,7 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
           <article className="border border-rule bg-paper p-6">
             <header className="mb-3 flex items-baseline justify-between">
               <h2 className="font-display text-2xl text-ink">{briefing.title}</h2>
-              <span className="font-mono text-[11px] tracking-eyebrow uppercase text-slate-soft">
+              <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
                 {new Date(briefing.publishedAt).toLocaleDateString()}
                 {briefing.isStale ? " · stale" : ""}
               </span>
@@ -135,7 +135,7 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
             ))}
           </article>
         ) : (
-          <p className="border border-rule bg-paper p-6 text-[15px] leading-relaxed text-slate-soft">
+          <p className="border border-rule bg-paper p-6 text-[15px] leading-relaxed text-mute">
             No briefing yet. Your chief-of-staff agent files one each morning;
             this section will populate after the first run.
           </p>
@@ -149,7 +149,7 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
         <section className="border border-rule bg-paper p-5">
           <p className="eyebrow mb-3">Recent fleet activity</p>
           {recentHandoffs.length === 0 ? (
-            <p className="text-[13px] text-slate-soft">
+            <p className="text-[13px] text-mute">
               No handoffs logged yet. Activity from your fleet appears here.
             </p>
           ) : (
@@ -158,11 +158,11 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
                 <li key={h.id} className="flex justify-between gap-4">
                   <span className="truncate">
                     <span className="font-mono">{h.fromAgent}</span>
-                    <span className="mx-1 text-slate-soft">→</span>
+                    <span className="mx-1 text-mute">→</span>
                     <span className="font-mono">{h.toAgent}</span>
-                    <span className="ml-2 text-slate-soft">{h.handoffType}</span>
+                    <span className="ml-2 text-mute">{h.handoffType}</span>
                   </span>
-                  <span className="font-mono text-[11px] uppercase text-slate-soft">
+                  <span className="font-mono text-[11px] uppercase text-mute">
                     {new Date(h.occurredAt).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",

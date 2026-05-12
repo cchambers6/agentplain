@@ -2,14 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Canonical agentplain brand tokens — kept in sync with lib/brand/tokens.ts.
+   Components consume these via Tailwind utilities (bg-paper, text-ink, etc.).
+   Direct CSS-variable reads are reserved for base body/html and ::selection. */
 :root {
   color-scheme: light;
+  --color-paper: #F7F4ED;
+  --color-paper-deep: #EDE9DE;
+  --color-ink: #1A1A1F;
+  --color-ink-soft: #2E2E33;
+  --color-clay: #B65D3A;
+  --color-clay-deep: #9A4D2F;
+  --color-moss: #3F5C3F;
+  --color-flag: #B43A3A;
+  --color-mute: #8C8478;
+  --color-rule: #E0DAC9;
 }
 
 html,
 body {
-  background-color: #F4EEE3;
-  color: #2A2620;
+  background-color: var(--color-paper);
+  color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -17,12 +30,11 @@ body {
 
 body {
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
-  font-feature-settings: "ss01", "cv11";
 }
 
 ::selection {
-  background: #2A2620;
-  color: #F4EEE3;
+  background: var(--color-ink);
+  color: var(--color-paper);
 }
 
 @layer base {
@@ -34,18 +46,22 @@ body {
 }
 
 @layer components {
+  /* Eyebrow — small caps mono label above headings + cards. spec §3 caption usage. */
   .eyebrow {
-    @apply font-mono text-[11px] tracking-eyebrow uppercase text-slate;
+    @apply font-mono text-[11px] tracking-eyebrow uppercase text-mute;
   }
 
+  /* Hairline rule between sections / inside cards. spec §6 cards-no-shadows pattern. */
   .rule {
     @apply h-px w-full bg-rule;
   }
 
+  /* Primary CTA — clay on paper. spec §6. */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-none border border-ink bg-ink px-6 py-3 font-sans text-sm font-medium text-paper transition hover:bg-ink-soft;
+    @apply inline-flex items-center justify-center gap-2 rounded-none border border-clay bg-clay px-6 py-3 font-sans text-sm font-medium text-paper transition hover:border-clay-deep hover:bg-clay-deep;
   }
 
+  /* Secondary CTA — outlined ink on paper. spec §6. */
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-none border border-ink/30 bg-transparent px-6 py-3 font-sans text-sm font-medium text-ink transition hover:border-ink hover:bg-ink/[0.03];
   }

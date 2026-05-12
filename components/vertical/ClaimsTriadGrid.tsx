@@ -55,16 +55,16 @@ function Column({
 }) {
   return (
     <div className="flex flex-col bg-paper p-8 md:p-10">
-      <p className="font-mono text-[11px] tracking-eyebrow text-signal">
+      <p className="font-mono text-[11px] tracking-eyebrow text-clay">
         {label}
       </p>
-      <p className="mt-3 max-w-xs text-[14px] leading-relaxed text-slate-soft">
+      <p className="mt-3 max-w-xs text-[14px] leading-relaxed text-mute">
         {body}
       </p>
       <ul className="mt-6 space-y-3 border-t border-rule pt-6 text-[15px] leading-relaxed text-ink">
         {items.map((item) => (
           <li key={item} className="flex gap-3">
-            <span className="mt-2 inline-block h-px w-3 shrink-0 bg-signal" />
+            <span className="mt-2 inline-block h-px w-3 shrink-0 bg-clay" />
             <span>{item}</span>
           </li>
         ))}

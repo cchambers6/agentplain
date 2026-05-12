@@ -117,7 +117,7 @@ export default function HomePage() {
           <h1 className="max-w-4xl font-display text-5xl leading-[1.05] text-ink sm:text-6xl md:text-[5.5rem] md:leading-[1.02]">
             Intelligence.
             <br />
-            <span className="text-signal">Rooted in reality.</span>
+            <span className="text-clay">Rooted in reality.</span>
           </h1>
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft md:text-xl">
             agentplain is a pre-trained AI agent fleet for professional-services
@@ -193,7 +193,7 @@ export default function HomePage() {
             />
           ))}
         </div>
-        <p className="mt-10 max-w-2xl text-sm leading-relaxed text-slate-soft">
+        <p className="mt-10 max-w-2xl text-sm leading-relaxed text-mute">
           v0 fleet covers the realty vertical. The other nine verticals on our
           roadmap — mortgage, insurance, property management, title &amp;
           escrow, recruiting, home services, CPA / tax, law, and RIA — light up
@@ -274,7 +274,7 @@ export default function HomePage() {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="font-mono text-[11px] tracking-eyebrow uppercase text-slate-soft">
+      <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
         {label}
       </p>
       <p className="mt-1 font-display text-3xl text-ink">{value}</p>
@@ -293,7 +293,7 @@ function Pillar({
 }) {
   return (
     <div className="bg-paper p-8 md:p-10">
-      <p className="font-mono text-[11px] tracking-eyebrow text-signal">
+      <p className="font-mono text-[11px] tracking-eyebrow text-clay">
         {number}
       </p>
       <h3 className="mt-4 font-display text-2xl leading-tight text-ink md:text-3xl">

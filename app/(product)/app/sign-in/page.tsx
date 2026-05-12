@@ -15,7 +15,7 @@ export default function SignInPage() {
         <div className="mt-8">
           <SignInForm />
         </div>
-        <p className="mt-8 text-sm text-slate-soft">
+        <p className="mt-8 text-sm text-mute">
           New to agentplain?{" "}
           <Link href="/app/sign-up" className="text-ink underline">
             Create a workspace

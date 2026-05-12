@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Logo from "./Logo";
+import Logo from "./brand/Logo";
 
 export default function Footer() {
   return (
@@ -10,7 +10,7 @@ export default function Footer() {
           <p className="mt-5 max-w-sm font-display text-2xl leading-snug text-ink">
             Intelligence. Rooted in reality.
           </p>
-          <p className="mt-3 max-w-sm text-sm text-slate-soft">
+          <p className="mt-3 max-w-sm text-sm text-mute">
             A pre-trained agent fleet for professional-services firms — realty
             first.
           </p>
@@ -20,17 +20,17 @@ export default function Footer() {
           <p className="eyebrow mb-4">Product</p>
           <ul className="space-y-2 text-sm">
             <li>
-              <Link href="/#pricing" className="text-ink hover:text-signal">
+              <Link href="/#pricing" className="text-ink hover:text-clay">
                 Pricing
               </Link>
             </li>
             <li>
-              <Link href="/#fleet" className="text-ink hover:text-signal">
+              <Link href="/#fleet" className="text-ink hover:text-clay">
                 The agent fleet
               </Link>
             </li>
             <li>
-              <Link href="/#faq" className="text-ink hover:text-signal">
+              <Link href="/#faq" className="text-ink hover:text-clay">
                 FAQ
               </Link>
             </li>
@@ -41,14 +41,14 @@ export default function Footer() {
           <p className="eyebrow mb-4">Company</p>
           <ul className="space-y-2 text-sm">
             <li>
-              <Link href="/about" className="text-ink hover:text-signal">
+              <Link href="/about" className="text-ink hover:text-clay">
                 About
               </Link>
             </li>
             <li>
               <a
                 href="mailto:hello@agentplain.com"
-                className="text-ink hover:text-signal"
+                className="text-ink hover:text-clay"
               >
                 hello@agentplain.com
               </a>
@@ -58,13 +58,13 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-rule">
-        <div className="container-wide flex flex-col justify-between gap-2 py-5 text-xs text-slate-soft sm:flex-row">
+        <div className="container-wide flex flex-col justify-between gap-2 py-5 text-xs text-mute sm:flex-row">
           <p className="font-mono tracking-wide">
             © {new Date().getFullYear()} agentplain
           </p>
           <p className="font-mono tracking-wide">v0 · design partner phase</p>
         </div>
-        <div className="container-wide pb-5 text-xs text-slate-soft">
+        <div className="container-wide pb-5 text-xs text-mute">
           <p className="font-mono tracking-wide">
             site reflects current product capabilities; updated 2026-05-11
           </p>

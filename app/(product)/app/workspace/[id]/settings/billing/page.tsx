@@ -224,13 +224,13 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
           <section className="mt-10">
             <p className="eyebrow mb-3">Recent invoices</p>
             {invoices.length === 0 ? (
-              <p className="border border-rule bg-paper p-5 text-[15px] text-slate-soft">
+              <p className="border border-rule bg-paper p-5 text-[15px] text-mute">
                 None yet. First invoice arrives at trial end.
               </p>
             ) : (
               <table className="w-full border border-rule bg-paper text-left text-[14px]">
                 <thead>
-                  <tr className="border-b border-rule bg-paper-deep text-[11px] font-mono uppercase tracking-eyebrow text-slate-soft">
+                  <tr className="border-b border-rule bg-paper-deep text-[11px] font-mono uppercase tracking-eyebrow text-mute">
                     <th className="px-4 py-3">Issued</th>
                     <th className="px-4 py-3">Period</th>
                     <th className="px-4 py-3">Amount</th>
@@ -244,7 +244,7 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
                       key={inv.id}
                       className="border-b border-rule last:border-b-0"
                     >
-                      <td className="px-4 py-3 font-mono text-[12px] uppercase text-slate-soft">
+                      <td className="px-4 py-3 font-mono text-[12px] uppercase text-mute">
                         {formatDate(inv.issuedAt)}
                       </td>
                       <td className="px-4 py-3 text-ink-soft">
@@ -255,7 +255,7 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
                       <td className="px-4 py-3 font-mono text-ink">
                         {formatCents(inv.amountUsdCents)}
                       </td>
-                      <td className="px-4 py-3 font-mono text-[12px] uppercase text-slate-soft">
+                      <td className="px-4 py-3 font-mono text-[12px] uppercase text-mute">
                         {inv.status}
                       </td>
                       <td className="px-4 py-3 text-[13px]">
@@ -290,7 +290,7 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
                     className="flex items-center justify-between border-b border-rule px-4 py-3 text-[13px] last:border-b-0"
                   >
                     <span className="font-mono text-ink-soft">{e.type}</span>
-                    <span className="font-mono text-[12px] text-slate-soft">
+                    <span className="font-mono text-[12px] text-mute">
                       {formatDate(e.receivedAt)}
                     </span>
                   </li>
@@ -337,7 +337,7 @@ function TrialBanner(props: {
 
 function MissingSubscriptionState() {
   return (
-    <div className="mt-8 border border-rule bg-paper p-5 text-[15px] text-slate-soft">
+    <div className="mt-8 border border-rule bg-paper p-5 text-[15px] text-mute">
       We're still provisioning your trial. Refresh in a moment. If this
       persists, check the workspace audit log or reach out — your workspace
       still works without the subscription wired up.
@@ -363,7 +363,7 @@ function ChangePlanCard(props: {
         className="mt-4 flex flex-wrap items-end gap-4"
       >
         <label className="flex flex-col gap-1 text-[13px]">
-          <span className="font-mono uppercase tracking-eyebrow text-[11px] text-slate-soft">
+          <span className="font-mono uppercase tracking-eyebrow text-[11px] text-mute">
             Tier
           </span>
           <select
@@ -379,7 +379,7 @@ function ChangePlanCard(props: {
           </select>
         </label>
         <label className="flex flex-col gap-1 text-[13px]">
-          <span className="font-mono uppercase tracking-eyebrow text-[11px] text-slate-soft">
+          <span className="font-mono uppercase tracking-eyebrow text-[11px] text-mute">
             Seats
           </span>
           <input
@@ -395,7 +395,7 @@ function ChangePlanCard(props: {
           Update plan
         </button>
       </form>
-      <p className="mt-3 text-[12px] text-slate-soft">
+      <p className="mt-3 text-[12px] text-mute">
         100+ seats route to a custom build engagement.
       </p>
     </section>

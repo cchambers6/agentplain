@@ -22,7 +22,7 @@ export function SignInForm() {
   return (
     <form action={formAction} className="space-y-4">
       <label className="block text-sm">
-        <span className="font-mono text-[11px] tracking-eyebrow uppercase text-slate">
+        <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
           Email
         </span>
         <input
@@ -34,7 +34,7 @@ export function SignInForm() {
         />
       </label>
       {state.error ? (
-        <p className="text-sm text-amber" role="alert">
+        <p className="text-sm text-flag" role="alert">
           {state.error}
         </p>
       ) : null}

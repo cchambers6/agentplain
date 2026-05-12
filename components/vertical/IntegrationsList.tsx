@@ -40,7 +40,7 @@ export default function IntegrationsList({
         <List items={integrations.planned} variant="planned" />
       </div>
 
-      <p className="mt-10 max-w-3xl font-mono text-[12px] leading-relaxed text-slate-soft">
+      <p className="mt-10 max-w-3xl font-mono text-[12px] leading-relaxed text-mute">
         Source: `project_integration_roadmap.md` (current state) and
         `feedback_integration_acceptance_is_functional.md` (acceptance bar).
         Sync-diff alone is a subtest; integration-acceptance means the agent
@@ -63,7 +63,7 @@ function List({
         <div key={item.name} className="bg-paper p-5">
           <p
             className={`font-mono text-[11px] tracking-eyebrow ${
-              variant === "shipped" ? "text-signal" : "text-slate"
+              variant === "shipped" ? "text-moss" : "text-mute"
             }`}
           >
             {item.category}
@@ -72,7 +72,7 @@ function List({
             {item.name}
           </p>
           {item.note && (
-            <p className="mt-2 text-[13px] leading-relaxed text-slate-soft">
+            <p className="mt-2 text-[13px] leading-relaxed text-mute">
               {item.note}
             </p>
           )}

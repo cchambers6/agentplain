@@ -30,7 +30,7 @@ export default function VerticalsIndexPage() {
           <h1 className="max-w-4xl font-display text-5xl leading-[1.05] text-ink md:text-7xl md:leading-[1.02]">
             Ten verticals.
             <br />
-            <span className="text-signal">Three tiers.</span>
+            <span className="text-clay">Three tiers.</span>
           </h1>
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft md:text-xl">
             Each vertical maps to a tier per
@@ -79,7 +79,7 @@ function Grid({ items }: { items: ReturnType<typeof getAllVerticals> }) {
           href={`/${v.slug}`}
           className="group bg-paper p-7 transition hover:bg-paper-deep"
         >
-          <p className="font-mono text-[11px] tracking-eyebrow text-signal">
+          <p className="font-mono text-[11px] tracking-eyebrow text-clay">
             {v.hero.eyebrow}
           </p>
           <h3 className="mt-3 font-display text-2xl leading-tight text-ink md:text-3xl">
@@ -88,7 +88,7 @@ function Grid({ items }: { items: ReturnType<typeof getAllVerticals> }) {
           <p className="mt-3 text-[14px] leading-relaxed text-ink-soft">
             {v.hero.headline}
           </p>
-          <p className="mt-5 inline-flex items-center gap-2 font-mono text-[11px] tracking-eyebrow text-slate group-hover:text-signal">
+          <p className="mt-5 inline-flex items-center gap-2 font-mono text-[11px] tracking-eyebrow text-mute group-hover:text-clay">
             Read the page <span aria-hidden>→</span>
           </p>
         </Link>

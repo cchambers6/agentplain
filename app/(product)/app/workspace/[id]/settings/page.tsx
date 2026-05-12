@@ -72,7 +72,7 @@ export default async function SettingsPage({ params }: PageProps) {
         </Link>
       </div>
 
-      <p className="mt-8 max-w-2xl text-[13px] leading-relaxed text-slate-soft">
+      <p className="mt-8 max-w-2xl text-[13px] leading-relaxed text-mute">
         Phase 1 settings are minimal — agent enablement, tool connections,
         team management land in Phase 2 / Phase 3. Reach out to the
         agentplain operator to change anything you don't see here.
@@ -84,7 +84,7 @@ export default async function SettingsPage({ params }: PageProps) {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="bg-paper p-5">
-      <p className="font-mono text-[11px] tracking-eyebrow uppercase text-slate-soft">
+      <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
         {label}
       </p>
       <p className="mt-1 font-display text-lg text-ink">{value}</p>

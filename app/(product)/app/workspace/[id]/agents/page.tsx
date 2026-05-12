@@ -56,11 +56,11 @@ export default async function AgentsPage({ params }: PageProps) {
             href={`/app/workspace/${workspaceId}/agents/${agent.slug}`}
             className="block bg-paper p-5 transition hover:bg-paper-deep"
           >
-            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-slate-soft">
+            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
               {agent.slug}
             </p>
             <p className="mt-2 font-display text-xl text-ink">{agent.name}</p>
-            <p className="mt-3 text-[13px] text-slate-soft">
+            <p className="mt-3 text-[13px] text-mute">
               {counts.get(agent.slug) ?? 0} handoffs logged
             </p>
           </Link>

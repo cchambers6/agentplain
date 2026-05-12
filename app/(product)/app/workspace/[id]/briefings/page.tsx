@@ -26,7 +26,7 @@ export default async function BriefingsPage({ params }: PageProps) {
       </p>
 
       {briefings.length === 0 ? (
-        <p className="mt-8 border border-rule bg-paper p-5 text-[15px] text-slate-soft">
+        <p className="mt-8 border border-rule bg-paper p-5 text-[15px] text-mute">
           No briefings yet. Your fleet files the first one after their next
           morning run.
         </p>
@@ -36,7 +36,7 @@ export default async function BriefingsPage({ params }: PageProps) {
             <li key={b.sourceId} className="border border-rule bg-paper p-5">
               <header className="mb-3 flex items-baseline justify-between">
                 <h2 className="font-display text-xl text-ink">{b.title}</h2>
-                <span className="font-mono text-[11px] tracking-eyebrow uppercase text-slate-soft">
+                <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
                   {new Date(b.publishedAt).toLocaleDateString()}
                   {b.isStale ? " · stale" : ""}
                 </span>

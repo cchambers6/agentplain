@@ -74,7 +74,7 @@ export default async function WorkThresholdsPage({ params }: PageProps) {
           const currentSeverity = current?.requiresApprovalAboveSeverity ?? "NONE";
           return (
             <li key={k.kind} className="border border-rule bg-paper p-5">
-              <p className="font-mono text-[11px] tracking-eyebrow uppercase text-slate-soft">
+              <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
                 {k.kind}
               </p>
               <p className="mt-1 font-display text-xl text-ink">{k.label}</p>
@@ -85,7 +85,7 @@ export default async function WorkThresholdsPage({ params }: PageProps) {
                 <input type="hidden" name="workspaceId" value={workspaceId} />
                 <input type="hidden" name="kind" value={k.kind} />
                 <label className="text-sm">
-                  <span className="font-mono text-[11px] tracking-eyebrow uppercase text-slate">
+                  <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
                     Approve when severity ≥
                   </span>
                   <select

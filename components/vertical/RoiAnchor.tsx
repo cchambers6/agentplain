@@ -11,7 +11,7 @@ export default function RoiAnchor({ roi }: { roi: RoiAnchorType }) {
     >
       <div className="grid gap-px overflow-hidden border border-rule bg-rule lg:grid-cols-[1fr_2fr]">
         <div className="bg-paper p-10 md:p-12">
-          <p className="font-mono text-[11px] tracking-eyebrow text-signal">
+          <p className="font-mono text-[11px] tracking-eyebrow text-clay">
             Headline multiplier
           </p>
           <p className="mt-4 font-display text-6xl leading-none text-ink md:text-7xl">
@@ -48,14 +48,14 @@ function Row({
 }) {
   return (
     <div className={wide ? "" : "flex flex-wrap items-baseline gap-3"}>
-      <dt className="font-mono text-[11px] tracking-eyebrow uppercase text-slate">
+      <dt className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
         {label}
       </dt>
       <dd
         className={`${
           wide ? "mt-2" : ""
         } text-[15px] leading-relaxed text-ink-soft ${
-          cite ? "font-mono text-[12px] text-slate-soft" : ""
+          cite ? "font-mono text-[12px] text-mute" : ""
         }`}
       >
         {value}

@@ -200,13 +200,13 @@ function renderHtml(args: {
 }): string {
   const { candidate, billingUrl, dayLabel } = args;
   return `<!doctype html>
-<html><body style="font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif; color:#2A2620; background:#F4EEE3; padding:32px;">
-  <h2 style="font-weight:500; color:#2A2620;">Your agentplain trial ends ${escapeHtml(dayLabel)}.</h2>
+<html><body style="font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif; color:#1A1A1F; background:#F7F4ED; padding:32px;">
+  <h2 style="font-weight:500; color:#1A1A1F;">Your agentplain trial ends ${escapeHtml(dayLabel)}.</h2>
   <p>You're on <strong>${escapeHtml(candidate.tierLabel)}</strong> — ${candidate.seats} seat${candidate.seats === 1 ? "" : "s"} at ${formatCents(candidate.perSeatCents)}/seat/mo. After ${escapeHtml(dayLabel)}, your card on file will be charged ${formatCents(candidate.totalCents)} on a monthly cycle.</p>
   <p>If you haven't added a card yet, your fleet pauses when the trial ends. Add one in under a minute:</p>
-  <p><a href="${billingUrl}" style="display:inline-block; padding:12px 20px; background:#2A2620; color:#F4EEE3; text-decoration:none; font-weight:500;">Open billing</a></p>
-  <p style="font-size:13px; color:#5A5D62;">Month-to-month. Cancel any time from the same page.</p>
-  <p style="font-size:13px; color:#5A5D62;">— agentplain</p>
+  <p><a href="${billingUrl}" style="display:inline-block; padding:12px 20px; background:#1A1A1F; color:#F7F4ED; text-decoration:none; font-weight:500;">Open billing</a></p>
+  <p style="font-size:13px; color:#8C8478;">Month-to-month. Cancel any time from the same page.</p>
+  <p style="font-size:13px; color:#8C8478;">— agentplain</p>
 </body></html>`;
 }
 

@@ -43,8 +43,8 @@ export default function PricingTierBanner({ tier }: { tier: VerticalTier }) {
       title={
         <>
           {active.name} tier · per seat ·{" "}
-          <span className="text-signal">{active.solo}</span> sliding to{" "}
-          <span className="text-signal">{active.floor}</span>
+          <span className="text-clay">{active.solo}</span> sliding to{" "}
+          <span className="text-clay">{active.floor}</span>
         </>
       }
       intro="Three tiers, per seat, month-to-month. First month is free across every tier. Card on file at sign-up, month 1 = $0, month 2 onward at your tier's per-seat rate. Cancel any time."
@@ -73,7 +73,7 @@ export default function PricingTierBanner({ tier }: { tier: VerticalTier }) {
         />
       </div>
 
-      <p className="mt-8 max-w-3xl font-mono text-[12px] leading-relaxed text-slate-soft">
+      <p className="mt-8 max-w-3xl font-mono text-[12px] leading-relaxed text-mute">
         Source: `project_stripe_both_surfaces.md` (per-seat ladder; pilot SKUs
         deprecated 2026-05-09). Tier mapping per
         `project_vertical_tier_mapping.md`. 100+ seats moves to enterprise terms.
@@ -95,12 +95,12 @@ function Cell({
   band: string;
   active: boolean;
 }) {
-  const border = active ? "ring-2 ring-inset ring-signal" : "";
+  const border = active ? "ring-2 ring-inset ring-clay" : "";
   return (
     <div className={`bg-paper ${border} p-7`}>
       <p
         className={`font-mono text-[11px] tracking-eyebrow uppercase ${
-          active ? "text-signal" : "text-slate"
+          active ? "text-clay" : "text-mute"
         }`}
       >
         {label}
@@ -109,13 +109,13 @@ function Cell({
       <p className="mt-4 font-display text-3xl leading-none text-ink md:text-4xl">
         {solo}
       </p>
-      <p className="mt-2 text-[13px] leading-relaxed text-slate-soft">
+      <p className="mt-2 text-[13px] leading-relaxed text-mute">
         per seat · solo (1 seat)
       </p>
       <p className="mt-4 font-display text-2xl leading-none text-ink-soft">
         {floor}
       </p>
-      <p className="mt-2 text-[13px] leading-relaxed text-slate-soft">
+      <p className="mt-2 text-[13px] leading-relaxed text-mute">
         per seat · {band}
       </p>
     </div>

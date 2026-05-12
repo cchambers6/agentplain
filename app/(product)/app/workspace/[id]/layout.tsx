@@ -39,19 +39,19 @@ export default async function WorkspaceLayout({
       <div className="border-b border-rule bg-paper-deep">
         <div className="container-wide flex flex-col gap-3 py-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-slate-soft">
+            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
               {workspace.slug}
             </p>
             <p className="font-display text-2xl text-ink">{workspace.name}</p>
           </div>
-          <div className="flex items-center gap-3 text-[11px] font-mono tracking-wide uppercase text-slate-soft">
+          <div className="flex items-center gap-3 text-[11px] font-mono tracking-wide uppercase text-mute">
             <span>{member.email}</span>
             <span aria-hidden>·</span>
             <span>{member.role.replace("_", " ").toLowerCase()}</span>
             <form action={signOutAction}>
               <button
                 type="submit"
-                className="text-slate-soft underline-offset-4 hover:text-ink hover:underline"
+                className="text-mute underline-offset-4 hover:text-ink hover:underline"
               >
                 sign out
               </button>

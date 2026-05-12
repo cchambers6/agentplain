@@ -58,7 +58,7 @@ export function SignUpForm({
         autoComplete="name"
       />
       {state.error ? (
-        <p className="text-sm text-amber" role="alert">
+        <p className="text-sm text-flag" role="alert">
           {state.error}
         </p>
       ) : null}
@@ -76,7 +76,7 @@ function VerticalField({
 }) {
   return (
     <label className="block text-sm">
-      <span className="font-mono text-[11px] tracking-eyebrow uppercase text-slate">
+      <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
         Vertical
       </span>
       <select
@@ -113,7 +113,7 @@ function Field({
 }) {
   return (
     <label className="block text-sm">
-      <span className="font-mono text-[11px] tracking-eyebrow uppercase text-slate">
+      <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
         {label}
       </span>
       <input

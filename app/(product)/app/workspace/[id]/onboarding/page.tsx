@@ -77,7 +77,7 @@ export default async function OnboardingPage({ params }: PageProps) {
         {currentMeta.description}
       </p>
 
-      <ol className="mt-8 grid gap-3 border-y border-rule py-5 text-[13px] text-slate-soft">
+      <ol className="mt-8 grid gap-3 border-y border-rule py-5 text-[13px] text-mute">
         {STEP_ORDER.filter((s) => s !== "done").map((s) => {
           const isDone = completed.includes(s);
           const isCurrent = s === currentStep;
@@ -85,7 +85,7 @@ export default async function OnboardingPage({ params }: PageProps) {
             <li key={s} className="flex items-baseline gap-3">
               <span
                 className={`font-mono text-[11px] uppercase tracking-eyebrow ${
-                  isCurrent ? "text-ink" : "text-slate-soft"
+                  isCurrent ? "text-ink" : "text-mute"
                 }`}
               >
                 {STEP_META[s].index}.
@@ -94,7 +94,7 @@ export default async function OnboardingPage({ params }: PageProps) {
                 {STEP_META[s].label}
               </span>
               {isDone ? (
-                <span className="ml-auto font-mono text-[11px] uppercase tracking-eyebrow text-signal">
+                <span className="ml-auto font-mono text-[11px] uppercase tracking-eyebrow text-moss">
                   complete
                 </span>
               ) : null}
@@ -130,7 +130,7 @@ export default async function OnboardingPage({ params }: PageProps) {
           ) : null}
           <Link
             href={`/app/workspace/${workspaceId}`}
-            className="text-sm text-slate-soft underline-offset-4 hover:underline"
+            className="text-sm text-mute underline-offset-4 hover:underline"
           >
             Back to workspace
           </Link>
@@ -159,7 +159,7 @@ function ConfirmDetails({
         value={verticalIsLive ? verticalLabel : `${verticalLabel} — early access`}
       />
       <Row label="Tier" value={tier} />
-      <p className="mt-3 border-t border-rule pt-3 text-[13px] text-slate-soft">
+      <p className="mt-3 border-t border-rule pt-3 text-[13px] text-mute">
         To change any of this later, head to Settings inside the workspace.
       </p>
     </dl>
@@ -174,7 +174,7 @@ function ConnectIntegration() {
         agentplain team to wire up your CRM / MLS / AMS / ATS / accounting,
         or skip — the fleet works with manually-entered data while you decide.
       </p>
-      <p className="mt-3 text-[13px] text-slate-soft">
+      <p className="mt-3 text-[13px] text-mute">
         Per the no-outbound architecture, every integration is read-only from
         our side; sends still happen in your own systems.
       </p>
@@ -185,7 +185,7 @@ function ConnectIntegration() {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-6 border-b border-rule/60 pb-2 last:border-b-0">
-      <dt className="font-mono text-[11px] uppercase tracking-eyebrow text-slate-soft">
+      <dt className="font-mono text-[11px] uppercase tracking-eyebrow text-mute">
         {label}
       </dt>
       <dd className="text-ink">{value}</dd>

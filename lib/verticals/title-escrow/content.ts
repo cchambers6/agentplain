@@ -8,6 +8,7 @@ export const titleEscrow: VerticalContent = {
   slug: "title-escrow",
   name: "Title & escrow",
   tier: "regular",
+  missionSubject: "title and escrow agencies",
 
   hero: {
     eyebrow: "Roadmap vertical · Regular tier",

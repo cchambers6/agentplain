@@ -26,7 +26,8 @@ export default function Footer() {
             {tokens.tagline}
           </p>
           <p className="mt-3 max-w-sm text-sm text-mute">
-            An AI ops fleet for professional services firms. Built for ten
+            We lift up local businesses by doing the work that takes their
+            time and money away from the people they serve. Built for ten
             verticals — pick yours.
           </p>
         </div>

@@ -12,6 +12,7 @@ export const insurance: VerticalContent = {
   slug: "insurance",
   name: "Insurance brokerages",
   tier: "regular",
+  missionSubject: "insurance brokers and agencies",
 
   hero: {
     eyebrow: "Tied #1 vertical fit · Regular tier",

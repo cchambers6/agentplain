@@ -9,6 +9,7 @@ export const propertyManagement: VerticalContent = {
   slug: "property-management",
   name: "Property management",
   tier: "regular",
+  missionSubject: "property managers and management companies",
 
   hero: {
     eyebrow: "Roadmap vertical · Regular tier",

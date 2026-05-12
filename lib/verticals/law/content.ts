@@ -12,6 +12,7 @@ export const law: VerticalContent = {
   slug: "law",
   name: "Law firms",
   tier: "max",
+  missionSubject: "law firms and solo practitioners",
 
   hero: {
     eyebrow: "Max tier · narrow competitive window",

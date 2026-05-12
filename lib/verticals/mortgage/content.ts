@@ -10,6 +10,7 @@ export const mortgage: VerticalContent = {
   slug: "mortgage",
   name: "Mortgage brokerages",
   tier: "regular",
+  missionSubject: "mortgage brokers and loan officers",
 
   hero: {
     eyebrow: "Roadmap vertical · Regular tier",

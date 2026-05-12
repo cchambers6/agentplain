@@ -167,8 +167,9 @@ function WelcomeStrip({
           : "Today's work, ready for review."}
       </h1>
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
-        The fleet drafted overnight. You decide what ships. Approve, edit, or
-        reject — your existing tools send.
+        Your fleet is doing the work that doesn't need you, so you can focus
+        on the work that does. Approve, edit, or reject — your existing tools
+        send.
       </p>
 
       <div className="mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[12px] text-mute">

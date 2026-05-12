@@ -64,7 +64,11 @@ export const tokens: BrandTokens = {
     sansFamily: "Inter",
     monoFamily: "JetBrains Mono",
   },
-  tagline: "Intelligence. Rooted in reality.",
+  // Tagline locked 2026-05-11 per project_agentplain_mission_and_positioning.md.
+  // Form: no mid-sentence period — "Intelligence rooted in reality." reads as
+  // a single thought, not two beats. The prior comma-spliced form has been
+  // retired across every customer surface.
+  tagline: "Intelligence rooted in reality.",
   wordmark: "agentplain",
   version: "v0",
 };

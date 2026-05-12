@@ -12,6 +12,7 @@ export const homeServices: VerticalContent = {
   slug: "home-services",
   name: "Home services",
   tier: "plus",
+  missionSubject: "home services contractors",
 
   hero: {
     eyebrow: "Recommended Product 3 · Plus tier",

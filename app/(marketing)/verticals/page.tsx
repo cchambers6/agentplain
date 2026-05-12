@@ -33,13 +33,14 @@ export default function VerticalsIndexPage() {
             <span className="text-clay">Different ops. Same value loop.</span>
           </h1>
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft md:text-xl">
-            Each vertical-aware fleet reads your tools, drafts the systematic
-            work, and queues every customer-facing output for your review.
-            Different domain rules, same pattern: the fleet handles the
-            recurring ops, the human keeps the relationships.
+            Each vertical-aware fleet lifts up local businesses by doing the
+            work that takes their time and money away from the people they
+            serve. Different domain rules, same pattern: the fleet handles
+            the recurring ops, the human keeps the relationships.
           </p>
           <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-mute">
-            Per-seat, month-to-month, first month free across every tier.
+            Affordable access · per-seat · month-to-month · first month free
+            across every tier.
           </p>
         </div>
       </section>

@@ -9,6 +9,7 @@ export const cpa: VerticalContent = {
   slug: "cpa",
   name: "CPA firms",
   tier: "plus",
+  missionSubject: "CPAs and tax practices",
 
   hero: {
     eyebrow: "Top-5 vertical fit · Plus tier",

@@ -9,6 +9,7 @@ export const recruiting: VerticalContent = {
   slug: "recruiting",
   name: "Recruiting firms",
   tier: "regular",
+  missionSubject: "recruiters and staffing firms",
 
   hero: {
     eyebrow: "Adjacent vertical · Regular tier",

@@ -10,6 +10,7 @@ export const realEstate: VerticalContent = {
   slug: "real-estate",
   name: "Real estate",
   tier: "regular",
+  missionSubject: "realtors and brokerages",
 
   hero: {
     eyebrow: "Regular tier · live with design partners",

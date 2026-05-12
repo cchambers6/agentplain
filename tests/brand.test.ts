@@ -50,8 +50,8 @@ describe("brand tokens — locked strings (spec §1, §2)", () => {
   it("wordmark is `agentplain` lowercase, no space, no hyphen", () => {
     assert.equal(tokens.wordmark, "agentplain");
   });
-  it("tagline is the exact form 'Intelligence. Rooted in reality.'", () => {
-    assert.equal(tokens.tagline, "Intelligence. Rooted in reality.");
+  it("tagline is the locked form 'Intelligence rooted in reality.' (no mid-period; locked 2026-05-11 per project_agentplain_mission_and_positioning.md)", () => {
+    assert.equal(tokens.tagline, "Intelligence rooted in reality.");
   });
   it("version is v0", () => {
     assert.equal(tokens.version, "v0");

@@ -167,4 +167,22 @@ export interface VerticalContent {
    * initial 10-vertical content drop.
    */
   valueLoopExample?: ValueLoopExample;
+
+  /**
+   * Audience noun the vertical hero plugs into the locked mission line:
+   *   "We lift up {missionSubject} by doing the work that takes their time
+   *   and money away from the people they serve."
+   *
+   * Per `project_agentplain_mission_and_positioning.md` (2026-05-11 lock),
+   * every vertical hero needs the mission line rendered with the vertical-
+   * specific noun so the visitor sees themselves on page 1. Examples:
+   *   - real-estate     → "realtors and brokerages"
+   *   - mortgage        → "mortgage brokers"
+   *   - cpa             → "CPAs and tax practices"
+   *   - law             → "law firms"
+   *
+   * Optional in the type for backward-compat; populated on all 10 active
+   * verticals in this PR.
+   */
+  missionSubject?: string;
 }

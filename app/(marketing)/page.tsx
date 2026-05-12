@@ -99,31 +99,40 @@ export default function HomePage() {
 
   return (
     <>
-      {/* HERO — mission line + all 10 verticals visible above the fold */}
+      {/* HERO — wordmark + tagline + locked mission line + all 10 verticals */}
       <section className="border-b border-rule bg-paper">
         <div className="container-wide pb-24 pt-20 md:pb-28 md:pt-24">
-          <p className="eyebrow mb-6">An AI ops fleet for professional services</p>
-          <h1 className="max-w-[58rem] font-display text-4xl leading-[1.08] text-ink sm:text-5xl md:text-[4.5rem] md:leading-[1.04]">
-            People get to do more relationship building and more of the work
-            they enjoy, while{" "}
-            <span className="text-clay">
-              outsourcing the work that takes their time and money
-            </span>{" "}
-            that they can't and don't want to do.
+          {/* Wordmark-and-tagline lockup. The wordmark is rendered by the
+              header logo above; this hero echoes the brand thesis line. */}
+          <p className="font-display text-base leading-snug text-clay md:text-lg">
+            {tokens.tagline}
+          </p>
+          <h1 className="mt-6 max-w-[58rem] font-display text-4xl leading-[1.08] text-ink sm:text-5xl md:text-[4.5rem] md:leading-[1.04]">
+            We lift up{" "}
+            <span className="text-clay">local businesses</span> by doing the
+            work that takes their time and money away from the people they
+            serve.
           </h1>
           <p className="mt-8 max-w-3xl text-lg leading-relaxed text-ink-soft md:text-xl">
-            {tokens.wordmark} is the AI ops fleet for professional services
-            firms. The fleet reads your email, calendar, CRM, and documents,
-            categorizes what's important, drafts what you'd otherwise type,
-            schedules what needs scheduling, and coordinates across threads.
-            You stay in control: the fleet drafts and proposes; you approve
-            and send.
+            {tokens.wordmark} is a fleet of capable AI partners that runs
+            inside your business. The fleet reads from your email, calendar,
+            CRM, and documents, categorizes what's important, drafts what
+            you'd otherwise type, schedules what needs scheduling, and
+            coordinates across threads. You stay in control: the fleet drafts
+            and proposes; you approve and send.
+          </p>
+          {/* Supporting copy from Conner's first-pass mission articulation —
+              preserved per the canonical rule as useful supporting framing. */}
+          <p className="mt-4 max-w-3xl text-[15px] leading-relaxed text-mute">
+            More relationship building. More of the work you enjoy. Less of
+            the work that takes your time and money away from the people you
+            serve.
           </p>
 
           {/* All 10 verticals as a chip row */}
           <div className="mt-10">
             <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-              Built for ten verticals — pick yours
+              Built for ten kinds of local business — pick yours
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               {verticals.map((v) => (
@@ -160,8 +169,8 @@ export default function HomePage() {
       {/* Q1 — Why do we exist? */}
       <Section
         eyebrow="Why we exist"
-        title="Professional services people spend most of their week on the work they don't love."
-        intro="Email triage, copying data between tools, drafting boilerplate, scheduling, status updates — 60-70% of the week, in most surveys. The work practitioners actually love — client relationships, judgment calls, growing the book — gets the leftover time."
+        title="Local business owners spend most of their week on the work they don't love."
+        intro="Email triage, copying data between tools, drafting boilerplate, scheduling, status updates — 60–70% of the week, in most surveys. The work that built the business in the first place — client relationships, judgment calls, growing the book — gets the leftover time."
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
           <div className="bg-paper p-8 md:p-10">
@@ -291,9 +300,9 @@ export default function HomePage() {
 
       {/* Q6 — Why should anyone believe us? */}
       <Section
-        eyebrow="Why anyone should believe us"
-        title="Proof points, not slogans."
-        intro="Four things we can point at today. We don't claim 'built for X' without the per-vertical compliance corpus + JTBD tables; we don't claim 'integrates with X' without the value-loop demo. The bar is functional, not marketing."
+        eyebrow="Rooted in reality"
+        title="Here's what we mean by &lsquo;rooted in reality.&rsquo;"
+        intro="Four things we can point at today. Not magic, not pixie dust — real product, real operators, real outcomes. We don't claim 'built for X' without the per-vertical compliance corpus + JTBD tables; we don't claim 'integrates with X' without the value-loop demo. The bar is functional, not marketing."
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule lg:grid-cols-2">
           {proof.map((p) => (
@@ -307,8 +316,8 @@ export default function HomePage() {
         id="pricing"
         tone="deep"
         eyebrow="Pricing + ROI"
-        title="Three tiers, per seat. Run your own numbers."
-        intro="Per-seat subscription, month-to-month from day one. First month free across all three tiers. The calculator below uses the locked per-seat ladder; the value side uses your own hours and rate."
+        title="Affordable access to enterprise-grade tools."
+        intro="That's the vision — and the calculator below is the math. Per-seat subscription, month-to-month from day one, first month free across all three tiers. Enter your own hours and hourly rate; the ROI multiple is yours to audit."
       >
         <RoiCalculator />
 
@@ -346,15 +355,22 @@ export default function HomePage() {
 
       {/* Q8 — How do we think about the future of work? + Q9 — Why now? */}
       <Section
-        eyebrow="Where this goes"
-        title="The future of work isn't no humans — it's humans focused on what only humans can do."
-        intro="AI doesn't replace knowledge workers. It changes WHICH parts of the job they do. Professional services has been over-rotated toward administrative work for two decades — CRMs, scheduling, compliance, status reports. The judgment work gets squeezed."
+        eyebrow="Where we're going"
+        title={
+          <>
+            Local businesses can thrive through access to{" "}
+            <span className="text-clay">
+              affordable, best-in-class tools and services.
+            </span>
+          </>
+        }
+        intro="That's the vision. AI doesn't replace local business owners; it changes WHICH parts of the job they do. Local businesses have been over-rotated toward administrative work for two decades — CRMs, scheduling, compliance, status reports. The judgment work gets squeezed."
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
           <Card
             number="Q8"
             title="The future of work"
-            body="agentplain inverts the ratio. The fleet handles the systematic work; the human gets back to client relationships, deal architecture, advisory. Solo practitioners compete with mid-size firms on operational depth. Mid-size firms compete with enterprise on agility."
+            body="agentplain inverts the ratio. The fleet handles the systematic work; the human gets back to client relationships, deal architecture, advisory. Solo practitioners compete with mid-size firms on operational depth. Mid-size firms compete with enterprise on agility. Affordable access to the same operational depth that used to require an enterprise budget — that's the leveling effect."
           />
           <Card
             number="Q9"
@@ -374,14 +390,15 @@ export default function HomePage() {
         <FAQ />
       </Section>
 
-      {/* CLOSING CTA — mission line repeated, no realty-only framing */}
+      {/* CLOSING CTA — locked mission line, no realty-only framing */}
       <section className="border-b border-rule bg-ink text-paper">
         <div className="container-wide py-24 md:py-32">
-          <p className="eyebrow mb-6 text-paper/60">The thesis</p>
+          <p className="eyebrow mb-6 text-paper/60">{tokens.tagline}</p>
           <p className="max-w-3xl font-display text-3xl leading-[1.15] md:text-5xl md:leading-[1.08]">
-            More of the work people enjoy. Less of the work they don't.
+            We lift up local businesses by doing the work that takes their
+            time and money{" "}
             <span className="block mt-4 text-paper/70">
-              The fleet handles the rest.
+              away from the people they serve.
             </span>
           </p>
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-paper/75">

@@ -10,6 +10,7 @@ export const ria: VerticalContent = {
   slug: "ria",
   name: "RIA practices",
   tier: "max",
+  missionSubject: "RIAs and wealth advisors",
 
   hero: {
     eyebrow: "Max tier · fiduciary-aware fleet",

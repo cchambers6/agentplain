@@ -1,16 +1,40 @@
 import Section from "@/components/Section";
 import type { VerticalTier } from "@/lib/verticals/types";
 
-// Pricing per `project_stripe_both_surfaces.md` L13 + L30.
-// Per-seat is uniform across all tiers ($49/mo, $500/yr).
-const PILOT_PRICE: Record<VerticalTier, { name: string; price: string }> = {
-  regular: { name: "Regular", price: "$1,500" },
-  plus: { name: "Plus", price: "$2,750" },
-  max: { name: "Max", price: "$4,500" },
+// Pricing per `project_stripe_both_surfaces.md` (three-tier per-seat ladder,
+// pilot SKUs deprecated 2026-05-09). Each tier has a per-seat ladder that
+// slides by seat count; first month is free across all three tiers.
+const TIER_LADDER: Record<
+  VerticalTier,
+  {
+    name: string;
+    solo: string;
+    floor: string;
+    floorBand: string;
+  }
+> = {
+  regular: {
+    name: "Regular",
+    solo: "$199",
+    floor: "$99",
+    floorBand: "50–99 seats",
+  },
+  plus: {
+    name: "Plus",
+    solo: "$299",
+    floor: "$199",
+    floorBand: "50–99 seats",
+  },
+  max: {
+    name: "Max",
+    solo: "$499",
+    floor: "$299",
+    floorBand: "50–99 seats",
+  },
 };
 
 export default function PricingTierBanner({ tier }: { tier: VerticalTier }) {
-  const active = PILOT_PRICE[tier];
+  const active = TIER_LADDER[tier];
 
   return (
     <Section
@@ -18,44 +42,41 @@ export default function PricingTierBanner({ tier }: { tier: VerticalTier }) {
       eyebrow="Pricing"
       title={
         <>
-          {active.name} tier ·{" "}
-          <span className="text-signal">{active.price}</span> / 30-day pilot
+          {active.name} tier · per seat ·{" "}
+          <span className="text-signal">{active.solo}</span> sliding to{" "}
+          <span className="text-signal">{active.floor}</span>
         </>
       }
-      intro="Two surfaces, one Stripe account. The 30-day pilot is a paid working engagement that ends with an outcome report. Per-seat scaled-SaaS pricing applies once the customer surface goes live."
+      intro="Three tiers, per seat, month-to-month. First month is free across every tier. Card on file at sign-up, month 1 = $0, month 2 onward at your tier's per-seat rate. Cancel any time."
     >
-      <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-3">
         <Cell
           label="Regular"
-          price="$1,500"
-          tag="30-day pilot"
+          solo="$199"
+          floor="$99"
+          band="50–99 seats"
           active={tier === "regular"}
         />
         <Cell
           label="Plus"
-          price="$2,750"
-          tag="30-day pilot"
+          solo="$299"
+          floor="$199"
+          band="50–99 seats"
           active={tier === "plus"}
         />
         <Cell
           label="Max"
-          price="$4,500"
-          tag="30-day pilot"
+          solo="$499"
+          floor="$299"
+          band="50–99 seats"
           active={tier === "max"}
-        />
-        <Cell
-          label="Per seat (scaled SaaS)"
-          price="$49"
-          tag="/ seat / month · $500 / yr"
-          active={false}
-          accent
         />
       </div>
 
       <p className="mt-8 max-w-3xl font-mono text-[12px] leading-relaxed text-slate-soft">
-        Source: `project_stripe_both_surfaces.md` L13 (pilot tiers) and L30
-        (per-seat). High-touch pilot tier is invoice-based; scaled SaaS is
-        Stripe Checkout. Tier mapping per `project_vertical_tier_mapping.md`.
+        Source: `project_stripe_both_surfaces.md` (per-seat ladder; pilot SKUs
+        deprecated 2026-05-09). Tier mapping per
+        `project_vertical_tier_mapping.md`. 100+ seats moves to enterprise terms.
       </p>
     </Section>
   );
@@ -63,21 +84,20 @@ export default function PricingTierBanner({ tier }: { tier: VerticalTier }) {
 
 function Cell({
   label,
-  price,
-  tag,
+  solo,
+  floor,
+  band,
   active,
-  accent = false,
 }: {
   label: string;
-  price: string;
-  tag: string;
+  solo: string;
+  floor: string;
+  band: string;
   active: boolean;
-  accent?: boolean;
 }) {
   const border = active ? "ring-2 ring-inset ring-signal" : "";
-  const bg = accent ? "bg-paper-deep" : "bg-paper";
   return (
-    <div className={`${bg} ${border} p-7`}>
+    <div className={`bg-paper ${border} p-7`}>
       <p
         className={`font-mono text-[11px] tracking-eyebrow uppercase ${
           active ? "text-signal" : "text-slate"
@@ -87,9 +107,17 @@ function Cell({
         {active && " · this vertical"}
       </p>
       <p className="mt-4 font-display text-3xl leading-none text-ink md:text-4xl">
-        {price}
+        {solo}
       </p>
-      <p className="mt-2 text-[13px] leading-relaxed text-slate-soft">{tag}</p>
+      <p className="mt-2 text-[13px] leading-relaxed text-slate-soft">
+        per seat · solo (1 seat)
+      </p>
+      <p className="mt-4 font-display text-2xl leading-none text-ink-soft">
+        {floor}
+      </p>
+      <p className="mt-2 text-[13px] leading-relaxed text-slate-soft">
+        per seat · {band}
+      </p>
     </div>
   );
 }

@@ -99,13 +99,13 @@ export const propertyManagement: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "20x",
-    inputCost: "$1,500 / 30-day pilot (Regular tier)",
+    multiplier: "15x",
+    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
     outputValue: "$36,000 / yr saved on PM-hour and delinquency reclamation",
     math:
-      "1 PM @ $48k all-in × ~25% of day on tenant inbound and maintenance routing = $12k/yr per PM in labor reclamation. At 3 PMs that is $36k. Delinquency-day compression of 2 days/month at $200/door in rent float × 200 doors = $80k/yr additional in worst-case operations (modeled as upside, not committed). Pilot recovers at one-PM threshold.",
+      "1 PM @ $48k all-in × ~25% of day on tenant inbound and maintenance routing = $12k/yr per PM in labor reclamation. At 3 PMs that is $36k against 3 Regular-tier seats at $199/mo solo ($7,164/yr) — ~5x at three PMs, sliding to ~15x+ as a portfolio grows past 25 seats and per-seat drops to $119/mo. Delinquency-day compression of 2 days/month at $200/door in rent float × 200 doors = $80k/yr additional in worst-case operations (modeled as upside, not committed).",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` L13. PM-hour distribution and delinquency-float math pending primary-research validation — flagged in capability inbox. Buildium/AppFolio market dynamics referenced from public segment reporting; specific savings claims are operator-modeled, not customer-attested.",
+      "Pricing per `project_stripe_both_surfaces.md` (per-seat ladder, locked 2026-05-09). ROI band per `project_pricing_value_anchor.md`. PM-hour distribution and delinquency-float math pending primary-research validation — flagged in capability inbox. Buildium/AppFolio market dynamics referenced from public segment reporting; specific savings claims are operator-modeled, not customer-attested.",
   },
 
   claims: {

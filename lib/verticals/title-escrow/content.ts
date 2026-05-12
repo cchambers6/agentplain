@@ -91,13 +91,13 @@ export const titleEscrow: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "16x",
-    inputCost: "$1,500 / 30-day pilot (Regular tier)",
+    multiplier: "10x",
+    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
     outputValue: "$24,000 / yr per closer in cycle-time reclamation",
     math:
-      "Average closer handles 30–50 files/month. File-intake automation saves ~45 minutes/file. 40 files × 0.75 hours × $40/hr × 12 months = $14,400/yr per closer. Closing-prep automation saves another ~30 minutes/file = ~$9,600/yr. Total ~$24k/yr per closer; pilot recovers at single-closer threshold within month one.",
+      "Average closer handles 30–50 files/month. File-intake automation saves ~45 minutes/file. 40 files × 0.75 hours × $40/hr × 12 months = $14,400/yr per closer. Closing-prep automation saves another ~30 minutes/file = ~$9,600/yr. Total ~$24k/yr per closer against the solo Regular-tier seat at $199/mo ($2,388/yr) = ~10x at one closer; multi-closer offices on the 10–24 seat band ($149/seat) run ~13x+ on the same inputs.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` L13. Time-per-file estimates pending primary-research validation — flagged in capability inbox. Closer compensation midpoint based on US BLS 2024 SOC 13-2072 (loan officers and related) — flagged as operator-modeled.",
+      "Pricing per `project_stripe_both_surfaces.md` (per-seat ladder, locked 2026-05-09). ROI band per `project_pricing_value_anchor.md` (Regular-tier value $2,900–$10,600/mo per seat). Time-per-file estimates pending primary-research validation — flagged in capability inbox. Closer compensation midpoint based on US BLS 2024 SOC 13-2072 (loan officers and related) — flagged as operator-modeled.",
   },
 
   claims: {

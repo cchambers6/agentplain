@@ -14,8 +14,8 @@ import PricingTierBanner from "@/components/vertical/PricingTierBanner";
 import IntegrationsList from "@/components/vertical/IntegrationsList";
 import VerticalCta from "@/components/vertical/VerticalCta";
 
-// Static generation for all 9 verticals — no runtime DB lookups, no ISR
-// cache churn. Adding a tenth requires a new content file and a registry
+// Static generation for all 10 verticals — no runtime DB lookups, no ISR
+// cache churn. Adding an eleventh requires a new content file and a registry
 // entry; the route picks it up automatically.
 export function generateStaticParams() {
   return VERTICAL_SLUGS.map((vertical) => ({ vertical }));

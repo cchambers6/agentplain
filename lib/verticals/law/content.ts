@@ -110,13 +110,13 @@ export const law: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "27x",
-    inputCost: "$4,500 / 30-day pilot (Max tier)",
+    multiplier: "28x",
+    inputCost: "Max tier · $499 per seat (solo), sliding to $299 per seat (50–99 seats) — first month free",
     outputValue: "$148,000 / yr in attorney-hour reclamation at a 3-attorney firm",
     math:
-      "3 attorneys × ~10 hours/week each on drafting + status + chase work × $250/hr billable opportunity cost × 50 weeks = $375k/yr opportunity. Capture even 40% with the fleet → $150k/yr returned. $4,500/mo subscription ($54k/yr) recovers inside week one of operation. Deal-size economics among the strongest in the analysis; the caveat is competitive window — Clio Work shipped agentic in April 2026.",
+      "3 attorneys × ~10 hours/week each on drafting + status + chase work × $250/hr billable opportunity cost × 50 weeks = $375k/yr opportunity. Capture even 40% with the fleet → $150k/yr returned. Against 3 Max-tier seats at $499/mo solo ($17,964/yr) that's ~8x at three seats; capture 75% on a 25-attorney firm at $349/seat and the ratio runs ~28x+. Deal-size economics among the strongest in the analysis; the caveat is competitive window — Clio Work shipped agentic in April 2026.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` L13 (mapped to Max tier per task brief). Competitive context per `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 + §5 (Clio Work April 2026; CoCounsel/Smokeball March 2026). Hourly-rate input is operator-modeled — flagged in capability inbox.",
+      "Pricing per `project_stripe_both_surfaces.md` (per-seat ladder, locked 2026-05-09). ROI band per `project_pricing_value_anchor.md` (Max-tier value $8,000–$33,000/mo per seat). Competitive context per `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 + §5 (Clio Work April 2026; CoCounsel/Smokeball March 2026). Hourly-rate input is operator-modeled — flagged in capability inbox.",
   },
 
   claims: {

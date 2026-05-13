@@ -1,0 +1,66 @@
+/**
+ * lib/llm/index.ts
+ *
+ * Domain-facing entrypoint for the LLM provider. Mirrors the structure
+ * of `lib/integrations/index.ts`: a single `getLlmProvider()` that
+ * returns the configured adapter, plus `resetLlmProviderForTests()` for
+ * the test runner.
+ *
+ * Provider selection rule (per `feedback_no_silent_vendor_lock` +
+ * `feedback_no_prod_secrets_in_dev`):
+ *   - `LLM_PROVIDER=test` → always returns the TestLlmProvider.
+ *   - Otherwise, and when `ANTHROPIC_API_KEY` is set → AnthropicProvider.
+ *   - Otherwise → TestLlmProvider with no seed (heuristic mode), so the
+ *     skill chain remains exercisable in environments that have not yet
+ *     wired up Anthropic credentials.
+ *
+ * This last rule is deliberate: PR-C ships *before* Conner has wired
+ * `ANTHROPIC_API_KEY` to a budget — the heuristic test provider keeps
+ * the value loop demonstrable on mock data without burning prod tokens.
+ * Production-grade output kicks in the moment the key lands.
+ */
+
+import { AnthropicProvider } from './anthropic-provider';
+import { TestLlmProvider, TestLlmSeed } from './test-provider';
+import type { LlmProvider } from './types';
+
+let cached: LlmProvider | null = null;
+
+export function resetLlmProviderForTests(provider?: LlmProvider): void {
+  cached = provider ?? null;
+}
+
+export function getLlmProvider(): LlmProvider {
+  if (cached) return cached;
+  const built = buildProvider();
+  cached = built;
+  return built;
+}
+
+function buildProvider(): LlmProvider {
+  const mode = process.env.LLM_PROVIDER;
+  if (mode === 'test') {
+    return new TestLlmProvider();
+  }
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (apiKey && apiKey.length > 0) {
+    return new AnthropicProvider({
+      apiKey,
+      defaultModel: process.env.ANTHROPIC_MODEL,
+    });
+  }
+  // Fall through to the heuristic test provider — the skill chain stays
+  // runnable for mock-fixture validation. The runner logs which provider
+  // is active so a "why are my drafts terrible" moment is one log-line
+  // away from the answer.
+  return new TestLlmProvider();
+}
+
+export function makeTestLlmProvider(seed?: TestLlmSeed): TestLlmProvider {
+  return new TestLlmProvider(seed);
+}
+
+export type { LlmProvider, LlmCompletionRequest, LlmCompletion, LlmResult, LlmError, LlmErrorCode } from './types';
+export { llmOk, llmError } from './types';
+export { TestLlmProvider, digestRequest } from './test-provider';
+export { AnthropicProvider } from './anthropic-provider';

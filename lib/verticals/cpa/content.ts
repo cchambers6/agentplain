@@ -4,6 +4,12 @@ import type { VerticalContent } from "../types";
 // firms, 2–10 person, composite 34). Fleet shape and operational pain
 // points cited. JTBD draft:true — no Phase 0 product_spec.md table.
 // Capability-inbox flagged.
+//
+// Pricing: surfaces as Regular tier per `project_stripe_both_surfaces.md`
+// (simplified 2026-05-12 — single productized tier across all 10 verticals;
+// state-specific compliance corpus and bespoke practice-mgmt integrations
+// route to /custom). The `tier: "plus"` field below is schema-only and is
+// NOT surfaced on the customer page.
 
 export const cpa: VerticalContent = {
   slug: "cpa",
@@ -12,7 +18,7 @@ export const cpa: VerticalContent = {
   missionSubject: "CPAs and tax practices",
 
   hero: {
-    eyebrow: "Top-5 vertical fit · Plus tier",
+    eyebrow: "Built for small CPA and tax practices",
     headline: "The fleet for the small-firm CPA.",
     valueProp:
       "agentplain REPLACES the 8-week document-chase cycle, INTEGRATES with TaxDome / Karbon, Lacerte / UltraTax / Drake, and QuickBooks / Xero, and AUGMENTS the partner's review on every return with a federal + state checklist run before the file hits the desk.",
@@ -100,13 +106,13 @@ export const cpa: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "12x",
-    inputCost: "Plus tier · $299 per seat (solo), sliding to $199 per seat (50–99 seats) — first month free",
+    multiplier: "17x",
+    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
     outputValue: "$42,000 / yr in tax-season hour reclamation per staff seat",
     math:
-      "Tax season = 80-hour weeks. Doc-chase consumes ~25% of staff hours through 8 weeks (per b2b_vertical_opportunity_analysis_2026-04-27.md §3.4 — \"document chase consumes the front office for 8 weeks a year\"). 0.25 × 80 hours × 8 weeks × $65/hr loaded = $10,400 per staff per season. Add onboarding-letter automation and books-recon reclamation: total ~$42k/yr per staff against the solo Plus-tier seat at $299/mo ($3,588/yr) = ~12x at one seat. A 3-staff firm sees ~$126k/yr in reclamation against ~$10,764/yr of Plus-tier subscription.",
+      "Tax season = 80-hour weeks. Doc-chase consumes ~25% of staff hours through 8 weeks (per b2b_vertical_opportunity_analysis_2026-04-27.md §3.4 — \"document chase consumes the front office for 8 weeks a year\"). 0.25 × 80 hours × 8 weeks × $65/hr loaded = $10,400 per staff per season. Add onboarding-letter automation and books-recon reclamation: total ~$42k/yr per staff against the solo Regular-tier seat at $199/mo ($2,388/yr) = ~17x at one seat. A 3-staff firm sees ~$126k/yr in reclamation against $7,164/yr of subscription — ~17x at three seats too. Anything that needs bespoke compliance, white-label, or 100+ seats routes to /custom.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (per-seat ladder, locked 2026-05-09). ROI band per `project_pricing_value_anchor.md` (Plus-tier value $4,500–$15,000/mo per seat). Doc-chase share cited from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.4. Staff-loading rate is operator-modeled — flagged in capability inbox for primary-research validation. Plus-tier mapping per `project_vertical_tier_mapping.md`.",
+      "Pricing per `project_stripe_both_surfaces.md` (single Regular tier, simplified 2026-05-12; per-seat ladder $199→$99). ROI band per `project_pricing_value_anchor.md` (Regular-tier ROI range 15x–107x). Doc-chase share cited from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.4. Staff-loading rate is operator-modeled — flagged in capability inbox for primary-research validation.",
   },
 
   claims: {

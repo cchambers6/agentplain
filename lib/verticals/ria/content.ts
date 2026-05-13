@@ -1,8 +1,13 @@
 import type { VerticalContent } from "../types";
 
 // Source: `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 (financial
-// advisors / RIAs, 1–10 advisor, composite 33). Max-tier mapping per task
-// brief — deal size and compliance posture justify the price ceiling.
+// advisors / RIAs, 1–10 advisor, composite 33).
+//
+// Pricing: surfaces as Regular tier per `project_stripe_both_surfaces.md`
+// (simplified 2026-05-12 — single productized tier across all 10 verticals;
+// fiduciary-aware depth, SEC Marketing Rule compliance corpus, and bespoke
+// custodian integrations route to /custom). The `tier: "max"` field below is
+// schema-only and is NOT surfaced on the customer page.
 //
 // JTBD draft:true — no Phase 0 product_spec.md table. Capability-inbox flagged.
 
@@ -13,7 +18,7 @@ export const ria: VerticalContent = {
   missionSubject: "RIAs and wealth advisors",
 
   hero: {
-    eyebrow: "Max tier · fiduciary-aware fleet",
+    eyebrow: "Built for independent RIAs and wealth practices",
     headline: "The fleet for the independent RIA.",
     valueProp:
       "agentplain REPLACES the meeting-prep + post-meeting documentation cycle, INTEGRATES with your CRM (Wealthbox / Redtail / Salesforce FSC), planning software (eMoney / RightCapital / MoneyGuidePro), and custodian portals, and AUGMENTS the advisor's review on every client-facing communication with a fiduciary-aware compliance pass.",
@@ -106,13 +111,13 @@ export const ria: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "33x",
-    inputCost: "Max tier · $499 per seat (solo), sliding to $299 per seat (50–99 seats) — first month free",
+    multiplier: "24x",
+    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
     outputValue: "$175,000 / yr in advisor-hour reclamation at a 3-advisor practice",
     math:
-      "3 advisors × ~6 hours/week each on prep + recap + comms triage × $300/hr opportunity cost × 50 weeks = $270k/yr opportunity. Capture 65% with the fleet → $175k/yr returned. Against 3 Max-tier seats at $499/mo solo ($17,964/yr) that's ~10x at three advisors; the same value stream at a 25-advisor practice on the $349 band runs ~33x+. Strong vertical fit per §2 ranking; lower competitive density than law because no fiduciary-aware fleet has shipped at the small-/mid-size-RIA scale yet.",
+      "3 advisors × ~6 hours/week each on prep + recap + comms triage × $300/hr opportunity cost × 50 weeks = $270k/yr opportunity. Capture 65% with the fleet → $175k/yr returned. Against 3 Regular-tier seats at $199/mo solo ($7,164/yr) that's ~24x at three advisors; a 25-advisor practice on the $119/seat band ($35,700/yr) capturing the same share of a $2.25M opportunity runs past 40x. Fiduciary-aware compliance, SEC Marketing Rule corpus, and dedicated success route to /custom when a firm needs depth beyond plug-and-play.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (per-seat ladder, locked 2026-05-09). ROI band per `project_pricing_value_anchor.md` (Max-tier value $8,000–$33,000/mo per seat). RIA segment economics per `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 (financial advisors, composite 33). Hourly-rate input is operator-modeled — flagged in capability inbox.",
+      "Pricing per `project_stripe_both_surfaces.md` (single Regular tier, simplified 2026-05-12; per-seat ladder $199→$99; anything bespoke routes to /custom). ROI band per `project_pricing_value_anchor.md` (Regular-tier ROI range 15x–107x). RIA segment economics per `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 (financial advisors, composite 33). Hourly-rate input is operator-modeled — flagged in capability inbox.",
   },
 
   claims: {

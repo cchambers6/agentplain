@@ -13,7 +13,7 @@ export const mortgage: VerticalContent = {
   missionSubject: "mortgage brokers and loan officers",
 
   hero: {
-    eyebrow: "Roadmap vertical · Regular tier",
+    eyebrow: "Built for independent mortgage brokerages",
     headline: "The fleet for the independent loan-officer office.",
     valueProp:
       "agentplain REPLACES the document-chase that drowns every loan file, INTEGRATES with your LOS, wholesale lender portals, and DU/LP, and AUGMENTS the loan officer's read on every borrower interaction and TRID-sensitive disclosure.",

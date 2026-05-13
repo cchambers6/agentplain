@@ -11,7 +11,7 @@ export const titleEscrow: VerticalContent = {
   missionSubject: "title and escrow agencies",
 
   hero: {
-    eyebrow: "Roadmap vertical · Regular tier",
+    eyebrow: "Built for local title and escrow agencies",
     headline: "The fleet for the local title agency.",
     valueProp:
       "agentplain REPLACES the file-intake and document-collection scramble, INTEGRATES with your title production system and the realtor/lender source documents, and AUGMENTS the closer's read on every closing-day prep packet.",

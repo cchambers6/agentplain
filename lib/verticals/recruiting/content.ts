@@ -12,7 +12,7 @@ export const recruiting: VerticalContent = {
   missionSubject: "recruiters and staffing firms",
 
   hero: {
-    eyebrow: "Adjacent vertical · Regular tier",
+    eyebrow: "Built for boutique recruiting firms and in-house talent teams",
     headline: "The fleet for the boutique recruiting practice.",
     valueProp:
       "agentplain REPLACES the manual sourcing + first-touch drafting cycle, INTEGRATES with your ATS and the public license / production boards your candidates show up on, and AUGMENTS the recruiter's read on every outreach with substantiated production evidence.",

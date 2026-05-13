@@ -12,7 +12,7 @@ export const propertyManagement: VerticalContent = {
   missionSubject: "property managers and management companies",
 
   hero: {
-    eyebrow: "Roadmap vertical · Regular tier",
+    eyebrow: "Built for small-portfolio property managers",
     headline: "The fleet for the small-portfolio property manager.",
     valueProp:
       "agentplain REPLACES tenant inbound triage and maintenance ticket routing, INTEGRATES with Buildium, AppFolio, Propertyware, and your accounting stack, and AUGMENTS the owner report cadence so landlords stop calling you for status.",

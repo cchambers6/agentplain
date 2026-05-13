@@ -2,9 +2,13 @@ import type { VerticalContent } from "../types";
 
 // Source: `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 (law firms
 // composite 30, deprioritized for Product 2 due to Clio Work April 2026
-// shipping agentic + CoCounsel/Smokeball March 2026 partnership). Listed as
-// Max-tier here because the deal-size + compliance posture justify the
-// price ceiling even though the competitive window is closing.
+// shipping agentic + CoCounsel/Smokeball March 2026 partnership).
+//
+// Pricing: surfaces as Regular tier per `project_stripe_both_surfaces.md`
+// (simplified 2026-05-12 — single productized tier across all 10 verticals;
+// privilege-aware depth, ABA Model Rule compliance corpus, and bespoke
+// jurisdictional packs route to /custom). The `tier: "max"` field below is
+// schema-only and is NOT surfaced on the customer page.
 //
 // JTBD draft:true — no Phase 0 product_spec.md table. Capability-inbox flagged.
 
@@ -15,7 +19,7 @@ export const law: VerticalContent = {
   missionSubject: "law firms and solo practitioners",
 
   hero: {
-    eyebrow: "Max tier · narrow competitive window",
+    eyebrow: "Built for small law firms and solo practitioners",
     headline: "The fleet for the small law firm.",
     valueProp:
       "agentplain REPLACES the intake-to-engagement bottleneck, INTEGRATES with Clio / MyCase / Smokeball and your court e-filing + research stack, and AUGMENTS the partner's read on every client communication and every drafted pleading with a privilege-aware compliance pass.",
@@ -111,13 +115,13 @@ export const law: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "28x",
-    inputCost: "Max tier · $499 per seat (solo), sliding to $299 per seat (50–99 seats) — first month free",
-    outputValue: "$148,000 / yr in attorney-hour reclamation at a 3-attorney firm",
+    multiplier: "21x",
+    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
+    outputValue: "$150,000 / yr in attorney-hour reclamation at a 3-attorney firm",
     math:
-      "3 attorneys × ~10 hours/week each on drafting + status + chase work × $250/hr billable opportunity cost × 50 weeks = $375k/yr opportunity. Capture even 40% with the fleet → $150k/yr returned. Against 3 Max-tier seats at $499/mo solo ($17,964/yr) that's ~8x at three seats; capture 75% on a 25-attorney firm at $349/seat and the ratio runs ~28x+. Deal-size economics among the strongest in the analysis; the caveat is competitive window — Clio Work shipped agentic in April 2026.",
+      "3 attorneys × ~10 hours/week each on drafting + status + chase work × $250/hr billable opportunity cost × 50 weeks = $375k/yr opportunity. Capture even 40% with the fleet → $150k/yr returned. Against 3 Regular-tier seats at $199/mo solo ($7,164/yr) that's ~21x at three attorneys; a 25-attorney firm on the $119/seat band ($35,700/yr) capturing 75% of $3.125M opportunity runs well past 60x. Privilege-aware compliance, ABA Model Rule 1.6 review, and the bespoke jurisdiction corpus route to /custom when a firm needs depth beyond plug-and-play.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (per-seat ladder, locked 2026-05-09). ROI band per `project_pricing_value_anchor.md` (Max-tier value $8,000–$33,000/mo per seat). Competitive context per `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 + §5 (Clio Work April 2026; CoCounsel/Smokeball March 2026). Hourly-rate input is operator-modeled — flagged in capability inbox.",
+      "Pricing per `project_stripe_both_surfaces.md` (single Regular tier, simplified 2026-05-12; per-seat ladder $199→$99; anything bespoke routes to /custom). ROI band per `project_pricing_value_anchor.md` (Regular-tier ROI range 15x–107x). Competitive context per `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 + §5 (Clio Work April 2026; CoCounsel/Smokeball March 2026). Hourly-rate input is operator-modeled — flagged in capability inbox.",
   },
 
   claims: {

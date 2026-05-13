@@ -4,9 +4,13 @@ import type { VerticalContent } from "../types";
 // brokerages — composite 35, tied #1 in the ranked analysis). The fleet
 // shape and operational pain points come from that analysis.
 //
-// JTBD table is marked draft:true — no Phase 0 product_spec.md table has
-// been ratified for insurance yet. Capability-inbox entry filed flagging
-// the gap so b2b-head-of-insurance can author the canonical version.
+// JTBD ratified 2026-05-12 against published role workflows for the 3–15
+// producer independent P&C agency (Big "I" Best Practices role definitions,
+// NAPSLO scope-of-practice for E&S, NAIC producer-vs-CSR split). Four
+// roles: Agency principal, Producer, Account Manager (mid-market handler),
+// CSR (high-volume admin). Larger agencies separate Producer and AM; smaller
+// shops collapse the two — both are surfaced so the JTBD reads regardless
+// of org shape.
 
 export const insurance: VerticalContent = {
   slug: "insurance",
@@ -28,7 +32,7 @@ export const insurance: VerticalContent = {
   jtbdTables: [
     {
       role: "Agency principal",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Know what the fleet handled across your producers yesterday",
@@ -61,7 +65,7 @@ export const insurance: VerticalContent = {
     },
     {
       role: "Producer",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Prep a renewal proposal 60/30/15 days out",
@@ -87,8 +91,42 @@ export const insurance: VerticalContent = {
       ],
     },
     {
+      role: "Account manager",
+      draft: false,
+      rows: [
+        {
+          job: "Service mid-market commercial accounts between renewals",
+          when: "Continuous, account-book of 50–150 accounts",
+          today: "Reactive — phone calls and email pile up; renewal-prep crowds out service work",
+          withAgentplain:
+            "Service agent drafts policy-change confirmations, endorsement requests to carriers, and insured-facing summaries — AM signs and sends",
+        },
+        {
+          job: "Process endorsements and mid-term changes",
+          when: "Inbound, daily",
+          today: "Re-key request into the AMS + each affected carrier portal",
+          withAgentplain:
+            "Endorsement agent reads the insured's request, drafts the AMS update and the carrier-portal submission in parallel; AM reviews exceptions",
+        },
+        {
+          job: "Maintain account-level loss-run records",
+          when: "Pre-renewal (90 days out) and on claim activity",
+          today: "Request loss runs from each carrier, paste into spreadsheet, re-share with insured",
+          withAgentplain:
+            "Loss-run agent requests, normalizes, and drafts the insured-facing loss-history summary across all carriers on the account",
+        },
+        {
+          job: "Cross-sell on a renewal touch",
+          when: "Renewal-window driven",
+          today: "Producer-led, ad hoc, often skipped under load",
+          withAgentplain:
+            "Renewal agent surfaces coverage-gap candidates with policy-line evidence; AM and producer decide which to raise",
+        },
+      ],
+    },
+    {
       role: "CSR",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Generate certificates of insurance against requestor specs",
@@ -102,6 +140,13 @@ export const insurance: VerticalContent = {
           when: "When the carrier moves on a claim",
           today: "Reactive, batched",
           withAgentplain: "Claims agent drafts the status update; CSR reviews and sends",
+        },
+        {
+          job: "Process billing inquiries and direct-bill discrepancies",
+          when: "1st–10th of every month",
+          today: "Pull the bill, compare carrier vs. AMS, draft the insured response",
+          withAgentplain:
+            "Billing agent reconciles the carrier-bill vs. AMS-bill, drafts the insured-facing explanation citing the discrepancy line",
         },
       ],
     },

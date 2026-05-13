@@ -3,8 +3,15 @@ import type { VerticalContent } from "../types";
 // Sources: `b2b_vertical_opportunity_analysis_2026-04-27.md` (insurance §3.2
 // is the structural analog — same recurring-admin density, same compliance
 // posture, same per-portal integration set with carriers replaced by
-// wholesale lenders and AUS systems). Phase 0 product_spec.md has no
-// mortgage JTBD table yet — draft:true and capability-inbox flagged.
+// wholesale lenders and AUS systems).
+//
+// JTBD ratified 2026-05-12 against published role workflows for the 2–10-LO
+// independent mortgage brokerage (loanofficerhub.com role definitions, NMLS
+// SAFE Act role boundaries, NAMB scope of practice). Underwriter is NOT
+// surfaced as a JTBD role here — independent brokers route to wholesale-
+// lender underwriters; they do not employ in-house UWs. Correspondent /
+// banker shops that DO employ in-house UWs route to /custom. Flagged in
+// audit.md as [VERIFY — applies if/when vertical scope expands to bankers].
 
 export const mortgage: VerticalContent = {
   slug: "mortgage",
@@ -26,7 +33,7 @@ export const mortgage: VerticalContent = {
   jtbdTables: [
     {
       role: "Owner / branch manager",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Know which files are stalled and why",
@@ -48,11 +55,18 @@ export const mortgage: VerticalContent = {
           today: "Manual LOS export → spreadsheet",
           withAgentplain: "Production-reporter agent drafts the weekly read",
         },
+        {
+          job: "Approve a pricing-exception or rate-lock extension",
+          when: "Ad hoc, urgent",
+          today: "Phone / Teams approval; no audit trail back to the lock desk",
+          withAgentplain:
+            "Lock-desk agent drafts the exception memo with cost-to-extend math; branch manager signs with one click",
+        },
       ],
     },
     {
       role: "Loan officer",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Run inbound borrower triage",
@@ -75,11 +89,18 @@ export const mortgage: VerticalContent = {
           withAgentplain:
             "Status agent drafts the update on every milestone; LO signs and sends from their own system",
         },
+        {
+          job: "Pre-qualify a referral against current pricing + guidelines",
+          when: "Inbound from realtor partners, sub-hour expected",
+          today: "Open Optimal Blue, run a scenario, redraw guidelines, draft a referral-back email",
+          withAgentplain:
+            "Pre-qual agent pulls Optimal Blue scenario + DU eligibility, drafts the pre-qual letter and the realtor-facing summary in <5 minutes",
+        },
       ],
     },
     {
       role: "Processor",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Build the document checklist for a new file",
@@ -94,6 +115,13 @@ export const mortgage: VerticalContent = {
           today: "Translate condition language, route to LO",
           withAgentplain:
             "Conditions agent drafts the borrower-facing translation + the doc list to close it",
+        },
+        {
+          job: "Order appraisal + title and track to CD",
+          when: "Continuous through every file",
+          today: "Vendor portal logins + manual status nags",
+          withAgentplain:
+            "Vendor-coordination agent submits orders, polls for status, and flags slipping files before they affect the closing date",
         },
       ],
     },

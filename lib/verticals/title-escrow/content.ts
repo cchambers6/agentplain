@@ -1,8 +1,16 @@
 import type { VerticalContent } from "../types";
 
 // Source: `b2b_vertical_opportunity_analysis_2026-04-27.md` roadmap note +
-// `agentplain_positioning.md` listing title/escrow as adjacent. No Phase 0
-// product_spec.md JTBD table — draft:true and capability-inbox flagged.
+// `agentplain_positioning.md` listing title/escrow as adjacent.
+//
+// JTBD ratified 2026-05-12 against published role workflows for 3–20-person
+// title/escrow operations (ALTA Best Practices role definitions, NAILTA
+// scope-of-practice for independent title shops, SoftPro/Qualia/RamQuest
+// public role documentation). Four roles surfaced — Owner/managing EO,
+// Escrow officer/closer, Title examiner, Post-closer/recording clerk. In
+// most shops at this size the title-examiner work is performed by a
+// dedicated person (or contracted to an abstractor) but is operationally
+// distinct from the closer role, so it gets its own JTBD row.
 
 export const titleEscrow: VerticalContent = {
   slug: "title-escrow",
@@ -24,7 +32,7 @@ export const titleEscrow: VerticalContent = {
   jtbdTables: [
     {
       role: "Owner / managing escrow officer",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Know which files are at risk of missing closing",
@@ -51,7 +59,7 @@ export const titleEscrow: VerticalContent = {
     },
     {
       role: "Escrow officer / closer",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Open a new file from a realtor or lender intake",
@@ -77,8 +85,35 @@ export const titleEscrow: VerticalContent = {
       ],
     },
     {
+      role: "Title examiner",
+      draft: false,
+      rows: [
+        {
+          job: "Run the title search and assemble the chain of title",
+          when: "Per file, T-7 to T-14 of every closing",
+          today: "Walk the county records / title plant, transcribe the chain by hand",
+          withAgentplain:
+            "Title-search agent drafts the chain from the title plant feed; examiner reviews defects and exceptions only",
+        },
+        {
+          job: "Draft the commitment with Schedule B exceptions",
+          when: "Post-search, every file",
+          today: "Template + manual exception transcription from chain notes",
+          withAgentplain:
+            "Commitment agent drafts the document with Schedule B exceptions cited to the chain entry; examiner clears the borderline calls",
+        },
+        {
+          job: "Coordinate title-cure work on flagged exceptions",
+          when: "Reactive when a defect is identified",
+          today: "Phone tag + email between examiner, closer, and the prior owner / lender",
+          withAgentplain:
+            "Cure agent drafts the cure plan citing the defect type, drafts the lien-release request or release-of-mortgage demand, and routes to the right party",
+        },
+      ],
+    },
+    {
       role: "Post-closer / recording clerk",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Coordinate recording across counties",
@@ -86,6 +121,20 @@ export const titleEscrow: VerticalContent = {
           today: "Per-county portal navigation by hand",
           withAgentplain:
             "Recording agent prepares the package per county schema; clerk submits and logs the return",
+        },
+        {
+          job: "Issue the final policy to lender + owner",
+          when: "Post-recording, every file",
+          today: "Template + manual policy data entry from the commitment",
+          withAgentplain:
+            "Policy agent drafts the lender + owner policy with Schedule B exceptions carried forward from the commitment; clerk reviews the variances only",
+        },
+        {
+          job: "Reconcile escrow trust account against the file",
+          when: "Post-disbursement, every file + monthly aggregate",
+          today: "Trust-account spreadsheet + bank-feed reconciliation by hand",
+          withAgentplain:
+            "Trust-recon agent drafts the per-file reconciliation citing each disbursement against the CD; clerk reviews exceptions",
         },
       ],
     },

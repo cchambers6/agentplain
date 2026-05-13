@@ -28,6 +28,10 @@ const REPO_ROOT = join(__dirname, "..");
 // hero.eyebrow and roi.inputCost). The vertical-content-polish PR
 // (feat/agentplain-vertical-content-polish, 2026-05-12) extended this test
 // to keep that regression from coming back.
+const VERTICAL_CONTENT_FILES: string[] = walkVerticalContent(
+  join(REPO_ROOT, "lib", "verticals"),
+);
+
 const SURFACE_FILES: string[] = [
   ...walk(join(REPO_ROOT, "app", "(marketing)")),
   join(REPO_ROOT, "components", "Header.tsx"),
@@ -37,7 +41,7 @@ const SURFACE_FILES: string[] = [
   join(REPO_ROOT, "components", "Section.tsx"),
   ...walk(join(REPO_ROOT, "components", "brand")),
   ...walk(join(REPO_ROOT, "components", "vertical")),
-  ...walkVerticalContent(join(REPO_ROOT, "lib", "verticals")),
+  ...VERTICAL_CONTENT_FILES,
 ];
 
 // Banned literal substrings. The flagged stat block + the V0/MVP/pilot
@@ -104,6 +108,26 @@ const BANNED_REGEX: { description: string; pattern: RegExp }[] = [
   },
 ];
 
+// Vertical-content-only bans. Scoped narrowly to `lib/verticals/*/content.ts`
+// because the renderer (components/vertical/JtbdTables.tsx) legitimately
+// contains the literal `[DRAFT — needs vertical-CEO review]` JSX as a
+// rendering escape hatch for any future vertical that ships mid-bring-up.
+// Locked 2026-05-12 alongside `feat/agentplain-vertical-jtbd-tables`, the
+// PR that ratified all 9 non-real-estate verticals out of draft state. The
+// rule: vertical content ships ratified, or it does not ship.
+const VERTICAL_CONTENT_BANNED_REGEX: { description: string; pattern: RegExp }[] = [
+  {
+    description:
+      "JTBD `draft: true` in vertical content (every role table must be ratified before merging — see vertical-routes.test.ts)",
+    pattern: /\bdraft\s*:\s*true\b/,
+  },
+  {
+    description:
+      "literal `[DRAFT]` text in vertical content source (the renderer surfaces the badge from `draft: true`; pinning the literal in source bypasses ratification)",
+    pattern: /\[\s*DRAFT[^\]]*\]/,
+  },
+];
+
 describe("marketing surfaces — banned framings (story-arc enforcement)", () => {
   for (const file of SURFACE_FILES) {
     const rel = relative(REPO_ROOT, file).replace(/\\/g, "/");
@@ -127,6 +151,26 @@ describe("marketing surfaces — banned framings (story-arc enforcement)", () =>
           null,
           match
             ? `Banned pattern (${description}) matched "${match[0]}" in ${rel} — see ~/.claude/projects/C--agentplain/memory/feedback_everything_tells_a_story.md.`
+            : "",
+        );
+      });
+    }
+  }
+});
+
+describe("vertical content — JTBD ratification guard", () => {
+  for (const file of VERTICAL_CONTENT_FILES) {
+    const rel = relative(REPO_ROOT, file).replace(/\\/g, "/");
+    const stripped = stripComments(readFileSync(file, "utf8"));
+
+    for (const { description, pattern } of VERTICAL_CONTENT_BANNED_REGEX) {
+      it(`${rel} :: must not match ${description}`, () => {
+        const match = stripped.match(pattern);
+        assert.equal(
+          match,
+          null,
+          match
+            ? `JTBD ratification guard violated: ${description}. Found "${match[0]}" in ${rel}. Fix: populate the role with real workflows + set draft:false (see lib/verticals/real-estate/content.ts for the canonical shape).`
             : "",
         );
       });

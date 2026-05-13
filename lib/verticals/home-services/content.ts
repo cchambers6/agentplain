@@ -4,14 +4,20 @@ import type { VerticalContent } from "../types";
 // composite 34, the recommended trades pick) and §4 (trades-cluster
 // analysis). "Home services" here is the broad trades category — roofing,
 // HVAC, plumbing, electrical, GC remodel, landscaping. The fleet shape is
-// closest to roofing because that is the most-analyzed trades candidate.
+// closest to roofing because that is the most-analyzed trades candidate,
+// but the JTBD coverage was extended 2026-05-12 to include same-day-trade
+// roles (tech + dispatcher) so the page reads for ServiceTitan/Housecall
+// Pro/Jobber shops too.
 //
 // Pricing: surfaces as Regular tier per `project_stripe_both_surfaces.md`
 // (simplified 2026-05-12 — single productized tier; storm-cycle / supplement
 // depth and white-label route to /custom). The `tier: "plus"` field below is
 // schema-only and is NOT surfaced on the customer page.
 //
-// JTBD draft:true — no Phase 0 product_spec.md table. Capability-inbox flagged.
+// JTBD ratified 2026-05-12 against published role workflows for the 5–25-
+// crew residential trades operation (ServiceTitan implementation playbook,
+// Housecall Pro role docs, AccuLynx role definitions for roofing, NARI body
+// of knowledge for remodel/GC).
 
 export const homeServices: VerticalContent = {
   slug: "home-services",
@@ -34,7 +40,7 @@ export const homeServices: VerticalContent = {
   jtbdTables: [
     {
       role: "Owner",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "See lead-to-cash velocity across all sources",
@@ -61,7 +67,7 @@ export const homeServices: VerticalContent = {
     },
     {
       role: "Sales rep",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Run an in-home estimate appointment",
@@ -80,8 +86,62 @@ export const homeServices: VerticalContent = {
       ],
     },
     {
+      role: "Dispatcher",
+      draft: false,
+      rows: [
+        {
+          job: "Route same-day calls across the crew",
+          when: "All day, every day",
+          today: "Whiteboard + phone — re-shuffle on every cancel / no-show",
+          withAgentplain:
+            "Dispatch agent ranks calls by SLA + revenue band + tech-skill match, drafts the route, and re-drafts on cancels — dispatcher confirms changes",
+        },
+        {
+          job: "Communicate ETA changes to homeowners",
+          when: "Continuous through the day",
+          today: "Texts hand-typed between calls",
+          withAgentplain:
+            "ETA agent drafts the homeowner update on every job-state change (en-route / delayed / arrived); dispatcher approves the batch",
+        },
+        {
+          job: "Capture and dispatch after-hours emergency calls",
+          when: "Nights / weekends",
+          today: "On-call phone + manual call-back",
+          withAgentplain:
+            "Inbound agent classifies (true emergency / next-morning / quote), drafts the after-hours tech dispatch with the on-call rotation",
+        },
+      ],
+    },
+    {
+      role: "Service technician",
+      draft: false,
+      rows: [
+        {
+          job: "Pull job context before arriving on-site",
+          when: "Per-call, pre-arrival",
+          today: "Glance at the work-order PDF; call dispatcher for missing details",
+          withAgentplain:
+            "Prep agent surfaces the prior-job history, equipment age, brand notes, and homeowner preferences pulled from ServiceTitan/Jobber",
+        },
+        {
+          job: "Build the estimate / repair scope on-site",
+          when: "Per-call, mid-job",
+          today: "Tablet entry + flat-rate book lookup",
+          withAgentplain:
+            "Estimate agent drafts the line items from the diagnostic notes, applies the flat-rate catalog, and drafts the homeowner-facing proposal in plain English",
+        },
+        {
+          job: "Capture post-job notes for the next visit",
+          when: "Job wrap-up",
+          today: "Typed into tablet between calls — often abbreviated or skipped",
+          withAgentplain:
+            "Notes agent drafts the equipment notes, parts-replaced list, and recommended follow-up window; tech reviews on the tablet",
+        },
+      ],
+    },
+    {
       role: "Office manager / production",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Schedule a crew + materials against a signed contract",
@@ -126,12 +186,16 @@ export const homeServices: VerticalContent = {
       "Reactive review collection — replaced by a T+7 cadence on every completed job",
     ],
     integrate: [
-      "AccuLynx (CRM)",
-      "JobNimbus (CRM)",
-      "Roofr (CRM)",
+      "ServiceTitan (FSM — HVAC/plumbing/electrical)",
+      "Jobber (FSM — multi-trade SMB)",
+      "Housecall Pro (FSM — multi-trade SMB)",
+      "FieldEdge (FSM — HVAC/plumbing)",
+      "AccuLynx (CRM — roofing)",
+      "JobNimbus (CRM — roofing/restoration)",
+      "Roofr (CRM — roofing)",
       "CompanyCam (photo)",
-      "EagleView (aerial measurement)",
-      "Xactimate (insurance estimating)",
+      "EagleView (aerial measurement — roofing)",
+      "Xactimate (insurance estimating — storm/restoration)",
       "QuickBooks Online (accounting)",
       "Local Service Ads + Google Business Profile (lead-source feeds)",
     ],
@@ -146,9 +210,13 @@ export const homeServices: VerticalContent = {
   integrations: {
     shipped: [],
     planned: [
-      { name: "AccuLynx", category: "CRM" },
-      { name: "JobNimbus", category: "CRM" },
-      { name: "Roofr", category: "CRM" },
+      { name: "ServiceTitan", category: "FSM (multi-trade)" },
+      { name: "Jobber", category: "FSM (multi-trade SMB)" },
+      { name: "Housecall Pro", category: "FSM (multi-trade SMB)" },
+      { name: "FieldEdge", category: "FSM (HVAC/plumbing)" },
+      { name: "AccuLynx", category: "CRM (roofing)" },
+      { name: "JobNimbus", category: "CRM (roofing/restoration)" },
+      { name: "Roofr", category: "CRM (roofing)" },
       { name: "CompanyCam", category: "Photo" },
       { name: "EagleView", category: "Aerial measurement" },
       { name: "Xactimate", category: "Insurance estimating" },

@@ -3,13 +3,20 @@ import type { VerticalContent } from "../types";
 // Source: `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 (financial
 // advisors / RIAs, 1–10 advisor, composite 33).
 //
+// JTBD ratified 2026-05-12 against published role workflows for 1–10
+// advisor independent RIA firms (Charles Schwab RIA Benchmarking Study
+// role definitions, Investment Adviser Association scope-of-practice,
+// Wealthbox/Redtail public role docs, SEC Form ADV Part 2A role boundaries).
+// Five roles surfaced — Principal/lead advisor, Associate advisor/planner,
+// Portfolio manager (where investment ops is separated from advice),
+// Operations/CSA, Compliance officer (often outsourced or wears multiple
+// hats at small RIAs).
+//
 // Pricing: surfaces as Regular tier per `project_stripe_both_surfaces.md`
 // (simplified 2026-05-12 — single productized tier across all 10 verticals;
 // fiduciary-aware depth, SEC Marketing Rule compliance corpus, and bespoke
 // custodian integrations route to /custom). The `tier: "max"` field below is
 // schema-only and is NOT surfaced on the customer page.
-//
-// JTBD draft:true — no Phase 0 product_spec.md table. Capability-inbox flagged.
 
 export const ria: VerticalContent = {
   slug: "ria",
@@ -32,7 +39,7 @@ export const ria: VerticalContent = {
   jtbdTables: [
     {
       role: "Principal / lead advisor",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Prep for a client meeting",
@@ -59,7 +66,7 @@ export const ria: VerticalContent = {
     },
     {
       role: "Associate advisor / planner",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Update a client's financial plan post-life-event",
@@ -84,8 +91,35 @@ export const ria: VerticalContent = {
       ],
     },
     {
+      role: "Portfolio manager",
+      draft: false,
+      rows: [
+        {
+          job: "Run quarterly rebalancing across model portfolios",
+          when: "Quarterly + on drift triggers",
+          today: "Pull positions from custodian, run drift analysis in Orion/Tamarac/Black Diamond, draft trade tickets manually",
+          withAgentplain:
+            "Rebalance agent drafts the trade list per model with drift cited per position; portfolio manager reviews and submits to the custodian",
+        },
+        {
+          job: "Generate quarterly performance reporting",
+          when: "Quarterly",
+          today: "Orion/Black Diamond/Tamarac report runs, manual narrative",
+          withAgentplain:
+            "Reporting agent drafts the per-client performance narrative with benchmark + attribution citations from the portfolio system",
+        },
+        {
+          job: "Handle a security-specific question from an advisor",
+          when: "Reactive",
+          today: "Pull research / fundamentals / position-level context manually",
+          withAgentplain:
+            "Research agent drafts the position-level summary citing fund factsheet / 10-K / analyst note for the advisor's client conversation",
+        },
+      ],
+    },
+    {
       role: "Operations / client-service associate",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Open a new account at the custodian",
@@ -105,6 +139,33 @@ export const ria: VerticalContent = {
           when: "Weekly",
           today: "Hygiene drift between quarterly clean-ups",
           withAgentplain: "Hygiene agent dedupes, normalizes, surfaces stale records weekly",
+        },
+      ],
+    },
+    {
+      role: "Compliance officer (CCO)",
+      draft: false,
+      rows: [
+        {
+          job: "Prep the annual SEC Form ADV update",
+          when: "Annually, plus material-change filings",
+          today: "Walk through every section against firm changes, draft the amendments by hand",
+          withAgentplain:
+            "ADV agent drafts the section-by-section change list against the year's firm events (new affiliations / new product offerings / material disciplinary history); CCO reviews and files",
+        },
+        {
+          job: "Review marketing communications under the SEC Marketing Rule",
+          when: "Per-piece, ongoing",
+          today: "Read every public communication, flag testimonials / endorsements / hypotheticals manually",
+          withAgentplain:
+            "Marketing-rule agent runs an automated first pass citing the specific Rule 206(4)-1 clause for each flag; CCO reviews the substantive calls",
+        },
+        {
+          job: "Run the annual compliance review",
+          when: "Annually",
+          today: "Checklist + interviews + sample testing — weeks of work",
+          withAgentplain:
+            "Review agent drafts the test plan, samples transactions and trade allocations, drafts the findings report; CCO reviews and the principal signs",
         },
       ],
     },
@@ -134,6 +195,9 @@ export const ria: VerticalContent = {
       "eMoney Advisor (planning)",
       "RightCapital (planning)",
       "MoneyGuidePro (planning)",
+      "Orion Advisor Tech (portfolio mgmt + performance reporting)",
+      "Black Diamond (portfolio mgmt + performance reporting)",
+      "Envestnet Tamarac (portfolio mgmt + rebalancing)",
       "Schwab Advisor Center, Fidelity Wealthscape, Pershing NetX360 (custodian — read-only)",
       "Outlook + Microsoft 365 Graph",
     ],
@@ -154,6 +218,9 @@ export const ria: VerticalContent = {
       { name: "eMoney Advisor", category: "Planning" },
       { name: "RightCapital", category: "Planning" },
       { name: "MoneyGuidePro", category: "Planning" },
+      { name: "Orion", category: "Portfolio mgmt" },
+      { name: "Black Diamond", category: "Portfolio mgmt" },
+      { name: "Envestnet Tamarac", category: "Portfolio mgmt" },
       { name: "Schwab / Fidelity / Pershing", category: "Custodian (read-only)" },
       { name: "Outlook + M365 Graph", category: "Email + calendar" },
     ],

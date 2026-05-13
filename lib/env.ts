@@ -38,6 +38,17 @@ export const env = {
   billingProvider: () => oneOf("BILLING_PROVIDER", ["stripe", "test"] as const, "stripe"),
   briefingsProvider: () =>
     oneOf("BRIEFINGS_PROVIDER", ["notion", "test"] as const, "notion"),
+  // Knowledge substrate (project_knowledge_substrate.md). `pgvector` is the
+  // prod store; `test` is the in-memory store used by unit tests + previews
+  // without a DB. Embedding provider defaults to `openai` when
+  // `OPENAI_API_KEY` is set, otherwise falls back to the deterministic test
+  // embedder — mirrors the LLM provider's heuristic-fallback pattern.
+  knowledgeStore: () =>
+    oneOf("KNOWLEDGE_STORE", ["pgvector", "test"] as const, "pgvector"),
+  knowledgeEmbeddingProvider: () =>
+    oneOf("KNOWLEDGE_EMBEDDING_PROVIDER", ["openai", "test"] as const, "openai"),
+  knowledgeEmbeddingModel: () =>
+    optional("OPENAI_EMBEDDING_MODEL") ?? "text-embedding-3-small",
 
   // App
   appPublicOrigin: () => optional("APP_PUBLIC_ORIGIN") ?? "http://localhost:3000",
@@ -103,4 +114,12 @@ export const env = {
   // dev/preview submissions don't silently disappear when the var is unset.
   customInquiryTo: () =>
     optional("CUSTOM_INQUIRY_TO") ?? "hello@agentplain.com",
+
+  // Knowledge substrate (project_knowledge_substrate.md).
+  // OPENAI_API_KEY enables the OpenAI embedding provider; when absent the
+  // factory falls back to the deterministic test embedder so the chain
+  // stays runnable in environments without a paid key (mirrors LLM
+  // provider behavior in lib/llm/index.ts). Per
+  // feedback_no_prod_secrets_in_dev: dev should use a dev-tier key.
+  openaiApiKey: () => optional("OPENAI_API_KEY"),
 };

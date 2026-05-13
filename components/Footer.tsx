@@ -75,6 +75,11 @@ export default function Footer() {
               </Link>
             </li>
             <li>
+              <Link href="/how-we-build" className="text-ink hover:text-clay">
+                How we build
+              </Link>
+            </li>
+            <li>
               <Link href="/#faq" className="text-ink hover:text-clay">
                 FAQ
               </Link>

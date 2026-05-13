@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Section from "@/components/Section";
 import CustomInquiryForm from "@/components/CustomInquiryForm";
+import ArchitectureDiagram from "@/components/marketing/ArchitectureDiagram";
 import { tokens } from "@/lib/brand/tokens";
 
 export const metadata: Metadata = {
@@ -233,6 +234,18 @@ export default function CustomPage() {
           <code className="text-[12px]">project_stripe_both_surfaces.md</code>{" "}
           (Custom engagement pricing framework; locked 2026-05-12).
         </p>
+      </Section>
+
+      {/* Architecture — answers Q6 ("why should I believe you?") for the
+          technical buyer. Per `project_no_outbound_architecture.md` +
+          `project_living_portable_architecture.md`, every layer is grounded
+          in a memory rule with the citation in the legend. */}
+      <Section
+        eyebrow="How the work actually lands"
+        title="Read-only in. Drafts out. You send."
+        intro="The architecture is intentionally narrow: the fleet reads your tools via read-only OAuth, drafts inside its own workspace, and surfaces every customer-facing output for your review. Outbound execution stays in your systems."
+      >
+        <ArchitectureDiagram />
       </Section>
 
       {/* Q5 — proof */}

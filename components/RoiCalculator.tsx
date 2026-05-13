@@ -74,6 +74,8 @@ export default function RoiCalculator() {
     const valuePerSeat = hours * rate * WEEKS_PER_MONTH;
     const value = valuePerSeat * clampedSeats;
     const roi = subscription > 0 ? value / subscription : 0;
+    const hoursPerMonth = hours * WEEKS_PER_MONTH * clampedSeats;
+    const net = value - subscription;
     const overEnterprise = seats > 99;
     return {
       perSeat,
@@ -81,6 +83,8 @@ export default function RoiCalculator() {
       valuePerSeat,
       value,
       roi,
+      hoursPerMonth,
+      net,
       overEnterprise,
       clampedSeats,
     };
@@ -192,8 +196,173 @@ export default function RoiCalculator() {
           First month is $0 across every seat band.
         </p>
       </div>
+
+      {/* Chart — spans both columns so the visual sits as a footer to the
+          input/output split. Answers Q7 ("how do we think about ROI?") visually
+          per `feedback_everything_tells_a_story.md`. Hand-rolled SVG bars (no
+          chart library) per `feedback_no_silent_vendor_lock.md`. */}
+      <div className="bg-paper p-6 md:p-8 lg:col-span-2">
+        <RoiBarChart
+          hoursPerMonth={result.hoursPerMonth}
+          value={result.value}
+          subscription={result.subscription}
+          net={result.net}
+        />
+      </div>
     </div>
   );
+}
+
+interface BarRow {
+  label: string;
+  /** Numeric magnitude for bar length (always >=0). */
+  magnitude: number;
+  /** Pre-formatted display value (e.g. "$4,300" or "129 hrs"). */
+  display: string;
+  /** Tailwind background utility — clay/moss/mute per spec §4 token meaning. */
+  fill: string;
+  /** Caption explaining what the bar represents. */
+  caption: string;
+}
+
+function RoiBarChart({
+  hoursPerMonth,
+  value,
+  subscription,
+  net,
+}: {
+  hoursPerMonth: number;
+  value: number;
+  subscription: number;
+  net: number;
+}) {
+  // Two side-by-side scales: HOURS (Bar 1) and DOLLARS (Bars 2-4). We render
+  // each scale relative to its own max so a small subscription bar isn't
+  // crushed by a 100x value bar. The legend underneath names the scale.
+  const dollarMax = Math.max(value, subscription, Math.abs(net), 1);
+  const hourMax = Math.max(hoursPerMonth, 1);
+
+  const hoursBar: BarRow = {
+    label: "Hours saved",
+    magnitude: hoursPerMonth / hourMax,
+    display: `${formatHours(hoursPerMonth)} hr / mo`,
+    fill: "bg-moss",
+    caption: "Hours per month the fleet lifts off your practitioners.",
+  };
+
+  const dollarBars: BarRow[] = [
+    {
+      label: "Value of those hours",
+      magnitude: value / dollarMax,
+      display: fmtDollars(value),
+      fill: "bg-clay",
+      caption: "Productive-hour rate × hours saved.",
+    },
+    {
+      label: "Subscription cost",
+      magnitude: subscription / dollarMax,
+      display: fmtDollars(subscription),
+      fill: "bg-mute",
+      caption: "What you pay agentplain at the current seat band.",
+    },
+    {
+      label: "Net value",
+      magnitude: Math.max(net, 0) / dollarMax,
+      display: net >= 0 ? fmtDollars(net) : `−${fmtDollars(Math.abs(net))}`,
+      fill: "bg-ink",
+      caption: "Value of hours saved minus the subscription.",
+    },
+  ];
+
+  return (
+    <div role="figure" aria-label="ROI visualization">
+      <p className="eyebrow mb-5">Monthly picture</p>
+
+      <BarGroup
+        scaleLabel="Time saved"
+        scaleUnit="hours / month"
+        bars={[hoursBar]}
+      />
+      <div className="my-6 h-px w-full bg-rule" aria-hidden="true" />
+      <BarGroup
+        scaleLabel="Dollars in motion"
+        scaleUnit="USD / month"
+        bars={dollarBars}
+      />
+
+      <p className="mt-6 font-mono text-[11px] leading-relaxed text-mute">
+        Bars rescale on each input change. Hours and dollars are charted
+        separately because the units don&apos;t share a scale.
+      </p>
+    </div>
+  );
+}
+
+function BarGroup({
+  scaleLabel,
+  scaleUnit,
+  bars,
+}: {
+  scaleLabel: string;
+  scaleUnit: string;
+  bars: BarRow[];
+}) {
+  return (
+    <div>
+      <div className="mb-3 flex items-baseline justify-between">
+        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+          {scaleLabel}
+        </p>
+        <p className="font-mono text-[10px] uppercase tracking-eyebrow text-mute">
+          {scaleUnit}
+        </p>
+      </div>
+      <ul className="space-y-3" aria-label={scaleLabel}>
+        {bars.map((b) => (
+          <li
+            key={b.label}
+            className="grid grid-cols-1 items-center gap-x-4 gap-y-1 sm:grid-cols-[10rem_1fr_8rem]"
+          >
+            <div className="text-[13px] leading-tight text-ink">
+              <p>{b.label}</p>
+              <p className="font-mono text-[10px] leading-relaxed text-mute">
+                {b.caption}
+              </p>
+            </div>
+            <div
+              className="relative h-6 w-full overflow-hidden border border-rule bg-paper-deep"
+              role="img"
+              aria-label={`${b.label}: ${b.display}`}
+            >
+              <div
+                className={`roi-bar-fill h-full ${b.fill}`}
+                style={{
+                  width: `${Math.max(2, Math.round(b.magnitude * 100))}%`,
+                }}
+              />
+            </div>
+            <p className="font-display text-xl leading-none text-ink sm:text-right">
+              {b.display}
+            </p>
+          </li>
+        ))}
+      </ul>
+      <style>{`
+        .roi-bar-fill {
+          transition: width 480ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .roi-bar-fill { transition: none; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function formatHours(n: number): string {
+  if (!Number.isFinite(n)) return "0";
+  if (n >= 100) return Math.round(n).toLocaleString("en-US");
+  return n.toFixed(0);
 }
 
 function Field({

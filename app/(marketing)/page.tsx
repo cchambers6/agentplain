@@ -2,6 +2,8 @@ import Link from "next/link";
 import Section from "@/components/Section";
 import FAQ from "@/components/FAQ";
 import RoiCalculator from "@/components/RoiCalculator";
+import ReplaceIntegrateAugment from "@/components/marketing/ReplaceIntegrateAugment";
+import HowItWorks from "@/components/marketing/HowItWorks";
 import { getAllVerticals, getVerticalContent } from "@/lib/verticals";
 import { tokens } from "@/lib/brand/tokens";
 
@@ -191,34 +193,37 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* Q3 — What is the app + Q5 How easy is it to use? */}
+      {/* Q3 — What does it do? — REPLACE / INTEGRATE / AUGMENT framing
+          per `feedback_everything_tells_a_story.md` story arc Q3. Visual
+          replaces the prior text-only treatment scattered across uniques
+          and the per-vertical hero copy. */}
+      <Section
+        id="what-it-does"
+        eyebrow="What it does"
+        title="Three things, in one fleet."
+        intro="REPLACE the systematic work that leaves your week. INTEGRATE with the tools you already pay for. AUGMENT the judgment work where you stay in the driver's seat."
+      >
+        <ReplaceIntegrateAugment />
+      </Section>
+
+      {/* Q4 — How does it work? + Q5 How easy is it to use? Per
+          `feedback_everything_tells_a_story.md` story arc Q4 ("3-step value
+          loop"). Replaces the prior text-only 3-card grid with the visual
+          HowItWorks component (chip row of all 10 verticals, generic tool
+          icons, fleet-flow micro-animation). */}
       <Section
         id="how"
         tone="deep"
         eyebrow="How it works"
         title="Three steps. Then the fleet drafts every morning."
-        intro="Sign up free, pick your vertical, connect your first tool — Gmail, Outlook, your CRM — and see the fleet's first drafts within minutes. No setup wizards that span days; no implementation services package."
+        intro="Sign up free, pick your vertical, connect your first tool — and see the fleet's first drafts within minutes. No setup wizards that span days; no implementation services package."
       >
-        <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-3">
-          <Step
-            number="01"
-            title="Pick your vertical."
-            body="Each of the ten verticals ships with its own JTBD table, integration list, and compliance corpus. No prompt engineering, no per-customer custom build."
-          />
-          <Step
-            number="02"
-            title="Connect your tools."
-            body="Read-only OAuth into the CRM, inbox, calendar, and accounting tools you already use. The fleet watches what's there — you stay in control. 60 seconds, not a project."
-          />
-          <Step
-            number="03"
-            title="The fleet drafts; you decide."
-            body="Every customer-facing output queues for your review. Approve, edit, or reject. Your existing systems send. The fleet never reaches the consumer on its own."
-          />
-        </div>
+        <HowItWorks />
       </Section>
 
-      {/* Q4 — What makes agentplain unique */}
+      {/* Q4b — What makes agentplain unique. Five concrete commitments that
+          differentiate from generic AI; complements (not replaces) the RIA
+          framing above which answers WHAT-it-does, not WHY-us. */}
       <Section
         eyebrow="What makes us different"
         title="Five things you won't get from a generic AI tool."
@@ -431,28 +436,6 @@ export default function HomePage() {
         </div>
       </section>
     </>
-  );
-}
-
-function Step({
-  number,
-  title,
-  body,
-}: {
-  number: string;
-  title: string;
-  body: string;
-}) {
-  return (
-    <div className="bg-paper p-8 md:p-10">
-      <p className="font-mono text-[11px] tracking-eyebrow text-clay">
-        {number}
-      </p>
-      <h3 className="mt-4 font-display text-xl leading-tight text-ink md:text-2xl">
-        {title}
-      </h3>
-      <p className="mt-3 text-[15px] leading-relaxed text-ink-soft">{body}</p>
-    </div>
   );
 }
 

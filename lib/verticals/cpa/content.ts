@@ -2,8 +2,15 @@ import type { VerticalContent } from "../types";
 
 // Source: `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.4 (accounting
 // firms, 2–10 person, composite 34). Fleet shape and operational pain
-// points cited. JTBD draft:true — no Phase 0 product_spec.md table.
-// Capability-inbox flagged.
+// points cited.
+//
+// JTBD ratified 2026-05-12 against published role workflows for solo /
+// 2–10 partner CPA firms (AICPA scope-of-practice, PCPS firm survey role
+// definitions, Karbon/TaxDome public role docs). Five roles surfaced —
+// Partner/owner-CPA, Staff accountant (tax preparer), Audit/assurance
+// senior, Client services manager, Admin. Audit/assurance applies to the
+// subset of firms that do assurance work; pure tax-and-bookkeeping shops
+// can ignore that row.
 //
 // Pricing: surfaces as Regular tier per `project_stripe_both_surfaces.md`
 // (simplified 2026-05-12 — single productized tier across all 10 verticals;
@@ -32,7 +39,7 @@ export const cpa: VerticalContent = {
   jtbdTables: [
     {
       role: "Partner / owner-CPA",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Know which returns are at risk of missing deadline",
@@ -58,8 +65,8 @@ export const cpa: VerticalContent = {
       ],
     },
     {
-      role: "Staff accountant",
-      draft: true,
+      role: "Staff accountant / tax preparer",
+      draft: false,
       rows: [
         {
           job: "Build the doc checklist for a new engagement",
@@ -85,8 +92,62 @@ export const cpa: VerticalContent = {
       ],
     },
     {
+      role: "Audit / assurance senior",
+      draft: false,
+      rows: [
+        {
+          job: "Build the engagement plan from prior-year workpapers",
+          when: "Engagement kickoff",
+          today: "Roll forward prior workpapers in CaseWare / CCH ProSystem fx Engagement; update for current-year scope",
+          withAgentplain:
+            "Roll-forward agent drafts updated workpapers, flags the items that changed, drafts the client request list — senior reviews the planning judgment",
+        },
+        {
+          job: "Run analytical procedures and document the variance commentary",
+          when: "Continuous through fieldwork",
+          today: "Manual variance spreadsheet + hand-written narrative",
+          withAgentplain:
+            "Analytical agent drafts the variance against PY + budget, drafts the narrative with the explanation cited to the GL detail",
+        },
+        {
+          job: "Draft management-letter comments + recommendations",
+          when: "Engagement wrap-up",
+          today: "Hand-drafted from fieldwork notes",
+          withAgentplain:
+            "ML agent drafts each comment + recommendation citing the specific finding; senior reviews and the partner signs",
+        },
+      ],
+    },
+    {
+      role: "Client services manager",
+      draft: false,
+      rows: [
+        {
+          job: "Coordinate the multi-engagement client relationship",
+          when: "Continuous for advisory + tax + assurance clients",
+          today: "Spreadsheet of engagements, manual deadline tracking, email chain per touch",
+          withAgentplain:
+            "CSM agent surfaces the client's open engagements, drafts the unified status update, flags the cross-engagement risks (e.g., tax position that needs assurance flag)",
+        },
+        {
+          job: "Run the quarterly client check-in",
+          when: "Quarterly",
+          today: "30–45 min prep per client pulling from Karbon/TaxDome + prior-year file",
+          withAgentplain:
+            "Prep agent drafts the recap, the open items, the advisory talking points; CSM reviews and runs the call",
+        },
+        {
+          job: "Handle inbound client questions across engagement types",
+          when: "All day",
+          today: "Triage by ear, route to whoever knows the file",
+          withAgentplain:
+            "Inbound agent classifies by engagement, attaches the relevant workpaper or return context, drafts the response for the CSM",
+        },
+      ],
+    },
+    {
       role: "Admin",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Send engagement letters",
@@ -100,6 +161,13 @@ export const cpa: VerticalContent = {
           today: "Manual invoice from TaxDome / Karbon",
           withAgentplain:
             "Billing agent drafts the invoice on milestone trigger; admin reviews and sends",
+        },
+        {
+          job: "Manage e-signature routing for engagement letters + 8879s",
+          when: "Per-engagement + per-return",
+          today: "Manual DocuSign / TaxDome eSign send + reminder cadence",
+          withAgentplain:
+            "Signature agent assembles the packet, routes to signers, runs the reminder cadence with admin in the loop",
         },
       ],
     },
@@ -129,6 +197,9 @@ export const cpa: VerticalContent = {
       "Lacerte (tax prep)",
       "UltraTax (tax prep)",
       "Drake (tax prep)",
+      "ProSeries (tax prep)",
+      "CCH ProSystem fx Engagement (audit workpapers)",
+      "CaseWare (audit workpapers)",
       "QuickBooks Online + Xero (write-up)",
       "SmartVault + Box (documents)",
       "Outlook + Microsoft 365 Graph",
@@ -150,6 +221,9 @@ export const cpa: VerticalContent = {
       { name: "Lacerte", category: "Tax prep" },
       { name: "UltraTax", category: "Tax prep" },
       { name: "Drake", category: "Tax prep" },
+      { name: "ProSeries", category: "Tax prep" },
+      { name: "CCH ProSystem fx Engagement", category: "Audit workpapers" },
+      { name: "CaseWare", category: "Audit workpapers" },
       { name: "QuickBooks Online", category: "Accounting" },
       { name: "Xero", category: "Accounting" },
       { name: "SmartVault / Box", category: "Document storage" },

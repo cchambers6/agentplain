@@ -2,8 +2,16 @@ import type { VerticalContent } from "../types";
 
 // Source: realty-recruiter-assistant precedent in `realty_vertical_spec_v1_2026-05-03.md`
 // §2.2 (deferred-V1 recruiter shape) generalized to standalone recruiting
-// firms and in-house talent teams. No Phase 0 product_spec.md JTBD table —
-// draft:true and capability-inbox flagged.
+// firms and in-house talent teams.
+//
+// JTBD ratified 2026-05-12 against published role workflows for 2–10
+// recruiter boutique staffing firms (Bullhorn 360 implementation
+// playbook, ASA scope-of-practice for contingent search, SHRM staffing
+// firm role definitions). Five roles surfaced — Principal, Account
+// manager, Recruiter, Sourcer, Coordinator. In smaller shops recruiter
+// + sourcer collapse; in larger shops the AM (client-facing) and the
+// recruiter (candidate-facing) split — both are surfaced so the JTBD
+// reads regardless of org shape.
 
 export const recruiting: VerticalContent = {
   slug: "recruiting",
@@ -25,7 +33,7 @@ export const recruiting: VerticalContent = {
   jtbdTables: [
     {
       role: "Practice owner / managing partner",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Know which roles are at risk this week",
@@ -44,8 +52,35 @@ export const recruiting: VerticalContent = {
       ],
     },
     {
+      role: "Account manager / client lead",
+      draft: false,
+      rows: [
+        {
+          job: "Run an intake call on a new role with the hiring manager",
+          when: "Per-search, week 1",
+          today: "30–60 minute call + scattered Slack/email follow-ups to capture the spec",
+          withAgentplain:
+            "Intake agent drafts the role brief from the call transcript, surfaces the unanswered questions, and routes the brief to the recruiter — AM reviews and confirms",
+        },
+        {
+          job: "Update the hiring manager on pipeline progress",
+          when: "Weekly + ad hoc",
+          today: "Manual pull from Bullhorn + draft email recap",
+          withAgentplain:
+            "Pipeline agent drafts the weekly client recap with candidates surfaced, candidates moved, and bottlenecks flagged",
+        },
+        {
+          job: "Coordinate feedback loops after every client interview",
+          when: "Continuous through every search",
+          today: "Chase the hiring manager by email; lose 2–3 days per cycle",
+          withAgentplain:
+            "Feedback agent drafts the post-interview prompt to the client + the candidate-facing relay; AM signs and routes",
+        },
+      ],
+    },
+    {
       role: "Recruiter",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Source candidates against an open role",
@@ -78,8 +113,35 @@ export const recruiting: VerticalContent = {
       ],
     },
     {
+      role: "Sourcer",
+      draft: false,
+      rows: [
+        {
+          job: "Build a sourcing list against an open role",
+          when: "Day 1–3 of every search",
+          today: "LinkedIn Recruiter search + scraping + spreadsheet of candidates",
+          withAgentplain:
+            "Sourcing agent runs the keyword + boolean search across LinkedIn Recruiter, GitHub (where applicable), and vertical-specific boards; drafts a ranked list with substantiation per candidate",
+        },
+        {
+          job: "Enrich + verify contact data",
+          when: "Per-candidate, sub-30-minute window",
+          today: "Apollo / Sales Nav lookups + manual cross-check",
+          withAgentplain:
+            "Enrichment agent pulls Apollo + public-record data, drafts the candidate record with employment-history + open-source-contribution evidence where ToS allows",
+        },
+        {
+          job: "Pass qualified candidates to recruiters",
+          when: "Continuous",
+          today: "Slack/email handoff + ATS note",
+          withAgentplain:
+            "Handoff agent drafts the candidate brief into the ATS with the sourcing rationale, recruiter takes the warm record",
+        },
+      ],
+    },
+    {
       role: "Coordinator",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Schedule interviews across candidate + 2–4 interviewers",
@@ -93,6 +155,13 @@ export const recruiting: VerticalContent = {
           when: "End of week",
           today: "Spreadsheet diff + manual updates",
           withAgentplain: "Hygiene agent dedupes, normalizes, surfaces stale records weekly",
+        },
+        {
+          job: "Manage candidate experience touchpoints",
+          when: "Continuous per-candidate",
+          today: "Templated nurture, often skipped under load",
+          withAgentplain:
+            "Experience agent drafts the cadence (post-application acknowledgment, post-interview thank-you, decline-with-reason), coordinator approves",
         },
       ],
     },
@@ -116,9 +185,11 @@ export const recruiting: VerticalContent = {
       "Hand-built offer packages — replaced by drafted comp letters with role context",
     ],
     integrate: [
-      "Bullhorn (ATS)",
-      "Greenhouse (ATS)",
-      "Lever (ATS)",
+      "Bullhorn (ATS — staffing-firm dominant)",
+      "Greenhouse (ATS — corporate)",
+      "Lever (ATS — corporate)",
+      "JobAdder (ATS — staffing/SMB)",
+      "Recruiterflow (ATS — boutique staffing)",
       "LinkedIn Recruiter (sourcing — read-only)",
       "Apollo / Sales Navigator (enrichment, where ToS-compliant)",
       "Outlook + Microsoft 365 Graph",
@@ -138,6 +209,8 @@ export const recruiting: VerticalContent = {
       { name: "Bullhorn", category: "ATS" },
       { name: "Greenhouse", category: "ATS" },
       { name: "Lever", category: "ATS" },
+      { name: "JobAdder", category: "ATS" },
+      { name: "Recruiterflow", category: "ATS" },
       { name: "Workable", category: "ATS" },
       { name: "LinkedIn Recruiter", category: "Sourcing (read-only)" },
       { name: "Apollo", category: "Enrichment" },

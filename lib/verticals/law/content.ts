@@ -4,13 +4,20 @@ import type { VerticalContent } from "../types";
 // composite 30, deprioritized for Product 2 due to Clio Work April 2026
 // shipping agentic + CoCounsel/Smokeball March 2026 partnership).
 //
+// JTBD ratified 2026-05-12 against published role workflows for solo /
+// 2–5 attorney practices (ABA Model Rules scope-of-practice, Clio Legal
+// Trends Report role definitions, Smokeball/MyCase public role docs).
+// Four roles surfaced — Managing partner, Litigator, Transactional
+// attorney, Paralegal. The litigation vs. transactional split matters
+// because the JTBDs differ materially (litigators run discovery + court
+// filings + opposing-counsel coordination; transactional attorneys run
+// drafting + redlining + closing coordination).
+//
 // Pricing: surfaces as Regular tier per `project_stripe_both_surfaces.md`
 // (simplified 2026-05-12 — single productized tier across all 10 verticals;
 // privilege-aware depth, ABA Model Rule compliance corpus, and bespoke
 // jurisdictional packs route to /custom). The `tier: "max"` field below is
 // schema-only and is NOT surfaced on the customer page.
-//
-// JTBD draft:true — no Phase 0 product_spec.md table. Capability-inbox flagged.
 
 export const law: VerticalContent = {
   slug: "law",
@@ -33,7 +40,7 @@ export const law: VerticalContent = {
   jtbdTables: [
     {
       role: "Managing partner / owner-attorney",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Know matter-state across the firm",
@@ -59,26 +66,33 @@ export const law: VerticalContent = {
       ],
     },
     {
-      role: "Associate / staff attorney",
-      draft: true,
+      role: "Litigator / litigation associate",
+      draft: false,
       rows: [
         {
-          job: "Draft a routine pleading or motion",
-          when: "Per-matter, ongoing",
-          today: "Template + manual customization",
+          job: "Draft a pleading, motion, or discovery response",
+          when: "Continuous through every active matter",
+          today: "Template + manual customization against jurisdiction local rules",
           withAgentplain:
-            "Drafting agent generates the first draft with jurisdiction-specific local rules cited; attorney reviews and revises",
+            "Drafting agent generates the first draft with the matter facts inserted + local-rule citations attached; attorney reviews and revises",
         },
         {
-          job: "Run an intake conflict check + engagement letter",
-          when: "Day 1 of every new matter",
-          today: "Manual conflict search + template merge",
+          job: "Coordinate with opposing counsel on scheduling + discovery",
+          when: "Continuous",
+          today: "Email chains + phone tag",
           withAgentplain:
-            "Onboarding agent runs the conflict check, drafts the engagement letter scoped to matter type",
+            "OC-coordination agent drafts the meet-and-confer correspondence, drafts the scheduling-order positions, logs the agreed-upon dates to the matter calendar",
+        },
+        {
+          job: "Run discovery review on opposing production",
+          when: "Discovery phase",
+          today: "Doc-by-doc review + privilege-tag spreadsheet",
+          withAgentplain:
+            "Review agent runs first-pass responsiveness + privilege tagging, drafts the privilege log entries citing the rule basis; litigator reviews the borderline calls",
         },
         {
           job: "Update the client on matter status",
-          when: "Per scheduled cadence",
+          when: "Per scheduled cadence + court-event-driven",
           today: "Reactive — client calls you",
           withAgentplain:
             "Status agent drafts the update on every matter-state change; attorney signs and sends",
@@ -86,8 +100,42 @@ export const law: VerticalContent = {
       ],
     },
     {
+      role: "Transactional attorney",
+      draft: false,
+      rows: [
+        {
+          job: "Draft a contract from a term sheet or playbook",
+          when: "Per-deal, ongoing",
+          today: "Open the firm precedent, customize against the deal terms, redline by hand",
+          withAgentplain:
+            "Drafting agent generates the first-pass draft from the firm precedent applying the deal terms, surfaces the playbook-exception clauses for attorney decision",
+        },
+        {
+          job: "Redline a counterparty draft against playbook positions",
+          when: "Per-deal turn",
+          today: "Read line-by-line, mark up Word, escalate edge cases to partner",
+          withAgentplain:
+            "Redline agent runs a first-pass review citing the firm-playbook position for each deviation; attorney reviews the substantive points",
+        },
+        {
+          job: "Run an intake conflict check + engagement letter",
+          when: "Day 1 of every new matter",
+          today: "Manual conflict search + template merge",
+          withAgentplain:
+            "Onboarding agent runs the conflict check, drafts the engagement letter scoped to deal type + fee structure",
+        },
+        {
+          job: "Coordinate the closing checklist",
+          when: "Pre-closing, per-deal",
+          today: "Spreadsheet of conditions precedent + email reminders",
+          withAgentplain:
+            "Closing agent drafts the checklist scoped to the deal type, runs the document-chase cadence, surfaces stuck items to the attorney",
+        },
+      ],
+    },
+    {
       role: "Paralegal / case manager",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Build a document checklist for a new matter",
@@ -136,6 +184,8 @@ export const law: VerticalContent = {
       "MyCase (practice mgmt)",
       "Smokeball (practice mgmt)",
       "PracticePanther (practice mgmt)",
+      "NetDocuments (DMS — mid-market)",
+      "iManage Work (DMS — mid-market+)",
       "Westlaw / Lexis (research — read-only, ToS-compliant)",
       "Court e-filing portals (state-specific)",
       "Outlook + Microsoft 365 Graph",
@@ -155,6 +205,8 @@ export const law: VerticalContent = {
       { name: "MyCase", category: "Practice mgmt" },
       { name: "Smokeball", category: "Practice mgmt" },
       { name: "PracticePanther", category: "Practice mgmt" },
+      { name: "NetDocuments", category: "Document management" },
+      { name: "iManage Work", category: "Document management" },
       { name: "Westlaw + Lexis", category: "Legal research" },
       { name: "Court e-filing portals", category: "Court" },
       { name: "Outlook + M365 Graph", category: "Email + calendar" },

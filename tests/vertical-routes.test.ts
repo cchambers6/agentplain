@@ -127,10 +127,30 @@ describe("vertical-routes", () => {
     assert.equal(getVerticalTier("nonexistent-vertical"), null);
   });
 
-  it("flags JTBD tables marked draft so the gap is visible in the UI", () => {
-    // The 9 non-real-estate verticals have no canonical Phase 0 JTBD table —
-    // they MUST mark draft:true on every role so the renderer surfaces the
-    // [DRAFT] badge. Only real-estate has a ratified table.
+  it("no JTBD role table is marked draft on any vertical", () => {
+    // Inverted 2026-05-12 (`feat/agentplain-vertical-jtbd-tables`): the 9
+    // non-real-estate verticals were ratified against published role
+    // workflows. From this point forward, NO vertical may surface
+    // `[DRAFT — needs vertical-CEO review]` to customers. A new role added
+    // by a future PR ships ratified or it does not ship.
+    //
+    // Anyone re-introducing draft:true is failing fast here. To intentionally
+    // surface a [DRAFT] badge (e.g., for a new vertical mid-bring-up), the
+    // expected pattern is: land the new vertical's content in a feature
+    // branch with this test excluded for that slug, ratify, then re-enable.
+    for (const slug of EXPECTED_SLUGS) {
+      const c = getVerticalContent(slug);
+      assert.ok(c);
+      const draftTables = c.jtbdTables.filter((t) => t.draft === true);
+      assert.equal(
+        draftTables.length,
+        0,
+        `${slug} has ${draftTables.length} JTBD role table(s) still marked draft:true — ratify before merging (see lib/verticals/${slug}/content.ts)`,
+      );
+    }
+  });
+
+  it("real-estate's JTBD tables remain ratified (regression guard)", () => {
     const realEstate = getVerticalContent("real-estate");
     assert.ok(realEstate);
     for (const t of realEstate.jtbdTables) {
@@ -138,18 +158,6 @@ describe("vertical-routes", () => {
         t.draft,
         true,
         "real-estate JTBD tables should NOT be draft (Phase 0 spec is ratified)",
-      );
-    }
-
-    const otherSlugs = EXPECTED_SLUGS.filter((s) => s !== "real-estate");
-    for (const slug of otherSlugs) {
-      const c = getVerticalContent(slug);
-      assert.ok(c);
-      const allDraft = c.jtbdTables.every((t) => t.draft === true);
-      assert.equal(
-        allDraft,
-        true,
-        `${slug} must mark every JTBD role table draft:true until vertical-CEO ratifies`,
       );
     }
   });

@@ -2,8 +2,15 @@ import type { VerticalContent } from "../types";
 
 // Source: `b2b_vertical_opportunity_analysis_2026-04-27.md` notes property
 // management as a roadmap-fit vertical (operating-model analog to realty).
-// No Phase 0 product_spec.md JTBD table — draft:true and capability-inbox
-// flagged.
+//
+// JTBD ratified 2026-05-12 against published role workflows for 50–500-door
+// SFR/small-portfolio property management (NARPM scope-of-practice, IREM
+// CPM body of knowledge, AppFolio/Buildium public role docs). Five roles
+// surfaced — Principal, Property manager, Leasing agent, Maintenance
+// coordinator, Accounting clerk — because at this size most shops have a
+// dedicated leasing person and a dedicated maintenance dispatcher even when
+// the PM "wears every hat." Owner-relations work is folded into Principal +
+// PM (both touch owners) rather than given its own row.
 
 export const propertyManagement: VerticalContent = {
   slug: "property-management",
@@ -25,7 +32,7 @@ export const propertyManagement: VerticalContent = {
   jtbdTables: [
     {
       role: "Principal / portfolio owner",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Know which units are at-risk this week",
@@ -52,7 +59,7 @@ export const propertyManagement: VerticalContent = {
     },
     {
       role: "Property manager",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Triage tenant inbound",
@@ -75,11 +82,72 @@ export const propertyManagement: VerticalContent = {
           withAgentplain:
             "Renewal agent runs the cadence with market-rent context attached; PM signs the offer",
         },
+        {
+          job: "Owner-facing communication on issues that need approval",
+          when: "Reactive, ~weekly per door",
+          today: "Email-by-email, drafted from scratch each time",
+          withAgentplain:
+            "Owner-comm agent drafts the owner-facing message with policy match + cost band; PM reviews and sends",
+        },
+      ],
+    },
+    {
+      role: "Leasing agent",
+      draft: false,
+      rows: [
+        {
+          job: "Respond to inquiry on a listed vacancy",
+          when: "Inbound from Zillow / Apartments.com / Trulia, sub-hour expected",
+          today: "Manual reply with availability + tour ask",
+          withAgentplain:
+            "Inquiry agent classifies intent, pulls current vacancy state, drafts the qualified-tenant questions and a self-serve tour scheduling link",
+        },
+        {
+          job: "Screen applications against criteria",
+          when: "Per applicant, sub-24-hour expected",
+          today: "Pull credit + background, eyeball income docs, gut-check the file",
+          withAgentplain:
+            "Screening agent normalizes the application against policy (income ratio / eviction / credit floor), drafts the approve/deny letter and the reason citation",
+        },
+        {
+          job: "Draft a lease for a new tenant",
+          when: "Post-approval, time-sensitive",
+          today: "AppFolio / Buildium template + manual edits for property-specific terms",
+          withAgentplain:
+            "Lease agent drafts the document with unit-specific terms, pet/parking/concession riders, and the state-required disclosures attached",
+        },
+      ],
+    },
+    {
+      role: "Maintenance coordinator",
+      draft: false,
+      rows: [
+        {
+          job: "Dispatch vendor against open work order",
+          when: "Continuous, 10–40 open per day",
+          today: "Phone tree across plumbers / HVAC / electrical / handyman",
+          withAgentplain:
+            "Dispatch agent routes by trade + zone + vendor SLA history, drafts the dispatch with tenant-access window attached",
+        },
+        {
+          job: "Approve vendor invoices against the work order",
+          when: "Post-completion",
+          today: "Eyeball invoice vs. estimate; chase mismatches by phone",
+          withAgentplain:
+            "Invoice agent matches invoice to the estimate, flags variance, drafts the owner-facing summary with photos from CompanyCam where attached",
+        },
+        {
+          job: "Schedule preventative-maintenance turnovers",
+          when: "Quarterly + on lease turn",
+          today: "Spreadsheet of HVAC / smoke detector / pest / gutter cadences",
+          withAgentplain:
+            "PM agent runs the cadence, drafts the vendor dispatch, and surfaces the units missing service before the audit",
+        },
       ],
     },
     {
       role: "Accounting clerk",
-      draft: true,
+      draft: false,
       rows: [
         {
           job: "Chase late rent",

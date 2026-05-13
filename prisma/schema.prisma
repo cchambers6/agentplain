@@ -166,6 +166,25 @@ enum WebhookSubscriptionStatus {
   UNSUBSCRIBED
 }
 
+// Knowledge substrate context kinds (per project_knowledge_substrate.md).
+// Five scopes the fleet's customer-facing answers draw from:
+//   SKILL          — capability documentation (read/categorize/coordinate/schedule/draft)
+//   CUSTOMER       — workspace-scoped knowledge (CRM facts, prefs, history)
+//   VERTICAL       — pattern-level vertical knowledge (real estate vs CPA vs law)
+//   CROSS_CUSTOMER — anonymized fleet learnings derived offline
+//   COMPLIANCE     — state-by-state + per-vertical rule corpus (fair housing, RESPA, etc.)
+//
+// workspaceId is NULL for every kind EXCEPT CUSTOMER. The RLS policy on
+// Embedding + KnowledgeDocument enforces that customer queries see their
+// own rows + every non-customer-scoped row.
+enum ContextKind {
+  SKILL
+  CUSTOMER
+  VERTICAL
+  CROSS_CUSTOMER
+  COMPLIANCE
+}
+
 model User {
   id                   String                  @id @default(uuid()) @db.Uuid
   email                String                  @unique @db.Citext
@@ -216,6 +235,8 @@ model Workspace {
   subscription           Subscription?
   integrationCredentials IntegrationCredential[]
   webhookSubscriptions   WebhookSubscription[]
+  knowledgeDocuments     KnowledgeDocument[]
+  embeddings             Embedding[]
 
   @@index([slug])
   @@index([vertical])
@@ -559,6 +580,85 @@ model WebhookEvent {
 
   @@index([subscriptionId, receivedAt])
   @@index([processed, receivedAt])
+}
+
+// Knowledge substrate document (project_knowledge_substrate.md). The
+// human-readable side of every embedded chunk. One Embedding row per
+// document keeps the storage simple; a future "chunk into N pieces" pass
+// would change Embedding into a many-to-one against KnowledgeDocument
+// (the relation already supports it — Embedding.documentId is nullable
+// only because we also embed non-document records like handoff entries
+// in later phases).
+//
+// workspaceId NULL for SKILL / VERTICAL / CROSS_CUSTOMER / COMPLIANCE.
+// workspaceId required for CUSTOMER. The RLS policy enforces this — see
+// the trigger in the migration.
+model KnowledgeDocument {
+  id           String      @id @default(uuid()) @db.Uuid
+  contextKind  ContextKind
+  workspaceId  String?     @db.Uuid
+  /// Short human-readable label — surfaces in operator audit logs + MCP
+  /// search results. Required.
+  title        String
+  /// The full text body — chunkers in later passes split this into
+  /// multiple Embedding rows. V1 = one embedding per document.
+  body         String
+  /// Optional canonical source URL (e.g. HUD fair-housing rule page).
+  sourceUrl    String?
+  /// Optional vertical slug for VERTICAL / COMPLIANCE rows that scope to
+  /// one of the ten locked verticals. Matches `lib/verticals/<slug>/`.
+  verticalSlug String?
+  metadata     Json        @default("{}")
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  workspace    Workspace?  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  embeddings   Embedding[]
+
+  @@index([contextKind, workspaceId])
+  @@index([contextKind, verticalSlug])
+}
+
+// One embedding row per (sourceType, sourceId). The vector column is a
+// pgvector `vector(1536)` — dimension chosen to match OpenAI's
+// `text-embedding-3-small` (1536 dims, $0.02/1M tokens, replaced ada-002
+// in 2024 — same dims, ~5x cheaper). Per
+// `feedback_no_silent_vendor_lock.md`, lib/knowledge/openai-embedding.ts
+// is the only file that talks to OpenAI; everything else reads the
+// 1536-dim float array from this column.
+//
+// The vector column is `Unsupported("vector(1536)")` because Prisma does
+// not yet have a native vector type; all reads + writes happen through
+// $queryRawUnsafe / $executeRawUnsafe inside lib/knowledge/pgvector-store.ts.
+// Per Prisma docs (https://www.prisma.io/docs/orm/prisma-schema/data-model/unsupported-database-features),
+// this is the canonical pattern for working with pgvector through Prisma.
+model Embedding {
+  id           String             @id @default(uuid()) @db.Uuid
+  /// FK to KnowledgeDocument when this embedding came from a doc. Null
+  /// when the embedding is for an ad-hoc record (e.g. a HandoffLogEntry
+  /// once that's wired in a later pass).
+  documentId   String?            @db.Uuid
+  /// Free-form source-table label so non-document records (handoff logs,
+  /// briefing snippets, etc.) can be embedded under the same table.
+  /// V1: always "knowledge_document".
+  sourceType   String
+  /// Stable id of the source record. For knowledge_document this is the
+  /// KnowledgeDocument.id; for future record types this is whatever the
+  /// upstream table calls its primary key.
+  sourceId     String
+  workspaceId  String?            @db.Uuid
+  contextKind  ContextKind
+  metadata     Json               @default("{}")
+  /// 1536-dim float vector. Prisma cannot read this column through the
+  /// generated client; lib/knowledge/pgvector-store.ts does all I/O.
+  vector       Unsupported("vector(1536)")
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  document     KnowledgeDocument? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  workspace    Workspace?         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceType, sourceId])
+  @@index([contextKind, workspaceId])
+  @@index([documentId])
 }
 
 // Magic-link tokens issued for sign-in. Single-use; consumed on verify.

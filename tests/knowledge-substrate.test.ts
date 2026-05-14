@@ -431,23 +431,40 @@ describe('TestKnowledgeStore — RLS isolation', () => {
 describe('seed assembly', () => {
   it('builds the expected SKILL / VERTICAL / COMPLIANCE buckets', () => {
     const a = buildSeedAssembly();
-    assert.equal(a.skill.length, 5);
-    assert.ok(a.vertical.length >= 50); // 10 verticals × ~5 chunks each
+    // 5 PR-C value-loop skill docs + 5 architecture-doc chunks (from
+    // docs/skills-architecture.md + docs/knowledge-substrate.md).
+    assert.equal(a.skill.length, 10);
+    assert.ok(a.vertical.length >= 50); // 10 verticals × ~5 chunks each + per-role jtbd synthesis
     assert.ok(a.compliance.length >= 5);
     for (const r of a.skill) {
       assert.equal(r.contextKind, 'SKILL');
       assert.equal(r.workspaceId ?? null, null);
-      assert.ok(r.sourceId?.startsWith('skill:'));
+      // SKILL rows now come from two sourceTypes: `skill_doc` (sourceId
+      // `skill:*`) and `architecture-doc` (sourceId `architecture:*`).
+      assert.ok(
+        r.sourceId?.startsWith('skill:') || r.sourceId?.startsWith('architecture:'),
+        `unexpected skill sourceId: ${r.sourceId}`,
+      );
     }
     for (const r of a.vertical) {
       assert.equal(r.contextKind, 'VERTICAL');
-      assert.ok(r.sourceId?.startsWith('vertical:'));
+      // VERTICAL rows come from two sourceTypes: `vertical_content`
+      // (sourceId `vertical:*`) and `jtbd` (sourceId `jtbd:*`).
+      assert.ok(
+        r.sourceId?.startsWith('vertical:') || r.sourceId?.startsWith('jtbd:'),
+        `unexpected vertical sourceId: ${r.sourceId}`,
+      );
       assert.ok(r.verticalSlug && r.verticalSlug.length > 0);
     }
     for (const r of a.compliance) {
       assert.equal(r.contextKind, 'COMPLIANCE');
-      assert.ok(r.sourceId?.startsWith('compliance:'));
+      // Two sourceId prefixes: original `compliance:*` real-estate
+      // fixtures + new per-vertical sentinel rules (sourceType
+      // `compliance-corpus`, sourceId `<vertical>:<ruleId>`).
+      assert.ok(r.sourceId !== undefined && r.sourceId.length > 0);
     }
+    // Diagnostics should be populated.
+    assert.ok(a.diagnostics.skippedUnverifiedCompliance >= 0);
   });
 
   it('SEED_COUNTS matches the assembly', () => {

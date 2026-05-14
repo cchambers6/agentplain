@@ -1,19 +1,32 @@
 /**
  * lib/knowledge/seed-data.ts
  *
- * Static seed corpus for the knowledge substrate. Three context kinds
- * land at install time:
+ * Static seed corpus for the knowledge substrate. Five buckets land at
+ * install time:
  *
- *   * SKILL       — documentation for the five PR-C value-loop skills
- *                   (read / categorize / coordinate / schedule / draft).
- *   * VERTICAL    — chunked content from each of the 10 locked verticals
- *                   in `lib/verticals/<slug>/content.ts`. Hero, JTBD,
- *                   ROI, claims, integrations, value loop each become
- *                   their own row so search can target a specific chunk.
- *   * COMPLIANCE  — real-estate fair-housing fixture (HUD + ECOA digest).
- *                   Other verticals' compliance corpora land in the
- *                   parallel compliance-pack PR per
- *                   `feedback_no_new_verticals_finish_locked.md`.
+ *   * SKILL — documentation for the five PR-C value-loop skills
+ *     (read / categorize / coordinate / schedule / draft), PLUS
+ *     architecture chunks from `docs/skills-architecture.md` and
+ *     `docs/knowledge-substrate.md` so any skill agent can query
+ *     "how does the value loop work" or "how do I call the substrate"
+ *     and get authoritative answers.
+ *
+ *   * VERTICAL — chunked content from each of the 10 locked verticals
+ *     in `lib/verticals/<slug>/content.ts`. Hero, JTBD per role, ROI,
+ *     claims, integrations, value loop each become their own row so
+ *     search can target a specific chunk. Plus a richer per-role JTBD
+ *     synthesis (sourceType='jtbd') that joins JTBD rows with the
+ *     vertical's claims + integrations + value-loop example so a single
+ *     "what does a CPA tax preparer do all day" query returns the full
+ *     picture.
+ *
+ *   * COMPLIANCE — original real-estate fair-housing fixtures (HUD +
+ *     ECOA + GA broker disclosure + material-fact disclosure) PLUS the
+ *     verified entries from the per-vertical sentinel corpus at
+ *     `lib/agents/sentinel/corpus/<vertical>/`. Entries flagged
+ *     `unverified: true` are intentionally skipped — they ship as
+ *     placeholder text under `[UNVERIFIED — needs counsel]` and would
+ *     poison live queries until counsel red-lines them.
  *
  * Every row carries a stable `sourceId` so the seed script is idempotent
  * (replaying the seed updates rows in place; it does not duplicate).
@@ -21,11 +34,20 @@
  * Per `project_knowledge_substrate.md`: CUSTOMER + CROSS_CUSTOMER stay
  * empty at seed time. CUSTOMER fills as workspaces connect tools;
  * CROSS_CUSTOMER fills offline via the anonymization fleet agent.
+ *
+ * Per `feedback_no_guesses_no_estimates.md`: every entry's body is
+ * derived from a real file path (cited in metadata.source). Unverified
+ * compliance entries are skipped, not fabricated.
+ *
+ * Per `feedback_no_silent_vendor_lock.md`: this file produces typed
+ * `KnowledgeUpsertInput` rows. The store + embedder construction stays
+ * inside `lib/knowledge/`; nothing here touches OpenAI or pgvector.
  */
 
 import type { KnowledgeUpsertInput } from './types';
 import { getAllVerticals } from '../verticals';
 import type { VerticalContent } from '../verticals/types';
+import { listCorpusVerticals, loadCorpusFor } from '../agents/sentinel';
 
 // ── SKILL corpus ────────────────────────────────────────────────────────
 
@@ -111,7 +133,126 @@ landing in the inbox where a hurried tap could send them.`,
   },
 ];
 
-// ── COMPLIANCE corpus (real-estate fair-housing) ────────────────────────
+// ── Architecture-doc corpus (shipped under SKILL kind) ──────────────────
+//
+// The user spec referenced `docs/mcp-first-migration.md` +
+// `docs/skills-mcp-contract.md`, but those docs have not shipped. The
+// real architecture artifacts in the repo today are
+// `docs/skills-architecture.md` and `docs/knowledge-substrate.md` —
+// both authored as part of the PR-C / knowledge-substrate work. We seed
+// these so any skill agent can query "how does the value loop compose"
+// or "what's the embedding dimension" and get a grounded answer from a
+// committed artifact rather than the LLM's prior knowledge.
+
+interface ArchDoc {
+  slug: string;
+  title: string;
+  body: string;
+  source: string;
+  section: string;
+}
+
+const ARCHITECTURE_CORPUS: ArchDoc[] = [
+  {
+    slug: 'skills-architecture:loop-overview',
+    title: 'Skills architecture — the five-skill value loop',
+    body: `The agentplain value loop is one runner over five composable skills. A WebhookEvent flows
+read → categorize → (noise | transactional | vendor | lead | scheduling-needed | draft-needed). Noise,
+transactional, vendor, and lead intents terminate. Scheduling-needed routes coordinate → schedule →
+draft. Draft-needed routes coordinate → draft. Every skill is a small adapter under the
+ISkill<TInput, TOutput> contract; skills do not know about each other. lib/skills/runner.ts owns the
+conditional logic. Outputs: read → ParsedMessage[], categorize → Categorization (intent + confidence +
+reason), coordinate → ThreadContext (summary + cross-thread refs), schedule → SchedulingProposal,
+draft → DraftReply (subject + body + Gmail draft id).`,
+    source: 'docs/skills-architecture.md',
+    section: 'The loop',
+  },
+  {
+    slug: 'skills-architecture:adapter-ports',
+    title: 'Skills architecture — adapter ports (provider-neutral)',
+    body: `Three swappable ports keep lib/skills/ provider-neutral per feedback_no_silent_vendor_lock.md
+and project_living_portable_architecture.md.
+
+LlmProvider (lib/llm/types.ts): production AnthropicProvider (lib/llm/anthropic-provider.ts); test
+TestLlmProvider (lib/llm/test-provider.ts) with canned + heuristic outputs. getLlmProvider() reads
+LLM_PROVIDER env (test forces test mode) and ANTHROPIC_API_KEY presence.
+
+MessageFetcher (lib/skills/types.ts): production GmailMessageAdapter (lib/skills/gmail-fetcher.ts)
+calling gmail.users.history.list + gmail.users.messages.get; test FixtureMessageFetcher reading from
+tests/fixtures/webhook-events/.
+
+DraftPersister (lib/skills/types.ts): production GmailMessageAdapter (same class implements both ports);
+test RecordingDraftPersister captures calls in memory.
+
+The two-implementation rule per feedback_runner_portability.md is satisfied for each port — new
+providers (M365, OpenAI) slot in without touching skill code.`,
+    source: 'docs/skills-architecture.md',
+    section: 'Adapter ports',
+  },
+  {
+    slug: 'skills-architecture:no-outbound-contract',
+    title: 'Skills architecture — the no-outbound contract',
+    body: `Per project_no_outbound_architecture.md, lib/skills/ produces proposals; the customer's
+system executes. The contract is enforced at three layers:
+
+1. Interface shape. DraftPersister.persistDraft is the ONLY write method. There is no send. Adding
+one would require an interface change visible in code review.
+
+2. Schedule skill. Returns SchedulingProposal — no calendar method on its surface.
+
+3. Draft skill. Persists via gmail.users.drafts.create. The GmailMessageAdapter deliberately does not
+expose gmail.users.messages.send.
+
+The e2e test (tests/skills-loop-e2e.test.ts) asserts the recording persister sees zero calls for
+noise / transactional / vendor / lead intents, and that low-confidence drafts (< 0.5) are generated
+but not persisted.`,
+    source: 'docs/skills-architecture.md',
+    section: 'The no-outbound contract',
+  },
+  {
+    slug: 'knowledge-substrate:context-kinds',
+    title: 'Knowledge substrate — the five context kinds + RLS rules',
+    body: `The substrate has five context kinds with strict workspaceId rules enforced at both the
+Postgres CHECK and the application layer:
+
+SKILL — platform-wide, workspaceId NULL. The read/categorize/coordinate/schedule/draft docs.
+CUSTOMER — one workspace, workspaceId REQUIRED. This customer's pipeline notes, prefs, history.
+VERTICAL — platform-wide, workspaceId NULL. Real-estate vs CPA JTBD, ROI, claims, value-loop chunks.
+CROSS_CUSTOMER — platform-wide, workspaceId NULL. Anonymized fleet learnings; populated offline.
+COMPLIANCE — platform-wide, workspaceId NULL. Fair-housing, ECOA, state-by-state advertising rules.
+
+Customer queries read their own rows (workspaceId matches GUC) AND every non-customer-scoped row
+(workspaceId IS NULL). Operator queries read everything. Writes are operator-only at the policy level.
+The store wraps each method in withRls(ctx, ...) from lib/db/rls.ts which sets app.user_id,
+app.workspace_id, and app.is_operator GUCs inside a transaction.`,
+    source: 'docs/knowledge-substrate.md',
+    section: 'The five context kinds',
+  },
+  {
+    slug: 'knowledge-substrate:ports-and-embedding',
+    title: 'Knowledge substrate — two-impl ports + embedding model',
+    body: `IEmbeddingProvider port: production OpenAIEmbeddingProvider (text-embedding-3-small, 1536
+dims, $0.02/1M tokens per OpenAI pricing read 2026-05-12); test TestEmbeddingProvider (deterministic
+SHA-256 → unit-norm float[]).
+
+IKnowledgeStore port: production PgvectorKnowledgeStore (pgvector ivfflat cosine, RLS); test
+TestKnowledgeStore (in-memory).
+
+Selection rules in lib/knowledge/index.ts: KNOWLEDGE_EMBEDDING_PROVIDER (test forces test; unset +
+OPENAI_API_KEY present → openai; unset + no key → test fallback). KNOWLEDGE_STORE (pgvector default;
+test for in-memory). The test fallback when OPENAI_API_KEY is unset mirrors lib/llm/index.ts so the
+chain stays exercisable on mock data until prod keys land.
+
+Dimension mismatch between provider and column is detected at write time (DIMENSION_MISMATCH error).
+The MCP route (app/api/knowledge/mcp/route.ts) exposes knowledge.search, knowledge.upsert, and
+knowledge.delete via JSON-RPC 2.0 with x-agentplain-mcp-key header auth and an optional
+x-agentplain-workspace-id header for CUSTOMER-scoped operations.`,
+    source: 'docs/knowledge-substrate.md',
+    section: 'Architecture',
+  },
+];
+
+// ── COMPLIANCE corpus (real-estate fair-housing — original 5) ───────────
 
 interface ComplianceDoc {
   slug: string;
@@ -277,11 +418,171 @@ AUGMENT: ${v.claims.augment.join(' | ')}`,
   return chunks;
 }
 
+/**
+ * Per-role JTBD synthesis. One row per (vertical × role) that joins the
+ * JTBD rows with the vertical's claims + integrations + value-loop
+ * example. This is a different sourceType ('jtbd') from `chunkVertical`'s
+ * per-role chunks so a query like "what does a CPA tax preparer do all
+ * day" lands a full-picture row rather than just the bare JTBD table.
+ *
+ * The structure follows the user spec's primaryGoal / dailyStruggles /
+ * toolsTheyUse / workAgentplainReplaces / workAgentplainIntegrates /
+ * workAgentplainAugments / exampleScenario shape, synthesized from the
+ * data the content.ts file actually exposes (JTBD rows + claims +
+ * integrations + value-loop example). Keeping the synthesis here means
+ * we don't touch the source files — per the source-files-are-read-only
+ * constraint.
+ */
+function buildJtbdSynthesisRows(v: VerticalContent): KnowledgeUpsertInput[] {
+  const out: KnowledgeUpsertInput[] = [];
+  const toolsAll = [
+    ...v.claims.integrate,
+    ...v.integrations.planned.map((i) => `${i.name} (${i.category})`),
+  ];
+  const dedupedTools = Array.from(new Set(toolsAll));
+  const augments = v.claims.augment;
+  const replaces = v.claims.replace;
+  const integrates = v.claims.integrate;
+  const example = v.valueLoopExample;
+
+  for (const table of v.jtbdTables) {
+    const primaryGoal = table.rows[0]?.job ?? '(no primary goal listed)';
+    const dailyStruggles = table.rows.map((r) => r.today).filter((s) => s && s.length > 0);
+    const rowReplaces = table.rows.map((r) => `${r.job} → ${r.withAgentplain}`);
+    const sourceId = `jtbd:${v.slug}:${slugifyRole(table.role)}`;
+
+    const bodyParts: string[] = [
+      `Vertical: ${v.name} (slug=${v.slug}). Tier surfaced as Regular per project_stripe_both_surfaces.md.`,
+      `Role: ${table.role}.`,
+      `Mission audience: ${v.missionSubject ?? v.name}.`,
+      ``,
+      `Primary goal: ${primaryGoal}.`,
+      ``,
+      `Daily struggles (without agentplain):\n${dailyStruggles.map((s) => `- ${s}`).join('\n')}`,
+      ``,
+      `Tools they use: ${dedupedTools.join(', ')}.`,
+      ``,
+      `Work agentplain REPLACES (role-specific):\n${rowReplaces.map((s) => `- ${s}`).join('\n')}`,
+      ``,
+      `Work agentplain REPLACES (vertical-wide):\n${replaces.map((s) => `- ${s}`).join('\n')}`,
+      ``,
+      `Work agentplain INTEGRATES with:\n${integrates.map((s) => `- ${s}`).join('\n')}`,
+      ``,
+      `Work agentplain AUGMENTS:\n${augments.map((s) => `- ${s}`).join('\n')}`,
+    ];
+
+    if (example) {
+      bodyParts.push(
+        ``,
+        `Example scenario: ${example.scenario}`,
+        `Before agentplain: ${example.before}`,
+        `After agentplain: ${example.after}`,
+        `Outcome: ${example.outcome}`,
+      );
+    }
+
+    out.push({
+      contextKind: 'VERTICAL',
+      workspaceId: null,
+      verticalSlug: v.slug,
+      sourceType: 'jtbd',
+      sourceId,
+      title: `${table.role} in ${v.name}`,
+      body: bodyParts.join('\n'),
+      metadata: {
+        chunk: 'jtbd',
+        role: table.role,
+        verticalSlug: v.slug,
+        tier: 'regular',
+        tools: dedupedTools,
+        draft: table.draft ?? false,
+        source: `lib/verticals/${v.slug}/content.ts`,
+      },
+    });
+  }
+
+  return out;
+}
+
 function slugifyRole(role: string): string {
   return role
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
+}
+
+// ── Per-vertical sentinel compliance corpus ─────────────────────────────
+
+/**
+ * Walks every registered sentinel corpus and emits one
+ * KnowledgeUpsertInput per VERIFIED ComplianceRule. Unverified rules
+ * (literal text under [UNVERIFIED — needs counsel]) are intentionally
+ * skipped — they'd poison live queries with placeholder text. Counsel
+ * red-line flips `unverified` to false; a re-seed then picks them up.
+ *
+ * Returns the rows plus a count of how many entries were skipped, so
+ * the seed script + PR description can report coverage accurately.
+ */
+export interface ComplianceCorpusBuild {
+  rows: KnowledgeUpsertInput[];
+  skippedUnverified: number;
+  verifiedByVertical: Record<string, number>;
+  unverifiedByVertical: Record<string, number>;
+}
+
+export function buildComplianceCorpus(): ComplianceCorpusBuild {
+  const rows: KnowledgeUpsertInput[] = [];
+  let skippedUnverified = 0;
+  const verifiedByVertical: Record<string, number> = {};
+  const unverifiedByVertical: Record<string, number> = {};
+
+  for (const slug of listCorpusVerticals()) {
+    const bundle = loadCorpusFor(slug);
+    if (!bundle) continue;
+    verifiedByVertical[slug] = 0;
+    unverifiedByVertical[slug] = 0;
+    for (const rule of bundle.rules) {
+      if (rule.unverified) {
+        skippedUnverified += 1;
+        unverifiedByVertical[slug] += 1;
+        continue;
+      }
+      verifiedByVertical[slug] += 1;
+      const scope = rule.scope;
+      const scopeLabel =
+        scope.kind === 'federal'
+          ? 'federal'
+          : scope.kind === 'state'
+            ? `state:${scope.state}`
+            : `professional-body:${scope.body}`;
+
+      rows.push({
+        contextKind: 'COMPLIANCE',
+        workspaceId: null,
+        sourceType: 'compliance-corpus',
+        sourceId: `${slug}:${rule.ruleId}`,
+        title: rule.title,
+        body: `${rule.summary}\n\nLITERAL TEXT:\n${rule.literalText}\n\nCITATION: ${rule.citation.source} (read ${rule.citation.accessedAt}).${
+          rule.drafterNotes ? `\n\nDRAFTER NOTES: ${rule.drafterNotes}` : ''
+        }`,
+        sourceUrl: rule.citation.url,
+        verticalSlug: slug,
+        metadata: {
+          verticalSlug: slug,
+          ruleId: rule.ruleId,
+          statute: rule.citation.source,
+          jurisdiction: rule.jurisdiction,
+          scope: scopeLabel,
+          status: bundle.metadata.status,
+          counselReviewer: bundle.metadata.counselReviewer,
+          lastReviewedAt: bundle.metadata.lastReviewedAt,
+          source: `lib/agents/sentinel/corpus/${slug}/${rule.ruleId}`,
+        },
+      });
+    }
+  }
+
+  return { rows, skippedUnverified, verifiedByVertical, unverifiedByVertical };
 }
 
 // ── Public assembly ─────────────────────────────────────────────────────
@@ -290,37 +591,69 @@ export interface SeedAssembly {
   skill: KnowledgeUpsertInput[];
   vertical: KnowledgeUpsertInput[];
   compliance: KnowledgeUpsertInput[];
+  /** Diagnostics carried through for the seed script + tests. */
+  diagnostics: {
+    skippedUnverifiedCompliance: number;
+    verifiedComplianceByVertical: Record<string, number>;
+    unverifiedComplianceByVertical: Record<string, number>;
+  };
 }
 
 export function buildSeedAssembly(): SeedAssembly {
-  const skill: KnowledgeUpsertInput[] = SKILL_CORPUS.map((s) => ({
-    contextKind: 'SKILL',
-    workspaceId: null,
-    sourceType: 'skill_doc',
-    sourceId: `skill:${s.slug}`,
-    title: s.title,
-    body: s.body,
-    metadata: { skillSlug: s.slug },
-  }));
+  const skill: KnowledgeUpsertInput[] = [
+    ...SKILL_CORPUS.map<KnowledgeUpsertInput>((s) => ({
+      contextKind: 'SKILL',
+      workspaceId: null,
+      sourceType: 'skill_doc',
+      sourceId: `skill:${s.slug}`,
+      title: s.title,
+      body: s.body,
+      metadata: { skillSlug: s.slug },
+    })),
+    ...ARCHITECTURE_CORPUS.map<KnowledgeUpsertInput>((a) => ({
+      contextKind: 'SKILL',
+      workspaceId: null,
+      sourceType: 'architecture-doc',
+      sourceId: `architecture:${a.slug}`,
+      title: a.title,
+      body: a.body,
+      metadata: { doc: a.source, section: a.section },
+    })),
+  ];
 
   const vertical: KnowledgeUpsertInput[] = [];
   for (const v of getAllVerticals()) {
     vertical.push(...chunkVertical(v));
+    vertical.push(...buildJtbdSynthesisRows(v));
   }
 
-  const compliance: KnowledgeUpsertInput[] = COMPLIANCE_CORPUS.map((c) => ({
-    contextKind: 'COMPLIANCE',
-    workspaceId: null,
-    sourceType: 'compliance_doc',
-    sourceId: `compliance:${c.verticalSlug}:${c.slug}`,
-    title: c.title,
-    body: c.body,
-    sourceUrl: c.sourceUrl,
-    verticalSlug: c.verticalSlug,
-    metadata: { complianceSlug: c.slug },
-  }));
+  const corpusBuild = buildComplianceCorpus();
 
-  return { skill, vertical, compliance };
+  const compliance: KnowledgeUpsertInput[] = [
+    ...COMPLIANCE_CORPUS.map<KnowledgeUpsertInput>((c) => ({
+      contextKind: 'COMPLIANCE',
+      workspaceId: null,
+      sourceType: 'compliance_doc',
+      sourceId: `compliance:${c.verticalSlug}:${c.slug}`,
+      title: c.title,
+      body: c.body,
+      sourceUrl: c.sourceUrl,
+      verticalSlug: c.verticalSlug,
+      metadata: { complianceSlug: c.slug },
+    })),
+    ...corpusBuild.rows,
+  ];
+
+  return {
+    skill,
+    vertical,
+    compliance,
+    diagnostics: {
+      skippedUnverifiedCompliance: corpusBuild.skippedUnverified,
+      verifiedComplianceByVertical: corpusBuild.verifiedByVertical,
+      unverifiedComplianceByVertical: corpusBuild.unverifiedByVertical,
+    },
+  };
 }
 
 export const SEED_COUNTS = (() => {

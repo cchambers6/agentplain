@@ -69,6 +69,13 @@ async function main() {
   console.log(
     `Plan: SKILL=${assembly.skill.length} VERTICAL=${assembly.vertical.length} COMPLIANCE=${assembly.compliance.length}`,
   );
+  console.log(
+    `Compliance corpus: ${assembly.diagnostics.skippedUnverifiedCompliance} unverified entries skipped (placeholder text — counsel red-line gates them in).`,
+  );
+  for (const [slug, count] of Object.entries(assembly.diagnostics.verifiedComplianceByVertical)) {
+    const skipped = assembly.diagnostics.unverifiedComplianceByVertical[slug] ?? 0;
+    console.log(`    ${slug.padEnd(20)} verified=${count}  skipped=${skipped}`);
+  }
 
   const start = Date.now();
   const skillCounts = await seedBucket('SKILL', assembly.skill);

@@ -3,6 +3,10 @@ import Link from "next/link";
 import Section from "@/components/Section";
 import CustomInquiryForm from "@/components/CustomInquiryForm";
 import { tokens } from "@/lib/brand/tokens";
+import {
+  INQUIRY_TYPE_OPTIONS,
+  type InquiryType,
+} from "@/lib/custom-inquiry/types";
 
 export const metadata: Metadata = {
   title: "Build with us — agentplain Custom engagements",
@@ -119,7 +123,34 @@ const proof = [
   },
 ];
 
-export default function CustomPage() {
+interface PageProps {
+  searchParams: Promise<{ type?: string | string[] }>;
+}
+
+// `?type=max` etc. pre-selects the inquiry-type toggle. Used by the
+// /pricing Max-card CTA and the billing-settings "Talk to us about Max"
+// link (see docs/pricing-page-handoff-2026-05-15.md for the URL contract).
+function resolveDefaultInquiryType(raw: unknown): InquiryType {
+  const slug = Array.isArray(raw) ? raw[0] : raw;
+  if (typeof slug !== "string") return "custom_skill_build";
+  const normalized = slug.toLowerCase().replace(/-/g, "_");
+  if (normalized === "max" || normalized === "max_service_engagement") {
+    return "max_service_engagement";
+  }
+  if (normalized === "not_sure" || normalized === "both") {
+    return "not_sure";
+  }
+  if (
+    (INQUIRY_TYPE_OPTIONS as readonly string[]).includes(normalized)
+  ) {
+    return normalized as InquiryType;
+  }
+  return "custom_skill_build";
+}
+
+export default async function CustomPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const defaultInquiryType = resolveDefaultInquiryType(params.type);
   return (
     <>
       {/* HERO */}
@@ -265,7 +296,7 @@ export default function CustomPage() {
         title="Tell us what you need."
         intro="Six fields. A human reads each one. We come back within two business days with a scoping-call invite and a first read on what we&rsquo;d build."
       >
-        <CustomInquiryForm />
+        <CustomInquiryForm defaultInquiryType={defaultInquiryType} />
       </Section>
 
       {/* Q7 — closing */}

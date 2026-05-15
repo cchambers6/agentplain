@@ -112,3 +112,70 @@ These should be ratified as memory before the next copy reframe, so future agent
 3. Cadence cadence. Regular = monthly review, Partner = weekly review per this PR. Confirm or revise.
 4. Header nav. Should /custom and a separate "Talk to a partner" link both surface in nav, or does the existing Custom nav-item carry both functions?
 5. Plus → Partner rename. Schema-side: Tier enum stays Plus (unchanged); display label is Partner. Confirm or migrate.
+
+---
+
+## Reference (preserved from sibling branch `feat/copy-reframe-service-partnership-2026-05-15`)
+
+The sibling rebase landed the same lock with the same scope; the lists below were the most reusable artifacts from that branch's guidance doc and are preserved here as the canonical reference table for any future copy reframe that needs to cite the lock at a glance.
+
+### The positioning shift (2026-05-15 lock)
+
+| BEFORE | AFTER |
+|---|---|
+| agentplain is a platform for SMBs to use AI agents in their business | agentplain is the SERVICE PARTNERSHIP that installs, runs, and customizes AI ops for local businesses |
+| Customer is the AI OPERATOR | Customer is the SERVED PARTY |
+| "Sign up, pick your vertical, connect your tools" | "Sign up, your service partner reaches out, the install happens inside two business days" |
+| Self-serve onboarding implied | Managed onboarding by a named service partner |
+
+If the visitor finishes a section thinking they will be operating AI agents themselves, the section is wrong. They should finish thinking we will be running it for them.
+
+### Banned framings — replace on sight
+
+These strings (or their close paraphrases) should not appear on any customer-facing surface:
+
+- "self-serve AI platform" / "self-serve" anything customer-facing
+- "DIY agentic workflows" / "DIY agents"
+- "try our tool" / "try our platform"
+- "configure your agents" (when customer is the actor)
+- "set up your fleet" (when customer is the actor)
+- "platform for SMBs" / "platform for small businesses"
+- "AI tool for SMBs"
+- Any phrasing that positions the CUSTOMER as the AI operator
+- "Sign up and start using AI" (implies customer drives it)
+- "Build your own workflows"
+- "No code required" / "AI in minutes" (implies customer self-onboards)
+
+Edge cases worth knowing:
+
+- The word "self-serve" is still fine in INTERNAL contexts (e.g., `app/api/auth/oauth/google/connect/route.ts:42` and `app/(operator)/layout.tsx:7`) where it refers to operator/admin flows. Banned only on customer-facing copy.
+
+### Required framings — use these patterns
+
+The customer is the SERVED PARTY. We do the work; they do their business.
+
+Acceptable lead-ins:
+
+- "we run it for you"
+- "managed AI ops"
+- "your AI ops team — without hiring one"
+- "your service partner"
+- "we install, we run, we customize"
+- "service partnership"
+- "you decide on drafts; we run everything else"
+- "the partnership is the product; the fleet is the mechanism"
+
+Required verb patterns:
+
+- For agentplain as actor: "install," "run," "customize," "tune," "monitor," "watch," "refresh," "scope"
+- For the customer as actor: "sign up," "decide," "approve," "edit," "reject," "review" — never "configure," "set up," "wire up," "operate," "drive"
+- For the fleet as mechanism: "drafts," "proposes," "categorizes," "schedules," "coordinates"
+
+### Conflict-resolution rule
+
+If anything in this doc conflicts with the locked memory files, the memory files win. Mission/vision/tagline are immovable. The service-partnership framing is the lens through which everything else is told.
+
+## CHANGELOG
+
+- 2026-05-15: Original doc landed via sibling branch `feat/copy-reframe-service-partnership-2026-05-15-kind-shirley` (PR #25). Captures the canonical service-partnership lock for the marketing surface.
+- 2026-05-17: Rebase of `feat/copy-reframe-service-partnership-2026-05-15` appended the reference section (positioning shift table, banned framings, required framings) preserved from the sibling branch's alternate guidance doc.

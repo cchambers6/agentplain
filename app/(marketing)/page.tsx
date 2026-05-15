@@ -220,29 +220,29 @@ export default function HomePage() {
         id="how"
         tone="deep"
         eyebrow="How it works"
-        title="Four steps. Then your service team runs it with you."
-        intro="Sign up free, pick your vertical, connect your first tool — Gmail, Outlook, your CRM. Your named service partner handles install, weekly review calls, and ongoing customization. No DIY setup wizards spanning days; no implementation-services line item bolted on at the end."
+        title="Four steps. Your service partner runs three of them."
+        intro="Sign up and you get a service partner, not a tool to figure out. We do the install, we run the fleet, we customize it as your workflow changes. Your job: pick your vertical, give us OAuth, and decide on the drafts. Our job: everything else."
       >
-        <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-4">
           <Step
             number="01"
             title="Pick your vertical."
-            body="Each of the ten verticals ships with its own JTBD table, integration list, and compliance corpus. No prompt engineering, no per-customer custom build."
+            body="Each of the ten verticals ships with its own JTBD table, integration list, and compliance corpus. No prompt engineering, no per-customer custom build — your service partner uses the vertical pack as the starting point."
           />
           <Step
             number="02"
-            title="Connect your tools."
-            body="Read-only OAuth into the CRM, inbox, calendar, and accounting tools you already use. The fleet watches what's there — you stay in control. 60 seconds, not a project."
+            title="Give us OAuth."
+            body="Read-only OAuth into the CRM, inbox, calendar, and accounting tools you already use. 60 seconds on your side — your service partner takes it from there."
           />
           <Step
             number="03"
-            title="The fleet drafts; you decide."
-            body="Every customer-facing output queues for your review. Approve, edit, or reject. Your existing systems send. The fleet never reaches the consumer on its own."
+            title="We install + customize the fleet."
+            body="Your service partner installs the fleet in your workspace, tunes the corpus to your firm's voice, sets the work thresholds, and watches the first week of drafts. You don't run a setup wizard; we run the install."
           />
           <Step
             number="04"
-            title="Your service team runs the rest."
-            body="Your named service partner handles onboarding, configures the fleet for your shop, runs weekly reviews, and tunes the agents as your ops change. You don't operate the AI — we do, alongside you."
+            title="The fleet drafts; you decide."
+            body="Every customer-facing output queues for your review. Approve, edit, or reject. Your existing systems send. Your service partner stays on as ongoing config — corpus refreshes, model updates, integration drift — for as long as the seat is live."
           />
         </div>
       </Section>
@@ -251,7 +251,7 @@ export default function HomePage() {
       <Section
         eyebrow="What makes us different"
         title="Five things you won't get from a generic AI tool."
-        intro="Each point is a commitment, not a slogan. Generic AI is horizontal — agentplain is a service partnership built per-vertical. Your service partner REPLACES the recurring drudge work, INTEGRATES with the tools you already pay for, and AUGMENTS the judgment work that only you can do."
+        intro="Generic AI is horizontal and self-serve — you figure it out. agentplain is a service partnership: we pick three jobs on day one and run them for you. We REPLACE the manual work that lives between your tools. We INTEGRATE with the systems you already pay for. We AUGMENT the human judgment you keep. Each unique below is a commitment your service partner owns — not a feature you configure."
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-3">
           {uniques.map((u, i) => (
@@ -483,6 +483,13 @@ export default function HomePage() {
               Talk to a service partner
               <span aria-hidden>→</span>
             </a>
+            <Link
+              href="/custom"
+              className="inline-flex items-center justify-center gap-2 border border-paper/40 bg-transparent px-6 py-3 text-sm font-medium text-paper transition hover:border-paper"
+            >
+              Build with us
+              <span aria-hidden>→</span>
+            </Link>
             <Link
               href="/verticals"
               className="inline-flex items-center justify-center gap-2 border border-paper/20 bg-transparent px-6 py-3 text-sm font-medium text-paper/80 transition hover:border-paper hover:text-paper"

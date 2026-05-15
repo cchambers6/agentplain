@@ -14,6 +14,9 @@ type FAQItem = {
 //   - No "configure your agents" with customer-as-operator
 //   - Pricing answered as the three-tier service partnership
 //   - Drafts / proposes / advises — never "sends" / "executes"
+//   - Customer is the SERVED party, never the AI operator —
+//     no "configure your agents," "set up your fleet," "self-serve,"
+//     "DIY agents." The service partner installs, runs, and customizes.
 
 const items: FAQItem[] = [
   {
@@ -31,6 +34,10 @@ const items: FAQItem[] = [
   {
     q: "How is this different from Claude for Small Business or other AI-for-SMB tools?",
     a: "Claude for Small Business hands a horizontal model to a small-business owner who's expected to figure out workflows, write prompts, and stitch integrations on their own. agentplain is the opposite: we ship a vertical-aware fleet (built per industry, with the compliance corpus and integration list each one needs) AND a service team that installs, runs reviews, and customizes for your shop. You're not buying a tool; you're hiring an AI ops team. We don't ask the realtor, the CPA, or the mortgage broker to learn prompt engineering on top of running their business.",
+  },
+  {
+    q: "What if I just want the tool, not the service?",
+    a: "agentplain isn't sold without the service. The product is the partnership — install, run, customize — not a self-serve platform you wire together yourself. If you want to assemble your own agents from scratch, the foundation-model APIs are open and you can build on them; that's a different product than what we sell. The reason we run it for you is that the vertical-specific corpus, the integration plumbing, and the compliance posture are where local businesses bleed the most time — and those are exactly the layers a generic tool won't solve for you.",
   },
   {
     q: "How is this different from existing vertical software?",
@@ -70,11 +77,11 @@ const items: FAQItem[] = [
   },
   {
     q: "Why should anyone believe you?",
-    a: "Four things. (1) We eat our own cooking — we run a flat-fee real-estate brokerage in production today (~35 cron-fired agents) where we use the same service-partnership model on ourselves. (2) Outside counsel is reviewing the per-vertical compliance corpus. (3) Every claim on this site cites a memory rule we can show you. (4) Every agent action is visible in the workspace — nothing happens behind the curtain, and your service partner is a single human you can call.",
+    a: "Four things. (1) We run the service partnership on flatsbo — our own brokerage — before we sell it. The ~35 cron-fired agents in production there are the working precursor of what we sell, operating on a real local business. (2) Outside counsel is reviewing the per-vertical compliance corpus. (3) Every claim on this site cites a memory rule we can show you. (4) Every agent action is visible in your workspace — nothing your service partner does is behind a curtain.",
   },
   {
     q: "Is my data safe?",
-    a: "Your data stays in your stack. The fleet pulls what it needs to do a task, returns a result, doesn't retain client lists or transaction records as training data. Liability for licensed activities — anything that requires a state license — stays with you and your firm. We don't act as a brokerage, lender, insurance carrier, law firm, RIA, or any other licensed party.",
+    a: "Your data stays in your stack. The fleet pulls what it needs to do a task, returns a result, doesn't retain client lists or transaction records as training data. Liability for licensed activities — anything that requires a state license — stays with you and your firm. We don't act as a brokerage, lender, insurance carrier, law firm, RIA, or any other licensed party. Your service partner runs the AI ops; you run the licensed business.",
   },
 ];
 

@@ -91,7 +91,7 @@ Banned framings: 0 introduced. "DIY" and "self-serve" appear only as explicit ne
 | Lens | Score | Notes |
 |---|---|---|
 | Pre-edit | 2 | 10 entries. "How does pricing work?" surfaced the single-tier ladder. "Can my firm actually use it today?" read as self-serve ("sign up free, pick your vertical, connect your first tool, and the fleet starts drafting"). No entry mentioning the service partner, the three tiers, or /custom. |
-| Post-edit | 5 | 15 entries — 10 original (4 audited and rewritten under the new lock) + 5 new. |
+| Post-edit | 5 | 16 entries — 10 original (4 audited and rewritten under the new lock) + 6 new. (Original kind-shirley landed 15; the rebase of `feat/copy-reframe-service-partnership-2026-05-15` added 1 more — "What if I just want the tool, not the service?" — preserved from that sibling branch.) |
 
 Entries:
 
@@ -101,19 +101,20 @@ Entries:
 | 02 | **What does the service partner actually do?** | **NEW** — Install / Review / Customize / Escalate / Translate, five-point framing. |
 | 03 | Is this just ChatGPT with extra steps? | REWRITTEN — adds "service team that installs and runs it. And you don't operate it — we do." |
 | 04 | **How is this different from Claude for Small Business or other AI-for-SMB tools?** | **NEW** — direct contrast: horizontal tool the owner has to operate vs. vertical-aware fleet + service team that installs and runs reviews. |
-| 05 | How is this different from existing vertical software? | REWRITTEN — adds "Your service partner does the integration work, not you." |
-| 06 | Can my firm actually use it today? | REWRITTEN — "your service partner handles the install (connecting your tools, loading your vertical's corpus, walking through the workspace)" replaces "sign up free, pick your vertical, connect your first tool". |
-| 07 | Does the fleet send anything on its own? | Unchanged — already aligned. |
-| 08 | What data do you need access to? | REWRITTEN — adds "Your service partner sets this up with you on a call; you're not stitching OAuth flows alone." |
-| 09 | How does pricing work? | REWRITTEN — three-tier explanation replaces single-ladder explanation. Regular $199→$99 monthly cadence, Partner $299→$199 weekly cadence + dedicated partner, Max quoted to scope sales-led. |
-| 10 | **What's the difference between Regular, Partner, and Max?** | **NEW** — cadence + dedication framing. |
-| 11 | **When would I want Partner instead of Regular?** | **NEW** — three patterns (high week-over-week change, high stakes per draft, growth/restructure in flight). |
-| 12 | **What is /custom and how is it different from Max?** | **NEW** — Max is a tier (recurring per-seat, non-standard scope). /custom is engagement work (written spec, fixed price, 4–6 week build, handoff). |
-| 13 | What's the ROI math? | REWRITTEN — extends per-seat range to $99→$299 to cover Partner pricing. |
-| 14 | Why should anyone believe you? | REWRITTEN — opens with "We eat our own cooking" and frames the flatsbo brokerage as where we run the service partnership on ourselves. |
-| 15 | Is my data safe? | Unchanged — already aligned. |
+| 05 | **What if I just want the tool, not the service?** | **NEW** (added 2026-05-17 from sibling branch) — the partnership IS the product; foundation-model APIs are open if you want to wire it yourself. |
+| 06 | How is this different from existing vertical software? | REWRITTEN — adds "Your service partner does the integration work, not you." |
+| 07 | Can my firm actually use it today? | REWRITTEN — "your service partner handles the install (connecting your tools, loading your vertical's corpus, walking through the workspace)" replaces "sign up free, pick your vertical, connect your first tool". |
+| 08 | Does the fleet send anything on its own? | Unchanged — already aligned. |
+| 09 | What data do you need access to? | REWRITTEN — adds "Your service partner sets this up with you on a call; you're not stitching OAuth flows alone." |
+| 10 | How does pricing work? | REWRITTEN — three-tier explanation replaces single-ladder explanation. Regular $199→$99 monthly cadence, Partner $299→$199 weekly cadence + dedicated partner, Max quoted to scope sales-led. |
+| 11 | **What's the difference between Regular, Partner, and Max?** | **NEW** — cadence + dedication framing. |
+| 12 | **When would I want Partner instead of Regular?** | **NEW** — three patterns (high week-over-week change, high stakes per draft, growth/restructure in flight). |
+| 13 | **What is /custom and how is it different from Max?** | **NEW** — Max is a tier (recurring per-seat, non-standard scope). /custom is engagement work (written spec, fixed price, 4–6 week build, handoff). |
+| 14 | What's the ROI math? | REWRITTEN — extends per-seat range to $99→$299 to cover Partner pricing. |
+| 15 | Why should anyone believe you? | REWRITTEN — opens with the flatsbo-as-precursor framing: "We run the service partnership on flatsbo — our own brokerage — before we sell it." |
+| 16 | Is my data safe? | Unchanged — already aligned. |
 
-Counts: **5 new, 8 rewritten, 2 unchanged. Total 15.**
+Counts: **6 new, 8 rewritten, 2 unchanged. Total 16.**
 
 Banned framings: 0 introduced. "Self-serve" / "DIY" appear in the source-comment header only.
 
@@ -182,7 +183,7 @@ Edits applied:
 - **Banned framings found pre-edit:** 6 categories actively present (single-tier self-serve framing on homepage / about / pricing / verticals / FAQ / Footer micro-copy).
 - **Banned framings introduced post-edit:** 0.
 - **Banned framings remaining on customer-facing surfaces I could edit:** 0 (excluding source-comment audit trail and explicit negation copy).
-- **FAQ entries added:** 5 new + 8 rewritten under the lock + 2 unchanged. Total 15.
+- **FAQ entries added:** 6 new + 8 rewritten under the lock + 2 unchanged. Total 16. (5 + 8 + 2 = 15 from kind-shirley; +1 from the sibling rebase 2026-05-17.)
 - **Pricing tiers surfaced:** 3 (Regular, Partner, Max) + 1 separate engagement track (/custom). Schema-backed via `prisma/schema.prisma` Tier enum and the HISTORICAL block of `project_stripe_both_surfaces.md` for the Partner per-seat numbers.
 - **Locked text preserved verbatim:** mission, vision, tagline, on every surface.
 
@@ -201,3 +202,38 @@ Edits applied:
 3. Update `lib/billing/` Stripe Product names for Plus → Partner. Out of scope here; the homepage/pricing pages don't surface the Stripe product name, only the per-seat ladder.
 4. Coordinate with the in-flight `/custom` worktree to align "plug-and-play" framing (still in `custom/page.tsx:138` last seen) — see `docs/copy-reframe-guidance-for-inflight-tasks.md`.
 5. Coordinate with the in-flight `[vertical]/page.tsx` worktree to align per-vertical pricing copy with the three-tier model — see same coordination doc.
+
+---
+
+## Alternate audit reference (sibling branch `feat/copy-reframe-service-partnership-2026-05-15`)
+
+The sibling rebase that landed this branch in main was preceded by a parallel audit run against the same `origin/main` @ `69173c6` base. The headline numbers and rubric below are preserved from that branch as a cross-check for future copy audits. Both audits agreed on score deltas (homepage / about / FAQ moved from 2→5) and the routes-not-touched list (custom, [vertical] — in-flight); the alternate report scored fewer routes (3 edited vs. this audit's 4 + 2 components) because the sibling branch left pricing.tsx unedited under the surgical-edit rule, where this audit performed the full three-tier rewrite there. The alternate scoring rubric is included verbatim because it is reusable as a calibration aid for future audits.
+
+**Alternate scoring rubric (1–5):**
+
+- **5** — fully aligned; service partnership is the operating posture throughout; customer-as-served reads cleanly end to end
+- **4** — aligned; minor reframes possible but no banned terms; customer-as-served reads cleanly
+- **3** — partially aligned; no banned terms, but framing reads as fleet-centric / tool-centric rather than service-partner-led
+- **2** — misaligned; one or more banned terms OR strong customer-as-operator framing
+- **1** — actively contradicts the new lock
+
+**Alternate headline numbers (sibling branch, pre-rebase):**
+
+| Metric | Count |
+| --- | --- |
+| Customer-facing routes audited | 6 |
+| Routes edited on that branch | 3 |
+| Routes covered by in-flight tasks (guidance doc) | 2 |
+| Routes already aligned (no edits needed) | 2 (incl. layout) |
+| Distinct banned framings replaced | 0 (none of the explicit banned strings appeared verbatim) |
+| Sections rewritten to service-partner lens | 6 |
+| New FAQ entries added | 3 (vs. 5 here, vs. 6 after rebase) |
+| Routes scoring ≥4 after edits | 4 |
+| Routes scoring ≥4 after in-flight tasks land per guidance | 6 |
+
+**Reconciliation note on banned-framings count:** No instance of the explicit banned strings ("self-serve [product]," "DIY," "try our tool," "configure your agents," "set up your fleet," "platform for SMBs") appeared in any customer-facing marketing route before this edit. The misalignment in the existing copy was IMPLICIT — fleet-centric and customer-as-operator framings without using the banned terms verbatim. Both audits measured alignment by lens, not by literal-string substitution. The single instance of "self-serve product" in the codebase (`app/(marketing)/custom/page.tsx:54`) is in an in-flight file neither branch edited; flagged in the guidance doc instead.
+
+## CHANGELOG
+
+- 2026-05-15: Audit run on the day of the service-partnership positioning lock (kind-shirley sibling branch, landed via PR #25). Four customer-facing surfaces edited + two shared components; two in-flight surfaces deferred to guidance doc; one structural layout passed clean.
+- 2026-05-17: Rebase of `feat/copy-reframe-service-partnership-2026-05-15` added one FAQ entry ("What if I just want the tool, not the service?") from the sibling branch's audit; appended the alternate scoring rubric + headline numbers as a calibration reference for future audits.

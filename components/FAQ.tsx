@@ -38,7 +38,7 @@ const items: FAQItem[] = [
   },
   {
     q: "How does pricing work?",
-    a: "One plan, per-seat, month-to-month. $199 solo, sliding to $179 (2–9 seats), $149 (10–24), $119 (25–49), $99 (50–99). First month free. Month 2 onward you pay your seat band's rate. Cancel anytime from your billing settings. No annual contract, no pilot fees, no setup charges. Anything beyond plug-and-play — bespoke compliance, white-label, dedicated success, 100+ seats — is a Custom engagement scoped per customer on /custom.",
+    a: "One plan, per-seat, month-to-month. $199 solo, sliding to $179 (2–9 seats), $149 (10–24), $119 (25–49), $99 (50–99). First month free. Month 2 onward you pay your seat band's rate. Cancel anytime from your billing settings. No annual contract, no minimums, no setup charges. Anything beyond plug-and-play — bespoke compliance, white-label, dedicated success, 100+ seats — is a Custom engagement scoped per customer on /custom.",
   },
   {
     q: "What's the ROI math?",

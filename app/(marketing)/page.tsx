@@ -1,29 +1,43 @@
 import Link from "next/link";
 import Section from "@/components/Section";
 import FAQ from "@/components/FAQ";
-import RoiCalculator from "@/components/RoiCalculator";
-import { getAllVerticals, getVerticalContent } from "@/lib/verticals";
+import VerticalChipRow from "@/components/marketing/VerticalChipRow";
+import ReplaceIntegrateAugment from "@/components/marketing/ReplaceIntegrateAugment";
+import RoiPreview from "@/components/marketing/RoiPreview";
+import RootedInRealityProof from "@/components/marketing/RootedInRealityProof";
+import { getVerticalContent } from "@/lib/verticals";
 import { tokens } from "@/lib/brand/tokens";
 
-// Marketing home.
+// Homepage — 9-question story arc.
 //
-// Required to answer ALL 9 questions per
-// `project_agentplain_mission_and_positioning.md` (Q1–Q9). Banned framings
-// enforced in this file:
-//   - no specific agent count ("the fleet" is the unit; counts belong to spec docs)
-//   - no real-estate-only on page 1 (all 10 verticals named upfront)
-//   - no "pilot pricing" framing (killed per project_stripe_both_surfaces.md)
-//   - no "AI assistant" framing
-//   - no "automate everything" / "replace your team" framings
-//   - no "coming soon" without date/qualification
+// Source-of-truth files (load-bearing — do NOT diverge):
+//   - `project_agentplain_mission_and_positioning.md` — locked mission, vision,
+//     tagline + the 9 questions every customer surface must answer
+//   - `feedback_everything_tells_a_story.md` — every section must advance the
+//     arc OR serve a functional purpose; filler banned
+//   - `project_stripe_both_surfaces.md` — ONE Regular tier surfaced; Plus/Max
+//     stay schema-only; pilot pricing dead
+//   - `project_vertical_tier_mapping.md` — 10 active verticals on page 1
 //
-// Sources for every concrete claim are footnoted with their memory file.
+// Arc mapping (visible in section comments below):
+//   Q1 Why does agentplain exist?
+//   Q2 What is agentplain  →  per-vertical chip row (all 10)
+//   Q3 What's the app?
+//   Q4 What makes it unique → REPLACE / INTEGRATE / AUGMENT three pillars
+//   Q5 Why is it easy?
+//   Q6 Why believe? — rooted in reality (dogfood / counsel / ROI math)
+//   Q7 ROI — preview block; full calculator on /pricing
+//   Q8 Future of work / vision (locked vision line verbatim)
+//   Q9 Why now / CTA
+//
+// Banned framings (presence = revert per `feedback_everything_tells_a_story.md`):
+//   "V0" / "Phase 0" / "MVP" / "pilot" / "invite only" / "AI assistant"
+//   any specific agent count ("the fleet" is the unit; counts belong in spec docs)
+//   single-vertical framing on page 1
+//   3-column tier comparisons (one tier surfaced; rest routes to /custom)
+//   the three pilot tiers $1,500 / $2,750 / $4,500 (killed)
+//   "we do not aim to replace your CRM" (wrong shape — use the three pillars)
 
-// Per-seat ladder from `project_stripe_both_surfaces.md` (simplified
-// 2026-05-12 — single productized tier; anything beyond Regular routes to
-// /custom). The five-band ladder is the only pricing surface on the homepage;
-// 3-column tier comparisons are banned per the same rule because they imply
-// Plus/Max are buyable, and they aren't.
 const ladderBands = [
   { band: "Solo (1 seat)", price: "$199" },
   { band: "2–9 seats", price: "$179" },
@@ -32,70 +46,19 @@ const ladderBands = [
   { band: "50–99 seats", price: "$99" },
 ];
 
-// Q4 — what makes agentplain unique. Five points pulled verbatim from the
-// mission rule (Vertical-aware / Control / Integrates / Built BY agents /
-// Compliance-first).
-const uniques = [
-  {
-    label: "Vertical-aware",
-    body: "A real-estate agentplain knows MLS workflows, fair-housing copy, broker-of-record rules. A CPA agentplain knows tax-prep deadlines and e-file conventions. Each vertical ships with its own JTBD table and compliance corpus — generic AI tools don't.",
-  },
-  {
-    label: "You stay in control",
-    body: "The fleet drafts and proposes; it never auto-sends, never moves money, never makes commitments. Every customer-facing output queues for your review. Your existing CRM and inbox handle every send.",
-  },
-  {
-    label: "Integrates, not replaces",
-    body: "Sits on top of the tools you already pay for — your CRM, your inbox, your transaction system, your accounting. No migration. The fleet replaces the manual work that lives between them.",
-  },
-  {
-    label: "Built BY agents",
-    body: "The same fleet model we sell builds our own product. The pattern works because we run it on ourselves — a brokerage in production today running ~35 cron-fired agents on daily ops is the working precursor we productized.",
-  },
-  {
-    label: "Compliance-first",
-    body: "Per-vertical compliance corpus, counsel-reviewed (TCPA, RESPA, fair-housing for realty; analog corpuses for the other nine). Not bolted on after the marketing site went up.",
-  },
-];
-
-// Q6 — proof points. Each item must cite a memory rule or a concrete artifact.
-// "Why should anyone believe us?"
-const proof = [
-  {
-    label: "Eat our own cooking",
-    body: "agentplain is built BY a fleet of agents, not a human engineering team. The brokerage running in production today is the working precursor of this model — the pattern is real, not theoretical.",
-    cite: "project_agentplain_built_by_agents.md",
-  },
-  {
-    label: "Counsel-reviewed corpus",
-    body: "Outside counsel is reviewing the broker-of-record term sheet, GA TCPA + RESPA compliance corpus. When counsel returns we'll name them publicly; until then the corpus is gated, not vapor.",
-    cite: "project_counsel_engaged.md",
-  },
-  {
-    label: "ROI math, not vibes",
-    body: "Value math anchored at $2,900–$10,600/mo per practitioner against $99–$199/mo per-seat subscription — typical ROI multiple 15x to 110x, every claim traceable to a memory rule.",
-    cite: "project_pricing_value_anchor.md",
-  },
-  {
-    label: "Open feedback loop",
-    body: "Every agent action is visible in the workspace. Nothing happens behind the curtain — handoffs, drafts, compliance flags, all auditable inside the product.",
-    cite: "project_no_outbound_architecture.md",
-  },
-];
-
 export default function HomePage() {
-  // All ten verticals named on page 1 per the mission rule. Real estate is
-  // one of ten — never the only one mentioned upfront.
-  const verticals = getAllVerticals();
+  // One concrete value-loop example surfaces real estate by default; the
+  // "not in real estate?" link below routes to the other nine. Page 1 still
+  // names all 10 verticals via the chip row at the top — Q2 stays universal.
   const realEstateExample = getVerticalContent("real-estate")?.valueLoopExample;
 
   return (
     <>
-      {/* HERO — wordmark + tagline + locked mission line + all 10 verticals */}
+      {/* HERO + Q2 — wordmark anchored by tagline; locked mission line; all
+          10 verticals named immediately so non-real-estate visitors see
+          themselves on page 1 before the fold ends. */}
       <section className="border-b border-rule bg-paper">
         <div className="container-wide pb-24 pt-20 md:pb-28 md:pt-24">
-          {/* Wordmark-and-tagline lockup. The wordmark is rendered by the
-              header logo above; this hero echoes the brand thesis line. */}
           <p className="font-display text-base leading-snug text-clay md:text-lg">
             {tokens.tagline}
           </p>
@@ -108,41 +71,15 @@ export default function HomePage() {
           <p className="mt-8 max-w-3xl text-lg leading-relaxed text-ink-soft md:text-xl">
             {tokens.wordmark} is a fleet of capable AI partners that runs
             inside your business. The fleet reads from your email, calendar,
-            CRM, and documents, categorizes what's important, drafts what
-            you'd otherwise type, schedules what needs scheduling, and
-            coordinates across threads. You stay in control: the fleet drafts
-            and proposes; you approve and send.
-          </p>
-          {/* Supporting copy from Conner's first-pass mission articulation —
-              preserved per the canonical rule as useful supporting framing. */}
-          <p className="mt-4 max-w-3xl text-[15px] leading-relaxed text-mute">
-            More relationship building. More of the work you enjoy. Less of
-            the work that takes your time and money away from the people you
-            serve.
+            CRM, and documents, categorizes what&apos;s important, drafts
+            what you&apos;d otherwise type, schedules what needs scheduling,
+            and coordinates across threads. You stay in control: the fleet
+            drafts and proposes; you approve and send.
           </p>
 
-          {/* All 10 verticals as a chip row */}
+          {/* Q2 — chip row, above the fold of section 2 per the story arc */}
           <div className="mt-10">
-            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-              Built for ten kinds of local business — pick yours
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {verticals.map((v) => (
-                <Link
-                  key={v.slug}
-                  href={`/${v.slug}`}
-                  className="group inline-flex items-center gap-2 border border-rule bg-paper px-3 py-2 text-sm text-ink transition hover:border-ink hover:bg-paper-deep"
-                >
-                  <span className="font-display">{v.name}</span>
-                  <span
-                    aria-hidden
-                    className="font-mono text-[10px] tracking-eyebrow text-mute group-hover:text-clay"
-                  >
-                    →
-                  </span>
-                </Link>
-              ))}
-            </div>
+            <VerticalChipRow />
           </div>
 
           <div className="mt-10 flex flex-wrap items-center gap-4">
@@ -158,11 +95,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Q1 — Why do we exist? */}
+      {/* Q1 — Why does agentplain exist? */}
       <Section
-        eyebrow="Why we exist"
+        eyebrow="Q1 — Why we exist"
         title="Local business owners spend most of their week on the work they don't love."
-        intro="Email triage, copying data between tools, drafting boilerplate, scheduling, status updates — 60–70% of the week, in most surveys. The work that built the business in the first place — client relationships, judgment calls, growing the book — gets the leftover time."
+        intro="Email triage, copying data between tools, drafting boilerplate, scheduling, status updates — 60–70% of the week, in most surveys. The work that built the business in the first place — client relationships, judgment calls, growing the book — gets the leftover time. agentplain inverts that ratio."
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
           <div className="bg-paper p-8 md:p-10">
@@ -191,59 +128,73 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* Q3 — What is the app + Q5 How easy is it to use? */}
+      {/* Q3 — What's the app? */}
       <Section
         id="how"
         tone="deep"
-        eyebrow="How it works"
-        title="Three steps. Then the fleet drafts every morning."
-        intro="Sign up free, pick your vertical, connect your first tool — Gmail, Outlook, your CRM — and see the fleet's first drafts within minutes. No setup wizards that span days; no implementation services package."
+        eyebrow="Q3 — What's the app"
+        title="One product. Solo practitioner today. Mid-size firm tomorrow."
+        intro="Same code, same UX, different scale. The app shows live agent activity (what's running now), today's progress (drafts ready, meetings coordinated, time saved), and next actions (1–3 items the human should handle today). No setup wizards spanning days. No implementation services package."
+      >
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-3">
+          <AppFacet
+            label="Live activity"
+            body="See every agent in motion — which thread it's reading, which draft it's queuing, which compliance flag it caught. Open feedback loop; nothing happens behind the curtain."
+          />
+          <AppFacet
+            label="Daily progress"
+            body="Today's drafts to review, meetings coordinated, hours recovered. The dashboard answers 'what did the fleet do for me?' before you've had your second coffee."
+          />
+          <AppFacet
+            label="Next actions"
+            body="One-to-three items the fleet surfaces for the human's day — judgment calls, send-this-or-edit-it decisions, the high-leverage moves only you should make."
+          />
+        </div>
+      </Section>
+
+      {/* Q4 — What makes it unique → REPLACE / INTEGRATE / AUGMENT */}
+      <Section
+        eyebrow="Q4 — What makes us different"
+        title="Replace. Integrate. Augment."
+        intro="The shape of the value: the fleet replaces the work you shouldn't be doing, integrates with the tools you already pay for, and augments the work that has to stay human. Concrete examples below — every entry is a commitment, not a slogan."
+      >
+        <ReplaceIntegrateAugment />
+      </Section>
+
+      {/* Q5 — Why is it easy? */}
+      <Section
+        tone="deep"
+        eyebrow="Q5 — Why it's easy"
+        title="Sign up free. Connect one tool. See drafts in minutes."
+        intro="No setup wizard that spans days. No implementation services package. No prompt engineering. Each of the ten verticals ships with its own JTBD table, integration list, and compliance corpus — the fleet is configured before you arrive."
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-3">
           <Step
             number="01"
             title="Pick your vertical."
-            body="Each of the ten verticals ships with its own JTBD table, integration list, and compliance corpus. No prompt engineering, no per-customer custom build."
+            body="Real estate, mortgage, insurance, property management, title & escrow, recruiting, home services, CPA, law, or RIA. Each vertical ships pre-configured — no custom build."
           />
           <Step
             number="02"
             title="Connect your tools."
-            body="Read-only OAuth into the CRM, inbox, calendar, and accounting tools you already use. The fleet watches what's there — you stay in control. 60 seconds, not a project."
+            body="Read-only OAuth into the CRM, inbox, calendar, and accounting tools you already use. The fleet watches what's already there. 60 seconds, not a project."
           />
           <Step
             number="03"
             title="The fleet drafts; you decide."
-            body="Every customer-facing output queues for your review. Approve, edit, or reject. Your existing systems send. The fleet never reaches the consumer on its own."
+            body="Every customer-facing output queues for your review. Approve, edit, or reject. Your existing systems send. The fleet never reaches the customer on its own."
           />
         </div>
       </Section>
 
-      {/* Q4 — What makes agentplain unique */}
-      <Section
-        eyebrow="What makes us different"
-        title="Five things you won't get from a generic AI tool."
-        intro="Each point is a commitment, not a slogan. Generic AI is horizontal — agentplain is built per-vertical, with the integration depth and compliance posture each one needs."
-      >
-        <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-3">
-          {uniques.map((u, i) => (
-            <UniqueCard
-              key={u.label}
-              number={String(i + 1).padStart(2, "0")}
-              label={u.label}
-              body={u.body}
-            />
-          ))}
-        </div>
-      </Section>
-
-      {/* Concrete value-loop example (real-estate sample, with a deep link to
-          every other vertical's example). */}
+      {/* Concrete value-loop example — Q5 supporting (what it actually feels
+          like once it's running). Real-estate by default; deep link to the
+          other nine sits below. */}
       {realEstateExample ? (
         <Section
-          tone="deep"
           eyebrow="A day in the life"
           title="What the fleet drafts before you open the laptop."
-          intro="One concrete example. The scenario, what a practitioner does today, what changes after the fleet lands. Every vertical page carries its own version."
+          intro="One concrete example. The scenario, what you do today, what changes after the fleet lands. Every vertical page carries its own version."
         >
           <div className="border border-rule bg-paper p-6 md:p-10">
             <p className="font-mono text-[11px] tracking-eyebrow text-clay">
@@ -290,30 +241,31 @@ export default function HomePage() {
         </Section>
       ) : null}
 
-      {/* Q6 — Why should anyone believe us? */}
+      {/* Q6 — Why believe? Rooted in reality */}
       <Section
-        eyebrow="Rooted in reality"
-        title="Here's what we mean by &lsquo;rooted in reality.&rsquo;"
-        intro="Four things we can point at today. Not magic, not pixie dust — real product, real operators, real outcomes. We don't claim 'built for X' without the per-vertical compliance corpus + JTBD tables; we don't claim 'integrates with X' without the value-loop demo. The bar is functional, not marketing."
+        tone="deep"
+        eyebrow="Q6 — Rooted in reality"
+        title={
+          <>
+            Here&apos;s what we mean by{" "}
+            <span className="text-clay">&lsquo;rooted in reality.&rsquo;</span>
+          </>
+        }
+        intro="Three things we can point at today. Not magic, not pixie dust — real product, real operators, real outcomes. We don't claim 'built for X' without the per-vertical compliance corpus + JTBD tables. We don't claim 'integrates with X' without the value-loop demo. The bar is functional, not marketing."
       >
-        <div className="grid gap-px overflow-hidden border border-rule bg-rule lg:grid-cols-2">
-          {proof.map((p) => (
-            <ProofCard key={p.label} {...p} />
-          ))}
-        </div>
+        <RootedInRealityProof />
       </Section>
 
-      {/* Q7 — How do we think about ROI? — interactive calculator */}
+      {/* Q7 — ROI preview + pricing teaser */}
       <Section
         id="pricing"
-        tone="deep"
-        eyebrow="Pricing + ROI"
+        eyebrow="Q7 — Pricing + ROI"
         title="Affordable access to enterprise-grade tools."
-        intro="That's the vision — and the calculator below is the math. One plan, per-seat, month-to-month, first month free. Enter your own hours and hourly rate; the ROI multiple is yours to audit."
+        intro="That's the vision — and the math is auditable. One productized tier, per-seat, month-to-month, first month free. Anything beyond plug-and-play routes to a Custom engagement. No three-column tier comparison, no minimums, no annual lock-in."
       >
-        <RoiCalculator />
+        <RoiPreview />
 
-        <div className="mt-10 grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-5">
+        <div className="mt-12 grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-5">
           {ladderBands.map((row) => (
             <div key={row.band} className="bg-paper p-5">
               <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
@@ -340,14 +292,20 @@ export default function HomePage() {
               <li>— No data resold, no client list retained</li>
               <li>— You own the work product</li>
             </ul>
+            <Link
+              href="/pricing"
+              className="mt-6 inline-flex items-center gap-2 text-ink underline"
+            >
+              Full pricing + ROI calculator →
+            </Link>
           </div>
 
           <div className="border-l border-rule pl-6">
-            <p className="eyebrow mb-3">Need more depth?</p>
+            <p className="eyebrow mb-3">Need more?</p>
             <p className="text-[15px] leading-relaxed text-ink-soft">
-              Bespoke compliance corpus, white-label, dedicated success,
-              custom integration, 100+ seats — anything Regular doesn&apos;t
-              cover plug-and-play, we scope as a Custom engagement.
+              Bespoke compliance corpus, white-label, dedicated success, custom
+              integration, 100+ seats — anything Regular doesn&apos;t cover
+              plug-and-play, we scope as a Custom engagement.
             </p>
             <Link
               href="/custom"
@@ -359,9 +317,10 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* Q8 — How do we think about the future of work? + Q9 — Why now? */}
+      {/* Q8 — Future of work (locked vision line verbatim) */}
       <Section
-        eyebrow="Where we're going"
+        tone="deep"
+        eyebrow="Q8 — Where we're going"
         title={
           <>
             Local businesses can thrive through access to{" "}
@@ -374,19 +333,38 @@ export default function HomePage() {
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
           <Card
-            number="Q8"
-            title="The future of work"
-            body="agentplain inverts the ratio. The fleet handles the systematic work; the human gets back to client relationships, deal architecture, advisory. Solo practitioners compete with mid-size firms on operational depth. Mid-size firms compete with enterprise on agility. Affordable access to the same operational depth that used to require an enterprise budget — that's the leveling effect."
+            label="The leveling effect"
+            body="Solo practitioners compete with mid-size firms on operational depth. Mid-size firms compete with enterprise on agility. Affordable access to the same depth that used to require an enterprise budget — that's the long-term thesis."
           />
           <Card
-            number="Q9"
-            title="Why now"
-            body="Models got good enough in 2025 to do real categorization, drafting, scheduling on real-world data — not benchmarks. Vendor APIs (Gmail, Outlook, every major CRM) stabilized enough to build multi-tenant integrations. Compliance frameworks (TCPA, GLBA) are clear enough to build per-vertical corpuses against. Early enough to define the category, late enough that the tech actually works."
+            label="What the human keeps"
+            body="Client relationships. Deal architecture. Advisory judgment. The work that built the business in the first place. The fleet handles the systematic work so the human gets back to the work that compounds."
           />
         </div>
       </Section>
 
-      {/* FAQ — Q2/Q3/Q4/Q5/Q6 follow-ups in one place */}
+      {/* Q9 — Why now */}
+      <Section
+        eyebrow="Q9 — Why now"
+        title="Three things had to be true at once. As of 2026, they are."
+      >
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-3">
+          <Card
+            label="Models are good enough"
+            body="2025 was the inflection. Categorization, drafting, scheduling, multi-step coordination at human-grade quality on real-world data — not just clean benchmarks."
+          />
+          <Card
+            label="Vendor APIs stabilized"
+            body="Gmail, Outlook, every major CRM, the transaction tools — the integration surface is buildable now. Multi-tenant OAuth is no longer a research project."
+          />
+          <Card
+            label="Compliance is mappable"
+            body="TCPA, GLBA, RESPA, fair-housing, GDPR for state-regulated industries — clear enough to build per-vertical corpuses against. Counsel-reviewable, not vibes."
+          />
+        </div>
+      </Section>
+
+      {/* FAQ — supporting answers across Q2–Q6 */}
       <Section
         id="faq"
         tone="deep"
@@ -396,7 +374,8 @@ export default function HomePage() {
         <FAQ />
       </Section>
 
-      {/* CLOSING CTA — locked mission line, no realty-only framing */}
+      {/* CLOSING CTA — locked tagline + locked mission line; no realty-only
+          framing, no pilot pricing, no agent counts */}
       <section className="border-b border-rule bg-ink text-paper">
         <div className="container-wide py-24 md:py-32">
           <p className="eyebrow mb-6 text-paper/60">{tokens.tagline}</p>
@@ -456,71 +435,23 @@ function Step({
   );
 }
 
-function UniqueCard({
-  number,
-  label,
-  body,
-}: {
-  number: string;
-  label: string;
-  body: string;
-}) {
+function AppFacet({ label, body }: { label: string; body: string }) {
   return (
-    <div className="flex flex-col bg-paper p-7 md:p-8">
-      <div className="flex items-baseline gap-3">
-        <p className="font-mono text-[11px] tracking-eyebrow text-clay">
-          {number}
-        </p>
-        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
-          {label}
-        </p>
-      </div>
+    <div className="bg-paper p-8 md:p-10">
+      <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+        {label}
+      </p>
       <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">{body}</p>
     </div>
   );
 }
 
-function ProofCard({
-  label,
-  body,
-  cite,
-}: {
-  label: string;
-  body: string;
-  cite: string;
-}) {
+function Card({ label, body }: { label: string; body: string }) {
   return (
-    <div className="flex flex-col bg-paper p-7 md:p-8">
+    <div className="bg-paper p-8 md:p-10">
       <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
         {label}
       </p>
-      <p className="mt-4 max-w-prose text-[15px] leading-relaxed text-ink-soft">
-        {body}
-      </p>
-      <p className="mt-5 border-t border-rule pt-4 font-mono text-[11px] leading-relaxed text-mute">
-        Source: <code className="text-[11px]">{cite}</code>
-      </p>
-    </div>
-  );
-}
-
-function Card({
-  number,
-  title,
-  body,
-}: {
-  number: string;
-  title: string;
-  body: string;
-}) {
-  return (
-    <div className="bg-paper p-8 md:p-10">
-      <p className="font-mono text-[11px] tracking-eyebrow text-clay">
-        {number}
-      </p>
-      <h3 className="mt-4 font-display text-2xl leading-tight text-ink md:text-3xl">
-        {title}
-      </h3>
       <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">{body}</p>
     </div>
   );

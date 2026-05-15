@@ -5,7 +5,7 @@ import { tokens } from "@/lib/brand/tokens";
 export const metadata: Metadata = {
   title: "About — agentplain",
   description:
-    "agentplain lifts up local businesses by doing the work that takes their time and money away from the people they serve. A fleet of capable AI partners — vertical-aware, compliance-first, built BY agents.",
+    "agentplain is a service partnership for local businesses. We install a fleet of capable AI partners, run weekly reviews, and customize as your ops shift — so you stay focused on the people you serve.",
 };
 
 // About page. Mission line carries the lede; tagline closes the page; vision
@@ -57,23 +57,29 @@ export default function AboutPage() {
               leftover time.
             </p>
             <p>
-              The market is full of software that adds another dashboard.
-              agentplain is built on the opposite belief: what local
-              businesses need is fewer tabs to keep open, fewer manual
-              handoffs to remember, fewer hours spent on operations that
-              someone, somewhere, has already done a thousand times.
+              The market is full of software that adds another dashboard, or
+              another DIY AI tool the owner is supposed to configure on top
+              of everything else they already do. agentplain is built on the
+              opposite belief: what local businesses need is fewer tabs to
+              keep open, fewer manual handoffs to remember, fewer hours spent
+              on operations that someone, somewhere, has already done a
+              thousand times — and a partner who runs it, not a platform that
+              hands them another job.
             </p>
             <p>
-              The product is a fleet of capable AI partners, scoped narrowly
-              to the recurring jobs of running a local business in any of ten
-              verticals: real estate, mortgage, insurance, property
-              management, title &amp; escrow, recruiting, home services,
-              CPA / tax, law, and RIA / wealth. The fleet hands off to a
-              human at the steps where a human still has to decide.
+              So we built a service-partnership team for local businesses,
+              not a self-serve platform. The fleet of capable AI partners is
+              one half of the product. The service team that installs it,
+              runs the reviews, and customizes the agents as your ops shift
+              is the other half. Together they replace the recurring drudge
+              work for any of ten verticals: real estate, mortgage,
+              insurance, property management, title &amp; escrow, recruiting,
+              home services, CPA / tax, law, and RIA / wealth.
             </p>
             <p className="text-ink">
-              The fleet handles the systematic work. The practitioner does
-              the relationship work. That's the inversion.
+              The fleet handles the systematic work. The service team runs
+              the operation. The practitioner does the relationship work.
+              That&apos;s the inversion.
             </p>
           </div>
         </div>
@@ -82,22 +88,27 @@ export default function AboutPage() {
       <section className="border-b border-rule bg-paper-deep">
         <div className="container-wide grid gap-12 py-20 md:grid-cols-[1fr_2fr] md:py-28">
           <div>
-            <p className="eyebrow mb-4">Built BY agents</p>
+            <p className="eyebrow mb-4">We eat our own cooking</p>
           </div>
           <div className="max-w-prose space-y-5 text-[15px] leading-relaxed text-ink-soft">
             <p>
               agentplain has no traditional engineering team. The same fleet
-              model we sell builds the product. Agents propose capabilities,
-              decompose them into work, execute the changes, run the tests,
-              and surface decisions for human review.
+              model we sell builds the product, and a small service team —
+              the same shape we sell to customers — runs the operation:
+              installs new capabilities, runs the weekly review, decides
+              what&apos;s ready to ship, and surfaces the calls that need a
+              human.
             </p>
             <p>
-              The brokerage running in production today — ~35 cron-fired
-              agents covering lead intake, listing coordination, contracts,
-              CRM hygiene, recruiting — is the working precursor of this
-              model. We've been running the pattern on ourselves long enough
-              to know it works, and long enough to know where the human still
-              has to decide. agentplain productizes that.
+              We also run a flat-fee real-estate brokerage in production
+              today — ~35 cron-fired agents covering lead intake, listing
+              coordination, contracts, CRM hygiene, recruiting. That
+              brokerage is where we run our own service partnership against
+              real customers, real deadlines, and real licensure. It&apos;s
+              how we learn what works at a local-business scale before we
+              package it into a tier. When you hire agentplain, you&apos;re
+              hiring the team that has been running this pattern on itself
+              long enough to know where the human still has to decide.
             </p>
           </div>
         </div>
@@ -157,6 +168,16 @@ export default function AboutPage() {
               in the background and surfaces drafts for your review. It&apos;s
               not on your homepage waiting to be prompted. Capable AI
               partners, scoped to the recurring jobs of your business.
+            </p>
+            <p>
+              <span className="text-ink">
+                Not a self-serve AI platform.
+              </span>{" "}
+              We don&apos;t hand you a fleet and a configuration UI and walk
+              away. Every tier comes with a service team: we install, we
+              run the reviews, we customize, we handle the change management
+              as your ops shift. You stay in control of the work; we run the
+              operation.
             </p>
           </div>
         </div>

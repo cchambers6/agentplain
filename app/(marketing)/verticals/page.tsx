@@ -7,7 +7,7 @@ import { getAllVerticals } from "@/lib/verticals";
 export const metadata: Metadata = {
   title: "Verticals — agentplain",
   description:
-    "agentplain is built for ten locked verticals. One per-seat plan ($199 → $99) covers every vertical plug-and-play; anything beyond is a Custom engagement we scope per customer.",
+    "agentplain is a service partnership built for ten locked verticals. Three tiers (Regular $199 → $99, Partner $299 → $199, Max quoted) cover every vertical; bespoke engagements live on /custom.",
 };
 
 // Verticals index page. Anchored to the simplified pricing model per
@@ -34,11 +34,13 @@ export default function VerticalsIndexPage() {
             Each vertical-aware fleet lifts up local businesses by doing the
             work that takes their time and money away from the people they
             serve. Different domain rules, same pattern: the fleet handles
-            the recurring ops, the human keeps the relationships.
+            the recurring ops, your service team runs the partnership, the
+            human keeps the relationships.
           </p>
           <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-mute">
-            One per-seat plan covers every vertical. $199 solo sliding to $99
-            at 50+ seats. First month free. Month-to-month.
+            Three service-partnership tiers cover every vertical — Regular
+            $199 → $99, Partner $299 → $199, Max quoted to scope. First month
+            free. Month-to-month.
           </p>
         </div>
       </section>
@@ -46,16 +48,16 @@ export default function VerticalsIndexPage() {
       <Section
         eyebrow="The ten"
         title="Pick your vertical."
-        intro="Every vertical lands at the same Regular per-seat plan. Vertical-aware compliance corpus, JTBD tables, and integration roadmap are scoped per vertical — the price isn't."
+        intro="Every vertical lands at the same three-tier ladder. Vertical-aware compliance corpus, JTBD tables, and integration roadmap are scoped per vertical — the tier choice (Regular / Partner / Max) is about cadence and depth of service partnership, not which vertical you're in."
       >
         <Grid items={all} />
       </Section>
 
       <Section
         tone="deep"
-        eyebrow="Need more depth?"
-        title="When Regular doesn't cover it, we scope custom."
-        intro="Bespoke compliance corpus, white-label, dedicated success, custom integration to a tool that isn't on the roadmap, 100+ seats. Anything that needs more than plug-and-play, we scope per customer."
+        eyebrow="Outside the tiers?"
+        title="When the productized tiers don't cover it, we scope custom."
+        intro="Bespoke compliance corpus, white-label, custom integration to a tool that isn't on the roadmap, 100+ seats. Different from Max (a tier with non-standard scope): /custom is engagement work against a written spec."
       >
         <div className="border border-rule bg-paper p-8 md:p-10">
           <p className="eyebrow mb-3">Custom engagement</p>

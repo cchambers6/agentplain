@@ -17,8 +17,10 @@ import { getBillingProvider } from "@/lib/billing";
 import { withRls, withSystemContext } from "@/lib/db";
 import { env } from "@/lib/env";
 import {
-  TIER_ORDER,
+  isSelfServeTier,
   seatBandForSeats,
+  TIER_ORDER,
+  tierFromVerticalTier,
   type TierName,
 } from "@/lib/pricing/tiers";
 
@@ -67,10 +69,32 @@ export async function changePlanAction(
   if (!TIER_ORDER.includes(rawTier)) {
     throw new Error(`Unknown tier "${rawTier}"`);
   }
+  // Max is quote-based per the 2026-05-15 amendment to
+  // `project_stripe_both_surfaces.md` — no Stripe Product, no self-serve
+  // checkout. UI never submits with tier=max, but defense-in-depth here
+  // catches any hand-crafted POST and redirects to the intake form.
+  if (!isSelfServeTier(rawTier)) {
+    redirect("/custom?type=max#custom-contact");
+  }
   if (!Number.isFinite(rawSeats) || rawSeats < 1 || rawSeats >= 100) {
     throw new Error(
       "Pick between 1 and 99 seats. 100+ is custom — reach out to schedule a build engagement.",
     );
+  }
+  // Downgrades from Partner to Regular require an explicit confirmation
+  // checkbox on the form (UI gates the button with `required`). This is
+  // server-side defense so a stale tab or hand-crafted POST can't strip
+  // the workspace of its reserved partner hours without the customer
+  // acknowledging the loss.
+  const currentTier = tierFromVerticalTier(sub.tier);
+  const isDowngrade = isStrictlyLowerTier(rawTier, currentTier);
+  if (isDowngrade) {
+    const confirmValue = String(formData.get("confirm") ?? "");
+    if (confirmValue !== "downgrade") {
+      throw new Error(
+        "Confirm the downgrade — check the acknowledgement box before submitting.",
+      );
+    }
   }
   const band: SeatBand = seatBandForSeats(rawSeats);
   const provider = getBillingProvider();
@@ -90,6 +114,14 @@ export async function changePlanAction(
     metadata: { agentplain_workspace_id: workspaceId },
   });
   redirect(session.url);
+}
+
+// Pure ordering helper local to this action — TIER_ORDER is [regular,
+// plus, max] so index comparison is the same as price comparison.
+// Centralized in `lib/pricing/tiers.ts` would be overkill until a third
+// caller needs it.
+function isStrictlyLowerTier(target: TierName, current: TierName): boolean {
+  return TIER_ORDER.indexOf(target) < TIER_ORDER.indexOf(current);
 }
 
 export async function openPortalAction(workspaceId: string): Promise<void> {

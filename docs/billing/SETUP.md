@@ -45,7 +45,12 @@ lookup key.
 
 After it runs, your Stripe dashboard will hold:
 
-- **3 Products** — `agentplain Regular` / `agentplain Plus` / `agentplain Max`
+- **3 Products** — `agentplain Regular` / `agentplain Partner` / `agentplain Max`
+  (Product names follow `tierProductName()` in `lib/pricing/tiers.ts` — the
+  `plus` enum is the on-disk identity for the customer-facing "Partner"
+  tier; Max stays in Stripe for SDK-contract continuity but no self-serve
+  flow ever routes a checkout to it — Max prospects flow through
+  `/custom?type=max`.)
 - **15 Prices** — one per (tier, seat band) at monthly cadence, named
   `agentplain_<tier>_seats_<band>_monthly`
 

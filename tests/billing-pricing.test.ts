@@ -6,17 +6,23 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  PARTNER_RESERVED_HOURS_PER_MONTH,
   PER_SEAT_MONTHLY_USD_CENTS,
   SEAT_BANDS,
+  SELF_SERVE_TIERS,
   TIER_ORDER,
+  TIER_TAGLINE,
   TRIAL_PERIOD_DAYS,
   TRIAL_WARNING_THRESHOLDS_DAYS,
   allLookupKeys,
+  isSelfServeTier,
   lookupKeyFor,
   monthlyChargeUsdCents,
   seatBandForSeats,
+  tierDisplayName,
   tierFromVerticalTier,
   tierProductLookupKey,
+  tierProductName,
   verticalTierFromTier,
 } from "@/lib/pricing/tiers";
 
@@ -121,5 +127,55 @@ describe("SEAT_BANDS labels", () => {
     assert.equal(SEAT_BANDS.SEATS_1.label, "1 seat");
     assert.equal(SEAT_BANDS.SEATS_2_9.label, "2–9 seats");
     assert.equal(SEAT_BANDS.SEATS_50_99.label, "50–99 seats");
+  });
+});
+
+// Three customer-facing tiers per the 2026-05-15 amendment to
+// `project_stripe_both_surfaces.md`. The DB enum stays regular/plus/max
+// for stable identity; "Plus" is the on-disk identity for the
+// customer-facing "Partner" tier. These tests pin the display rename
+// so a future PR that renames `plus` → `partner` (or vice-versa) in
+// either layer surfaces the drift here.
+describe("tier display naming (2026-05-15 Partner rename)", () => {
+  it("maps regular → Regular, plus → Partner, max → Max", () => {
+    assert.equal(tierDisplayName("regular"), "Regular");
+    assert.equal(tierDisplayName("plus"), "Partner");
+    assert.equal(tierDisplayName("max"), "Max");
+  });
+  it("Stripe Product name reflects the display rename", () => {
+    assert.equal(tierProductName("regular"), "agentplain Regular");
+    assert.equal(tierProductName("plus"), "agentplain Partner");
+    assert.equal(tierProductName("max"), "agentplain Max");
+  });
+  it("every tier has a tagline", () => {
+    for (const t of TIER_ORDER) {
+      const tagline = TIER_TAGLINE[t];
+      assert.equal(typeof tagline, "string");
+      assert.ok(tagline.length > 10, `tagline too short for ${t}`);
+    }
+  });
+  it("partner reserved hours is positive", () => {
+    assert.ok(PARTNER_RESERVED_HOURS_PER_MONTH > 0);
+  });
+});
+
+// SELF_SERVE_TIERS gates the sign-up flow, the billing-page tier toggle,
+// and the change-plan action. Max is intentionally excluded — Max is
+// quote-based and never reaches Stripe Checkout per the 2026-05-15
+// amendment to `project_stripe_both_surfaces.md`. A regression that
+// silently widens this would let a hand-crafted POST provision a Max
+// workspace through the self-serve path, which would bypass operator
+// triage. Tests pin the contract.
+describe("self-serve tier gating", () => {
+  it("regular + plus are self-serve; max is not", () => {
+    assert.equal(isSelfServeTier("regular"), true);
+    assert.equal(isSelfServeTier("plus"), true);
+    assert.equal(isSelfServeTier("max"), false);
+  });
+  it("SELF_SERVE_TIERS list matches the predicate", () => {
+    const fromList = new Set(SELF_SERVE_TIERS);
+    for (const t of TIER_ORDER) {
+      assert.equal(fromList.has(t), isSelfServeTier(t));
+    }
   });
 });

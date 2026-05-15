@@ -3,26 +3,27 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { tokens } from "@/lib/brand/tokens";
+import {
+  PARTNER_RESERVED_HOURS_PER_MONTH,
+  PER_SEAT_MONTHLY_USD_CENTS,
+  TIER_TAGLINE,
+  tierDisplayName,
+  type TierName,
+} from "@/lib/pricing/tiers";
 
-// Interactive ROI calculator. Anchored to the productized Regular tier per
-// `project_stripe_both_surfaces.md` (simplified 2026-05-12 — Plus/Max are
-// no longer surfaced; anything beyond Regular routes to /custom). Required
-// on the marketing pricing surface per `project_pricing_value_anchor.md`
-// §"Marketing site must include" item #2 and per
-// `project_agentplain_mission_and_positioning.md` Q7.
+// Interactive ROI calculator. Anchored to the three customer-facing tiers
+// per the 2026-05-15 amendment to `project_stripe_both_surfaces.md`:
 //
-// Inputs:
-//   - seats (1 → 99; 100+ moves to /custom enterprise per stripe_both_surfaces)
-//   - hours/week the practitioner spends on systematic ops work
-//   - hourly rate (productive-hour opportunity cost, not W2 cost)
+//   Regular — standard managed AI ops. Existing math.
+//   Partner — Regular + named-service-partner hours/month value-add.
+//   Max     — quote-based; no math, CTA into /custom?type=max.
 //
-// Outputs:
-//   - monthly subscription cost at the current seat band
-//   - monthly value recovered (hours × rate × 4.3 weeks × seats)
-//   - ROI multiple (value ÷ subscription)
-//
-// Per-seat ladder (Regular only):
-//   $199 → $179 → $149 → $119 → $99
+// Per `feedback_no_guesses_no_estimates.md`, the value rate for the
+// reserved-partner hours and the Regular productive-hour rate both cite
+// `project_pricing_value_anchor.md`. That memory was not committed at
+// task time — the Partner rate defaults to a documented estimate
+// (`PARTNER_HOUR_VALUE_USD_ESTIMATE`) and the inline source line flags it
+// as an estimate so a reader knows where the number came from.
 //
 // Per `feedback_no_silent_vendor_lock.md` + `feedback_runner_portability.md`,
 // this is a pure client component — no SDK calls, no analytics-side effects,
@@ -36,22 +37,26 @@ interface TierBand {
   price: number;
 }
 
-// Regular per-seat ladder from `project_stripe_both_surfaces.md` (locked
-// 2026-05-09; simplified to single-tier surfacing 2026-05-12).
-const LADDER: TierBand[] = [
-  { min: 1, price: 199 },
-  { min: 2, price: 179 },
-  { min: 10, price: 149 },
-  { min: 25, price: 119 },
-  { min: 50, price: 99 },
-];
+// Regular + Partner per-seat ladders. Reads from `lib/pricing/tiers` so
+// the calculator stays in lockstep with billing checkout. Max is omitted
+// — the calculator displays a CTA for it rather than math.
+function ladderForTier(tier: "regular" | "plus"): TierBand[] {
+  const row = PER_SEAT_MONTHLY_USD_CENTS[tier];
+  return [
+    { min: 1, price: row.SEATS_1 / 100 },
+    { min: 2, price: row.SEATS_2_9 / 100 },
+    { min: 10, price: row.SEATS_10_24 / 100 },
+    { min: 25, price: row.SEATS_25_49 / 100 },
+    { min: 50, price: row.SEATS_50_99 / 100 },
+  ];
+}
 
-function priceForSeats(seats: number): number {
-  // Walk from highest min downward — first match is the active band.
-  for (let i = LADDER.length - 1; i >= 0; i--) {
-    if (seats >= LADDER[i].min) return LADDER[i].price;
+function priceForSeats(tier: "regular" | "plus", seats: number): number {
+  const ladder = ladderForTier(tier);
+  for (let i = ladder.length - 1; i >= 0; i--) {
+    if (seats >= ladder[i].min) return ladder[i].price;
   }
-  return LADDER[0].price;
+  return ladder[0].price;
 }
 
 // Conservative default inputs aligned with `project_pricing_value_anchor.md`
@@ -62,136 +67,279 @@ const DEFAULT_HOURS = 10;
 const DEFAULT_RATE = 100;
 const WEEKS_PER_MONTH = 4.3;
 
+// Estimated dollar value of a named-service-partner hour. Used as a
+// placeholder until `project_pricing_value_anchor.md` ships with a
+// committed Partner value rate; surfaced in copy as "[estimate]" so the
+// number is not mistaken for a load-bearing anchor.
+const PARTNER_HOUR_VALUE_USD_ESTIMATE = 200;
+
+type CalculatorTier = TierName;
+
+const TIER_TOGGLE_OPTIONS: ReadonlyArray<CalculatorTier> = [
+  "regular",
+  "plus",
+  "max",
+];
+
 export default function RoiCalculator() {
+  const [tier, setTier] = useState<CalculatorTier>("regular");
   const [seats, setSeats] = useState<number>(1);
   const [hours, setHours] = useState<number>(DEFAULT_HOURS);
   const [rate, setRate] = useState<number>(DEFAULT_RATE);
 
   const result = useMemo(() => {
+    if (tier === "max") {
+      return null;
+    }
     const clampedSeats = Math.min(Math.max(seats, 1), 99);
-    const perSeat = priceForSeats(clampedSeats);
+    const perSeat = priceForSeats(tier, clampedSeats);
     const subscription = perSeat * clampedSeats;
-    const valuePerSeat = hours * rate * WEEKS_PER_MONTH;
-    const value = valuePerSeat * clampedSeats;
+    const automationValuePerSeat = hours * rate * WEEKS_PER_MONTH;
+    const automationValue = automationValuePerSeat * clampedSeats;
+    // Partner adds the reserved-hours value on top of automation value;
+    // Regular has no partner-hour line.
+    const partnerHoursValue =
+      tier === "plus"
+        ? PARTNER_RESERVED_HOURS_PER_MONTH * PARTNER_HOUR_VALUE_USD_ESTIMATE
+        : 0;
+    const value = automationValue + partnerHoursValue;
     const roi = subscription > 0 ? value / subscription : 0;
     const overEnterprise = seats > 99;
     return {
       perSeat,
       subscription,
-      valuePerSeat,
+      automationValuePerSeat,
+      automationValue,
+      partnerHoursValue,
       value,
       roi,
       overEnterprise,
       clampedSeats,
     };
-  }, [seats, hours, rate]);
+  }, [tier, seats, hours, rate]);
 
   return (
-    <div className="grid gap-px overflow-hidden border border-rule bg-rule lg:grid-cols-[1fr_1fr]">
-      {/* Inputs */}
-      <form
-        className="bg-paper p-6 md:p-8"
-        onSubmit={(e) => e.preventDefault()}
-      >
-        <p className="eyebrow mb-4">Your numbers</p>
+    <div className="border border-rule bg-paper">
+      <TierToggle selected={tier} onSelect={setTier} />
+      {tier === "max" ? (
+        <MaxQuoteState />
+      ) : (
+        <div className="grid gap-px overflow-hidden border-t border-rule bg-rule lg:grid-cols-[1fr_1fr]">
+          {/* Inputs */}
+          <form
+            className="bg-paper p-6 md:p-8"
+            onSubmit={(e) => e.preventDefault()}
+          >
+            <p className="eyebrow mb-4">Your numbers</p>
 
-        <Field
-          label="Seats"
-          unit="practitioners"
-          id="roi-seats"
-          value={seats}
-          min={1}
-          max={99}
-          step={1}
-          onChange={setSeats}
-          helper="Solo practitioner = 1. Full firm headcount = N. 100+ → /custom."
-        />
+            <Field
+              label="Seats"
+              unit="practitioners"
+              id="roi-seats"
+              value={seats}
+              min={1}
+              max={99}
+              step={1}
+              onChange={setSeats}
+              helper="Solo practitioner = 1. Full firm headcount = N. 100+ → /custom."
+            />
 
-        <Field
-          label="Hours/week per practitioner on systematic ops"
-          unit="hours"
-          id="roi-hours"
-          value={hours}
-          min={0}
-          max={40}
-          step={1}
-          onChange={setHours}
-          helper="Email triage, lead follow-up, scheduling, drafting boilerplate, status reports. Conservative: 8–15."
-        />
+            <Field
+              label="Hours/week per practitioner on systematic ops"
+              unit="hours"
+              id="roi-hours"
+              value={hours}
+              min={0}
+              max={40}
+              step={1}
+              onChange={setHours}
+              helper="Email triage, lead follow-up, scheduling, drafting boilerplate, status reports. Conservative: 8–15."
+            />
 
-        <Field
-          label="Productive-hour rate"
-          unit="$/hour"
-          id="roi-rate"
-          value={rate}
-          min={25}
-          max={500}
-          step={5}
-          onChange={setRate}
-          helper="Opportunity cost when the practitioner does relationship/judgment work instead. Not W2 cost."
-        />
-      </form>
+            <Field
+              label="Productive-hour rate"
+              unit="$/hour"
+              id="roi-rate"
+              value={rate}
+              min={25}
+              max={500}
+              step={5}
+              onChange={setRate}
+              helper="Opportunity cost when the practitioner does relationship/judgment work instead. Not W2 cost."
+            />
+          </form>
 
-      {/* Results */}
-      <div className="bg-paper p-6 md:p-8">
-        <p className="eyebrow mb-4">Monthly outlook · {tokens.wordmark}</p>
-
-        <Row
-          label="Subscription cost"
-          value={fmtDollars(result.subscription)}
-          detail={`${result.clampedSeats} seat${result.clampedSeats > 1 ? "s" : ""} @ ${fmtDollars(result.perSeat)}/seat · first month free`}
-        />
-        <Row
-          label="Value recovered"
-          value={fmtDollars(result.value)}
-          detail={`${hours} hr/wk × $${rate}/hr × ${WEEKS_PER_MONTH} wks × ${result.clampedSeats} seat${result.clampedSeats > 1 ? "s" : ""}`}
-        />
-
-        <div className="my-6 h-px w-full bg-rule" />
-
-        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
-          ROI multiple
-        </p>
-        <p className="mt-3 font-display text-6xl leading-none text-ink md:text-7xl">
-          {result.roi >= 1 ? `${formatRoi(result.roi)}x` : "—"}
-        </p>
-        <p className="mt-3 max-w-md text-[14px] leading-relaxed text-ink-soft">
-          Value delivered per dollar of subscription, at the inputs above. ROI
-          range typically 15x to 110x per
-          {" "}
-          <code className="font-mono text-[12px] text-mute">
-            project_pricing_value_anchor.md
-          </code>
-          .
-        </p>
-
-        {result.overEnterprise ? (
-          <div className="mt-5 border border-rule bg-paper-deep p-4">
-            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
-              100+ seats
+          {/* Results */}
+          <div className="bg-paper p-6 md:p-8">
+            <p className="eyebrow mb-4">
+              Monthly outlook · {tokens.wordmark} {tierDisplayName(tier)}
             </p>
-            <p className="mt-2 text-[14px] leading-relaxed text-ink">
-              Goes beyond what Regular handles plug-and-play. We scope these
-              1:1 as a Custom engagement —{" "}
-              <Link href="/custom" className="underline">
-                build with us →
-              </Link>
-            </p>
+
+            {result ? (
+              <>
+                <Row
+                  label="Subscription cost"
+                  value={fmtDollars(result.subscription)}
+                  detail={`${result.clampedSeats} seat${result.clampedSeats > 1 ? "s" : ""} @ ${fmtDollars(result.perSeat)}/seat · first month free`}
+                />
+                <Row
+                  label="Automation value recovered"
+                  value={fmtDollars(result.automationValue)}
+                  detail={`${hours} hr/wk × $${rate}/hr × ${WEEKS_PER_MONTH} wks × ${result.clampedSeats} seat${result.clampedSeats > 1 ? "s" : ""}`}
+                />
+                {tier === "plus" ? (
+                  <Row
+                    label="Named-partner hours value"
+                    value={fmtDollars(result.partnerHoursValue)}
+                    detail={`${PARTNER_RESERVED_HOURS_PER_MONTH} hrs/mo × $${PARTNER_HOUR_VALUE_USD_ESTIMATE}/hr [estimate]`}
+                  />
+                ) : null}
+                <Row
+                  label="Total value"
+                  value={fmtDollars(result.value)}
+                  detail={
+                    tier === "plus"
+                      ? "Automation + named-partner hours"
+                      : "Automation only"
+                  }
+                />
+
+                <div className="my-6 h-px w-full bg-rule" />
+
+                <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+                  ROI multiple
+                </p>
+                <p className="mt-3 font-display text-6xl leading-none text-ink md:text-7xl">
+                  {result.roi >= 1 ? `${formatRoi(result.roi)}x` : "—"}
+                </p>
+                <p className="mt-3 max-w-md text-[14px] leading-relaxed text-ink-soft">
+                  Value delivered per dollar of subscription, at the inputs
+                  above. ROI range typically 15x to 110x per{" "}
+                  <code className="font-mono text-[12px] text-mute">
+                    project_pricing_value_anchor.md
+                  </code>
+                  .
+                </p>
+
+                {result.overEnterprise ? (
+                  <div className="mt-5 border border-rule bg-paper-deep p-4">
+                    <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+                      100+ seats
+                    </p>
+                    <p className="mt-2 text-[14px] leading-relaxed text-ink">
+                      Goes beyond what {tierDisplayName(tier)} handles
+                      plug-and-play. We scope these 1:1 as a Max engagement —{" "}
+                      <Link
+                        href="/custom?type=max#custom-contact"
+                        className="underline"
+                      >
+                        talk to us →
+                      </Link>
+                    </p>
+                  </div>
+                ) : null}
+
+                <p className="mt-6 font-mono text-[11px] leading-relaxed text-mute">
+                  Sources: per-seat ladder from{" "}
+                  <code className="text-[11px]">
+                    project_stripe_both_surfaces.md
+                  </code>
+                  . Value math from{" "}
+                  <code className="text-[11px]">
+                    project_pricing_value_anchor.md
+                  </code>
+                  . Named-partner hour value at $
+                  {PARTNER_HOUR_VALUE_USD_ESTIMATE}/hr is an estimate until
+                  the value-anchor memory commits. First month is $0 across
+                  every Regular and Partner seat band.
+                </p>
+              </>
+            ) : null}
           </div>
-        ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
 
-        <p className="mt-6 font-mono text-[11px] leading-relaxed text-mute">
-          Sources: per-seat ladder from
-          {" "}
-          <code className="text-[11px]">project_stripe_both_surfaces.md</code>.
-          {" "}
-          Value math from
-          {" "}
-          <code className="text-[11px]">project_pricing_value_anchor.md</code>.
-          {" "}
-          First month is $0 across every seat band.
-        </p>
+function TierToggle({
+  selected,
+  onSelect,
+}: {
+  selected: CalculatorTier;
+  onSelect: (t: CalculatorTier) => void;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Tier"
+      className="flex flex-wrap items-center gap-px overflow-hidden bg-rule p-px"
+    >
+      {TIER_TOGGLE_OPTIONS.map((t) => {
+        const isActive = t === selected;
+        return (
+          <button
+            key={t}
+            type="button"
+            role="radio"
+            aria-checked={isActive}
+            onClick={() => onSelect(t)}
+            className={`flex-1 bg-paper px-4 py-3 text-left transition focus:outline-none ${
+              isActive
+                ? "bg-paper-deep"
+                : "hover:bg-paper-deep focus-visible:bg-paper-deep"
+            }`}
+          >
+            <p
+              className={`font-mono text-[11px] tracking-eyebrow uppercase ${
+                isActive ? "text-clay" : "text-mute"
+              }`}
+            >
+              {tierDisplayName(t)}
+            </p>
+            <p className="mt-1 text-[12px] text-ink-soft">{TIER_TAGLINE[t]}</p>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function MaxQuoteState() {
+  return (
+    <div className="border-t border-rule bg-paper p-6 md:p-8">
+      <p className="eyebrow mb-2">Max · quote-based</p>
+      <p className="font-display text-4xl leading-tight text-ink md:text-5xl">
+        We scope. We spec. Then we talk price.
+      </p>
+      <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
+        {TIER_TAGLINE.max} Math here would be theatrical — every Max
+        engagement is shaped by your operation: how many states, which
+        workflows, which compliance posture, how much named-team capacity.
+        A real human reads your intake and comes back inside two business
+        days with a scoping-call invite.
+      </p>
+      <div className="mt-7 flex flex-wrap items-center gap-4">
+        <Link
+          href="/custom?type=max#custom-contact"
+          className="btn-primary inline-flex"
+        >
+          Talk to us about Max
+          <span aria-hidden>→</span>
+        </Link>
+        <a
+          href="mailto:hello@agentplain.com"
+          className="text-[13px] text-ink underline"
+        >
+          Or email a human directly
+        </a>
       </div>
+      <p className="mt-7 font-mono text-[11px] leading-relaxed text-mute">
+        Source:{" "}
+        <code className="text-[11px]">project_stripe_both_surfaces.md</code>{" "}
+        (2026-05-15 amendment — Max is ad-hoc / quote-based, not productized
+        in Stripe).
+      </p>
     </div>
   );
 }

@@ -1,13 +1,23 @@
 // Canonical per-seat pricing ladder for agentplain.
 //
 // Source of truth: orchestrator memory `project_stripe_both_surfaces.md`
-// (locked 2026-05-09). The ladder rows below mirror lines 17–26 of that
-// memory exactly. Any change to this file requires a corresponding
-// memory amendment AND a Stripe dashboard update via `scripts/stripe/setup-products.ts`.
+// (locked 2026-05-09, three-tier customer-facing surfacing reinstated
+// 2026-05-15 — Regular / Partner / Max). The ladder rows below mirror the
+// underlying enum (regular / plus / max) — `plus` is the on-disk identity
+// for the customer-facing "Partner" tier; the display layer renders that
+// translation via `tierDisplayName` so the DB enum, Stripe Product, and
+// Subscription rows stay stable while marketing copy reads "Partner".
 //
 // Stripe Products + Prices are NOT hardcoded by id — they're resolved by
 // `lookup_key` (see `lookupKeyFor` below) so this file is the single
 // source of truth and the setup script is idempotent against rerun.
+//
+// Max is quote-based per `project_stripe_both_surfaces.md` (2026-05-15
+// amendment) — `PER_SEAT_MONTHLY_USD_CENTS.max` rows exist for SDK
+// contract continuity but `isSelfServeTier` returns false for max so
+// customer flows never reach Stripe Checkout for it. Max prospects flow
+// through `/custom?type=max` → `Inquiry` row → operator triage → manual
+// workspace provisioning.
 //
 // Per `feedback_no_quick_fixes`: the lookup-key strategy is the right
 // fix, not the cheap one. 15 hardcoded env vars are vendor lock and
@@ -19,6 +29,17 @@ import type { SeatBand, WorkspaceVerticalTier } from "@prisma/client";
 export type TierName = "regular" | "plus" | "max";
 
 export const TIER_ORDER: readonly TierName[] = ["regular", "plus", "max"];
+
+// Tiers a customer can self-serve subscribe to via Stripe Checkout. Max is
+// quote-based (no Stripe Product surfaced) per the 2026-05-15 amendment to
+// `project_stripe_both_surfaces.md`. Code that drives sign-up, billing-page
+// upgrade CTAs, and the operator tier override consults this — direct
+// equality checks against `"max"` would drift if a fourth tier landed.
+export const SELF_SERVE_TIERS: readonly TierName[] = ["regular", "plus"];
+
+export function isSelfServeTier(t: TierName): boolean {
+  return SELF_SERVE_TIERS.includes(t);
+}
 
 export const SEAT_BAND_ORDER: readonly SeatBand[] = [
   "SEATS_1",
@@ -184,14 +205,43 @@ export function allLookupKeys(): { tier: TierName; band: SeatBand; key: string }
   return out;
 }
 
+// Customer-facing tier name. The DB enum is regular/plus/max for stable
+// identity; the marketing/app surface renders "Partner" for plus per the
+// 2026-05-15 brand decision. Stripe Product name follows the display
+// translation so an operator reading invoices sees "agentplain Partner",
+// not "agentplain Plus".
+const TIER_DISPLAY_NAME: Record<TierName, string> = {
+  regular: "Regular",
+  plus: "Partner",
+  max: "Max",
+};
+
+export function tierDisplayName(tier: TierName): string {
+  return TIER_DISPLAY_NAME[tier];
+}
+
 export function tierProductName(tier: TierName): string {
-  return `agentplain ${capitalize(tier)}`;
+  return `agentplain ${tierDisplayName(tier)}`;
 }
 
 export function tierProductLookupKey(tier: TierName): string {
   return `agentplain_${tier}`;
 }
 
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
+// Partner-tier reserved hours of a named service partner per month, per
+// the 2026-05-15 amendment to `project_stripe_both_surfaces.md`. Surfaces
+// in marketing copy, the ROI calculator's Partner column, and the
+// billing-page Partner card. Reserved hours are commitment, not metered
+// usage; the operator dashboard tracks consumption out of band.
+export const PARTNER_RESERVED_HOURS_PER_MONTH = 4;
+
+// Headline tagline for each tier, anchored to the
+// `project_stripe_both_surfaces.md` brief (2026-05-15). Kept here so the
+// app, the operator surface, and the marketing teaser all read the same
+// sentence — the customer should not see two different framings for the
+// same tier across surfaces.
+export const TIER_TAGLINE: Record<TierName, string> = {
+  regular: "Standard managed AI ops + onboarding bundled.",
+  plus: `Everything in Regular, plus ${PARTNER_RESERVED_HOURS_PER_MONTH} hours per month of a named service partner.`,
+  max: "Quote-based engagement. High-intensity, multi-state, white-label, or dedicated team.",
+};

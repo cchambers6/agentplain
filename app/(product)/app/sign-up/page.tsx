@@ -1,9 +1,24 @@
 import Link from "next/link";
 import { getAllVerticals, getVerticalContent } from "@/lib/verticals";
+import { TIER_ORDER, type TierName } from "@/lib/pricing/tiers";
 import { SignUpForm } from "./SignUpForm";
 
 interface SignUpPageProps {
-  searchParams: Promise<{ vertical?: string }>;
+  searchParams: Promise<{ vertical?: string; tier?: string }>;
+}
+
+// `?tier=` pre-selects the picker so deep links from /pricing and the
+// billing-page upgrade CTA land on the right card. Unknown values fall
+// back to Regular (the default productized tier per
+// `project_stripe_both_surfaces.md`).
+function resolveDefaultTier(raw: string | undefined): TierName {
+  if (!raw) return "regular";
+  const normalized = raw.toLowerCase();
+  if (normalized === "partner") return "plus";
+  if ((TIER_ORDER as readonly string[]).includes(normalized)) {
+    return normalized as TierName;
+  }
+  return "regular";
 }
 
 export default async function SignUpPage({ searchParams }: SignUpPageProps) {
@@ -12,6 +27,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   // Marketing pages link with the slug; if the value matches a known vertical
   // we pre-select it. Otherwise default to real-estate (Pin 1).
   const defaultVerticalSlug = getVerticalContent(raw) ? raw : "real-estate";
+  const defaultTier = resolveDefaultTier(params.tier);
 
   // Server-rendered list keeps the marketing content bundle out of the
   // client. The form only needs {slug, name}.
@@ -28,13 +44,15 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
           Set up your workspace on agentplain.
         </h1>
         <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
-          Pick your vertical, name your firm, and we'll send a sign-in link.
-          First month is on us — card on file kicks in at month two.
+          Pick a tier, name your firm, and we&rsquo;ll send a sign-in link.
+          First month is on us across the self-serve tiers — Max is scoped
+          per engagement.
         </p>
         <div className="mt-8">
           <SignUpForm
             verticals={verticals}
             defaultVerticalSlug={defaultVerticalSlug}
+            defaultTier={defaultTier}
           />
         </div>
         <p className="mt-8 text-sm text-mute">

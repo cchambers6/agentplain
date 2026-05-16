@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220" role="img" aria-label="agentplain — intelligence rooted in reality" style="color:#1A1A1F">
+  <rect width="400" height="220" fill="#F7F4ED"/>
+  <g id="mark" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- horizon at top of mark area, vanishing point center -->
+    <line x1="170" y1="22" x2="230" y2="22" stroke-width="1.4"/>
+    <!-- five furrows converging on vanishing point (200, 22) -->
+    <line x1="170" y1="58" x2="194" y2="22" stroke-width="1.5"/>
+    <line x1="183" y1="58" x2="197" y2="22" stroke-width="1.5"/>
+    <line x1="200" y1="58" x2="200" y2="22" stroke-width="1.5"/>
+    <line x1="217" y1="58" x2="203" y2="22" stroke-width="1.5"/>
+    <line x1="230" y1="58" x2="206" y2="22" stroke-width="1.5"/>
+  </g>
+  <text x="200" y="135" text-anchor="middle" font-family="'Source Serif 4', 'Source Serif Pro', Georgia, serif" font-size="52" font-weight="500" fill="currentColor" letter-spacing="-0.8">agentplain</text>
+  <text x="200" y="175" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace" font-size="9.5" font-weight="500" fill="currentColor" letter-spacing="3.6">INTELLIGENCE  ROOTED  IN  REALITY</text>
+</svg>

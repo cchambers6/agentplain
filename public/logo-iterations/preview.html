@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>agentplain — logo iteration set</title>
+  <style>
+    :root {
+      --paper: #F7F4ED;
+      --paper-deep: #EDE9DE;
+      --ink: #1A1A1F;
+      --ink-soft: #2E2E33;
+      --clay: #B65D3A;
+      --clay-deep: #9A4D2F;
+      --moss: #3F5C3F;
+      --mute: #8C8478;
+      --rule: #E0DAC9;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    .wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 56px 32px 96px;
+    }
+    .eyebrow {
+      font-family: ui-monospace, "JetBrains Mono", SFMono-Regular, monospace;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--mute);
+    }
+    h1 {
+      font-family: Georgia, "Source Serif 4", "Source Serif Pro", serif;
+      font-weight: 500;
+      font-size: 56px;
+      letter-spacing: -1px;
+      margin: 8px 0 12px;
+    }
+    h2 {
+      font-family: Georgia, "Source Serif 4", "Source Serif Pro", serif;
+      font-weight: 500;
+      font-size: 28px;
+      letter-spacing: -0.4px;
+      margin: 0 0 24px;
+    }
+    .lede {
+      font-size: 16px;
+      line-height: 1.55;
+      color: var(--ink-soft);
+      max-width: 60ch;
+      margin: 0 0 40px;
+    }
+    .rule {
+      height: 1px;
+      background: var(--rule);
+      width: 100%;
+      margin: 40px 0;
+    }
+    .tokens {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin: 24px 0 0;
+    }
+    .swatch {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      font-size: 12px;
+      color: var(--ink-soft);
+    }
+    .chip {
+      width: 28px;
+      height: 28px;
+      border-radius: 0;
+      border: 1px solid var(--rule);
+    }
+    .chip-mono {
+      font-family: ui-monospace, monospace;
+      font-size: 10.5px;
+      color: var(--mute);
+      letter-spacing: 0.04em;
+    }
+
+    /* current pick */
+    .pick {
+      border: 1px dashed var(--rule);
+      padding: 28px;
+      background: var(--paper-deep);
+      display: grid;
+      grid-template-columns: 1fr 220px;
+      gap: 24px;
+      align-items: center;
+      margin: 24px 0 16px;
+    }
+    .pick-drop {
+      min-height: 140px;
+      border: 1px dashed var(--mute);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--paper);
+      cursor: pointer;
+      flex-direction: column;
+      gap: 8px;
+      color: var(--mute);
+      font-size: 13px;
+    }
+    .pick-drop.hover {
+      border-color: var(--clay);
+      color: var(--clay);
+    }
+    .pick-drop svg {
+      max-width: 100%;
+      max-height: 120px;
+    }
+    .pick-side {
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--ink-soft);
+    }
+    .pick-side strong { color: var(--ink); font-weight: 500; }
+    .pick-side code {
+      font-family: ui-monospace, monospace;
+      font-size: 11px;
+      background: var(--paper);
+      padding: 2px 5px;
+      border: 1px solid var(--rule);
+    }
+
+    /* candidate grid */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+    @media (max-width: 880px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .card-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .card-num {
+      font-family: ui-monospace, monospace;
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      color: var(--mute);
+    }
+    .card-name {
+      font-family: Georgia, "Source Serif 4", serif;
+      font-size: 22px;
+      font-weight: 500;
+      letter-spacing: -0.3px;
+    }
+    .card-note {
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: var(--ink-soft);
+      margin: 0;
+    }
+    .hero {
+      width: 100%;
+      aspect-ratio: 400 / 220;
+      background: var(--paper);
+      border-bottom: 1px solid var(--rule);
+      display: block;
+    }
+    .scales {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 24px;
+      align-items: end;
+      padding-top: 8px;
+    }
+    .scale-small {
+      width: 160px;
+      aspect-ratio: 400 / 220;
+      background: var(--paper);
+      border: 1px solid var(--rule);
+    }
+    .favicon-row {
+      display: flex;
+      gap: 16px;
+      align-items: end;
+    }
+    .favicon-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+    }
+    .favicon-cell .label {
+      font-family: ui-monospace, monospace;
+      font-size: 9.5px;
+      letter-spacing: 0.12em;
+      color: var(--mute);
+      text-transform: uppercase;
+    }
+    .favicon-mark, .favicon-full {
+      width: 24px;
+      height: 24px;
+      background: var(--paper);
+      border: 1px solid var(--rule);
+    }
+    .favicon-mark-lg, .favicon-full-lg {
+      width: 48px;
+      height: 48px;
+      background: var(--paper);
+      border: 1px solid var(--rule);
+    }
+
+    /* colorway preview row (moss + clay) */
+    .colorways {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding-top: 8px;
+    }
+    .cw {
+      padding: 12px;
+      border: 1px solid var(--rule);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .cw .cw-label {
+      font-family: ui-monospace, monospace;
+      font-size: 9.5px;
+      letter-spacing: 0.12em;
+      color: var(--mute);
+      text-transform: uppercase;
+    }
+    .cw img { width: 100%; height: auto; }
+    .cw-moss { color: var(--moss); }
+    .cw-clay { color: var(--clay); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <p class="eyebrow">Agentplain · Brand · Logo iteration set v0</p>
+      <h1>Logo iterations</h1>
+      <p class="lede">
+        Ten hand-coded SVG candidates for the agentplain mark. All share the same wordmark and tagline; only the tiny pictorial mark above the wordmark varies. The brand is rooted in the plains — prairie, horizon, soil, growth — never aerial. Pick a winner and we&rsquo;ll wire it in as the canonical logo set (favicon, OG, header).
+      </p>
+
+      <p class="eyebrow">Brand tokens in use</p>
+      <div class="tokens">
+        <div class="swatch"><span class="chip" style="background:#F7F4ED"></span><span><strong>paper</strong> <span class="chip-mono">#F7F4ED</span></span></div>
+        <div class="swatch"><span class="chip" style="background:#EDE9DE"></span><span><strong>paper-deep</strong> <span class="chip-mono">#EDE9DE</span></span></div>
+        <div class="swatch"><span class="chip" style="background:#1A1A1F"></span><span><strong>ink</strong> <span class="chip-mono">#1A1A1F</span></span></div>
+        <div class="swatch"><span class="chip" style="background:#B65D3A"></span><span><strong>clay</strong> <span class="chip-mono">#B65D3A</span></span></div>
+        <div class="swatch"><span class="chip" style="background:#3F5C3F"></span><span><strong>moss</strong> <span class="chip-mono">#3F5C3F</span></span></div>
+        <div class="swatch"><span class="chip" style="background:#8C8478"></span><span><strong>mute</strong> <span class="chip-mono">#8C8478</span></span></div>
+      </div>
+    </header>
+
+    <div class="rule"></div>
+
+    <section>
+      <h2>Current pick</h2>
+      <p class="lede" style="margin-bottom:16px">
+        Drop your pick here to compare it in isolation, or paste an SVG file path to preview from disk.
+      </p>
+      <div class="pick">
+        <label class="pick-drop" id="dropzone">
+          <span>Drop a candidate SVG here</span>
+          <span style="font-size:11px;color:var(--mute)">or click to pick a file</span>
+          <input type="file" accept="image/svg+xml" id="filepick" style="display:none">
+        </label>
+        <div class="pick-side">
+          <strong>How to use:</strong><br>
+          Click below each candidate and drag the file onto the drop zone, or click the zone and pick a file. The winner becomes the source for: <code>public/brand/wordmark-light.svg</code>, <code>public/brand/wordmark-inverted.svg</code>, and a mark-only crop for <code>public/favicon.svg</code>.
+        </div>
+      </div>
+    </section>
+
+    <div class="rule"></div>
+
+    <section>
+      <h2>Ten candidates</h2>
+      <p class="lede" style="margin-bottom:32px">
+        Each card shows the hero render (top), small render (~160px wide) and favicon tests:
+        <em>mark-only at 24px</em> (the realistic favicon), <em>full at 24px</em> (worst-case squash test),
+        plus a moss/clay colorway preview to check how the mark sits with the brand accent palette.
+      </p>
+
+      <div class="grid">
+
+        <!-- 01 horizon -->
+        <article class="card">
+          <div class="card-head">
+            <span class="card-num">01</span>
+            <span class="card-name">Horizon</span>
+          </div>
+          <p class="card-note">A single horizontal stroke. Prairie reduced to its purest gesture — the line where land meets sky. Most reductive in the set; reads as a deliberate, confident mark, never as a decorative flourish.</p>
+          <img class="hero" src="01-horizon.svg" alt="agentplain logo — horizon mark">
+          <div class="scales">
+            <img class="scale-small" src="01-horizon.svg" alt="small">
+            <div class="favicon-row">
+              <div class="favicon-cell">
+                <svg class="favicon-mark-lg" viewBox="160 8 80 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><image href="01-horizon.svg" width="400" height="220"/></svg>
+                <svg class="favicon-mark" viewBox="160 8 80 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><image href="01-horizon.svg" width="400" height="220"/></svg>
+                <span class="label">mark · 48 / 24</span>
+              </div>
+              <div class="favicon-cell">
+                <img class="favicon-full-lg" src="01-horizon.svg" alt="full @48">
+                <img class="favicon-full" src="01-horizon.svg" alt="full @24">
+                <span class="label">full · 48 / 24</span>
+              </div>
+            </div>
+          </div>
+          <div class="colorways">
+            <div class="cw cw-moss"><span class="cw-label">moss colorway</span><img src="01-horizon.svg" alt=""></div>
+            <div class="cw cw-clay"><span class="cw-label">clay colorway</span><img src="01-horizon.svg" alt=""></div>
+          </div>
+        </article>
+
+        <!-- 02 roots -->
+        <article class="card">
+          <div class="card-head">
+            <span class="card-num">02</span>
+            <span class="card-name">Plant with roots</span>
+          </div>
+          <p class="card-note">Stem above the soil line, root system descending below. Literal metaphor for &ldquo;rooted in reality&rdquo; — the visible plant grows because of what&rsquo;s beneath. Has stem, two leaves, taproot, and branching roots.</p>
+          <img class="hero" src="02-roots.svg" alt="agentplain logo — plant with roots">
+          <div class="scales">
+            <img class="scale-small" src="02-roots.svg" alt="small">
+            <div class="favicon-row">
+              <div class="favicon-cell">
+                <svg class="favicon-mark-lg" viewBox="170 10 60 70" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><image href="02-roots.svg" width="400" height="220"/></svg>
+                <svg class="favicon-mark" viewBox="170 10 60 70" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><image href="02-roots.svg" width="400" height="220"/></svg>
+                <span class="label">mark · 48 / 24</span>
+              </div>
+              <div class="favicon-cell">
+                <img class="favicon-full-lg" src="02-roots.svg" alt="full @48">
+                <img class="favicon-full" src="02-roots.svg" alt="full @24">
+                <span class="label">full · 48 / 24</span>
+              </div>
+            </div>
+          </div>
+          <div class="colorways">
+            <div class="cw cw-moss"><span class="cw-label">moss colorway</span><img src="02-roots.svg" alt=""></div>
+            <div class="cw cw-clay"><span class="cw-label">clay colorway</span><img src="02-roots.svg" alt=""></div>
+          </div>
+        </article>
+
+        <!-- 03 wheat -->
+        <article class="card">
+          <div class="card-head">
+            <span class="card-num">03</span>
+            <span class="card-name">Three wheat stalks</span>
+          </div>
+          <p class="card-note">Heartland icon. Three stalks with kernel detail along the upper third. Center stalk slightly taller; outer two lean. Detail-heavy — works at hero scale, kernel structure collapses below ~80px.</p>
+          <img class="hero" src="03-wheat.svg" alt="agentplain logo — three wheat stalks">
+          <div class="scales">
+            <img class="scale-small" src="03-wheat.svg" alt="small">
+            <div class="favicon-row">
+              <div class="favicon-cell">
+                <svg class="favicon-mark-lg" viewBox="174 14 52 50" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><image href="03-wheat.svg" width="400" height="220"/></svg>
+                <svg class="favicon-mark" viewBox="174 14 52 50" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><image href="03-wheat.svg" width="400" height="220"/></svg>
+                <span class="label">mark · 48 / 24</span>
+              </div>
+              <div class="favicon-cell">
+                <img class="favicon-full-lg" src="03-wheat.svg" alt="full @48">
+                <img class="favicon-full" src="03-wheat.svg" alt="full @24">
+                <span class="label">full · 48 / 24</span>
+              </div>
+            </div>
+          </div>
+          <div class="colorways">
+            <div class="cw cw-moss"><span class="cw-label">moss colorway</span><img src="03-wheat.svg" alt=""></div>
+            <div class="cw cw-clay"><span class="cw-label">clay colorway</span><img src="03-wheat.svg" alt=""></div>
+          </div>
+        </article>
+
+        <!-- 04 tree -->
+        <article class="card">
+          <div class="card-head">
+            <span class="card-num">04</span>
+            <span class="card-name">Lone tree</span>
+          </div>
+          <p class="card-note">Single tree on a horizon line. Lobed organic canopy (deliberately not a circle — reads as oak, not lollipop). Strong silhouette; survives down to favicon. Carries &ldquo;rooted, growing, alone but durable&rdquo; energy.</p>
+          <img class="hero" src="04-tree.svg" alt="agentplain logo — lone tree">
+          <div class="scales">
+            <img class="scale-small" src="04-tree.svg" alt="small">
+            <div class="favicon-row">
+              <div class="favicon-cell">
+                <svg class="favicon-mark-lg" viewBox="180 12 40 42" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><image href="04-tree.svg" width="400" height="220"/></svg>
+                <svg class="favicon-mark" viewBox="180 12 40 42" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><image href="04-tree.svg" width="400" height="220"/></svg>
+                <span class="label">mark · 48 / 24</span>
+              </div>
+              <div class="favicon-cell">
+                <img class="favicon-full-lg" src="04-tree.svg" alt="full @48">
+                <img class="favicon-full" src="04-tree.svg" alt="full @24">
+                <span class="label">full · 48 / 24</span>
+              </div>
+            </div>
+          </div>
+          <div class="colorways">
+            <div class="cw cw-moss"><span class="cw-label">moss colorway</span><img src="04-tree.svg" alt=""></div>
+            <div class="cw cw-clay"><span class="cw-label">clay colorway</span><img src="04-tree.svg" alt=""></div>
+          </div>
+        </article>
+
+        <!-- 05 sunrise -->
+        <article class="card">
+          <div class="card-head">
+            <span class="card-num">05</span>
+            <span class="card-name">Sunrise</span>
+          </div>
+          <p class="card-note">Half-disc rising over horizon. Outlined (not filled) so it reads as sun/light, not silo/dome. Inner chord at half-height suggests the moment of dawn. Cardinal optimism — new day on the prairie.</p>
+          <img class="hero" src="05-sunrise.svg" alt="agentplain logo — sunrise">
+          <div class="scales">
+            <img class="scale-small" src="05-sunrise.svg" alt="small">
+            <div class="favicon-row">
+              <div class="favicon-cell">
+                <svg class="favicon-mark-lg" viewBox="178 22 44 36" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><image href="05-sunrise.svg" width="400" height="220"/></svg>
+                <svg class="favicon-mark" viewBox="178 22 44 36" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><image href="05-sunrise.svg" width="400" height="220"/></svg>
+                <span class="label">mark · 48 / 24</span>
+              </div>
+              <div class="favicon-cell">
+                <img class="favicon-full-lg" src="05-sunrise.svg" alt="full @48">
+                <img class="favicon-full" src="05-sunrise.svg" alt="full @24">
+                <span class="label">full · 48 / 24</span>
+              </div>
+            </div>
+          </div>
+          <div class="colorways">
+            <div class="cw cw-moss"><span class="cw-label">moss colorway</span><img src="05-sunrise.svg" alt=""></div>
+            <div class="cw cw-clay"><span class="cw-label">clay colorway</span><img src="05-sunrise.svg" alt=""></div>
+          </div>
+        </article>
+
+        <!-- 06 seedling -->
+        <article class="card">
+          <div class="card-head">
+            <span class="card-num">06</span>
+            <span class="card-name">Seedling</span>
+          </div>
+          <p class="card-note">Sprout breaking the ground line, two cotyledons unfurling, seed husk and emerging root visible below. Dashed ground line gives soil texture without being literal. The most narrative of the set.</p>
+          <img class="hero" src="06-seedling.svg" alt="agentplain logo — seedling">
+          <div class="scales">
+            <img class="scale-small" src="06-seedling.svg" alt="small">
+            <div class="favicon-row">
+              <div class="favicon-cell">
+                <svg class="favicon-mark-lg" viewBox="174 8 52 64" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><image href="06-seedling.svg" width="400" height="220"/></svg>
+                <svg class="favicon-mark" viewBox="174 8 52 64" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><image href="06-seedling.svg" width="400" height="220"/></svg>
+                <span class="label">mark · 48 / 24</span>
+              </div>
+              <div class="favicon-cell">
+                <img class="favicon-full-lg" src="06-seedling.svg" alt="full @48">
+                <img class="favicon-full" src="06-seedling.svg" alt="full @24">
+                <span class="label">full · 48 / 24</span>
+              </div>
+            </div>
+          </div>
+          <div class="colorways">
+            <div class="cw cw-moss"><span class="cw-label">moss colorway</span><img src="06-seedling.svg" alt=""></div>
+            <div class="cw cw-clay"><span class="cw-label">clay colorway</span><img src="06-seedling.svg" alt=""></div>
+          </div>
+        </article>
+
+        <!-- 07 silo -->
+        <article class="card">
+          <div class="card-head">
+            <span class="card-num">07</span>
+            <span class="card-name">Grain silo</span>
+          </div>
+          <p class="card-note">Single silo with shallow-dome top and three ribbed metal bands. Wide-not-tall proportions and bands disambiguate from rocket. Heartland industry — agriculture meets infrastructure. Anchored to horizon.</p>
+          <img class="hero" src="07-silo.svg" alt="agentplain logo — grain silo">
+          <div class="scales">
+            <img class="scale-small" src="07-silo.svg" alt="small">
+            <div class="favicon-row">
+              <div class="favicon-cell">
+                <svg class="favicon-mark-lg" viewBox="180 8 40 50" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><image href="07-silo.svg" width="400" height="220"/></svg>
+                <svg class="favicon-mark" viewBox="180 8 40 50" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><image href="07-silo.svg" width="400" height="220"/></svg>
+                <span class="label">mark · 48 / 24</span>
+              </div>
+              <div class="favicon-cell">
+                <img class="favicon-full-lg" src="07-silo.svg" alt="full @48">
+                <img class="favicon-full" src="07-silo.svg" alt="full @24">
+                <span class="label">full · 48 / 24</span>
+              </div>
+            </div>
+          </div>
+          <div class="colorways">
+            <div class="cw cw-moss"><span class="cw-label">moss colorway</span><img src="07-silo.svg" alt=""></div>
+            <div class="cw cw-clay"><span class="cw-label">clay colorway</span><img src="07-silo.svg" alt=""></div>
+          </div>
+        </article>
+
+        <!-- 08 furrows -->
+        <article class="card">
+          <div class="card-head">
+            <span class="card-num">08</span>
+            <span class="card-name">Plowed field</span>
+          </div>
+          <p class="card-note">Five furrow lines in perspective, converging on the horizon. The work of the land in pure geometry. Confident, structural, and survives small scales because the gesture is geometric, not detail-dependent.</p>
+          <img class="hero" src="08-furrows.svg" alt="agentplain logo — plowed field furrows">
+          <div class="scales">
+            <img class="scale-small" src="08-furrows.svg" alt="small">
+            <div class="favicon-row">
+              <div class="favicon-cell">
+                <svg class="favicon-mark-lg" viewBox="166 18 68 44" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><image href="08-furrows.svg" width="400" height="220"/></svg>
+                <svg class="favicon-mark" viewBox="166 18 68 44" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><image href="08-furrows.svg" width="400" height="220"/></svg>
+                <span class="label">mark · 48 / 24</span>
+              </div>
+              <div class="favicon-cell">
+                <img class="favicon-full-lg" src="08-furrows.svg" alt="full @48">
+                <img class="favicon-full" src="08-furrows.svg" alt="full @24">
+                <span class="label">full · 48 / 24</span>
+              </div>
+            </div>
+          </div>
+          <div class="colorways">
+            <div class="cw cw-moss"><span class="cw-label">moss colorway</span><img src="08-furrows.svg" alt=""></div>
+            <div class="cw cw-clay"><span class="cw-label">clay colorway</span><img src="08-furrows.svg" alt=""></div>
+          </div>
+        </article>
+
+        <!-- 09 root system -->
+        <article class="card">
+          <div class="card-head">
+            <span class="card-num">09</span>
+            <span class="card-name">Root system</span>
+          </div>
+          <p class="card-note">Cross-section: thin soil line at top, the entire mark area is the root system below. The tagline rendered literally. Best at hero scale — at favicon size the secondary hair roots compress.</p>
+          <img class="hero" src="09-rootsystem.svg" alt="agentplain logo — root system">
+          <div class="scales">
+            <img class="scale-small" src="09-rootsystem.svg" alt="small">
+            <div class="favicon-row">
+              <div class="favicon-cell">
+                <svg class="favicon-mark-lg" viewBox="172 12 56 56" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><image href="09-rootsystem.svg" width="400" height="220"/></svg>
+                <svg class="favicon-mark" viewBox="172 12 56 56" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><image href="09-rootsystem.svg" width="400" height="220"/></svg>
+                <span class="label">mark · 48 / 24</span>
+              </div>
+              <div class="favicon-cell">
+                <img class="favicon-full-lg" src="09-rootsystem.svg" alt="full @48">
+                <img class="favicon-full" src="09-rootsystem.svg" alt="full @24">
+                <span class="label">full · 48 / 24</span>
+              </div>
+            </div>
+          </div>
+          <div class="colorways">
+            <div class="cw cw-moss"><span class="cw-label">moss colorway</span><img src="09-rootsystem.svg" alt=""></div>
+            <div class="cw cw-clay"><span class="cw-label">clay colorway</span><img src="09-rootsystem.svg" alt=""></div>
+          </div>
+        </article>
+
+        <!-- 10 big sky -->
+        <article class="card">
+          <div class="card-head">
+            <span class="card-num">10</span>
+            <span class="card-name">Big sky with cloud</span>
+          </div>
+          <p class="card-note">Low horizon, single small cloud upper-left. The negative space IS the sky. Quiet, atmospheric. The cloud is filled (the horizon stroked) which gives the mark visual weight at small sizes.</p>
+          <img class="hero" src="10-bigsky.svg" alt="agentplain logo — big sky with cloud">
+          <div class="scales">
+            <img class="scale-small" src="10-bigsky.svg" alt="small">
+            <div class="favicon-row">
+              <div class="favicon-cell">
+                <svg class="favicon-mark-lg" viewBox="160 16 80 44" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><image href="10-bigsky.svg" width="400" height="220"/></svg>
+                <svg class="favicon-mark" viewBox="160 16 80 44" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><image href="10-bigsky.svg" width="400" height="220"/></svg>
+                <span class="label">mark · 48 / 24</span>
+              </div>
+              <div class="favicon-cell">
+                <img class="favicon-full-lg" src="10-bigsky.svg" alt="full @48">
+                <img class="favicon-full" src="10-bigsky.svg" alt="full @24">
+                <span class="label">full · 48 / 24</span>
+              </div>
+            </div>
+          </div>
+          <div class="colorways">
+            <div class="cw cw-moss"><span class="cw-label">moss colorway</span><img src="10-bigsky.svg" alt=""></div>
+            <div class="cw cw-clay"><span class="cw-label">clay colorway</span><img src="10-bigsky.svg" alt=""></div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <div class="rule"></div>
+
+    <footer>
+      <p class="eyebrow">Next step</p>
+      <p class="lede">
+        Pick your favorite. The refinement task will produce <code>wordmark-light.svg</code>, <code>wordmark-inverted.svg</code>, a square <code>favicon.svg</code> using only the chosen mark, and wire them through <code>components/marketing/site-header.tsx</code> and <code>app/layout.tsx</code>. The current placeholder wordmark stays in place until then.
+      </p>
+    </footer>
+  </div>
+
+  <script>
+    // light drag-and-drop preview for the "current pick" zone
+    (function () {
+      const zone = document.getElementById('dropzone');
+      const filepick = document.getElementById('filepick');
+      function showSvg(text) {
+        zone.innerHTML = '';
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = text;
+        const svg = wrapper.querySelector('svg');
+        if (svg) {
+          svg.removeAttribute('width');
+          svg.removeAttribute('height');
+          svg.style.maxWidth = '100%';
+          svg.style.maxHeight = '160px';
+          zone.appendChild(svg);
+        } else {
+          zone.textContent = 'Not a valid SVG.';
+        }
+      }
+      zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('hover'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('hover'));
+      zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.classList.remove('hover');
+        const f = e.dataTransfer.files[0];
+        if (!f) return;
+        const r = new FileReader();
+        r.onload = () => showSvg(r.result);
+        r.readAsText(f);
+      });
+      zone.addEventListener('click', () => filepick.click());
+      filepick.addEventListener('change', () => {
+        const f = filepick.files[0];
+        if (!f) return;
+        const r = new FileReader();
+        r.onload = () => showSvg(r.result);
+        r.readAsText(f);
+      });
+    })();
+  </script>
+</body>
+</html>

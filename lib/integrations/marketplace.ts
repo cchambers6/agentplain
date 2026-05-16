@@ -47,6 +47,20 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     oauthConfigKey: 'GMAIL_OAUTH',
     status: 'available',
   },
+  {
+    id: 'outlook',
+    name: 'Outlook',
+    description:
+      'Connect your Outlook to read, categorize, coordinate, schedule, and draft replies.',
+    mcpEndpointTemplate: '/api/integrations/outlook-mcp/{workspaceId}',
+    // Microsoft Graph permission names. `Mail.ReadWrite` is the minimum
+    // for creating drafts via POST /me/messages; we deliberately do NOT
+    // request `Mail.Send` (Outlook equivalent of `gmail.send`) per the
+    // no-outbound rule. `offline_access` is required for refresh tokens.
+    scopes: ['Mail.Read', 'Mail.ReadWrite', 'offline_access'],
+    oauthConfigKey: 'MICROSOFT_OAUTH',
+    status: 'available',
+  },
 ];
 
 /**

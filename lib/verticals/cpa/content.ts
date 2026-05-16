@@ -12,11 +12,15 @@ import type { VerticalContent } from "../types";
 // subset of firms that do assurance work; pure tax-and-bookkeeping shops
 // can ignore that row.
 //
-// Pricing: surfaces as Regular tier per `project_stripe_both_surfaces.md`
-// (simplified 2026-05-12 — single productized tier across all 10 verticals;
-// state-specific compliance corpus and bespoke practice-mgmt integrations
-// route to /custom). The `tier: "plus"` field below is schema-only and is
-// NOT surfaced on the customer page.
+// Pricing: recommended at Partner tier per `project_stripe_both_surfaces.md`
+// (2026-05-15 — three customer-facing tiers Regular / Partner / Max). Partner
+// is the recommended starting tier for CPA practices because tax-season
+// cadence benefits from the 4 hrs/mo of named-service-partner reserved time
+// (review-gate adjustment, state-pack iteration, monthly business review).
+// The schema enum on disk stays `plus`; `lib/pricing/tiers.ts` →
+// `tierDisplayName("plus")` returns "Partner" so the customer never sees
+// the on-disk identifier. State-specific compliance corpus and bespoke
+// practice-mgmt integrations still route to /custom.
 
 export const cpa: VerticalContent = {
   slug: "cpa",
@@ -174,13 +178,13 @@ export const cpa: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "17x",
-    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
+    multiplier: "12x",
+    inputCost: "Partner tier · $299 per seat (solo), sliding to $199 per seat (50–99 seats) — first month free, includes 4 hrs/mo of named-service-partner time",
     outputValue: "$42,000 / yr in tax-season hour reclamation per staff seat",
     math:
-      "Tax season = 80-hour weeks. Doc-chase consumes ~25% of staff hours through 8 weeks (per b2b_vertical_opportunity_analysis_2026-04-27.md §3.4 — \"document chase consumes the front office for 8 weeks a year\"). 0.25 × 80 hours × 8 weeks × $65/hr loaded = $10,400 per staff per season. Add onboarding-letter automation and books-recon reclamation: total ~$42k/yr per staff against the solo Regular-tier seat at $199/mo ($2,388/yr) = ~17x at one seat. A 3-staff firm sees ~$126k/yr in reclamation against $7,164/yr of subscription — ~17x at three seats too. Anything that needs bespoke compliance, white-label, or 100+ seats routes to /custom.",
+      "Tax season = 80-hour weeks. Doc-chase consumes ~25% of staff hours through 8 weeks (per b2b_vertical_opportunity_analysis_2026-04-27.md §3.4 — \"document chase consumes the front office for 8 weeks a year\"). 0.25 × 80 hours × 8 weeks × $65/hr loaded = $10,400 per staff per season. Add onboarding-letter automation and books-recon reclamation: total ~$42k/yr per staff against the solo Partner-tier seat at $299/mo ($3,588/yr) = ~12x at one seat. A 3-staff firm sees ~$126k/yr in reclamation against $10,044/yr of subscription (3 seats × $279/mo at the 2–9 band) — ~12.5x at three seats. The 4 hrs/mo of named-service-partner time bundled with Partner is treated as commitment, not as ROI uplift here — primary research will reset this once first design partner signs. Customers needing bespoke compliance corpora, white-label, or 100+ seats route to Max (quote-based) or /custom (capability build).",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (single Regular tier, simplified 2026-05-12; per-seat ladder $199→$99). ROI band per `project_pricing_value_anchor.md` (Regular-tier ROI range 15x–107x). Doc-chase share cited from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.4. Staff-loading rate is operator-modeled — flagged in capability inbox for primary-research validation.",
+      "Pricing per `project_stripe_both_surfaces.md` (Partner tier per 2026-05-15 ratification; per-seat ladder $299→$199 with 4 hrs/mo of named-service-partner time included). ROI band per `project_pricing_value_anchor.md` (Partner-tier value scales with Regular's $2,900–$10,600/mo per seat plus the named-partner overlay). Doc-chase share cited from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.4. Staff-loading rate is operator-modeled — flagged in capability inbox for primary-research validation.",
   },
 
   claims: {

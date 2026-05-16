@@ -28,6 +28,13 @@ const REPO_ROOT = join(__dirname, "..");
 // hero.eyebrow and roi.inputCost). The vertical-content-polish PR
 // (feat/agentplain-vertical-content-polish, 2026-05-12) extended this test
 // to keep that regression from coming back.
+//
+// Note (2026-05-15 ratification): three customer-facing tiers are now in
+// scope (Regular / Partner / Max). The bans below were trimmed accordingly
+// — copy may legitimately mention "Partner tier", "Max tier", or "three
+// tiers"; what stays banned is the on-disk schema name "Plus" leaking to
+// the customer surface (it should always render via `tierDisplayName()`
+// as "Partner") and the deprecated 2026-05-09 productized Max prices.
 const VERTICAL_CONTENT_FILES: string[] = walkVerticalContent(
   join(REPO_ROOT, "lib", "verticals"),
 );
@@ -45,9 +52,12 @@ const SURFACE_FILES: string[] = [
 ];
 
 // Banned literal substrings. The flagged stat block + the V0/MVP/pilot
-// framings Conner banned 2026-05-11, plus the Plus/Max tier customer-surface
-// ban locked 2026-05-12 per `project_stripe_both_surfaces.md` (simplified
-// pricing model — Plus/Max stay schema-ready but are not surfaced).
+// framings Conner banned 2026-05-11. The Plus/Max tier customer-surface
+// ban from 2026-05-12 was REPLACED on 2026-05-15 with a narrower rule:
+// only the schema name "Plus" is banned from customer copy (it should
+// render as "Partner" via `tierDisplayName()`); the deprecated 2026-05-09
+// productized Max prices are also still banned because Max is now AD-HOC
+// quote-based and a literal "$499 → $299" would lie to the customer.
 const BANNED_LITERALS: string[] = [
   "AGENTS IN THE FLEET",
   "PILOT LENGTH",
@@ -63,20 +73,20 @@ const BANNED_LITERALS: string[] = [
   "smart insights",
   "AI-powered",
   "machine learning",
-  // Plus/Max tier customer-surface bans (simplified pricing 2026-05-12).
-  // The literal "Plus tier" / "Max tier" is the call-out; bare "Plus" /
-  // "Max" appear in unrelated copy ("plus mistakes avoided") so we use the
-  // specific 2-word forms here.
+  // Schema-name-leak ban — customer copy must render `plus` as "Partner"
+  // via `tierDisplayName()` (locked 2026-05-15 per
+  // `memory/project_stripe_both_surfaces.md`). The 2-word forms below
+  // catch the leak without flagging unrelated "plus mistakes avoided"
+  // copy. "Partner tier" / "Max tier" / "three tiers" are LEGITIMATE
+  // post-2026-05-15 and intentionally NOT banned.
   "Plus tier",
-  "Max tier",
   "Plus: $299",
+  // Deprecated 2026-05-09 productized Max prices — Max is now AD-HOC
+  // quote-based per the 2026-05-15 ratification, so any literal price
+  // ladder for Max would be wrong. Customer copy must say "quote-based"
+  // for Max, never a fixed price.
   "Max: $499",
-  "$299 → $199",
   "$499 → $299",
-  "three tiers",
-  "Three tiers",
-  "across every tier",
-  "across all three tiers",
 ];
 
 // Banned regex patterns. Case-insensitive, word-boundary anchored.

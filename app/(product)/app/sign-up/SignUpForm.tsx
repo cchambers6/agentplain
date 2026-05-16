@@ -163,7 +163,7 @@ function TierPicker({
                   isActive ? "text-clay" : "text-mute"
                 }`}
               >
-                {opt.tier === "max" ? "Max" : opt.tier === "plus" ? "Partner" : "Regular"}
+                {tierDisplayName(opt.tier)}
               </p>
               <p className="mt-2 font-display text-lg leading-tight text-ink">
                 {opt.headline}

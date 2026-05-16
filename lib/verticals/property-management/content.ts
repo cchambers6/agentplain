@@ -174,7 +174,7 @@ export const propertyManagement: VerticalContent = {
     math:
       "1 PM @ $48k all-in × ~25% of day on tenant inbound and maintenance routing = $12k/yr per PM in labor reclamation. At 3 PMs that is $36k against 3 Regular-tier seats at $199/mo solo ($7,164/yr) — ~5x at three PMs, sliding to ~15x+ as a portfolio grows past 25 seats and per-seat drops to $119/mo. Delinquency-day compression of 2 days/month at $200/door in rent float × 200 doors = $80k/yr additional in worst-case operations (modeled as upside, not committed).",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (per-seat ladder, locked 2026-05-09). ROI band per `project_pricing_value_anchor.md`. PM-hour distribution and delinquency-float math pending primary-research validation — flagged in capability inbox. Buildium/AppFolio market dynamics referenced from public segment reporting; specific savings claims are operator-modeled, not customer-attested.",
+      "Pricing per `project_stripe_both_surfaces.md` (Regular tier per the 2026-05-15 three-tier ratification — Regular is the default entry path; PM operations wanting named-service-partner reserved time can step up to Partner ($299→$199/seat), and high-intensity multi-state portfolios route to Max (quote-based)). ROI band per `project_pricing_value_anchor.md`. PM-hour distribution and delinquency-float math pending primary-research validation — flagged in capability inbox. Buildium/AppFolio market dynamics referenced from public segment reporting; specific savings claims are operator-modeled, not customer-attested.",
   },
 
   claims: {

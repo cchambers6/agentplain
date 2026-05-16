@@ -9,10 +9,15 @@ import type { VerticalContent } from "../types";
 // roles (tech + dispatcher) so the page reads for ServiceTitan/Housecall
 // Pro/Jobber shops too.
 //
-// Pricing: surfaces as Regular tier per `project_stripe_both_surfaces.md`
-// (simplified 2026-05-12 — single productized tier; storm-cycle / supplement
-// depth and white-label route to /custom). The `tier: "plus"` field below is
-// schema-only and is NOT surfaced on the customer page.
+// Pricing: recommended at Partner tier per `project_stripe_both_surfaces.md`
+// (2026-05-15 — three customer-facing tiers Regular / Partner / Max).
+// Partner is the recommended starting tier for trades operations because
+// storm-cycle volatility (estimate-to-supplement coordination, carrier
+// adjuster channel maintenance) benefits from the 4 hrs/mo of named-
+// service-partner reserved time. Schema enum stays `plus` on disk;
+// `tierDisplayName("plus")` returns "Partner" so customers never see the
+// on-disk identifier. Storm-cycle / supplement depth and white-label
+// engagements route to Max (quote-based) or /custom (capability build).
 //
 // JTBD ratified 2026-05-12 against published role workflows for the 5–25-
 // crew residential trades operation (ServiceTitan implementation playbook,
@@ -169,13 +174,13 @@ export const homeServices: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "21x",
-    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
+    multiplier: "14x",
+    inputCost: "Partner tier · $299 per seat (solo), sliding to $199 per seat (50–99 seats) — first month free, includes 4 hrs/mo of named-service-partner time",
     outputValue: "$50,000+ / yr in supplement reclamation alone at a storm-heavy shop",
     math:
-      "Per `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3: \"This single agent [insurance supplement] saves $50K+/yr at a storm-heavy shop.\" Against the solo Regular-tier seat at $199/mo ($2,388/yr) that single value stream alone is ~21x at one seat. Stack on cycle-time compression (estimate-to-contract velocity), reduced lead leakage across HomeAdvisor / Angi / LSA / GBP, and back-office reclamation — total is materially higher than $50k for shops doing $5–25M/yr. Anything that needs bespoke compliance, white-label, or 100+ seats routes to /custom.",
+      "Per `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3: \"This single agent [insurance supplement] saves $50K+/yr at a storm-heavy shop.\" Against the solo Partner-tier seat at $299/mo ($3,588/yr) that single value stream alone is ~14x at one seat. Stack on cycle-time compression (estimate-to-contract velocity), reduced lead leakage across HomeAdvisor / Angi / LSA / GBP, and back-office reclamation — total is materially higher than $50k for shops doing $5–25M/yr. The 4 hrs/mo of named-service-partner time bundled with Partner is treated as commitment, not as ROI uplift here. White-label, multi-state ops, or 100+ seats route to Max (quote-based) or /custom (capability build).",
     citation:
-      "Supplement-savings claim cited verbatim from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3. Pricing per `project_stripe_both_surfaces.md` (single Regular tier, simplified 2026-05-12; per-seat ladder $199→$99). ROI band per `project_pricing_value_anchor.md` (Regular-tier ROI range 15x–107x).",
+      "Supplement-savings claim cited verbatim from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3. Pricing per `project_stripe_both_surfaces.md` (Partner tier per 2026-05-15 ratification; per-seat ladder $299→$199 with 4 hrs/mo of named-service-partner time included). ROI band per `project_pricing_value_anchor.md`.",
   },
 
   claims: {

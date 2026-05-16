@@ -48,6 +48,7 @@ import type { KnowledgeUpsertInput } from './types';
 import { getAllVerticals } from '../verticals';
 import type { VerticalContent } from '../verticals/types';
 import { listCorpusVerticals, loadCorpusFor } from '../agents/sentinel';
+import { tierDisplayName, type TierName } from '../pricing/tiers';
 
 // ── SKILL corpus ────────────────────────────────────────────────────────
 
@@ -452,7 +453,7 @@ function buildJtbdSynthesisRows(v: VerticalContent): KnowledgeUpsertInput[] {
     const sourceId = `jtbd:${v.slug}:${slugifyRole(table.role)}`;
 
     const bodyParts: string[] = [
-      `Vertical: ${v.name} (slug=${v.slug}). Tier surfaced as Regular per project_stripe_both_surfaces.md.`,
+      `Vertical: ${v.name} (slug=${v.slug}). Recommended tier: ${tierDisplayName(v.tier as TierName)} per project_stripe_both_surfaces.md (2026-05-15 three-tier ratification).`,
       `Role: ${table.role}.`,
       `Mission audience: ${v.missionSubject ?? v.name}.`,
       ``,

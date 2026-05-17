@@ -20,13 +20,49 @@ export const metadata: Metadata = {
 // tier + Custom engagements). Per `feedback_everything_tells_a_story.md`,
 // every element earns its place along the visitor's story arc:
 //
-//   1. Can you build the thing I actually need?    → hero
-//   2. What does "custom" actually look like?      → 6 example builds
-//   3. How do we work together?                    → 4-step process
-//   4. What does it cost?                          → pricing framework
-//   5. Why should I trust the number?              → proof section
-//   6. How do I start the conversation?            → contact form
-//   7. What if I'm not ready to fill the form?     → closing CTA + mailto
+//   1.  Can you build the thing I actually need?   → hero
+//   1.5 Is this for me?                            → "Who this is for"
+//   2.  What does "custom" actually look like?     → 6 example builds
+//   3.  How do we work together?                   → 4-step process
+//   4.  What does it cost?                         → pricing framework
+//   5.  Why should I trust the number?             → proof section
+//   5.5 What future am I joining?                  → vision tie-in
+//   6.  How do I start the conversation?           → Custom-vs-Max
+//                                                    distinction + form
+//   7.  What if I'm not ready to fill the form?    → closing CTA + mailto
+
+// Q1.5 — who this is for. Sits between hero ("can you build it?") and
+// "what custom looks like" so a visitor self-identifies BEFORE seeing the
+// example builds. Frames Custom as a surface for operators who have
+// outgrown Regular ($199 → $99 per-seat, plug-and-play) rather than a
+// different product. Each bullet maps to one of the example builds below.
+const whoThisIsFor = [
+  {
+    label: "50+ seats with vertical compliance gates",
+    body:
+      "State-specific, carrier-specific, lender-specific rules beyond the ten counsel-reviewed corpuses we ship. The standard corpus is the floor; you need an overlay calibrated to how your shop actually files.",
+  },
+  {
+    label: "Multi-state operations",
+    body:
+      "The same workflow runs against different rule sets simultaneously — a closing in Georgia and one in Florida hit different disclosure deadlines, different earnest-money rules, different licensing constraints. Custom gives each state its own pass.",
+  },
+  {
+    label: "White-label deployment",
+    body:
+      "Your firm's wordmark on the surface, your data isolation posture, your customer-facing brand — useful when you're reselling to your own customers (a brokerage offering it to agents under your brand, a CPA firm offering it to clients).",
+  },
+  {
+    label: "Custom skills for proprietary workflows",
+    body:
+      "A vendor-specific dispute filing, an internal QA loop, a particular escrow-doc dance, a recurring buyer-side checklist — workflows the standard fleet doesn't ship a skill for yet because they're specific to how you run your shop.",
+  },
+  {
+    label: "100+ seats / enterprise terms",
+    body:
+      "Your own contract, security review, procurement path, audit access. The Regular ladder caps at 99 seats; past that the engagement is scoped per customer, not per seat.",
+  },
+];
 
 // Q2 — 6 example builds. Each one anchored in real fleet capabilities we
 // already run on flatsbo (per `feedback_agentplain_built_by_agents.md`) or
@@ -186,6 +222,48 @@ export default async function CustomPage({ searchParams }: PageProps) {
         </div>
       </section>
 
+      {/* Q1.5 — who this is for */}
+      <Section
+        tone="deep"
+        eyebrow="Who this is for"
+        title="When Regular runs out of room."
+        intro={
+          <>
+            <p>
+              Regular ($199 → $99 per seat, every vertical, 1–99 seats,
+              plug-and-play) covers most local businesses. Custom is the
+              surface for the operators Regular doesn&rsquo;t yet reach.
+            </p>
+            <p className="mt-4">
+              If any of these describe you, the conversation starts here. If
+              none of them do, Regular is the right fit and{" "}
+              <Link href="/pricing" className="underline">
+                /pricing
+              </Link>{" "}
+              is the page you want.
+            </p>
+          </>
+        }
+      >
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2 lg:grid-cols-3">
+          {whoThisIsFor.map((row, i) => (
+            <div key={row.label} className="bg-paper p-7 md:p-8">
+              <div className="flex items-baseline gap-3">
+                <p className="font-mono text-[11px] tracking-eyebrow text-clay">
+                  {String(i + 1).padStart(2, "0")}
+                </p>
+                <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+                  {row.label}
+                </p>
+              </div>
+              <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
+                {row.body}
+              </p>
+            </div>
+          ))}
+        </div>
+      </Section>
+
       {/* Q2 — what custom looks like */}
       <Section
         eyebrow="What custom looks like"
@@ -290,12 +368,70 @@ export default async function CustomPage({ searchParams }: PageProps) {
         </div>
       </Section>
 
+      {/* Q5.5 — vision tie-in. Vision line LOCKED VERBATIM per
+          `project_agentplain_mission_and_positioning.md`. The page just
+          showed proof; the visitor now sees the why behind the surface
+          they're about to engage with. */}
+      <Section
+        eyebrow="Where this leads"
+        title={
+          <>
+            Local businesses can thrive through access to{" "}
+            <span className="text-clay">
+              affordable, best-in-class tools and services.
+            </span>
+          </>
+        }
+        intro="Custom is how we extend the surface when &lsquo;affordable + best-in-class&rsquo; needs more depth than the productized fleet ships. The promise holds: the human stays in the loop, the audit trail stays open, the per-seat ROI math stays intact. The shape grows to fit your operation. That&rsquo;s the point."
+      >
+        <p className="max-w-3xl font-display text-2xl leading-snug text-ink md:text-3xl">
+          Same fleet, same control surface, scoped to the work only you do.
+        </p>
+      </Section>
+
       {/* Q6 — contact form */}
       <Section
         eyebrow="Get scoped"
         title="Tell us what you need."
         intro="Six fields. A human reads each one. We come back within two business days with a scoping-call invite and a first read on what we&rsquo;d build."
       >
+        {/* Custom vs Max distinction — preps the inquiry-type radio toggle
+            below. Source: `project_stripe_both_surfaces.md` (Custom = build
+            new capabilities Regular doesn't ship; Max = more service
+            intensity at standard skills). The two can stack on one
+            customer; the form's "Not sure / both" option routes that. */}
+        <div className="mb-10 grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
+          <div className="bg-paper p-7 md:p-8">
+            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+              Custom skill build
+            </p>
+            <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
+              Building <strong className="font-medium text-ink">new
+              capabilities</strong> we don&rsquo;t have yet — a skill, an
+              integration, a bespoke corpus, a white-label surface. Anything
+              the productized fleet doesn&rsquo;t already ship.
+            </p>
+          </div>
+          <div className="bg-paper p-7 md:p-8">
+            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+              Max-tier service engagement
+            </p>
+            <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
+              <strong className="font-medium text-ink">More service
+              intensity</strong> at standard skills — dedicated success,
+              multi-state ops, white-label deployment, regulated-vertical
+              compliance overlays. Quote-based, scoped per engagement.
+            </p>
+          </div>
+        </div>
+        <p className="mb-10 max-w-3xl text-[15px] leading-relaxed text-ink-soft">
+          The two can stack:{" "}
+          <strong className="font-medium text-ink">
+            you can be on Max AND have a Custom engagement.
+          </strong>{" "}
+          The same form below routes both — pick the one that fits, or pick
+          &ldquo;Not sure / both&rdquo; and a human reads what you wrote.
+        </p>
         <CustomInquiryForm defaultInquiryType={defaultInquiryType} />
       </Section>
 

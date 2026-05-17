@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220" role="img" aria-label="agentplain — intelligence rooted in reality" style="color:#1A1A1F">
+  <rect width="400" height="220" fill="#F7F4ED"/>
+  <g id="mark" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- horizon line (anchors silo to land, extends past silo) -->
+    <line x1="166" y1="48" x2="234" y2="48" stroke-width="1.4"/>
+    <!-- silo body: vertical sides, anchored to horizon -->
+    <line x1="193" y1="48" x2="193" y2="22" stroke-width="1.8"/>
+    <line x1="207" y1="48" x2="207" y2="22" stroke-width="1.8"/>
+    <!-- silo dome: shallow arc (not hemisphere — reads silo, not rocket) -->
+    <path d="M193 22 Q200 14 207 22" stroke-width="1.8"/>
+    <!-- ribbed metal band lines: silo signature -->
+    <line x1="194" y1="30" x2="206" y2="30" stroke-width="0.9" opacity="0.5"/>
+    <line x1="194" y1="37" x2="206" y2="37" stroke-width="0.9" opacity="0.5"/>
+    <line x1="194" y1="44" x2="206" y2="44" stroke-width="0.9" opacity="0.5"/>
+  </g>
+  <text x="200" y="135" text-anchor="middle" font-family="'Source Serif 4', 'Source Serif Pro', Georgia, serif" font-size="52" font-weight="500" fill="currentColor" letter-spacing="-0.8">agentplain</text>
+  <text x="200" y="175" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace" font-size="9.5" font-weight="500" fill="currentColor" letter-spacing="3.6">INTELLIGENCE  ROOTED  IN  REALITY</text>
+</svg>

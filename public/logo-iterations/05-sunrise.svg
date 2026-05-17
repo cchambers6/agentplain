@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220" role="img" aria-label="agentplain — intelligence rooted in reality" style="color:#1A1A1F">
+  <rect width="400" height="220" fill="#F7F4ED"/>
+  <g id="mark" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- horizon line — extends slightly past disc on either side -->
+    <line x1="164" y1="48" x2="236" y2="48" stroke-width="1.4"/>
+    <!-- half disc rising over horizon (outlined, reads as sun/light, not hill) -->
+    <path d="M183 48 A17 17 0 0 1 217 48" stroke-width="1.8"/>
+    <!-- inner suggestion of light: short horizontal chord inside the arc -->
+    <line x1="190" y1="40" x2="210" y2="40" stroke-width="1" opacity="0.55"/>
+  </g>
+  <text x="200" y="135" text-anchor="middle" font-family="'Source Serif 4', 'Source Serif Pro', Georgia, serif" font-size="52" font-weight="500" fill="currentColor" letter-spacing="-0.8">agentplain</text>
+  <text x="200" y="175" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace" font-size="9.5" font-weight="500" fill="currentColor" letter-spacing="3.6">INTELLIGENCE  ROOTED  IN  REALITY</text>
+</svg>

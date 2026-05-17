@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220" role="img" aria-label="agentplain — intelligence rooted in reality" style="color:#1A1A1F">
+  <rect width="400" height="220" fill="#F7F4ED"/>
+  <g id="mark" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <!-- horizon line: low on the mark, leaving the sky big -->
+    <line x1="162" y1="52" x2="238" y2="52" stroke-width="1.6" fill="none"/>
+    <!-- small cloud: stacked rounded forms, upper-left of horizon -->
+    <path d="M183 30
+             C179 30 178 26 182 25
+             C182 22 188 21 190 24
+             C193 22 199 24 199 28
+             C202 28 203 32 199 32
+             L184 32
+             C181 32 180 30 183 30 Z"
+          fill="currentColor" stroke="none"/>
+  </g>
+  <text x="200" y="135" text-anchor="middle" font-family="'Source Serif 4', 'Source Serif Pro', Georgia, serif" font-size="52" font-weight="500" fill="currentColor" letter-spacing="-0.8">agentplain</text>
+  <text x="200" y="175" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace" font-size="9.5" font-weight="500" fill="currentColor" letter-spacing="3.6">INTELLIGENCE  ROOTED  IN  REALITY</text>
+</svg>

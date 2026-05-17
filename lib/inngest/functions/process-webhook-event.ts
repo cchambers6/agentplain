@@ -17,8 +17,10 @@
  * state on every fire. There is no in-memory cache across runs.
  *
  * Per `feedback_no_silent_vendor_lock.md`: the function imports
- * `GmailMessageAdapter` (which speaks `MessageFetcher` + `DraftPersister`)
- * and the skill runner; it never imports `googleapis` directly.
+ * `GmailMessageAdapter` (which now wraps the Gmail MCP server — see
+ * `lib/integrations/gmail-mcp/`) and the skill runner; it never imports
+ * `googleapis` directly. The MCP-first migration (Phase A) confines all
+ * Gmail SDK calls to `lib/integrations/google/` + `lib/integrations/gmail-mcp/server.ts`.
  *
  * Per `project_no_outbound_architecture.md`: every code path here is
  * read or draft. The Gmail adapter has no send method exposed.
@@ -80,7 +82,7 @@ export async function processUnprocessedWebhookEvents(
       continue;
     }
     try {
-      const adapter = new GmailMessageAdapter({ credential });
+      const adapter = new GmailMessageAdapter({ workspaceId: workspace.id });
       const { record } = await runSkillChain({
         workspace,
         event,

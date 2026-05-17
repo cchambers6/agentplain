@@ -166,6 +166,33 @@ enum WebhookSubscriptionStatus {
   UNSUBSCRIBED
 }
 
+// Inquiry intake type. Drives operator triage on /operator/inquiries and
+// the SLA framing in the customer-facing confirmation. CUSTOM_SKILL_BUILD
+// is the existing /custom path (custom skill, integration, white-label,
+// bespoke compliance, dedicated success). MAX_SERVICE_ENGAGEMENT is the
+// quote-based Max-tier path per `project_stripe_both_surfaces.md` (Max is
+// ad-hoc, not productized in Stripe). NOT_SURE keeps visitors who can't
+// self-classify out of the failure mode of picking wrong.
+enum InquiryType {
+  CUSTOM_SKILL_BUILD
+  MAX_SERVICE_ENGAGEMENT
+  NOT_SURE
+}
+
+// Operator triage state for an Inquiry. NEW is the post-submit default;
+// TRIAGED_* records Conner's routing decision; DECLINED removes the row
+// from the active queue; CONVERTED is the terminal happy-path (workspace
+// created, Max engagement signed, or Custom SOW signed — the audit trail
+// is in AuditLog, not in this enum).
+enum InquiryStatus {
+  NEW
+  TRIAGED_CUSTOM
+  TRIAGED_MAX
+  TRIAGED_BOTH
+  DECLINED
+  CONVERTED
+}
+
 // Knowledge substrate context kinds (per project_knowledge_substrate.md).
 // Five scopes the fleet's customer-facing answers draw from:
 //   SKILL          — capability documentation (read/categorize/coordinate/schedule/draft)
@@ -198,6 +225,7 @@ model User {
   auditEntriesActor    AuditLog[]              @relation("AuditActor")
   auditEntriesActAs    AuditLog[]              @relation("AuditActingAs")
   magicLinkTokens      MagicLinkToken[]
+  triagedInquiries     Inquiry[]               @relation("InquiryTriagedBy")
 
   @@index([email])
 }
@@ -659,6 +687,57 @@ model Embedding {
   @@unique([sourceType, sourceId])
   @@index([contextKind, workspaceId])
   @@index([documentId])
+}
+
+// Inquiry from /custom contact form. Stays inside the no-outbound
+// architecture (per `project_no_outbound_architecture.md`): the row is
+// persisted, one email to Conner's inbox fires, and the visitor sees a
+// synchronous ack. No drip, no auto-follow. Operator triages via
+// /operator/inquiries; downstream actions (workspace provisioning, Max
+// engagement signing, Custom SOW) happen out of band and write back here.
+//
+// Not workspace-scoped at submit time — most inquiries come from prospects
+// who don't yet have a workspace. The convertedWorkspaceId column gets
+// populated when triage flips status to CONVERTED.
+//
+// RLS: operator-only read/write (policy in the migration). The submit
+// path uses `withSystemContext` to insert under the operator GUC.
+model Inquiry {
+  id                    String         @id @default(uuid()) @db.Uuid
+  // Free-text intake fields. Stored verbatim — triage reads them as-is.
+  name                  String
+  business              String
+  /// One of CUSTOM_INQUIRY_VERTICAL_OPTIONS slugs (lib/custom-inquiry/types).
+  /// Wider than the Vertical enum (includes "other"), so kept as a string.
+  vertical              String
+  seats                 String
+  needs                 String
+  email                 String
+  inquiryType           InquiryType    @default(CUSTOM_SKILL_BUILD)
+  /// Optional intensity prose — required at the form layer when inquiryType
+  /// is MAX_SERVICE_ENGAGEMENT, optional otherwise. Captures multi-state,
+  /// white-label, compliance-gate context that drives the quote.
+  serviceIntensityNotes String?
+  status                InquiryStatus  @default(NEW)
+  /// Resend / test-provider message id from the notification email. Null
+  /// when the mail send failed; the row is still persisted so the inquiry
+  /// is never silently lost.
+  emailMessageId        String?
+  /// Operator-typed prose captured during triage (`triageInquiryAction`).
+  triageNotes           String?
+  triagedAt             DateTime?
+  triagedByUserId       String?        @db.Uuid
+  /// Populated when the inquiry converts into a real workspace (Max
+  /// engagement signed, Custom SOW signed). Soft reference — Inquiry rows
+  /// outlive the workspace if a customer churns.
+  convertedWorkspaceId  String?        @db.Uuid
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  triagedBy             User?          @relation("InquiryTriagedBy", fields: [triagedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([inquiryType, status])
+  @@index([createdAt])
 }
 
 // Magic-link tokens issued for sign-in. Single-use; consumed on verify.

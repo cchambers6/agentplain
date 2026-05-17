@@ -2,9 +2,11 @@ import Link from "next/link";
 import { withWorkspace } from "@/lib/auth";
 import { withRls } from "@/lib/db";
 import {
+  PARTNER_RESERVED_HOURS_PER_MONTH,
   PER_SEAT_MONTHLY_USD_CENTS,
   SEAT_BANDS,
-  TIER_ORDER,
+  TIER_TAGLINE,
+  tierDisplayName,
   tierFromVerticalTier,
   monthlyChargeUsdCents,
   type TierName,
@@ -158,63 +160,110 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
               <div>
                 <p className="eyebrow mb-2">Plan</p>
                 <p className="font-display text-2xl text-ink">
-                  agentplain {capitalize(tier)}
+                  agentplain {tierDisplayName(tier)}
                 </p>
                 <p className="mt-1 text-[13px] text-ink-soft">
-                  {statusLabel(subscription.status)} ·{" "}
-                  {SEAT_BANDS[subscription.seatBand].label}
+                  {statusLabel(subscription.status)}
+                  {tier === "max"
+                    ? " · Quote-based engagement"
+                    : ` · ${SEAT_BANDS[subscription.seatBand].label}`}
                 </p>
               </div>
-              <div>
-                <p className="eyebrow mb-2">Seats</p>
-                <p className="font-display text-2xl text-ink">
-                  {subscription.seats}
-                </p>
-                <p className="mt-1 text-[13px] text-ink-soft">
-                  {formatCents(charge?.perSeatCents ?? 0)}/seat/mo
-                </p>
-              </div>
-              <div>
-                <p className="eyebrow mb-2">Monthly</p>
-                <p className="font-display text-2xl text-ink">
-                  {formatCents(charge?.totalCents ?? 0)}
-                </p>
-                <p className="mt-1 text-[13px] text-ink-soft">
-                  Next charge {formatDate(subscription.currentPeriodEnd)}
-                </p>
-              </div>
+              {tier === "max" ? (
+                <div className="md:col-span-2">
+                  <p className="eyebrow mb-2">Engagement</p>
+                  <p className="font-display text-2xl text-ink">Custom scope</p>
+                  <p className="mt-1 text-[13px] text-ink-soft">
+                    Billed per your signed engagement. Invoices appear below
+                    as they&rsquo;re issued.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <p className="eyebrow mb-2">Seats</p>
+                    <p className="font-display text-2xl text-ink">
+                      {subscription.seats}
+                    </p>
+                    <p className="mt-1 text-[13px] text-ink-soft">
+                      {formatCents(charge?.perSeatCents ?? 0)}/seat/mo
+                    </p>
+                  </div>
+                  <div>
+                    <p className="eyebrow mb-2">Monthly</p>
+                    <p className="font-display text-2xl text-ink">
+                      {formatCents(charge?.totalCents ?? 0)}
+                    </p>
+                    <p className="mt-1 text-[13px] text-ink-soft">
+                      Next charge {formatDate(subscription.currentPeriodEnd)}
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
+            <p className="mt-5 text-[13px] leading-relaxed text-ink-soft">
+              {TIER_TAGLINE[tier]}
+              {tier === "plus" ? (
+                <>
+                  {" "}
+                  Your named service partner reserves{" "}
+                  {PARTNER_RESERVED_HOURS_PER_MONTH} hours/month for this
+                  workspace.
+                </>
+              ) : null}
+            </p>
 
             <div className="mt-6 flex flex-wrap gap-3">
-              <form action={addPaymentMethodAction.bind(null, workspaceId)}>
-                <button
-                  type="submit"
-                  className={
-                    hasPaymentMethod
-                      ? "btn-secondary inline-flex"
-                      : "btn-primary inline-flex"
-                  }
+              {tier === "max" ? (
+                <Link
+                  href="/custom?type=max#custom-contact"
+                  className="btn-primary inline-flex"
                 >
-                  {hasPaymentMethod ? "Update payment method" : "Add payment method"}
-                </button>
-              </form>
-              <form action={openPortalAction.bind(null, workspaceId)}>
-                <button type="submit" className="btn-secondary inline-flex">
-                  View invoices + receipts
-                </button>
-              </form>
-              {!subscription.cancelAtPeriodEnd ? (
-                <form action={cancelSubscriptionAction.bind(null, workspaceId)}>
-                  <button type="submit" className="btn-secondary inline-flex">
-                    Cancel subscription
-                  </button>
-                </form>
-              ) : null}
+                  Manage your engagement
+                  <span aria-hidden>→</span>
+                </Link>
+              ) : (
+                <>
+                  <form
+                    action={addPaymentMethodAction.bind(null, workspaceId)}
+                  >
+                    <button
+                      type="submit"
+                      className={
+                        hasPaymentMethod
+                          ? "btn-secondary inline-flex"
+                          : "btn-primary inline-flex"
+                      }
+                    >
+                      {hasPaymentMethod
+                        ? "Update payment method"
+                        : "Add payment method"}
+                    </button>
+                  </form>
+                  <form action={openPortalAction.bind(null, workspaceId)}>
+                    <button type="submit" className="btn-secondary inline-flex">
+                      View invoices + receipts
+                    </button>
+                  </form>
+                  {!subscription.cancelAtPeriodEnd ? (
+                    <form
+                      action={cancelSubscriptionAction.bind(null, workspaceId)}
+                    >
+                      <button
+                        type="submit"
+                        className="btn-secondary inline-flex"
+                      >
+                        Cancel subscription
+                      </button>
+                    </form>
+                  ) : null}
+                </>
+              )}
             </div>
           </section>
 
-          {/* Change plan form */}
-          <ChangePlanCard
+          {/* Tier-aware upgrade / downgrade UI */}
+          <TierActionsCard
             currentTier={tier}
             currentSeats={subscription.seats}
             workspaceId={workspaceId}
@@ -345,39 +394,67 @@ function MissingSubscriptionState() {
   );
 }
 
-function ChangePlanCard(props: {
+// Tier-aware upgrade/downgrade surface. Three branches drive the same
+// `changePlanAction` (and one /custom link), gated by the workspace's
+// current tier:
+//
+//   Regular → "Upgrade to Partner" (Stripe Checkout swap)
+//   Partner → "Downgrade to Regular" (confirm-gated) + "Upgrade to Max"
+//             link routing to /custom?type=max#custom-contact
+//   Max     → "Manage your engagement" link (no self-serve downgrade —
+//             Max engagements are scoped per customer, so re-scoping is
+//             an out-of-band conversation with Conner).
+//
+// Per the 2026-05-15 amendment to `project_stripe_both_surfaces.md`, Max
+// has no Stripe Product / Checkout flow; the link routes through the
+// same `Inquiry` queue that powers /custom.
+function TierActionsCard(props: {
   currentTier: TierName;
   currentSeats: number;
   workspaceId: string;
 }) {
+  if (props.currentTier === "max") {
+    return (
+      <section className="mt-10 border border-rule bg-paper p-6">
+        <p className="eyebrow mb-2">Manage your engagement</p>
+        <p className="text-[14px] leading-relaxed text-ink-soft">
+          Max engagements are scoped per customer — re-scoping, white-label
+          updates, additional dedicated hours, multi-state expansion all
+          happen through the same intake. A human reads every note and gets
+          back inside two business days.
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Link
+            href="/custom?type=max#custom-contact"
+            className="btn-primary inline-flex"
+          >
+            Talk to your service partner
+            <span aria-hidden>→</span>
+          </Link>
+          <a
+            href="mailto:hello@agentplain.com"
+            className="text-[13px] text-ink underline"
+          >
+            Or email a human directly
+          </a>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="mt-10 border border-rule bg-paper p-6">
-      <p className="eyebrow mb-2">Change plan</p>
-      <p className="text-[14px] text-ink-soft">
-        Picking a new tier or seat count routes you through Stripe Checkout —
-        promotion codes work there. Existing trial period is preserved on
-        upgrade/downgrade.
+      <p className="eyebrow mb-2">Tier + seats</p>
+      <p className="text-[14px] leading-relaxed text-ink-soft">
+        Seat count updates route through Stripe Checkout — promotion codes
+        work there. Existing trial period is preserved on upgrade. 100+
+        seats route to a Custom engagement.
       </p>
       <form
         action={changePlanAction.bind(null, props.workspaceId)}
-        className="mt-4 flex flex-wrap items-end gap-4"
+        className="mt-4 flex flex-wrap items-end gap-3"
       >
-        <label className="flex flex-col gap-1 text-[13px]">
-          <span className="font-mono uppercase tracking-eyebrow text-[11px] text-mute">
-            Tier
-          </span>
-          <select
-            name="tier"
-            defaultValue={props.currentTier}
-            className="border border-rule bg-paper px-3 py-2 text-[14px] text-ink"
-          >
-            {TIER_ORDER.map((t) => (
-              <option key={t} value={t}>
-                {capitalize(t)} · {formatCents(PER_SEAT_MONTHLY_USD_CENTS[t].SEATS_1)}/seat
-              </option>
-            ))}
-          </select>
-        </label>
+        <input type="hidden" name="tier" value={props.currentTier} />
         <label className="flex flex-col gap-1 text-[13px]">
           <span className="font-mono uppercase tracking-eyebrow text-[11px] text-mute">
             Seats
@@ -391,14 +468,135 @@ function ChangePlanCard(props: {
             className="w-28 border border-rule bg-paper px-3 py-2 text-[14px] text-ink"
           />
         </label>
-        <button type="submit" className="btn-primary inline-flex">
-          Update plan
+        <button type="submit" className="btn-secondary inline-flex">
+          Update seats
         </button>
       </form>
-      <p className="mt-3 text-[12px] text-mute">
-        100+ seats route to a custom build engagement.
-      </p>
+
+      <div className="mt-6 grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
+        {props.currentTier === "regular" ? (
+          <UpgradeToPartner
+            workspaceId={props.workspaceId}
+            currentSeats={props.currentSeats}
+          />
+        ) : (
+          <DowngradeToRegular
+            workspaceId={props.workspaceId}
+            currentSeats={props.currentSeats}
+          />
+        )}
+        <UpgradeToMax />
+      </div>
     </section>
+  );
+}
+
+function UpgradeToPartner({
+  workspaceId,
+  currentSeats,
+}: {
+  workspaceId: string;
+  currentSeats: number;
+}) {
+  const partnerSoloCents = PER_SEAT_MONTHLY_USD_CENTS.plus.SEATS_1;
+  return (
+    <div className="bg-paper p-5">
+      <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+        Upgrade · Partner
+      </p>
+      <p className="mt-2 font-display text-xl leading-tight text-ink">
+        Add a named service partner.
+      </p>
+      <p className="mt-2 text-[13px] leading-relaxed text-ink-soft">
+        Everything in Regular, plus {PARTNER_RESERVED_HOURS_PER_MONTH} hours
+        per month of a dedicated service partner. From{" "}
+        {formatCents(partnerSoloCents)}/seat/mo at 1 seat — drops with the
+        ladder.
+      </p>
+      <form
+        action={changePlanAction.bind(null, workspaceId)}
+        className="mt-4"
+      >
+        <input type="hidden" name="tier" value="plus" />
+        <input type="hidden" name="seats" value={currentSeats} />
+        <button type="submit" className="btn-primary inline-flex">
+          Upgrade to Partner
+          <span aria-hidden>→</span>
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function DowngradeToRegular({
+  workspaceId,
+  currentSeats,
+}: {
+  workspaceId: string;
+  currentSeats: number;
+}) {
+  return (
+    <div className="bg-paper p-5">
+      <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+        Downgrade · Regular
+      </p>
+      <p className="mt-2 font-display text-xl leading-tight text-ink">
+        Drop the named service partner.
+      </p>
+      <p className="mt-2 text-[13px] leading-relaxed text-ink-soft">
+        Keeps the fleet running on standard managed AI ops. You lose the{" "}
+        {PARTNER_RESERVED_HOURS_PER_MONTH} hours/month of a named partner
+        and drop to the Regular ladder.
+      </p>
+      <form
+        action={changePlanAction.bind(null, workspaceId)}
+        className="mt-4 space-y-2"
+      >
+        <input type="hidden" name="tier" value="regular" />
+        <input type="hidden" name="seats" value={currentSeats} />
+        <label className="flex items-start gap-2 text-[12px] leading-relaxed text-ink-soft">
+          <input
+            type="checkbox"
+            name="confirm"
+            value="downgrade"
+            required
+            className="mt-[3px]"
+          />
+          <span>
+            I understand I&rsquo;ll lose my named service partner and the{" "}
+            {PARTNER_RESERVED_HOURS_PER_MONTH} reserved hours per month.
+          </span>
+        </label>
+        <button type="submit" className="btn-secondary inline-flex">
+          Confirm downgrade
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function UpgradeToMax() {
+  return (
+    <div className="bg-paper p-5">
+      <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+        Upgrade · Max
+      </p>
+      <p className="mt-2 font-display text-xl leading-tight text-ink">
+        Scope a Max engagement.
+      </p>
+      <p className="mt-2 text-[13px] leading-relaxed text-ink-soft">
+        Multi-state operations, white-label deployment, dedicated team,
+        regulated-vertical compliance gates. Quote-based — we scope on a
+        call, write the spec, then talk price.
+      </p>
+      <Link
+        href="/custom?type=max#custom-contact"
+        className="btn-primary mt-4 inline-flex"
+      >
+        Talk to us about Max
+        <span aria-hidden>→</span>
+      </Link>
+    </div>
   );
 }
 
@@ -423,8 +621,4 @@ function readFlash(
 function pickFirst(v: string | string[] | undefined): string | null {
   if (!v) return null;
   return Array.isArray(v) ? v[0] ?? null : v;
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }

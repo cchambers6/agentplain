@@ -15,6 +15,12 @@ import {
 } from "@/lib/auth";
 import { verticalEnumFromSlug } from "@/lib/auth/vertical-enum";
 import { getVerticalContent } from "@/lib/verticals";
+import {
+  isSelfServeTier,
+  SELF_SERVE_TIERS,
+  verticalTierFromTier,
+  type TierName,
+} from "@/lib/pricing/tiers";
 
 const formString = (form: FormData, key: string): string => {
   const v = form.get(key);
@@ -48,12 +54,35 @@ export async function signUpAction(
     return { ok: false, error: "Pick a vertical to continue" };
   }
 
+  // Tier selection comes from the picker (Regular / Partner). Max is
+  // quote-based and never reaches this action — the SignUpForm renders a
+  // /custom CTA instead of submitting. We defense-in-depth reject it here
+  // so a hand-crafted POST can't smuggle a Max workspace through the
+  // self-serve path (which would skip the operator-triage gate).
+  const rawTier = formString(form, "tier").toLowerCase();
+  if (rawTier && !(SELF_SERVE_TIERS as readonly string[]).includes(rawTier)) {
+    return {
+      ok: false,
+      error:
+        "Max engagements are scoped per customer. Tell us what you need at /custom?type=max.",
+    };
+  }
+  const selectedTier: TierName = (rawTier as TierName) || "regular";
+  if (!isSelfServeTier(selectedTier)) {
+    return {
+      ok: false,
+      error:
+        "Pick Regular or Partner to self-serve. Max is quote-based — start at /custom?type=max.",
+    };
+  }
+
   try {
     await signUpBrokerOwner({
       email,
       brokerageName,
       ownerName,
       vertical: verticalEnum,
+      verticalTier: verticalTierFromTier(selectedTier),
     });
   } catch (err) {
     return { ok: false, error: errorMessage(err) };

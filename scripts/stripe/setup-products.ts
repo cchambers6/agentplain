@@ -69,9 +69,22 @@ async function main(): Promise<void> {
     const productName = tierProductName(tier);
     const existing = await findProductByMetadata(stripe, productLookup);
     if (existing) {
+      const nameDrift = existing.name !== productName;
       console.log(
-        `[products] reuse  ${tier.padEnd(7)} → ${existing.id}  (name="${existing.name}")`,
+        `[products] reuse  ${tier.padEnd(7)} → ${existing.id}  (name="${existing.name}"${
+          nameDrift ? ` ← drifted, expected "${productName}"` : ""
+        })`,
       );
+      if (nameDrift) {
+        // Don't auto-rename — Stripe Product names show on Checkout +
+        // invoices and live by operator discretion. Surface the drift so
+        // Conner can rename manually in the dashboard if desired. This
+        // matters for the 2026-05-15 Plus → "agentplain Partner" rename;
+        // the on-disk enum stays `plus`, only the display string changed.
+        console.log(
+          `[products]   note: dashboard name does not match tierProductName("${tier}"). Rename in Stripe if you want the display to match.`,
+        );
+      }
       productByTier.set(tier, existing);
       continue;
     }

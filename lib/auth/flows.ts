@@ -8,7 +8,13 @@
 // before a user has a session, so the operator/system identity is the only
 // caller that can read/write User and MagicLinkToken.
 
-import type { Prisma, User, Vertical, Workspace } from "@prisma/client";
+import type {
+  Prisma,
+  User,
+  Vertical,
+  Workspace,
+  WorkspaceVerticalTier,
+} from "@prisma/client";
 import { provisionTrialSubscriptionSafe } from "../billing/provisioning";
 import { withSystemContext } from "../db/rls";
 import { env } from "../env";
@@ -45,6 +51,11 @@ export interface SignUpInput {
   ownerName?: string | null;
   /** One of the canonical 9 verticals (product_spec.md §13.2). */
   vertical: Vertical;
+  /** Customer-selected tier (per 2026-05-15 three-tier amendment to
+   *  `project_stripe_both_surfaces.md`). When omitted, fall back to the
+   *  vertical's default tier from the content registry — preserves the
+   *  earlier behavior for callers that haven't been updated yet. */
+  verticalTier?: WorkspaceVerticalTier;
 }
 
 export interface SignUpResult {
@@ -71,7 +82,11 @@ export async function signUpBrokerOwner(input: SignUpInput): Promise<SignUpResul
   if (!verticalContent) {
     throw new Error("Pick a vertical to continue");
   }
-  const verticalTier = verticalTierFromContentTier(verticalContent.tier);
+  // Caller-supplied tier wins (sign-up picker per 2026-05-15). When absent,
+  // fall back to the content registry's default tier — keeps the older API
+  // working until every caller migrates.
+  const verticalTier =
+    input.verticalTier ?? verticalTierFromContentTier(verticalContent.tier);
 
   const created = await withSystemContext(async (tx) => {
     const existingUser = await tx.user.findUnique({ where: { email } });

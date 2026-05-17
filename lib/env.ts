@@ -107,6 +107,16 @@ export const env = {
   gmailWebhookOidcAudience: () => optional("GMAIL_WEBHOOK_OIDC_AUDIENCE"),
   gmailWebhookServiceAccountEmail: () =>
     optional("GMAIL_WEBHOOK_SERVICE_ACCOUNT_EMAIL"),
+  // Microsoft (M365 / Outlook) OAuth — companion to the Outlook MCP shipped
+  // in feat/outlook-mcp-phase-b. The /common authority accepts both work/
+  // school accounts and personal Microsoft accounts; tenant lockdown happens
+  // at app-registration time (Azure portal), not in code. Per
+  // feedback_no_prod_secrets_in_dev: dev .env.local uses a dev-tier app
+  // registration; production values live in Vercel Production only.
+  microsoftOAuthClientId: () => optional("MICROSOFT_OAUTH_CLIENT_ID"),
+  microsoftOAuthClientSecret: () => optional("MICROSOFT_OAUTH_CLIENT_SECRET"),
+  microsoftOAuthAuthority: () =>
+    optional("MICROSOFT_OAUTH_AUTHORITY") ?? "https://login.microsoftonline.com/common",
   encryptionKey: () => required("ENCRYPTION_KEY"),
 
   // Custom-inquiry destination. Submissions from `/custom`'s contact form

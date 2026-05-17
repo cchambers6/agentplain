@@ -32,6 +32,7 @@ import { prisma } from '@/lib/db/prisma';
 import { GoogleOAuth } from '@/lib/integrations/google/oauth';
 import { decryptCredential, encryptTokenSet, getProvider } from '@/lib/integrations';
 import { requireUser } from '@/lib/auth/server';
+import { withSystemContext } from '@/lib/db/rls';
 import { env } from '@/lib/env';
 
 export const runtime = 'nodejs';
@@ -39,52 +40,69 @@ export const dynamic = 'force-dynamic';
 
 const OAUTH_STATE_COOKIE = 'agentplain_oauth_state';
 
+// Backwards-compatible cookie shape. The legacy operator-only start route
+// (/api/auth/oauth/google/connect) writes the 3-field shape. The Phase C
+// customer-self-serve start route (/api/integrations/[id]/oauth/start)
+// also sets `integrationId` — when present, the success path lands on the
+// workspace integrations page instead of /operator/integrations.
 interface OAuthStateCookie {
   nonce: string;
   workspaceId: string;
+  integrationId?: string;
   issuedAt: number;
 }
 
-function redirectWithError(origin: string, code: string, detail?: string): NextResponse {
-  const url = new URL('/operator/integrations', origin);
+function landingBase(cookie: OAuthStateCookie): string {
+  if (cookie.integrationId) {
+    return `/app/workspace/${cookie.workspaceId}/integrations`;
+  }
+  return '/operator/integrations';
+}
+
+function redirectWithError(
+  origin: string,
+  cookie: OAuthStateCookie,
+  code: string,
+  detail?: string,
+): NextResponse {
+  const url = new URL(landingBase(cookie), origin);
   url.searchParams.set('error', code);
   if (detail) url.searchParams.set('detail', detail.slice(0, 240));
   return NextResponse.redirect(url);
 }
 
-function redirectSuccess(origin: string, credentialId: string): NextResponse {
-  const url = new URL('/operator/integrations', origin);
-  url.searchParams.set('connected', credentialId);
+function redirectSuccess(
+  origin: string,
+  cookie: OAuthStateCookie,
+  credentialId: string,
+): NextResponse {
+  const url = new URL(landingBase(cookie), origin);
+  // Operator path expects the credential id; customer path expects the
+  // integration id so the marketplace banner can name the connector.
+  if (cookie.integrationId) {
+    url.searchParams.set('connected', cookie.integrationId);
+  } else {
+    url.searchParams.set('connected', credentialId);
+  }
   return NextResponse.redirect(url);
 }
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const session = await requireUser();
-  if (!session.isOperator) {
-    return NextResponse.json(
-      { error: 'operator_only' },
-      { status: 403 },
-    );
-  }
-
   const origin = env.appPublicOrigin();
   const params = req.nextUrl.searchParams;
   const code = params.get('code');
   const stateParam = params.get('state');
   const errorParam = params.get('error');
 
-  if (errorParam) {
-    // Google returns ?error=access_denied when the user denies consent.
-    return redirectWithError(origin, 'google_returned_error', errorParam);
-  }
-  if (!code || !stateParam) {
-    return redirectWithError(origin, 'missing_code_or_state');
-  }
-
-  // Read + clear the state cookie. The unseal will throw if expired/tampered.
+  // Read + clear the state cookie BEFORE the error branches so we can land
+  // on the right page (operator vs customer marketplace) on every failure.
+  // The unseal will throw if expired/tampered.
   const sealed = req.cookies.get(OAUTH_STATE_COOKIE)?.value;
   if (!sealed) {
-    return redirectWithError(origin, 'missing_state_cookie');
+    return NextResponse.redirect(
+      new URL('/operator/integrations?error=missing_state_cookie', origin),
+    );
   }
   let cookie: OAuthStateCookie;
   try {
@@ -92,23 +110,62 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       password: env.sessionPassword(),
     });
   } catch {
-    return redirectWithError(origin, 'invalid_state_cookie');
+    return NextResponse.redirect(
+      new URL('/operator/integrations?error=invalid_state_cookie', origin),
+    );
+  }
+
+  // Authorization: operators can complete any connect (legacy flow). For
+  // the customer-self-serve flow (cookie has `integrationId`), the signed-
+  // in user must be an active broker-owner of the workspace they connected.
+  if (!session.isOperator) {
+    if (!cookie.integrationId) {
+      return NextResponse.json(
+        { error: 'operator_only' },
+        { status: 403 },
+      );
+    }
+    const membership = await withSystemContext((tx) =>
+      tx.membership.findFirst({
+        where: {
+          userId: session.userId,
+          workspaceId: cookie.workspaceId,
+          status: 'ACTIVE',
+          role: 'BROKER_OWNER',
+        },
+        select: { id: true },
+      }),
+    );
+    if (!membership) {
+      return NextResponse.json(
+        { error: 'workspace_forbidden' },
+        { status: 403 },
+      );
+    }
+  }
+
+  if (errorParam) {
+    // Google returns ?error=access_denied when the user denies consent.
+    return redirectWithError(origin, cookie, 'google_returned_error', errorParam);
+  }
+  if (!code || !stateParam) {
+    return redirectWithError(origin, cookie, 'missing_code_or_state');
   }
   if (cookie.nonce !== stateParam) {
-    return redirectWithError(origin, 'state_mismatch');
+    return redirectWithError(origin, cookie, 'state_mismatch');
   }
 
   // Exchange code for tokens.
   const clientId = env.googleOAuthClientId();
   const clientSecret = env.googleOAuthClientSecret();
   if (!clientId || !clientSecret) {
-    return redirectWithError(origin, 'google_oauth_not_configured');
+    return redirectWithError(origin, cookie, 'google_oauth_not_configured');
   }
   const oauth = new GoogleOAuth({ clientId, clientSecret });
   const redirectUri = new URL('/api/auth/oauth/google/callback', origin).toString();
   const tokens = await oauth.exchangeCodeForTokens({ code, redirectUri });
   if (!tokens.ok) {
-    return redirectWithError(origin, 'token_exchange_failed', `${tokens.error.code}: ${tokens.error.message}`);
+    return redirectWithError(origin, cookie, 'token_exchange_failed', `${tokens.error.code}: ${tokens.error.message}`);
   }
 
   // Persist credential (encrypted at rest).
@@ -149,7 +206,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     where: { id: credential.id },
   });
   if (!verifyCred) {
-    return redirectWithError(origin, 'credential_persist_verify_failed');
+    return redirectWithError(origin, cookie, 'credential_persist_verify_failed');
   }
 
   // Subscribe to Gmail push notifications.
@@ -181,7 +238,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           },
         },
       });
-      return redirectWithError(origin, 'subscription_failed', `${sub.error.code}: ${sub.error.message}`);
+      return redirectWithError(origin, cookie, 'subscription_failed', `${sub.error.code}: ${sub.error.message}`);
     }
 
     await prisma.webhookSubscription.upsert({
@@ -220,7 +277,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return redirectWithError(origin, 'subscription_create_threw', message);
+    return redirectWithError(origin, cookie, 'subscription_create_threw', message);
   }
 
   // Audit row (DB-side; markdown audit log is renewal-cron-driven).
@@ -239,7 +296,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     },
   });
 
-  const res = redirectSuccess(origin, credential.id);
+  const res = redirectSuccess(origin, cookie, credential.id);
   res.cookies.set(OAUTH_STATE_COOKIE, '', { path: '/', maxAge: 0 });
   return res;
 }

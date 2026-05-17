@@ -4,29 +4,41 @@ type FAQItem = {
 };
 
 // FAQ content. Every entry cross-references mission rule
-// (`project_agentplain_mission_and_positioning.md`):
+// (`project_agentplain_mission_and_positioning.md`) plus the
+// service-partnership lock (ratified 2026-05-15 — three productized tiers
+// under a managed-service model; supersedes the 2026-05-12 self-serve
+// single-tier framing on customer surfaces):
 //   - No "agent counts" — "the fleet" is the unit
 //   - No real-estate-only framing
-//   - No pilot pricing references
-//   - No "coming soon" without date/qualification
+//   - No "self-serve" / "DIY" framing — agentplain is a service partnership
+//   - No "configure your agents" with customer-as-operator
+//   - Pricing answered as the three-tier service partnership
 //   - Drafts / proposes / advises — never "sends" / "executes"
 
 const items: FAQItem[] = [
   {
     q: "What is agentplain?",
-    a: "A fleet of capable AI partners that runs inside your local business. The fleet reads from your existing tools — email, calendar, CRM, transaction systems, accounting — categorizes what matters, drafts what you'd otherwise type, schedules what needs scheduling, and coordinates across threads. The fleet drafts; you decide. Built for ten verticals: real estate, mortgage, insurance, property management, title & escrow, recruiting, home services contractors, CPA / tax firms, law firms, and RIA / wealth practices.",
+    a: "A service partnership for local businesses. Your service team installs a fleet of capable AI partners inside your shop, configures it for your vertical, runs weekly reviews, and customizes the agents as your ops shift. The fleet reads from your existing tools — email, calendar, CRM, transaction systems, accounting — categorizes what matters, drafts what you'd otherwise type, schedules what needs scheduling, and coordinates across threads. The fleet drafts; you decide. We run the operation; you run the business. Built for ten verticals: real estate, mortgage, insurance, property management, title & escrow, recruiting, home services contractors, CPA / tax firms, law firms, and RIA / wealth practices.",
+  },
+  {
+    q: "What does the service partner actually do?",
+    a: "Five things. (1) Install — the partner sets up the fleet, connects your tools, loads your vertical's JTBD table and compliance corpus, and runs the first week alongside you. (2) Review — a recurring call (monthly for Regular, weekly for Partner) covering what the fleet drafted, what got approved, what needs tuning. (3) Customize — when your ops shift (new compliance rule, new transaction system, new comp model), the partner updates the agents so you don't have to. (4) Escalate — if a draft hits a hard call, the partner brings it to you with the context. (5) Translate — when something looks off, the partner is your single human contact, not a ticket queue.",
   },
   {
     q: "Is this just ChatGPT with extra steps?",
-    a: "No. ChatGPT is a horizontal tool you have to drive. The fleet is vertical-aware: it knows MLS workflows or tax-prep deadlines or IRS filing windows or fair-housing language — whatever your vertical needs. It runs in the background and surfaces drafts for your review; you don't prompt it to do its job.",
+    a: "No, and not even close. ChatGPT is a horizontal tool you have to drive yourself. agentplain is a service partnership: vertical-aware fleet (MLS workflows, tax-prep deadlines, IRS filing windows, fair-housing language — whatever your vertical needs) plus a service team that installs and runs it. The fleet works in the background and surfaces drafts for your review; you don't prompt it to do its job. And you don't operate it — we do.",
+  },
+  {
+    q: "How is this different from Claude for Small Business or other AI-for-SMB tools?",
+    a: "Claude for Small Business hands a horizontal model to a small-business owner who's expected to figure out workflows, write prompts, and stitch integrations on their own. agentplain is the opposite: we ship a vertical-aware fleet (built per industry, with the compliance corpus and integration list each one needs) AND a service team that installs, runs reviews, and customizes for your shop. You're not buying a tool; you're hiring an AI ops team. We don't ask the realtor, the CPA, or the mortgage broker to learn prompt engineering on top of running their business.",
   },
   {
     q: "How is this different from existing vertical software?",
-    a: "Most vertical software adds another dashboard for someone to maintain. agentplain integrates with the CRM, inbox, transaction system, and accounting tool you already use — and replaces the manual work that lives between them. Drafting every email. Writing every listing or proposal. Building every status report. Chasing every deadline. You keep your tools.",
+    a: "Most vertical software adds another dashboard for someone to maintain. agentplain integrates with the CRM, inbox, transaction system, and accounting tool you already use — and replaces the manual work that lives between them. Your service partner does the integration work, not you. Drafting every email. Writing every listing or proposal. Building every status report. Chasing every deadline. You keep your tools.",
   },
   {
     q: "Can my firm actually use it today?",
-    a: "Yes — sign up free, pick your vertical, connect your first tool, and the fleet starts drafting within minutes. Real estate ships with the deepest integration set today; the other nine verticals carry ratified JTBD tables and a committed integration roadmap. Each vertical page shows what's locked and what's in flight.",
+    a: "Yes. You sign up free, your service partner handles the install (connecting your tools, loading your vertical's corpus, walking through the workspace), and the fleet starts drafting within the first few days. Real estate ships with the deepest integration set today; the other nine verticals carry ratified JTBD tables and a committed integration roadmap. Each vertical page shows what's locked and what's in flight.",
   },
   {
     q: "Does the fleet send anything on its own?",
@@ -34,19 +46,31 @@ const items: FAQItem[] = [
   },
   {
     q: "What data do you need access to?",
-    a: "Read-only OAuth into your inbox, calendar, CRM, transaction system, and (for some verticals) accounting. Vertical-specific feeds where they exist — MLS for real estate, AMS for insurance, LOS for mortgage. The fleet reads what's needed for the task, drafts the response, and returns the draft to your review queue. We don't retain client lists as training data.",
+    a: "Read-only OAuth into your inbox, calendar, CRM, transaction system, and (for some verticals) accounting. Vertical-specific feeds where they exist — MLS for real estate, AMS for insurance, LOS for mortgage. Your service partner sets this up with you on a call; you're not stitching OAuth flows alone. The fleet reads what's needed for the task, drafts the response, and returns the draft to your review queue. We don't retain client lists as training data.",
   },
   {
     q: "How does pricing work?",
-    a: "One plan, per-seat, month-to-month. $199 solo, sliding to $179 (2–9 seats), $149 (10–24), $119 (25–49), $99 (50–99). First month free. Month 2 onward you pay your seat band's rate. Cancel anytime from your billing settings. No annual contract, no pilot fees, no setup charges. Anything beyond plug-and-play — bespoke compliance, white-label, dedicated success, 100+ seats — is a Custom engagement scoped per customer on /custom.",
+    a: "Three tiers of service partnership, all per seat, month-to-month, first month free. (1) Regular — standard partnership, monthly review cadence, $199 solo sliding to $99 at 50+ seats. (2) Partner — named service partner with weekly review cadence and deeper customization, $299 solo sliding to $199 at scale. (3) Max — ad-hoc service partnership for firms with non-standard scope; quoted to the engagement, sales-led. No pilot fees. No setup charges. Cancel anytime from your billing settings.",
+  },
+  {
+    q: "What's the difference between Regular, Partner, and Max?",
+    a: "Cadence and dedication. Regular is the standard service partnership: a partner installs, runs a monthly review call, handles tuning between calls. Most local-business shops fit Regular. Partner adds a named service partner who's dedicated to your account, runs a weekly review, owns customization, and handles change management as your ops shift — typically firms with more complex ops or higher stakes per draft. Max is sales-led: ad-hoc service partnership for firms whose ops don't fit the productized shape — different cadence, different deliverables, quoted to scope.",
+  },
+  {
+    q: "When would I want Partner instead of Regular?",
+    a: "Three common patterns. (1) Your week-over-week change is high — new listings, new clients, new compliance rules — and you want a weekly review instead of a monthly one. (2) Your stakes per draft are higher than the average shop (litigation work, wealth management, broker-of-record-sensitive comms) and you want a partner who's dedicated to your account and knows your conventions. (3) You're growing or restructuring and want change management built into the relationship, not retrofitted later. If none of those apply, Regular usually fits.",
+  },
+  {
+    q: "What is /custom and how is it different from Max?",
+    a: "Max is a service-partnership tier — recurring per-seat relationship with non-standard scope. /custom is engagement work: a written spec, a 4–6 week build, a fixed price ($5K–$15K typical plus $200–$500/mo maintenance), then handoff. You'd reach /custom when you need something the productized tiers don't include: a bespoke compliance corpus, a white-label deployment, a custom integration to a tool that isn't on our roadmap, 100+ seats, custom reporting. You can be on Regular OR Partner AND have a /custom engagement in flight at the same time.",
   },
   {
     q: "What's the ROI math?",
-    a: "Value delivered per practitioner runs $2,900–$10,600/mo — hours saved × your productive-hour rate, plus mistakes avoided, plus deals closed faster. Against the $199 → $99 per-seat subscription cost, the typical ROI multiple is 15x to 110x. Run your own numbers in the calculator on the pricing page.",
+    a: "Value delivered per practitioner runs $2,900–$10,600/mo — hours saved × your productive-hour rate, plus mistakes avoided, plus deals closed faster. Against the $99 → $299 per-seat subscription cost depending on tier, the typical ROI multiple is 15x to 110x. Run your own numbers in the calculator on the pricing page.",
   },
   {
     q: "Why should anyone believe you?",
-    a: "Four things. (1) We run the same fleet model on ourselves to build the product — the brokerage in production today running ~35 cron-fired agents is a working precursor of what we sell. (2) Outside counsel is reviewing the per-vertical compliance corpus. (3) Every claim on this site cites a memory rule we can show you. (4) Every agent action is visible in the workspace — nothing happens behind the curtain.",
+    a: "Four things. (1) We eat our own cooking — we run a flat-fee real-estate brokerage in production today (~35 cron-fired agents) where we use the same service-partnership model on ourselves. (2) Outside counsel is reviewing the per-vertical compliance corpus. (3) Every claim on this site cites a memory rule we can show you. (4) Every agent action is visible in the workspace — nothing happens behind the curtain, and your service partner is a single human you can call.",
   },
   {
     q: "Is my data safe?",

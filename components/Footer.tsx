@@ -26,9 +26,10 @@ export default function Footer() {
             {tokens.tagline}
           </p>
           <p className="mt-3 max-w-sm text-sm text-mute">
-            We lift up local businesses by doing the work that takes their
-            time and money away from the people they serve. Built for ten
-            verticals — pick yours.
+            A service partnership for local businesses. We install a fleet of
+            capable AI partners, run reviews, customize as your ops shift —
+            so you stay focused on the people you serve. Built for ten
+            verticals.
           </p>
         </div>
 
@@ -122,7 +123,7 @@ export default function Footer() {
         <div className="container-wide flex flex-col gap-2 py-5 text-xs text-mute sm:flex-row sm:items-center sm:justify-between">
           <p className="font-mono tracking-wide">© 2026 agentplain</p>
           <p className="font-mono tracking-wide">
-            10 verticals · 3 per-seat tiers · first month free
+            10 verticals · 3 service-partnership tiers · first month free
           </p>
         </div>
       </div>

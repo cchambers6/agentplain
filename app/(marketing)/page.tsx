@@ -19,17 +19,36 @@ import { tokens } from "@/lib/brand/tokens";
 //
 // Sources for every concrete claim are footnoted with their memory file.
 
-// Per-seat ladder from `project_stripe_both_surfaces.md` (simplified
-// 2026-05-12 — single productized tier; anything beyond Regular routes to
-// /custom). The five-band ladder is the only pricing surface on the homepage;
-// 3-column tier comparisons are banned per the same rule because they imply
-// Plus/Max are buyable, and they aren't.
+// Service-partnership tiers (ratified 2026-05-15 — three productized tiers
+// under the service-partnership lock; supersedes the 2026-05-12 single-tier
+// surfacing while preserving the per-seat ladder as Regular's price shape).
+// Regular: standard service partnership, per-seat ladder, self-served day-to-day
+// with our team running install + config + reviews on a cadence.
+// Partner: named service partner, weekly review cadence, deeper customization,
+//          uplift on the per-seat number to fund the dedicated overlay.
+// Max:     ad-hoc service partnership for firms with non-standard scope —
+//          quoted, not productized; sales-led CTA.
+// /custom remains a separate surface for bespoke ENGAGEMENTS (white-label,
+// integrations off the roadmap, 100+ seats) — that surface is not a tier.
 const ladderBands = [
   { band: "Solo (1 seat)", price: "$199" },
   { band: "2–9 seats", price: "$179" },
   { band: "10–24 seats", price: "$149" },
   { band: "25–49 seats", price: "$119" },
   { band: "50–99 seats", price: "$99" },
+];
+
+// Partner per-seat numbers map to the schema-backed Plus tier in
+// `prisma/schema.prisma` (kept since 2026-05-09) — the productized uplift
+// covers the named-partner overlay (onboarding, weekly review, customization).
+// Source: HISTORICAL block of `project_stripe_both_surfaces.md` —
+// $299 solo → $199 at scale.
+const partnerBands = [
+  { band: "Solo (1 seat)", price: "$299" },
+  { band: "2–9 seats", price: "$269" },
+  { band: "10–24 seats", price: "$239" },
+  { band: "25–49 seats", price: "$219" },
+  { band: "50–99 seats", price: "$199" },
 ];
 
 // Q4 — what makes agentplain unique. Five points pulled verbatim from the
@@ -105,13 +124,18 @@ export default function HomePage() {
             work that takes their time and money away from the people they
             serve.
           </h1>
-          <p className="mt-8 max-w-3xl text-lg leading-relaxed text-ink-soft md:text-xl">
-            {tokens.wordmark} is a fleet of capable AI partners that runs
-            inside your business. The fleet reads from your email, calendar,
-            CRM, and documents, categorizes what's important, drafts what
-            you'd otherwise type, schedules what needs scheduling, and
-            coordinates across threads. You stay in control: the fleet drafts
-            and proposes; you approve and send.
+          <p className="mt-8 max-w-3xl font-display text-2xl leading-snug text-ink md:text-[28px]">
+            Your AI ops team — without hiring one.
+          </p>
+          <p className="mt-5 max-w-3xl text-lg leading-relaxed text-ink-soft md:text-xl">
+            {tokens.wordmark} is a service partnership. We install the fleet of
+            capable AI partners inside your business, configure it for your
+            vertical, run weekly reviews, and customize as your ops change.
+            The fleet reads from your email, calendar, CRM, and documents,
+            categorizes what's important, drafts what you'd otherwise type,
+            schedules what needs scheduling, and coordinates across threads.
+            You stay in control: the fleet drafts and proposes; you approve and
+            send. We run the operation; you run the business.
           </p>
           {/* Supporting copy from Conner's first-pass mission articulation —
               preserved per the canonical rule as useful supporting framing. */}
@@ -196,10 +220,10 @@ export default function HomePage() {
         id="how"
         tone="deep"
         eyebrow="How it works"
-        title="Three steps. Then the fleet drafts every morning."
-        intro="Sign up free, pick your vertical, connect your first tool — Gmail, Outlook, your CRM — and see the fleet's first drafts within minutes. No setup wizards that span days; no implementation services package."
+        title="Four steps. Then your service team runs it with you."
+        intro="Sign up free, pick your vertical, connect your first tool — Gmail, Outlook, your CRM. Your named service partner handles install, weekly review calls, and ongoing customization. No DIY setup wizards spanning days; no implementation-services line item bolted on at the end."
       >
-        <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-3">
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2 lg:grid-cols-4">
           <Step
             number="01"
             title="Pick your vertical."
@@ -215,6 +239,11 @@ export default function HomePage() {
             title="The fleet drafts; you decide."
             body="Every customer-facing output queues for your review. Approve, edit, or reject. Your existing systems send. The fleet never reaches the consumer on its own."
           />
+          <Step
+            number="04"
+            title="Your service team runs the rest."
+            body="Your named service partner handles onboarding, configures the fleet for your shop, runs weekly reviews, and tunes the agents as your ops change. You don't operate the AI — we do, alongside you."
+          />
         </div>
       </Section>
 
@@ -222,7 +251,7 @@ export default function HomePage() {
       <Section
         eyebrow="What makes us different"
         title="Five things you won't get from a generic AI tool."
-        intro="Each point is a commitment, not a slogan. Generic AI is horizontal — agentplain is built per-vertical, with the integration depth and compliance posture each one needs."
+        intro="Each point is a commitment, not a slogan. Generic AI is horizontal — agentplain is a service partnership built per-vertical. Your service partner REPLACES the recurring drudge work, INTEGRATES with the tools you already pay for, and AUGMENTS the judgment work that only you can do."
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-3">
           {uniques.map((u, i) => (
@@ -303,51 +332,76 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* Q7 — How do we think about ROI? — interactive calculator */}
+      {/* Q6/Q7 — Pricing + ROI under the service-partnership lock.
+          Three tiers (Regular / Partner / Max) reframe the per-seat ladder
+          as the entry price for a service partnership, not a self-serve
+          plan. /custom remains a separate surface for bespoke engagements
+          outside the tier ladder. */}
       <Section
         id="pricing"
         tone="deep"
         eyebrow="Pricing + ROI"
-        title="Affordable access to enterprise-grade tools."
-        intro="That's the vision — and the calculator below is the math. One plan, per-seat, month-to-month, first month free. Enter your own hours and hourly rate; the ROI multiple is yours to audit."
+        title="Affordable access to enterprise-grade tools — with the service team that runs them."
+        intro="Three ways to partner with us. Every tier includes the fleet, the per-vertical compliance corpus, and a service team that installs, reviews, and customizes alongside you. The calculator below is anchored to Regular; Partner adds dedicated overlay; Max is quoted to scope."
       >
         <RoiCalculator />
 
-        <div className="mt-10 grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-5">
-          {ladderBands.map((row) => (
-            <div key={row.band} className="bg-paper p-5">
-              <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-                {row.band}
-              </p>
-              <p className="mt-3 font-display text-3xl leading-none text-ink">
-                {row.price}
-              </p>
-              <p className="mt-1 text-[12px] leading-relaxed text-mute">
-                per seat / mo
-              </p>
-            </div>
-          ))}
+        <div className="mt-12 grid gap-px overflow-hidden border border-rule bg-rule lg:grid-cols-3">
+          <TierCard
+            name="Regular"
+            tagline="Standard service partnership."
+            description="Our team installs the fleet, configures it for your vertical, and runs a monthly review. Day-to-day, the fleet drafts inside the workspace you log into."
+            bands={ladderBands}
+            ctaLabel="Start free trial"
+            ctaHref="/app/sign-up"
+            ctaStyle="primary"
+            footnote="First month free. Month-to-month. Per seat."
+          />
+          <TierCard
+            name="Partner"
+            tagline="Named service partner."
+            description="Same fleet, with a dedicated service partner who runs weekly reviews, owns customization, and handles change management as your ops shift."
+            bands={partnerBands}
+            ctaLabel="Talk to a service partner"
+            ctaHref="mailto:hello@agentplain.com?subject=agentplain%20Partner%20tier%20interest"
+            ctaStyle="secondary"
+            footnote="Schema-backed Plus tier per project_stripe_both_surfaces.md."
+            featured
+          />
+          <TierCard
+            name="Max"
+            tagline="Ad-hoc service partnership."
+            description="For firms whose ops don't fit the productized shape — quoted to scope, not by seat. Talk to us about what you need and we'll come back with a written engagement."
+            quotedNote="Quoted per engagement"
+            ctaLabel="Talk to us"
+            ctaHref="mailto:hello@agentplain.com?subject=agentplain%20Max%20tier%20inquiry"
+            ctaStyle="secondary"
+            footnote="Sales-led — no self-checkout."
+          />
         </div>
 
         <div className="mt-10 grid gap-8 md:grid-cols-[2fr_1fr]">
           <div className="max-w-prose">
-            <p className="eyebrow mb-3">What ships with every seat</p>
+            <p className="eyebrow mb-3">What ships with every tier</p>
             <ul className="grid gap-2 text-[15px] leading-relaxed text-ink-soft sm:grid-cols-2">
-              <li>— First month free; month-to-month after</li>
+              <li>— A service partner who installs and runs reviews</li>
               <li>— Human review on every customer-facing output</li>
               <li>— Liability for licensed activities stays with you</li>
-              <li>— Weekly outcome digest</li>
+              <li>— Per-vertical compliance corpus, counsel-reviewed</li>
               <li>— No data resold, no client list retained</li>
               <li>— You own the work product</li>
             </ul>
           </div>
 
           <div className="border-l border-rule pl-6">
-            <p className="eyebrow mb-3">Need more depth?</p>
+            <p className="eyebrow mb-3">Outside the tiers?</p>
             <p className="text-[15px] leading-relaxed text-ink-soft">
-              Bespoke compliance corpus, white-label, dedicated success,
-              custom integration, 100+ seats — anything Regular doesn&apos;t
-              cover plug-and-play, we scope as a Custom engagement.
+              Bespoke compliance corpus, white-label, custom integration to a
+              tool off the roadmap, 100+ seats — anything the productized
+              tiers don&apos;t cover, we scope as a Custom engagement on
+              /custom. Different from Max (which is a service-partnership
+              tier with non-standard scope): /custom is engagement work
+              against a written spec.
             </p>
             <Link
               href="/custom"
@@ -396,7 +450,8 @@ export default function HomePage() {
         <FAQ />
       </Section>
 
-      {/* CLOSING CTA — locked mission line, no realty-only framing */}
+      {/* CLOSING CTA — locked mission line, no realty-only framing.
+          Q9 double CTA: primary self-start, secondary talk-to-a-service-partner. */}
       <section className="border-b border-rule bg-ink text-paper">
         <div className="container-wide py-24 md:py-32">
           <p className="eyebrow mb-6 text-paper/60">{tokens.tagline}</p>
@@ -409,8 +464,8 @@ export default function HomePage() {
           </p>
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-paper/75">
             First month free. Month-to-month from day one. Cancel anytime. By
-            the time you&apos;d pay for month two, the fleet has either earned
-            its seat or it hasn&apos;t.
+            the time you&apos;d pay for month two, your service team has
+            either earned its seat or it hasn&apos;t.
           </p>
 
           <div className="mt-10 flex flex-wrap gap-4">
@@ -421,9 +476,16 @@ export default function HomePage() {
               Start free trial
               <span aria-hidden>→</span>
             </Link>
+            <a
+              href="mailto:hello@agentplain.com?subject=agentplain%20service%20partner%20conversation"
+              className="inline-flex items-center justify-center gap-2 border border-paper/40 bg-transparent px-6 py-3 text-sm font-medium text-paper transition hover:border-paper"
+            >
+              Talk to a service partner
+              <span aria-hidden>→</span>
+            </a>
             <Link
               href="/verticals"
-              className="inline-flex items-center justify-center gap-2 border border-paper/40 bg-transparent px-6 py-3 text-sm font-medium text-paper transition hover:border-paper"
+              className="inline-flex items-center justify-center gap-2 border border-paper/20 bg-transparent px-6 py-3 text-sm font-medium text-paper/80 transition hover:border-paper hover:text-paper"
             >
               See all ten verticals
             </Link>
@@ -522,6 +584,108 @@ function Card({
         {title}
       </h3>
       <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">{body}</p>
+    </div>
+  );
+}
+
+// Three-tier service-partnership card. Inlined here (not the existing
+// `components/PricingTier.tsx`) because the homepage teaser needs the
+// per-seat ladder rendered inside each tier — a shape the existing
+// PricingTier component (single price, single cadence) doesn't model.
+function TierCard({
+  name,
+  tagline,
+  description,
+  bands,
+  quotedNote,
+  ctaLabel,
+  ctaHref,
+  ctaStyle,
+  footnote,
+  featured = false,
+}: {
+  name: string;
+  tagline: string;
+  description: string;
+  bands?: { band: string; price: string }[];
+  quotedNote?: string;
+  ctaLabel: string;
+  ctaHref: string;
+  ctaStyle: "primary" | "secondary";
+  footnote: string;
+  featured?: boolean;
+}) {
+  const isMailto = ctaHref.startsWith("mailto:");
+  const CtaTag = (isMailto ? "a" : Link) as React.ElementType;
+  const ctaClass =
+    ctaStyle === "primary"
+      ? "btn-primary w-full justify-center"
+      : "btn-secondary w-full justify-center";
+
+  return (
+    <div
+      className={`flex flex-col bg-paper p-7 md:p-8 ${
+        featured ? "ring-1 ring-clay" : ""
+      }`}
+    >
+      <div className="flex items-baseline justify-between">
+        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+          {name}
+        </p>
+        {featured ? (
+          <p className="font-mono text-[10px] tracking-eyebrow uppercase text-clay">
+            Named partner
+          </p>
+        ) : null}
+      </div>
+      <h3 className="mt-3 font-display text-2xl leading-snug text-ink md:text-3xl">
+        {tagline}
+      </h3>
+      <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
+        {description}
+      </p>
+
+      {bands ? (
+        <div className="mt-6 grid gap-px overflow-hidden border border-rule bg-rule">
+          {bands.map((row) => (
+            <div
+              key={row.band}
+              className="flex items-baseline justify-between bg-paper px-3 py-2"
+            >
+              <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                {row.band}
+              </span>
+              <span className="font-display text-lg text-ink">
+                {row.price}
+                <span className="ml-1 font-mono text-[10px] tracking-eyebrow uppercase text-mute">
+                  /seat/mo
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {quotedNote ? (
+        <div className="mt-6 border border-rule bg-paper-deep px-4 py-6 text-center">
+          <p className="font-display text-2xl leading-snug text-ink">
+            {quotedNote}
+          </p>
+          <p className="mt-2 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+            sales-led
+          </p>
+        </div>
+      ) : null}
+
+      <div className="mt-auto pt-6">
+        <CtaTag href={ctaHref} className={ctaClass}>
+          {ctaLabel}
+          <span aria-hidden>→</span>
+        </CtaTag>
+        <p className="mt-3 font-mono text-[11px] leading-relaxed text-mute">
+          {footnote}
+        </p>
+      </div>
     </div>
   );
 }

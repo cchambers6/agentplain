@@ -51,6 +51,29 @@ export default function VerticalsIndexPage() {
         intro="Every vertical lands at the same three-tier ladder. Vertical-aware compliance corpus, JTBD tables, and integration roadmap are scoped per vertical — the tier choice (Regular / Partner / Max) is about cadence and depth of service partnership, not which vertical you're in."
       >
         <Grid items={all} />
+
+        {/* On-ramp affordance — `/general` is a surface, not an eleventh
+            vertical. Lives below the grid so it doesn't read as one of the
+            ratified ten, but on the same page so a visitor outside the ten
+            still has an honest landing path. */}
+        <div className="mt-10 border border-rule bg-paper p-7 md:flex md:items-center md:justify-between md:gap-8 md:p-8">
+          <div className="max-w-2xl">
+            <p className="eyebrow mb-2">Don&apos;t see your industry?</p>
+            <p className="text-[15px] leading-relaxed text-ink-soft">
+              Same service partnership, lighter scaffolding. Universal admin
+              (inbox triage, scheduling, follow-up, basic documentation)
+              against common-denominator tools — Gmail, Outlook, Google
+              Calendar, QuickBooks. No vertical-specific compliance corpus;
+              if you need one we scope it as a Custom engagement.
+            </p>
+          </div>
+          <Link
+            href="/general"
+            className="mt-5 inline-flex items-center gap-2 text-ink underline md:mt-0"
+          >
+            See the on-ramp →
+          </Link>
+        </div>
       </Section>
 
       <Section

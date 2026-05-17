@@ -54,6 +54,14 @@ export default function Footer() {
                 All ten →
               </Link>
             </li>
+            <li>
+              <Link
+                href="/general"
+                className="text-mute hover:text-clay"
+              >
+                Don&apos;t see your industry? →
+              </Link>
+            </li>
           </ul>
         </div>
 

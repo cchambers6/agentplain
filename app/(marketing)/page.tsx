@@ -145,7 +145,12 @@ export default function HomePage() {
             serve.
           </p>
 
-          {/* All 10 verticals as a chip row */}
+          {/* All 10 verticals as a chip row.
+              `/general` is NOT a chip — the chip row enumerates the ratified
+              ten per `feedback_no_new_verticals_finish_locked.md`. The
+              on-ramp surface is offered immediately below as a separate
+              "Don't see your industry?" link so businesses outside the ten
+              still have an honest landing path. */}
           <div className="mt-10">
             <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
               Built for ten kinds of local business — pick yours
@@ -167,6 +172,12 @@ export default function HomePage() {
                 </Link>
               ))}
             </div>
+            <p className="mt-4 text-[13px] leading-relaxed text-mute">
+              Don&apos;t see your industry?{" "}
+              <Link href="/general" className="text-ink underline">
+                Same service partnership, lighter scaffolding →
+              </Link>
+            </p>
           </div>
 
           <div className="mt-10 flex flex-wrap items-center gap-4">

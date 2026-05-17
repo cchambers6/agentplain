@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 
 import {
   VERTICAL_SLUGS,
+  ON_RAMP_SLUGS,
   getAllVerticals,
+  getAllVerticalsIncludingOnRamps,
   getVerticalContent,
   getVerticalTier,
 } from "@/lib/verticals";
@@ -158,6 +160,174 @@ describe("vertical-routes", () => {
         t.draft,
         true,
         "real-estate JTBD tables should NOT be draft (Phase 0 spec is ratified)",
+      );
+    }
+  });
+});
+
+// `/general` — on-ramp SURFACE for businesses outside the ratified ten.
+// Per `feedback_no_new_verticals_finish_locked.md`, the ten-vertical lock
+// is intact; `/general` lives in a separate registry and must NOT leak
+// into any surface that enumerates the ratified ten (chip row, footer
+// column, `/verticals` grid).
+//
+// Framing note: the task brief asked for "Partner/Max upgrade language" on
+// `/general`. That naming predates `project_stripe_both_surfaces.md`
+// (simplified 2026-05-12), which bans Plus/Max surfacing in customer copy
+// and routes anything-beyond-Regular to `/custom` as a Custom engagement.
+// We honor the locked memory rule: the on-ramp page advertises Regular
+// pricing and points to `/custom` for depth. The test below asserts that
+// path, not the stale Plus/Max framing.
+describe("vertical-routes — /general on-ramp surface", () => {
+  it("registers exactly one on-ramp surface (general)", () => {
+    assert.deepEqual(
+      [...ON_RAMP_SLUGS].sort(),
+      ["general"],
+      "On-ramp registry must contain exactly `general` — adding another on-ramp requires a memory ratification, same bar as adding a vertical",
+    );
+  });
+
+  it("does NOT appear in VERTICAL_SLUGS (ten-vertical lock intact)", () => {
+    assert.equal(
+      VERTICAL_SLUGS.includes("general"),
+      false,
+      "`general` must not appear in VERTICAL_SLUGS — chip row + footer + /verticals grid read from VERTICAL_SLUGS and the ten-vertical lock would silently break",
+    );
+  });
+
+  it("does NOT appear in getAllVerticals() (chip-row source)", () => {
+    const slugs = getAllVerticals().map((v) => v.slug);
+    assert.equal(
+      slugs.includes("general"),
+      false,
+      "getAllVerticals() must enumerate the ratified ten only — homepage chip row would surface /general as an eleventh vertical otherwise",
+    );
+    assert.equal(slugs.length, 10, "getAllVerticals() must return exactly 10");
+  });
+
+  it("DOES appear in getAllVerticalsIncludingOnRamps() (route source)", () => {
+    const slugs = getAllVerticalsIncludingOnRamps().map((v) => v.slug);
+    assert.equal(
+      slugs.includes("general"),
+      true,
+      "getAllVerticalsIncludingOnRamps() drives generateStaticParams — /general must be statically built",
+    );
+    assert.equal(
+      slugs.length,
+      11,
+      "getAllVerticalsIncludingOnRamps() must return the ten plus the on-ramp",
+    );
+  });
+
+  it("resolves via getVerticalContent() so the [vertical] route renders /general", () => {
+    const content = getVerticalContent("general");
+    assert.ok(content, "getVerticalContent('general') must resolve");
+    assert.equal(content.slug, "general");
+    assert.equal(content.name, "Local businesses");
+  });
+
+  it("is marked status: 'on-ramp' (the distinguishing flag)", () => {
+    const content = getVerticalContent("general");
+    assert.ok(content);
+    assert.equal(
+      content.status,
+      "on-ramp",
+      "/general must carry status: 'on-ramp' — the type discriminator for every surface that treats on-ramps differently from ratified verticals",
+    );
+  });
+
+  it("defaults to Regular tier per project_stripe_both_surfaces.md", () => {
+    const content = getVerticalContent("general");
+    assert.ok(content);
+    assert.equal(
+      content.tier,
+      "regular",
+      "/general must be Regular — single productized tier per the 2026-05-12 lock",
+    );
+    assert.equal(getVerticalTier("general"), "regular");
+  });
+
+  it("has the full VerticalContent shape (hero, JTBDs, ROI, claims, integrations)", () => {
+    const content = getVerticalContent("general");
+    assert.ok(content);
+
+    assert.ok(content.hero.headline.length > 10, "hero headline too short");
+    assert.ok(content.hero.valueProp.length > 40, "hero valueProp too short");
+
+    assert.ok(content.jtbdTables.length >= 1, "must surface at least one role");
+    const totalRows = content.jtbdTables.reduce(
+      (sum, t) => sum + t.rows.length,
+      0,
+    );
+    assert.ok(totalRows >= 3, `must have >=3 JTBD rows (got ${totalRows})`);
+
+    assert.ok(content.roi.multiplier.length > 0, "ROI missing multiplier");
+    assert.ok(content.roi.math.length > 30, "ROI math too thin");
+    assert.ok(
+      content.roi.citation.length > 20,
+      "ROI missing citation — every claim cites per feedback_no_guesses_no_estimates.md",
+    );
+
+    assert.ok(content.claims.replace.length > 0, "claims.replace empty");
+    assert.ok(content.claims.integrate.length > 0, "claims.integrate empty");
+    assert.ok(content.claims.augment.length > 0, "claims.augment empty");
+
+    assert.ok(
+      content.integrations.planned.length > 0,
+      "must list common-denominator integrations on the roadmap",
+    );
+    assert.ok(
+      content.integrations.plannedWindow.length > 0,
+      "missing plannedWindow",
+    );
+  });
+
+  it("frames upgrade depth toward /custom (NOT Plus/Max language, banned by project_stripe_both_surfaces.md)", () => {
+    const content = getVerticalContent("general");
+    assert.ok(content);
+
+    // The on-ramp's only honest upgrade path is a Custom engagement on
+    // `/custom`. The page text must NOT surface Plus / Max tier names —
+    // those are schema-only per the 2026-05-12 simplification.
+    const haystack = [
+      content.hero.valueProp,
+      content.metaDescription,
+      content.roi.math,
+      content.roi.citation,
+      ...content.claims.replace,
+      ...content.claims.integrate,
+      ...content.claims.augment,
+      content.valueLoopExample?.outcome ?? "",
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    assert.equal(
+      /\bplus\s+tier\b/.test(haystack),
+      false,
+      "/general must not surface 'Plus tier' — banned per project_stripe_both_surfaces.md",
+    );
+    assert.equal(
+      /\bmax\s+tier\b/.test(haystack),
+      false,
+      "/general must not surface 'Max tier' — banned per project_stripe_both_surfaces.md",
+    );
+
+    // Affirmative: the page must point to Custom as the depth path.
+    assert.ok(
+      /custom\s+engagement/.test(haystack),
+      "/general must point to Custom engagement as the depth path (per project_stripe_both_surfaces.md)",
+    );
+  });
+
+  it("ratified verticals carry no status (default 'live') so the on-ramp flag is unambiguous", () => {
+    for (const slug of VERTICAL_SLUGS) {
+      const c = getVerticalContent(slug);
+      assert.ok(c);
+      assert.notEqual(
+        c.status,
+        "on-ramp",
+        `${slug} must not carry status: 'on-ramp' — only /general does`,
       );
     }
   });

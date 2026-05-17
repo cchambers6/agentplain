@@ -12,11 +12,17 @@ import type { VerticalContent } from "../types";
 // Operations/CSA, Compliance officer (often outsourced or wears multiple
 // hats at small RIAs).
 //
-// Pricing: surfaces as Regular tier per `project_stripe_both_surfaces.md`
-// (simplified 2026-05-12 — single productized tier across all 10 verticals;
-// fiduciary-aware depth, SEC Marketing Rule compliance corpus, and bespoke
-// custodian integrations route to /custom). The `tier: "max"` field below is
-// schema-only and is NOT surfaced on the customer page.
+// Pricing: recommended at Max tier per `project_stripe_both_surfaces.md`
+// (2026-05-15 — three customer-facing tiers Regular / Partner / Max). Max is
+// AD-HOC quote-based, not a fixed per-seat price; RIAs self-route to Max
+// because fiduciary-aware depth, SEC Marketing Rule compliance corpus,
+// custodian-portal integrations (Schwab / Fidelity / Pershing), and Form ADV
+// Part 2A maintenance all require higher-intensity service than Regular's
+// standard cadence. The `tier: "max"` field on disk drives the recommended-
+// tier surface; `tierDisplayName("max")` returns "Max" so the customer-facing
+// label is stable. Custom custodian-portal scrapers, custom planning-software
+// integrations, or other capability builds we don't have yet still route to
+// /custom (separate from Max — capability work, not service intensity).
 
 export const ria: VerticalContent = {
   slug: "ria",
@@ -172,13 +178,13 @@ export const ria: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "24x",
-    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
+    multiplier: "engagement-dependent (target 15×+)",
+    inputCost: "Max tier · quote-based engagement (fiduciary-aware depth, SEC Marketing Rule compliance corpus, custodian-portal integrations, dedicated team)",
     outputValue: "$175,000 / yr in advisor-hour reclamation at a 3-advisor practice",
     math:
-      "3 advisors × ~6 hours/week each on prep + recap + comms triage × $300/hr opportunity cost × 50 weeks = $270k/yr opportunity. Capture 65% with the fleet → $175k/yr returned. Against 3 Regular-tier seats at $199/mo solo ($7,164/yr) that's ~24x at three advisors; a 25-advisor practice on the $119/seat band ($35,700/yr) capturing the same share of a $2.25M opportunity runs past 40x. Fiduciary-aware compliance, SEC Marketing Rule corpus, and dedicated success route to /custom when a firm needs depth beyond plug-and-play.",
+      "3 advisors × ~6 hours/week each on prep + recap + comms triage × $300/hr opportunity cost × 50 weeks = $270k/yr opportunity. Capture 65% with the fleet → $175k/yr returned. A 25-advisor practice capturing the same share of a $2.25M opportunity returns past $1.4M/yr. Max engagements are scoped per practice — fiduciary-aware compliance, SEC Marketing Rule corpus, custodian-portal coverage (Schwab / Fidelity / Pershing), and dedicated success management drive the price. Talk to a service partner to scope; the Partner ladder ($299→$199 per seat) is the floor the quote starts from before service-intensity overlay. Capability builds we don't have yet (e.g., a custom portfolio-rebalancer skill) live on /custom in addition to Max.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (single Regular tier, simplified 2026-05-12; per-seat ladder $199→$99; anything bespoke routes to /custom). ROI band per `project_pricing_value_anchor.md` (Regular-tier ROI range 15x–107x). RIA segment economics per `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 (financial advisors, composite 33). Hourly-rate input is operator-modeled — flagged in capability inbox.",
+      "Pricing per `project_stripe_both_surfaces.md` (Max tier per 2026-05-15 ratification — AD-HOC quote-based engagement; routes through `/custom?type=max` intake to operator triage). ROI band per `project_pricing_value_anchor.md` (Regular tier 15x–107x as the floor; Max engagements scope from there). RIA segment economics per `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 (financial advisors, composite 33). Hourly-rate input is operator-modeled — flagged in capability inbox.",
   },
 
   claims: {

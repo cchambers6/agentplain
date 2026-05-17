@@ -8,16 +8,23 @@
 
 /**
  * Tier identifier — must match the per-seat ladder defined in
- * `project_stripe_both_surfaces.md` (locked 2026-05-09; pilot SKUs deprecated
- * the same day) and the tier mapping in `project_vertical_tier_mapping.md`.
+ * `project_stripe_both_surfaces.md` (2026-05-15 three-tier ratification;
+ * supersedes the 2026-05-12 simplified Regular-only model and the
+ * 2026-05-09 productized-Max model).
+ *
+ * Customer-facing display names — see `lib/pricing/tiers.ts` →
+ * `tierDisplayName()`. The on-disk enum values stay `regular` / `plus` /
+ * `max` for stable identity; copy reads "Partner" wherever `plus` would
+ * otherwise leak.
  *
  * Per-seat ladder (solo → 50–99 seats):
- * - `regular` → agentplain-regular-monthly → $199 → $99 per seat
- * - `plus`    → agentplain-plus-monthly    → $299 → $199 per seat
- * - `max`     → agentplain-max-monthly     → $499 → $299 per seat
+ * - `regular` → "Regular" → $199 → $99 per seat (productized)
+ * - `plus`    → "Partner" → $299 → $199 per seat (productized; +4 hrs/mo named-service-partner time)
+ * - `max`     → "Max"     → AD-HOC quote-based (no fixed seat price)
  *
- * Month-to-month, first month free, no minimums, no pilot fees.
- * 100+ seats moves to enterprise terms.
+ * Month-to-month, first month free across Regular + Partner. Max is
+ * custom-quoted month-to-month or annual per engagement. 100+ seats moves
+ * to enterprise terms via /custom.
  */
 export type VerticalTier = "regular" | "plus" | "max";
 

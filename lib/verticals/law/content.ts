@@ -13,11 +13,17 @@ import type { VerticalContent } from "../types";
 // filings + opposing-counsel coordination; transactional attorneys run
 // drafting + redlining + closing coordination).
 //
-// Pricing: surfaces as Regular tier per `project_stripe_both_surfaces.md`
-// (simplified 2026-05-12 — single productized tier across all 10 verticals;
-// privilege-aware depth, ABA Model Rule compliance corpus, and bespoke
-// jurisdictional packs route to /custom). The `tier: "max"` field below is
-// schema-only and is NOT surfaced on the customer page.
+// Pricing: recommended at Max tier per `project_stripe_both_surfaces.md`
+// (2026-05-15 — three customer-facing tiers Regular / Partner / Max). Max is
+// AD-HOC quote-based, not a fixed per-seat price; law firms self-route to Max
+// because privilege-aware depth, ABA Model Rule 1.6 compliance corpus, multi-
+// jurisdiction state packs, and the Clio/CoCounsel competitive context all
+// require higher-intensity service than Regular's standard cadence. The
+// `tier: "max"` field on disk drives the recommended-tier surface;
+// `tierDisplayName("max")` returns "Max" so the customer-facing label is
+// stable. Bespoke jurisdictional packs and capability builds we don't have
+// yet still route to /custom (separate from Max — capability work, not
+// service intensity).
 
 export const law: VerticalContent = {
   slug: "law",
@@ -163,13 +169,13 @@ export const law: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "21x",
-    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
+    multiplier: "engagement-dependent (target 15×+)",
+    inputCost: "Max tier · quote-based engagement (privilege-aware depth, ABA Model Rule 1.6 compliance corpus, multi-jurisdiction packs, dedicated team)",
     outputValue: "$150,000 / yr in attorney-hour reclamation at a 3-attorney firm",
     math:
-      "3 attorneys × ~10 hours/week each on drafting + status + chase work × $250/hr billable opportunity cost × 50 weeks = $375k/yr opportunity. Capture even 40% with the fleet → $150k/yr returned. Against 3 Regular-tier seats at $199/mo solo ($7,164/yr) that's ~21x at three attorneys; a 25-attorney firm on the $119/seat band ($35,700/yr) capturing 75% of $3.125M opportunity runs well past 60x. Privilege-aware compliance, ABA Model Rule 1.6 review, and the bespoke jurisdiction corpus route to /custom when a firm needs depth beyond plug-and-play.",
+      "3 attorneys × ~10 hours/week each on drafting + status + chase work × $250/hr billable opportunity cost × 50 weeks = $375k/yr opportunity. Capture even 40% with the fleet → $150k/yr returned. A 25-attorney firm capturing 75% of $3.125M opportunity returns past $2.3M/yr. Max engagements are scoped per firm — privilege-aware compliance, ABA Model Rule 1.6 review, multi-state filing packs, and dedicated success management drive the price. Talk to a service partner to scope; the Partner ladder ($299→$199 per seat) is the floor the quote starts from before service-intensity overlay. Capability builds we don't have yet (e.g., a custom court e-filing skill) live on /custom in addition to Max.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (single Regular tier, simplified 2026-05-12; per-seat ladder $199→$99; anything bespoke routes to /custom). ROI band per `project_pricing_value_anchor.md` (Regular-tier ROI range 15x–107x). Competitive context per `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 + §5 (Clio Work April 2026; CoCounsel/Smokeball March 2026). Hourly-rate input is operator-modeled — flagged in capability inbox.",
+      "Pricing per `project_stripe_both_surfaces.md` (Max tier per 2026-05-15 ratification — AD-HOC quote-based engagement; routes through `/custom?type=max` intake to operator triage). ROI band per `project_pricing_value_anchor.md` (Regular tier 15x–107x as the floor; Max engagements scope from there). Competitive context per `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 + §5 (Clio Work April 2026; CoCounsel/Smokeball March 2026). Hourly-rate input is operator-modeled — flagged in capability inbox.",
   },
 
   claims: {

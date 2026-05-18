@@ -39,7 +39,9 @@ export default async function AgentDetailPage({ params }: PageProps) {
   return (
     <div>
       <ApEyebrow className="mb-3">{agentSlug}</ApEyebrow>
-      <h1 className="font-display text-3xl text-ink">Agent activity</h1>
+      <h1 className="font-display text-3xl text-ink">
+        What this capability has been doing.
+      </h1>
 
       <section className="mt-8">
         <ApEyebrow className="mb-3">

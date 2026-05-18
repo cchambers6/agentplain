@@ -46,9 +46,9 @@ export default async function ApprovalsPage({ params }: PageProps) {
       {rows.length === 0 ? (
         <div className="mt-8">
           <ApRootedEmptyState
-            motif="wheat"
+            motif="lone-tree"
             reality="Nothing waiting on you."
-            change="Your fleet is reading and acting. New items land here as they surface."
+            change="Your fleet is reading and acting. New decisions land here as they cross your threshold."
           />
         </div>
       ) : (

@@ -45,7 +45,11 @@ export function TestConnectionButton({
               router.refresh();
             } catch (err) {
               setState("fail");
-              setDetail(err instanceof Error ? err.message : "Network error");
+              setDetail(
+                err instanceof Error
+                  ? err.message
+                  : "We couldn't reach the connection.",
+              );
             }
           });
         }}
@@ -53,16 +57,18 @@ export function TestConnectionButton({
       >
         {pending ? "checking…" : "test connection"}
       </button>
-      {state === "ok" && (
-        <span className="font-mono text-[11px] tracking-eyebrow uppercase text-moss">
-          healthy
-        </span>
-      )}
-      {state === "fail" && (
-        <span className="font-mono text-[11px] tracking-eyebrow uppercase text-flag">
-          failed — {detail}
-        </span>
-      )}
+      <div role="status" aria-live="polite" aria-atomic="true">
+        {state === "ok" && (
+          <span className="font-mono text-[11px] tracking-eyebrow uppercase text-moss">
+            healthy
+          </span>
+        )}
+        {state === "fail" && (
+          <span className="font-mono text-[11px] tracking-eyebrow uppercase text-flag">
+            failed — {detail}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

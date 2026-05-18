@@ -82,8 +82,8 @@ export default async function WorkspaceActivityPage({
           <div className="mt-6">
             {filteredRows.length === 0 ? (
               <ApRootedEmptyState
-                motif="wheat"
-                reality={`No ${kindFilter ?? "matching"} handoffs in this slice.`}
+                motif="plow"
+                reality={`Nothing under ${kindFilter ?? "this filter"} yet.`}
                 change="Clear the filter to see the full feed, or wait — items land as the fleet works."
               />
             ) : (

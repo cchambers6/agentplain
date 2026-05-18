@@ -35,10 +35,15 @@ export function DisconnectButton({
   }
 
   return (
-    <div className="flex flex-col gap-3 border border-flag/40 bg-flag/5 p-4">
+    <div
+      className="flex flex-col gap-3 border border-flag/40 bg-flag/5 p-4"
+      role="alertdialog"
+      aria-label={`confirm disconnect ${integrationName}`}
+    >
       <p className="text-[14px] text-ink">
-        Disconnect {integrationName}? agentplain stops reading this account
-        immediately. You can reconnect anytime.
+        Disconnect {integrationName}? Your fleet stops reading this account
+        immediately. Drafts already in your review queue stay there.
+        Reconnect any time.
       </p>
       <div className="flex flex-wrap gap-3">
         <button
@@ -62,7 +67,7 @@ export function DisconnectButton({
           }}
           className={`border border-flag bg-flag px-4 py-2 font-sans text-[13px] text-paper transition hover:bg-flag/90 disabled:opacity-60 ${focusRing}`}
         >
-          {pending ? "disconnecting…" : "yes, disconnect"}
+          {pending ? "disconnecting…" : "disconnect"}
         </button>
       </div>
     </div>

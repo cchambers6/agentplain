@@ -62,7 +62,7 @@ export function ApprovalsList({ workspaceId, rows }: ApprovalsListProps) {
             <input type="hidden" name="itemId" value={editing.id} />
             <label className="block">
               <span className="mb-2 block font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-                Draft body
+                draft body
               </span>
               <textarea
                 name="body"
@@ -148,7 +148,7 @@ function ApprovalArticle({ row, workspaceId, onEdit }: ApprovalArticleProps) {
       {rendered.proposedSlots && rendered.proposedSlots.length > 0 ? (
         <div className="mt-4 border-t border-rule pt-4">
           <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-            Proposed slots
+            proposed slots
           </p>
           <ul className="mt-2 space-y-1 text-[14px] text-ink-soft">
             {rendered.proposedSlots.map((s, i) => (

@@ -97,7 +97,7 @@ export default async function WorkspaceIntegrationsPage({
       {tiles.length === 0 ? (
         <div className="mt-8">
           <ApRootedEmptyState
-            motif="wheat"
+            motif="silo"
             reality="Nothing in your marketplace yet."
             change="Your service partner seeds connectors here as the per-vertical fleet rolls out. Reach out and we'll move you up the list."
           />

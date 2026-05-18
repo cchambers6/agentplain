@@ -50,15 +50,20 @@ export function ApHeritageTable({
   ...rest
 }: ApHeritageTableProps) {
   const classes = [
-    "w-full border border-rule bg-paper text-[14px]",
+    "w-full min-w-[640px] border border-rule bg-paper text-[14px]",
     className,
   ]
     .filter(Boolean)
     .join(" ");
+  // Wrap in an overflow-x-auto band so narrow viewports (≤380px) get a
+  // horizontal scroll on the table without breaking the heritage hairlines.
+  // The min-w on the table itself keeps columns legible inside the scroll.
   return (
-    <table className={classes} {...rest}>
-      {children}
-    </table>
+    <div className="overflow-x-auto">
+      <table className={classes} {...rest}>
+        {children}
+      </table>
+    </div>
   );
 }
 

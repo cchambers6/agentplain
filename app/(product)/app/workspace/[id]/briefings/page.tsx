@@ -36,7 +36,7 @@ export default async function BriefingsPage({ params }: PageProps) {
       {briefings.length === 0 ? (
         <div className="mt-8">
           <ApRootedEmptyState
-            motif="horizon"
+            motif="big-sky"
             reality={`No briefings filed yet. ${partner} writes the first one after the next morning run.`}
             change="Briefings land here at 9am ET each workday once your fleet has read enough to have something to say."
           />

@@ -418,9 +418,9 @@ function SetPreferences({ partner }: { partner: string }) {
   return (
     <div className="space-y-6">
       <p className="text-[15px] leading-relaxed text-ink-soft">
-        These are the defaults {partner} starts with. Phase 1 ships
-        read-only — they become editable in the next release; we wanted
-        you to see what&rsquo;s in play.
+        These are the defaults {partner} starts with. They&rsquo;re
+        read-only today — they become editable in the next release. We
+        wanted you to see what&rsquo;s in play.
       </p>
 
       <FieldGroup

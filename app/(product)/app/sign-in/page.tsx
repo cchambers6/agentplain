@@ -1,7 +1,26 @@
 import Link from "next/link";
 import { SignInForm } from "./SignInForm";
 
-export default function SignInPage() {
+type Reason = "missing" | "invalid" | "expired" | "used";
+
+const REASON_COPY: Record<Reason, string> = {
+  missing: "That sign-in link is missing its token. Request a fresh one below.",
+  invalid: "That sign-in link is no longer valid. Request a fresh one below.",
+  expired: "That sign-in link has expired. Request a fresh one below — links are good for 15 minutes.",
+  used: "That sign-in link has already been used. Request a fresh one below.",
+};
+
+const isReason = (v: string | undefined): v is Reason =>
+  v === "missing" || v === "invalid" || v === "expired" || v === "used";
+
+interface SignInPageProps {
+  searchParams: Promise<{ reason?: string }>;
+}
+
+export default async function SignInPage({ searchParams }: SignInPageProps) {
+  const { reason } = await searchParams;
+  const flash = isReason(reason) ? REASON_COPY[reason] : null;
+
   return (
     <div className="container-wide py-16">
       <div className="mx-auto max-w-md">
@@ -12,6 +31,14 @@ export default function SignInPage() {
         <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
           Drop your email — we'll send a single-use link.
         </p>
+        {flash ? (
+          <p
+            className="mt-6 border border-rule bg-paper-deep p-4 text-[15px] leading-relaxed text-ink"
+            role="status"
+          >
+            {flash}
+          </p>
+        ) : null}
         <div className="mt-8">
           <SignInForm />
         </div>

@@ -8,10 +8,7 @@ import { redirect } from "next/navigation";
 import {
   requestMagicLink,
   signUpBrokerOwner,
-  verifyMagicLink,
-  writeSession,
   clearSession,
-  type SessionPayload,
 } from "@/lib/auth";
 import { verticalEnumFromSlug } from "@/lib/auth/vertical-enum";
 import { getVerticalContent } from "@/lib/verticals";
@@ -122,34 +119,11 @@ export async function requestSignInAction(
   };
 }
 
-export async function verifyAction(rawToken: string): Promise<{
-  ok: true;
-  destination: string;
-} | { ok: false; error: string }> {
-  if (!rawToken || rawToken.length < 32) {
-    return { ok: false, error: "Invalid sign-in link" };
-  }
-  let result: Awaited<ReturnType<typeof verifyMagicLink>>;
-  try {
-    result = await verifyMagicLink({ rawToken });
-  } catch (err) {
-    return { ok: false, error: errorMessage(err) };
-  }
-
-  const session: SessionPayload = {
-    userId: result.userId,
-    email: result.email,
-    isOperator: result.isOperator,
-    activeWorkspaceId: result.defaultWorkspaceId,
-    issuedAt: new Date().toISOString(),
-  };
-  await writeSession(session);
-
-  const destination = result.defaultWorkspaceId
-    ? `/app/workspace/${result.defaultWorkspaceId}`
-    : "/app";
-  return { ok: true, destination };
-}
+// Magic-link verification lives in app/(product)/app/verify/route.ts — it must
+// be a Route Handler because the success path writes the session cookie, and
+// Next.js forbids cookie mutation from Server Components. The previous
+// server-action approach crashed in production (digest 2234350772) when called
+// from the verify page's render. See docs/incident-log.md (2026-05-17).
 
 export async function signOutAction(): Promise<void> {
   await clearSession();

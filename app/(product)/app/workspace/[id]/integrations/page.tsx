@@ -34,18 +34,27 @@ export default async function WorkspaceIntegrationsPage({
 
   const ctx = { userId: member.userId, workspaceId, isOperator: false };
 
-  const credentials = await withRls(ctx, (tx) =>
-    tx.integrationCredential.findMany({
-      where: { workspaceId },
-      select: {
-        id: true,
-        provider: true,
-        accountEmail: true,
-        status: true,
-      },
-      orderBy: { createdAt: "desc" },
-    }),
-  );
+  const [credentials, onboardingState] = await Promise.all([
+    withRls(ctx, (tx) =>
+      tx.integrationCredential.findMany({
+        where: { workspaceId },
+        select: {
+          id: true,
+          provider: true,
+          accountEmail: true,
+          status: true,
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+    ),
+    withRls(ctx, (tx) =>
+      tx.onboardingState.findUnique({
+        where: { workspaceId },
+        select: { completedAt: true },
+      }),
+    ),
+  ]);
+  const onboardingComplete = onboardingState?.completedAt != null;
 
   const entries = listIntegrations();
   const connectedByProvider = new Map(
@@ -125,6 +134,7 @@ export default async function WorkspaceIntegrationsPage({
       <ConnectionFlash
         workspaceId={workspaceId}
         connectedName={connectedEntry?.name ?? null}
+        onboardingComplete={onboardingComplete}
       />
     </div>
   );

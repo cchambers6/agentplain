@@ -13,11 +13,18 @@ interface ConnectionFlashProps {
   workspaceId: string;
   /** Marketplace entry name (e.g. "Gmail"); falls back to a generic label. */
   connectedName?: string | null;
+  /** When false, the primary CTA routes back into the onboarding flow
+   *  rather than the workspace overview — closes the loop where a user
+   *  finished OAuth from inside onboarding step 2 and would otherwise be
+   *  dumped on the workspace landing with a "continue onboarding" banner
+   *  that just sends them back here. */
+  onboardingComplete?: boolean;
 }
 
 export function ConnectionFlash({
   workspaceId,
   connectedName,
+  onboardingComplete = true,
 }: ConnectionFlashProps) {
   const router = useRouter();
   const [open, setOpen] = useState(connectedName != null);
@@ -32,6 +39,13 @@ export function ConnectionFlash({
   };
 
   if (!connectedName) return null;
+
+  const primaryHref = onboardingComplete
+    ? `/app/workspace/${workspaceId}`
+    : `/app/workspace/${workspaceId}/onboarding`;
+  const primaryLabel = onboardingComplete
+    ? "back to workspace"
+    : "continue onboarding";
 
   return (
     <ApPaperSheet
@@ -50,12 +64,8 @@ export function ConnectionFlash({
         this screen and pauses reads immediately.
       </p>
       <div className="flex flex-wrap gap-3">
-        <ApHeritageButton
-          variant="primary"
-          withArrow
-          href={`/app/workspace/${workspaceId}`}
-        >
-          back to workspace
+        <ApHeritageButton variant="primary" withArrow href={primaryHref}>
+          {primaryLabel}
         </ApHeritageButton>
         <button
           type="button"

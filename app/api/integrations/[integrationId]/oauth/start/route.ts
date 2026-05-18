@@ -42,6 +42,27 @@ interface OAuthStateCookie {
   workspaceId: string;
   integrationId: string;
   issuedAt: number;
+  /** Workspace-scoped path the callback should redirect back to on
+   *  success. Validated against the active workspaceId at start time. */
+  returnTo?: string;
+}
+
+/**
+ * Whitelist the `returnTo` param to workspace-scoped paths owned by THIS
+ * workspace. Prevents the OAuth flow from being abused to redirect to
+ * arbitrary destinations, and prevents cross-workspace bouncing.
+ */
+function safeReturnTo(raw: string | null, workspaceId: string): string | undefined {
+  if (!raw) return undefined;
+  if (raw.length > 256) return undefined;
+  // Must be same-origin, must be workspace-scoped, must be this workspace.
+  const prefix = `/app/workspace/${workspaceId}/`;
+  if (!raw.startsWith(prefix) && raw !== `/app/workspace/${workspaceId}`) {
+    return undefined;
+  }
+  // No protocol-relative or absolute URLs sneak through (defense in depth).
+  if (raw.startsWith("//") || /^[a-z]+:/i.test(raw)) return undefined;
+  return raw;
 }
 
 interface RouteContext {
@@ -81,11 +102,16 @@ export async function GET(req: NextRequest, ctx: RouteContext): Promise<NextResp
   await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
 
   const nonce = randomBytes(32).toString("hex");
+  const returnTo = safeReturnTo(
+    req.nextUrl.searchParams.get("returnTo"),
+    workspaceId,
+  );
   const cookiePayload: OAuthStateCookie = {
     nonce,
     workspaceId,
     integrationId,
     issuedAt: Date.now(),
+    ...(returnTo ? { returnTo } : {}),
   };
   const sealed = await sealData(cookiePayload, {
     password: env.sessionPassword(),

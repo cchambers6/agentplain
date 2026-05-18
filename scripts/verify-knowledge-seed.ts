@@ -110,7 +110,7 @@ async function main() {
     }
     for (const [i, hit] of search.value.entries()) {
       console.log(
-        `   #${i + 1} sim=${hit.similarity.toFixed(4)} vertical=${hit.verticalSlug ?? '-'} sourceId=${hit.sourceId}`,
+        `   #${i + 1} sim=${hit.similarity.toFixed(4)} vertical=${hit.verticalSlug ?? '-'} documentId=${hit.documentId ?? '-'}`,
       );
       console.log(`        title: ${hit.title}`);
     }

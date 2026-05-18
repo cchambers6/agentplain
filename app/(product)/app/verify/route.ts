@@ -21,10 +21,14 @@ const signInUrlWithReason = (origin: string, reason: FailureReason): string => {
   return url.toString();
 };
 
+// Map the three specific error strings thrown by verifyMagicLink onto the
+// reason codes the sign-in page renders. Order matters: "Invalid or expired
+// link" (token not found, the most common failure) must NOT match the
+// "has expired" branch.
 const classifyError = (message: string): FailureReason => {
   const m = message.toLowerCase();
-  if (m.includes("expired")) return "expired";
   if (m.includes("already been used")) return "used";
+  if (m.includes("has expired")) return "expired";
   return "invalid";
 };
 

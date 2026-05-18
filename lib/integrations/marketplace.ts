@@ -187,9 +187,22 @@ export function resolveMcpEndpoint(entry: MarketplaceEntry, workspaceId: string)
 /**
  * The OAuth start URL the marketplace tile links to. Single source so the
  * tile, the per-integration settings page, and tests don't drift.
+ *
+ * `returnTo` lets the originating surface (onboarding step 2, the per-
+ * integration settings page, etc.) ask the OAuth callback to land back on
+ * THAT surface instead of the default `/integrations` index. The start
+ * route validates the path is workspace-scoped before stashing it on the
+ * sealed state cookie.
  */
-export function oauthStartPath(entry: MarketplaceEntry, workspaceId: string): string {
-  return `/api/integrations/${entry.id}/oauth/start?workspaceId=${encodeURIComponent(workspaceId)}`;
+export function oauthStartPath(
+  entry: MarketplaceEntry,
+  workspaceId: string,
+  returnTo?: string,
+): string {
+  const base = `/api/integrations/${entry.id}/oauth/start?workspaceId=${encodeURIComponent(workspaceId)}`;
+  return returnTo
+    ? `${base}&returnTo=${encodeURIComponent(returnTo)}`
+    : base;
 }
 
 /**

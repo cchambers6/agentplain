@@ -7,7 +7,7 @@ import {
 import { withWorkspace } from "@/lib/auth";
 import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
 import { withRls } from "@/lib/db";
-import { listIntegrations } from "@/lib/integrations/marketplace";
+import { listIntegrations, oauthStartPath } from "@/lib/integrations/marketplace";
 import {
   STEP_META,
   STEP_ORDER,
@@ -348,17 +348,19 @@ function ConnectIntegration({
           </ul>
           <p className="mt-3 text-[13px] leading-relaxed text-ink-soft">
             {partner} will start watching for new messages on the next
-            sweep. Add another tool any time from your connections.
+            sweep. The next step sets your drafting tone and the
+            categorization defaults the fleet uses on every reply.
           </p>
-          <div className="mt-4">
-            <ApHeritageButton
-              variant="secondary"
-              withArrow
+          <p className="mt-3 text-[12px] leading-relaxed text-mute">
+            Need to wire another tool first?{" "}
+            <Link
               href={`/app/workspace/${workspaceId}/integrations`}
+              className="text-ink underline-offset-4 hover:underline focus:outline-none focus-visible:underline"
             >
-              manage connections
-            </ApHeritageButton>
-          </div>
+              add it from connections
+            </Link>{" "}
+            — your spot in onboarding holds.
+          </p>
         </div>
       ) : (
         <div className="border border-ink bg-paper-deep p-5">
@@ -371,13 +373,35 @@ function ConnectIntegration({
               : "Pick a tool to connect from your connections."}
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
-            <ApHeritageButton
-              variant="primary"
-              withArrow
-              href={`/app/workspace/${workspaceId}/integrations`}
-            >
-              {primary ? `connect ${primary.name.toLowerCase()}` : "open connections"}
-            </ApHeritageButton>
+            {primary ? (
+              <ApHeritageButton
+                variant="primary"
+                withArrow
+                href={oauthStartPath(
+                  primary,
+                  workspaceId,
+                  `/app/workspace/${workspaceId}/onboarding`,
+                )}
+              >
+                connect {primary.name.toLowerCase()}
+              </ApHeritageButton>
+            ) : (
+              <ApHeritageButton
+                variant="primary"
+                withArrow
+                href={`/app/workspace/${workspaceId}/integrations`}
+              >
+                open connections
+              </ApHeritageButton>
+            )}
+            {primary ? (
+              <Link
+                href={`/app/workspace/${workspaceId}/integrations`}
+                className="self-center text-sm text-mute underline-offset-4 hover:text-ink hover:underline focus:outline-none focus-visible:text-ink focus-visible:underline"
+              >
+                see all connections
+              </Link>
+            ) : null}
           </div>
           <p className="mt-3 text-[12px] leading-relaxed text-mute">
             Nothing about the workspace blocks on a connector — skip

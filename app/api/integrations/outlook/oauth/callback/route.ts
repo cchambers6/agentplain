@@ -42,14 +42,28 @@ interface OAuthStateCookie {
   workspaceId: string;
   integrationId: string;
   issuedAt: number;
+  /** Workspace-scoped path the OAuth start route asked the callback to
+   *  redirect back to on success. When absent or not workspace-scoped,
+   *  fall through to the marketplace index. */
+  returnTo?: string;
+}
+
+function landingPath(cookie: OAuthStateCookie): string {
+  if (
+    cookie.returnTo &&
+    cookie.returnTo.startsWith(`/app/workspace/${cookie.workspaceId}`)
+  ) {
+    return cookie.returnTo;
+  }
+  return `/app/workspace/${cookie.workspaceId}/integrations`;
 }
 
 function workspaceRedirect(
   origin: string,
-  workspaceId: string,
+  cookie: OAuthStateCookie,
   params: Record<string, string>,
 ): NextResponse {
-  const url = new URL(`/app/workspace/${workspaceId}/integrations`, origin);
+  const url = new URL(landingPath(cookie), origin);
   for (const [k, v] of Object.entries(params)) {
     url.searchParams.set(k, v);
   }
@@ -96,30 +110,30 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const workspaceId = cookie.workspaceId;
 
   if (cookie.integrationId !== INTEGRATION_ID) {
-    return workspaceRedirect(origin, workspaceId, {
+    return workspaceRedirect(origin, cookie, {
       error: "integration_mismatch",
       detail: cookie.integrationId,
     });
   }
   if (errorParam) {
-    return workspaceRedirect(origin, workspaceId, {
+    return workspaceRedirect(origin, cookie, {
       error: "microsoft_returned_error",
       detail: errorDescription ?? errorParam,
     });
   }
   if (!code || !stateParam) {
-    return workspaceRedirect(origin, workspaceId, {
+    return workspaceRedirect(origin, cookie, {
       error: "missing_code_or_state",
     });
   }
   if (cookie.nonce !== stateParam) {
-    return workspaceRedirect(origin, workspaceId, { error: "state_mismatch" });
+    return workspaceRedirect(origin, cookie, { error: "state_mismatch" });
   }
 
   const clientId = env.microsoftOAuthClientId();
   const clientSecret = env.microsoftOAuthClientSecret();
   if (!clientId || !clientSecret) {
-    return workspaceRedirect(origin, workspaceId, {
+    return workspaceRedirect(origin, cookie, {
       error: "microsoft_oauth_not_configured",
     });
   }
@@ -153,7 +167,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       }),
     });
   } catch (err) {
-    return workspaceRedirect(origin, workspaceId, {
+    return workspaceRedirect(origin, cookie, {
       error: "token_exchange_network",
       detail: err instanceof Error ? err.message : String(err),
     });
@@ -170,7 +184,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     } catch {
       // fall through
     }
-    return workspaceRedirect(origin, workspaceId, {
+    return workspaceRedirect(origin, cookie, {
       error: "token_exchange_failed",
       detail: detail.slice(0, 240),
     });
@@ -187,13 +201,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     parsed = (await tokenRes.json()) as MicrosoftTokenResponse;
   } catch (err) {
-    return workspaceRedirect(origin, workspaceId, {
+    return workspaceRedirect(origin, cookie, {
       error: "token_parse_failed",
       detail: err instanceof Error ? err.message : String(err),
     });
   }
   if (!parsed.access_token) {
-    return workspaceRedirect(origin, workspaceId, {
+    return workspaceRedirect(origin, cookie, {
       error: "token_missing_access_token",
     });
   }
@@ -201,7 +215,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     // Outlook must return a refresh_token because we requested
     // offline_access. If it's missing the grant won't survive past
     // the access token's lifetime.
-    return workspaceRedirect(origin, workspaceId, {
+    return workspaceRedirect(origin, cookie, {
       error: "token_missing_refresh_token",
       detail: "Re-grant with offline_access scope.",
     });
@@ -219,7 +233,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       },
     });
     if (!profileRes.ok) {
-      return workspaceRedirect(origin, workspaceId, {
+      return workspaceRedirect(origin, cookie, {
         error: "graph_me_failed",
         detail: `HTTP ${profileRes.status}`,
       });
@@ -230,7 +244,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       userPrincipalName?: string;
     };
     if (!body.id || !body.userPrincipalName) {
-      return workspaceRedirect(origin, workspaceId, {
+      return workspaceRedirect(origin, cookie, {
         error: "graph_me_incomplete",
       });
     }
@@ -240,7 +254,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       userPrincipalName: body.userPrincipalName,
     };
   } catch (err) {
-    return workspaceRedirect(origin, workspaceId, {
+    return workspaceRedirect(origin, cookie, {
       error: "graph_me_threw",
       detail: err instanceof Error ? err.message : String(err),
     });
@@ -296,7 +310,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     where: { id: credential.id },
   });
   if (!verify) {
-    return workspaceRedirect(origin, workspaceId, {
+    return workspaceRedirect(origin, cookie, {
       error: "credential_persist_verify_failed",
     });
   }
@@ -317,7 +331,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     },
   });
 
-  const res = workspaceRedirect(origin, workspaceId, {
+  const res = workspaceRedirect(origin, cookie, {
     connected: INTEGRATION_ID,
   });
   res.cookies.set(OAUTH_STATE_COOKIE, "", { path: "/", maxAge: 0 });

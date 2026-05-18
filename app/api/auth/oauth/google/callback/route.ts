@@ -44,16 +44,26 @@ const OAUTH_STATE_COOKIE = 'agentplain_oauth_state';
 // (/api/auth/oauth/google/connect) writes the 3-field shape. The Phase C
 // customer-self-serve start route (/api/integrations/[id]/oauth/start)
 // also sets `integrationId` — when present, the success path lands on the
-// workspace integrations page instead of /operator/integrations.
+// workspace integrations page instead of /operator/integrations. The same
+// start route may also set `returnTo` (e.g. onboarding step 2 deep-link)
+// — when present and workspace-scoped, the success path lands on that
+// origin so the user doesn't get bounced out of the flow they came from.
 interface OAuthStateCookie {
   nonce: string;
   workspaceId: string;
   integrationId?: string;
   issuedAt: number;
+  returnTo?: string;
 }
 
 function landingBase(cookie: OAuthStateCookie): string {
   if (cookie.integrationId) {
+    if (
+      cookie.returnTo &&
+      cookie.returnTo.startsWith(`/app/workspace/${cookie.workspaceId}`)
+    ) {
+      return cookie.returnTo;
+    }
     return `/app/workspace/${cookie.workspaceId}/integrations`;
   }
   return '/operator/integrations';

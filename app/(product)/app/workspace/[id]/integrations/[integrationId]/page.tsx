@@ -1,5 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import {
+  ApEyebrow,
+  ApHeritageButton,
+  ApRootedEmptyState,
+} from "@/components/ui/ap";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
 import {
@@ -58,12 +63,12 @@ export default async function IntegrationSettingsPage({
 
   return (
     <div>
-      <p className="eyebrow mb-3">
+      <p className="mb-3 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
         <Link
           href={`/app/workspace/${workspaceId}/integrations`}
-          className="underline-offset-4 hover:underline"
+          className="underline-offset-4 hover:underline focus:outline-none focus-visible:underline"
         >
-          ← Back to integrations
+          ← back to connections
         </Link>
       </p>
       <h1 className="font-display text-3xl text-ink">{entry.name}</h1>
@@ -83,54 +88,55 @@ export default async function IntegrationSettingsPage({
       )}
 
       {isComingSoon && (
-        <div className="mt-8 border border-rule bg-paper p-6">
-          <p className="font-display text-xl text-ink">Not connected yet.</p>
-          <p className="mt-2 text-[14px] text-ink-soft">
-            {entry.name} is on the substrate, not yet wired up. Join the
-            waitlist and your service partner reaches out when it&apos;s ready.
-          </p>
-          <div className="mt-5">
-            <Link
-              prefetch={false}
-              href={waitlistPath(entry)}
-              className="btn-secondary"
-            >
-              Join waitlist
-            </Link>
-          </div>
+        <div className="mt-8">
+          <ApRootedEmptyState
+            motif="wheat"
+            reality={`${entry.name} isn't wired up yet.`}
+            change={`It's on the substrate. Join the waitlist and your service partner reaches out when ${entry.name} is ready to connect.`}
+            cta={
+              <ApHeritageButton
+                variant="secondary"
+                withArrow
+                href={waitlistPath(entry)}
+              >
+                join the waitlist
+              </ApHeritageButton>
+            }
+          />
         </div>
       )}
 
       {!isComingSoon && !isConnected && (
-        <div className="mt-8 border border-rule bg-paper p-6">
-          <p className="font-display text-xl text-ink">Not connected yet.</p>
-          <p className="mt-2 text-[14px] text-ink-soft">
-            Tap connect to start the {entry.name} grant. Your service partner
-            takes it from there.
-          </p>
-          <div className="mt-5">
-            <Link
-              prefetch={false}
-              href={oauthStartPath(entry, workspaceId)}
-              className="btn-primary"
-            >
-              Connect {entry.name}
-            </Link>
-          </div>
+        <div className="mt-8">
+          <ApRootedEmptyState
+            motif="lone-tree"
+            reality={`Not connected yet.`}
+            change={`Tap connect to start the ${entry.name} grant. Your service partner takes it from there.`}
+            cta={
+              <ApHeritageButton
+                variant="primary"
+                withArrow
+                href={oauthStartPath(entry, workspaceId)}
+              >
+                connect {entry.name.toLowerCase()}
+              </ApHeritageButton>
+            }
+          />
         </div>
       )}
 
       {isConnected && credential && (
         <>
-          <dl className="mt-8 grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2">
-            <Row label="Account" value={credential.accountEmail} />
-            <Row label="Status" value={statusLabel(credential.status)} />
+          <ApEyebrow className="mt-8 mb-3">connection details</ApEyebrow>
+          <dl className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2">
+            <Row label="account" value={credential.accountEmail} />
+            <Row label="status" value={statusLabel(credential.status)} />
             <Row
-              label="Connected"
+              label="connected"
               value={new Date(credential.createdAt).toLocaleString()}
             />
             <Row
-              label="Last refreshed"
+              label="last refreshed"
               value={
                 credential.lastRefreshedAt
                   ? new Date(credential.lastRefreshedAt).toLocaleString()
@@ -138,11 +144,11 @@ export default async function IntegrationSettingsPage({
               }
             />
             <Row
-              label="Token expires"
+              label="token expires"
               value={new Date(credential.expiresAt).toLocaleString()}
             />
             <Row
-              label="Granted scopes"
+              label="granted scopes"
               value={
                 credential.scopes.length === 0
                   ? "—"

@@ -38,7 +38,7 @@ type AsAnchorProps = CommonProps &
 export type ApHeritageButtonProps = AsButtonProps | AsAnchorProps;
 
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-none font-sans text-sm font-medium transition disabled:opacity-50 disabled:pointer-events-none";
+  "inline-flex items-center justify-center gap-2 rounded-none font-sans text-sm font-medium transition disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-paper focus-visible:ring-clay";
 
 const VARIANT: Record<ApHeritageButtonVariant, string> = {
   primary:

@@ -446,9 +446,9 @@ function NextActions({ actions }: { actions: NextAction[] }) {
           <li key={a.key}>
             <Link
               href={a.href}
-              className="block border border-rule bg-paper p-4 transition hover:border-ink"
+              className="block border border-rule bg-paper p-4 transition hover:border-ink focus:outline-none focus-visible:border-ink focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
             >
-              <div className="flex items-baseline justify-between gap-3">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                 <p className="font-display text-base leading-tight text-ink">
                   {a.label}
                 </p>

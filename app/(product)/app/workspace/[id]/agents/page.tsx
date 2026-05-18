@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ApEyebrow } from "@/components/ui/ap";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
 
@@ -39,35 +40,38 @@ export default async function AgentsPage({ params }: PageProps) {
 
   return (
     <div>
-      <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute mb-3">
-        your fleet
-      </p>
+      <ApEyebrow className="mb-3">your fleet</ApEyebrow>
       <h1 className="font-display text-3xl text-ink">
         Your fleet — each capability scoped to one job.
       </h1>
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
-        Click any capability for its daily loops, recent activity, and
+        Open any capability for its daily loops, recent activity, and
         the work it has surfaced for review. Enabling or disabling
         capabilities is your service team&rsquo;s call today; ask your
         partner if your fleet should change.
       </p>
 
       <div className="mt-8 grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-3">
-        {FLEET.map((agent) => (
-          <Link
-            key={agent.slug}
-            href={`/app/workspace/${workspaceId}/agents/${agent.slug}`}
-            className="block bg-paper p-5 transition hover:bg-paper-deep"
-          >
-            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-              {agent.slug}
-            </p>
-            <p className="mt-2 font-display text-xl text-ink">{agent.name}</p>
-            <p className="mt-3 text-[13px] text-mute">
-              {counts.get(agent.slug) ?? 0} handoffs logged
-            </p>
-          </Link>
-        ))}
+        {FLEET.map((agent) => {
+          const handoffCount = counts.get(agent.slug) ?? 0;
+          return (
+            <Link
+              key={agent.slug}
+              href={`/app/workspace/${workspaceId}/agents/${agent.slug}`}
+              className="block bg-paper p-5 transition hover:bg-paper-deep focus:outline-none focus-visible:bg-paper-deep focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-inset"
+            >
+              <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                {agent.slug}
+              </p>
+              <p className="mt-2 font-display text-xl text-ink">{agent.name}</p>
+              <p className="mt-3 text-[13px] text-mute">
+                {handoffCount === 0
+                  ? "rooting in — first handoff lands soon"
+                  : `${handoffCount} handoff${handoffCount === 1 ? "" : "s"} logged`}
+              </p>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

@@ -110,7 +110,7 @@ export function ApPaperSheet({
             type="button"
             onClick={onClose}
             aria-label="close panel"
-            className="rounded-none border border-transparent p-2 font-mono text-[18px] leading-none text-mute transition hover:border-rule hover:text-ink"
+            className="rounded-none border border-transparent p-2 font-mono text-[18px] leading-none text-mute transition hover:border-rule hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
           >
             ×
           </button>

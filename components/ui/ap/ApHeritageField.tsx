@@ -31,7 +31,7 @@ type ApHeritageFieldProps =
       });
 
 const INPUT_BASE =
-  "mt-1 block w-full border border-rule bg-paper px-3 py-2 text-[15px] text-ink outline-none transition focus:border-ink disabled:opacity-50";
+  "mt-1 block w-full border border-rule bg-paper px-3 py-2 text-[15px] text-ink outline-none transition focus:border-ink focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper disabled:opacity-50";
 
 /**
  * @example

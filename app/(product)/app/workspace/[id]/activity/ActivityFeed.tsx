@@ -41,7 +41,7 @@ export function ActivityFeed({ rows, partner }: ActivityFeedProps) {
               <button
                 type="button"
                 onClick={() => setOpenId(row.id)}
-                className="w-full text-left text-ink-soft transition hover:text-ink"
+                className="w-full rounded-none text-left text-ink-soft transition hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
               >
                 <span className="block">
                   <span className="font-mono text-ink">{row.fromAgent}</span>

@@ -87,20 +87,23 @@ export function ApWorkspaceStrip({
   return (
     <div className="border-b border-rule bg-paper-deep">
       <div className="container-wide flex flex-col gap-3 py-4 md:flex-row md:items-end md:justify-between">
-        <div>
+        <div className="min-w-0">
           <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
             {slug}
           </p>
-          <p className="font-display text-2xl text-ink">{name}</p>
+          <p className="font-display text-2xl text-ink truncate">{name}</p>
         </div>
         {right ? (
-          <div className="flex items-center gap-3 text-[11px] font-mono tracking-wide uppercase text-mute">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-mono tracking-wide uppercase text-mute">
             {right}
           </div>
         ) : null}
       </div>
       {nav ? (
-        <nav className="container-wide flex gap-5 overflow-x-auto pb-3 text-sm">
+        <nav
+          className="container-wide flex gap-5 overflow-x-auto pb-3 text-sm scrollbar-thin"
+          aria-label="workspace sections"
+        >
           {nav}
         </nav>
       ) : null}

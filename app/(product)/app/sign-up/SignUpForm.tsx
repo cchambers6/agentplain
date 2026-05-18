@@ -150,7 +150,7 @@ function TierPicker({
               role="radio"
               aria-checked={isActive}
               onClick={() => onSelect(opt.tier)}
-              className={`bg-paper p-4 text-left transition focus:outline-none ${
+              className={`bg-paper p-4 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-inset ${
                 isActive
                   ? "bg-paper-deep"
                   : "hover:bg-paper-deep focus-visible:bg-paper-deep"
@@ -264,7 +264,7 @@ function VerticalChipRow({
               role="radio"
               aria-checked={active}
               onClick={() => onSelect(v.slug)}
-              className={`rounded-none border px-3 py-2 font-mono text-[11px] tracking-eyebrow uppercase transition focus:outline-none ${
+              className={`rounded-none border px-3 py-2 font-mono text-[11px] tracking-eyebrow uppercase transition focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper ${
                 active
                   ? "border-clay bg-clay text-paper"
                   : "border-rule bg-paper text-mute hover:border-ink hover:text-ink"

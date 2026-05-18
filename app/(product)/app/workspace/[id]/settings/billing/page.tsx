@@ -5,6 +5,7 @@ import {
   ApHeritageTd,
   ApHeritageTh,
   ApPaperCard,
+  ApRootedEmptyState,
 } from "@/components/ui/ap";
 import { withWorkspace } from "@/lib/auth";
 import { withRls } from "@/lib/db";
@@ -269,7 +270,7 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
                       >
                         <button
                           type="submit"
-                          className="inline-flex items-center justify-center rounded-none px-3 py-2 font-sans text-sm text-mute underline-offset-4 hover:text-ink hover:underline"
+                          className="inline-flex items-center justify-center rounded-none px-3 py-2 font-sans text-sm text-mute underline-offset-4 hover:text-ink hover:underline focus:outline-none focus-visible:text-ink focus-visible:underline"
                         >
                           cancel subscription
                         </button>
@@ -298,10 +299,13 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
           <section className="mt-12">
             <ApEyebrow className="mb-4">invoices</ApEyebrow>
             {invoices.length === 0 ? (
-              <p className="border border-rule bg-paper p-5 text-[15px] text-mute">
-                None yet. Your first invoice arrives at trial end.
-              </p>
+              <ApRootedEmptyState
+                motif="silo"
+                reality="No invoices yet."
+                change="Your first invoice arrives at trial end. We post a copy here and email a PDF; receipts come from Stripe."
+              />
             ) : (
+              <div className="overflow-x-auto">
               <ApHeritageTable aria-label="Invoices">
                 <thead>
                   <tr>
@@ -358,6 +362,7 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
                   ))}
                 </tbody>
               </ApHeritageTable>
+              </div>
             )}
           </section>
 
@@ -645,10 +650,12 @@ function TrialBanner(props: {
 
 function MissingSubscriptionState() {
   return (
-    <div className="mt-8 border border-rule bg-paper p-5 text-[15px] text-mute">
-      We&rsquo;re still provisioning your trial. Refresh in a moment.
-      If this persists, your service partner is notified — your
-      workspace still works without the subscription wired up.
+    <div className="mt-8">
+      <ApRootedEmptyState
+        motif="lone-tree"
+        reality="Your trial is still provisioning."
+        change="Refresh in a moment. If this persists, your service partner is notified — your workspace still works without the subscription wired up."
+      />
     </div>
   );
 }

@@ -80,7 +80,15 @@ export default async function WorkspaceActivityPage({
             activeKind={kindFilter ?? null}
           />
           <div className="mt-6">
-            <ActivityFeed rows={filteredRows} partner={partner} />
+            {filteredRows.length === 0 ? (
+              <ApRootedEmptyState
+                motif="wheat"
+                reality={`No ${kindFilter ?? "matching"} handoffs in this slice.`}
+                change="Clear the filter to see the full feed, or wait — items land as the fleet works."
+              />
+            ) : (
+              <ActivityFeed rows={filteredRows} partner={partner} />
+            )}
           </div>
         </>
       )}
@@ -116,7 +124,8 @@ function FilterStrip({
           <a
             key={item.key ?? "all"}
             href={item.key ? `${base}?kind=${item.key}` : base}
-            className={`rounded-none border px-3 py-2 font-mono text-[11px] tracking-eyebrow uppercase transition ${
+            aria-current={active ? "page" : undefined}
+            className={`rounded-none border px-3 py-2 font-mono text-[11px] tracking-eyebrow uppercase transition focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper ${
               active
                 ? "border-clay bg-clay text-paper"
                 : "border-rule bg-paper text-mute hover:border-ink hover:text-ink"

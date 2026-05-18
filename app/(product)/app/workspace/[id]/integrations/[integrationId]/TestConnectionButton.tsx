@@ -49,18 +49,18 @@ export function TestConnectionButton({
             }
           });
         }}
-        className="inline-flex items-center gap-2 border border-ink/30 bg-paper px-4 py-2 font-sans text-[13px] text-ink transition hover:border-ink hover:bg-paper-deep disabled:opacity-60"
+        className="inline-flex items-center gap-2 border border-ink/30 bg-paper px-4 py-2 font-sans text-[13px] text-ink transition hover:border-ink hover:bg-paper-deep disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
       >
-        {pending ? "Checking…" : "Test connection"}
+        {pending ? "checking…" : "test connection"}
       </button>
       {state === "ok" && (
         <span className="font-mono text-[11px] tracking-eyebrow uppercase text-moss">
-          Healthy
+          healthy
         </span>
       )}
       {state === "fail" && (
         <span className="font-mono text-[11px] tracking-eyebrow uppercase text-flag">
-          Failed — {detail}
+          failed — {detail}
         </span>
       )}
     </div>

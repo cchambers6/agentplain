@@ -50,7 +50,7 @@ export default async function WorkspaceLayout({
             <form action={signOutAction}>
               <button
                 type="submit"
-                className="text-mute underline-offset-4 hover:text-ink hover:underline"
+                className="text-mute underline-offset-4 hover:text-ink hover:underline focus:outline-none focus-visible:text-ink focus-visible:underline"
               >
                 sign out
               </button>
@@ -61,7 +61,7 @@ export default async function WorkspaceLayout({
           <Link
             key={item.label}
             href={`${base}${item.href}`}
-            className="whitespace-nowrap text-ink/70 transition hover:text-ink"
+            className="whitespace-nowrap rounded-none text-ink/70 transition hover:text-ink focus:outline-none focus-visible:text-ink focus-visible:underline focus-visible:underline-offset-4"
           >
             {item.label}
           </Link>

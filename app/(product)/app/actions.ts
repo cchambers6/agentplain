@@ -131,4 +131,4 @@ export async function signOutAction(): Promise<void> {
 }
 
 const errorMessage = (err: unknown): string =>
-  err instanceof Error ? err.message : "Something went wrong";
+  err instanceof Error ? err.message : "We hit a snag on our side.";

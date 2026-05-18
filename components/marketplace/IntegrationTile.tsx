@@ -60,14 +60,16 @@ function TileAction({
   status: TileStatus;
   workspaceId: string;
 }) {
+  const focusRing =
+    "focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper";
   if (status === "connected") {
     return (
       <Link
         prefetch={false}
         href={`/app/workspace/${workspaceId}/integrations/${entry.id}`}
-        className="inline-flex items-center gap-2 font-mono text-[11px] tracking-eyebrow uppercase text-ink underline-offset-4 hover:underline"
+        className={`inline-flex items-center gap-2 font-mono text-[11px] tracking-eyebrow uppercase text-ink underline-offset-4 hover:underline ${focusRing}`}
       >
-        Manage <span aria-hidden>→</span>
+        manage <span aria-hidden>→</span>
       </Link>
     );
   }
@@ -76,9 +78,9 @@ function TileAction({
       <Link
         prefetch={false}
         href={oauthStartPath(entry, workspaceId)}
-        className="inline-flex items-center gap-2 border border-clay bg-clay px-4 py-2 font-sans text-[13px] font-medium text-paper transition hover:border-clay-deep hover:bg-clay-deep"
+        className={`inline-flex items-center gap-2 border border-clay bg-clay px-4 py-2 font-sans text-[13px] font-medium text-paper transition hover:border-clay-deep hover:bg-clay-deep ${focusRing}`}
       >
-        Connect <span aria-hidden>→</span>
+        connect <span aria-hidden>→</span>
       </Link>
     );
   }
@@ -86,9 +88,9 @@ function TileAction({
     <Link
       prefetch={false}
       href={waitlistPath(entry)}
-      className="inline-flex items-center gap-2 border border-ink/30 px-4 py-2 font-sans text-[13px] font-medium text-ink transition hover:border-ink hover:bg-ink/[0.03]"
+      className={`inline-flex items-center gap-2 border border-ink/30 px-4 py-2 font-sans text-[13px] font-medium text-ink transition hover:border-ink hover:bg-ink/[0.03] ${focusRing}`}
     >
-      Join waitlist <span aria-hidden>→</span>
+      join the waitlist <span aria-hidden>→</span>
     </Link>
   );
 }
@@ -96,15 +98,15 @@ function TileAction({
 function StatusBadge({ status }: { status: TileStatus }) {
   const map: Record<TileStatus, { label: string; classes: string }> = {
     connected: {
-      label: "Connected",
+      label: "connected",
       classes: "border-moss/40 bg-moss/10 text-moss",
     },
     available: {
-      label: "Available",
+      label: "available",
       classes: "border-ink/30 bg-paper text-ink",
     },
     "coming-soon": {
-      label: "Coming soon",
+      label: "coming soon",
       classes: "border-rule bg-paper text-mute",
     },
   };

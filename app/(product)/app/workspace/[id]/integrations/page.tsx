@@ -1,4 +1,4 @@
-import { ApEyebrow } from "@/components/ui/ap";
+import { ApEyebrow, ApRootedEmptyState } from "@/components/ui/ap";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
 import {
@@ -95,13 +95,12 @@ export default async function WorkspaceIntegrationsPage({
       </div>
 
       {tiles.length === 0 ? (
-        <div className="mt-8 border border-rule bg-paper p-8">
-          <p className="font-display text-xl text-ink">
-            Nothing here yet.
-          </p>
-          <p className="mt-2 text-[14px] text-ink-soft">
-            Your service partner connects these for you. Tap to start.
-          </p>
+        <div className="mt-8">
+          <ApRootedEmptyState
+            motif="wheat"
+            reality="Nothing in your marketplace yet."
+            change="Your service partner seeds connectors here as the per-vertical fleet rolls out. Reach out and we'll move you up the list."
+          />
         </div>
       ) : (
         <div className="mt-8 grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-3">

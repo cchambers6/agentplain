@@ -19,14 +19,17 @@ export function DisconnectButton({
   const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
 
+  const focusRing =
+    "focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper";
+
   if (!confirming) {
     return (
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="inline-flex items-center gap-2 border border-flag/40 px-4 py-2 font-sans text-[13px] text-flag transition hover:border-flag hover:bg-flag/5"
+        className={`inline-flex items-center gap-2 border border-flag/40 px-4 py-2 font-sans text-[13px] text-flag transition hover:border-flag hover:bg-flag/5 ${focusRing}`}
       >
-        Disconnect {integrationName}
+        disconnect {integrationName.toLowerCase()}
       </button>
     );
   }
@@ -37,13 +40,13 @@ export function DisconnectButton({
         Disconnect {integrationName}? agentplain stops reading this account
         immediately. You can reconnect anytime.
       </p>
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <button
           type="button"
           onClick={() => setConfirming(false)}
-          className="border border-ink/30 px-4 py-2 font-sans text-[13px] text-ink hover:border-ink"
+          className={`border border-ink/30 px-4 py-2 font-sans text-[13px] text-ink hover:border-ink ${focusRing}`}
         >
-          Keep connected
+          keep connected
         </button>
         <button
           type="button"
@@ -57,9 +60,9 @@ export function DisconnectButton({
               await disconnectIntegrationAction(form);
             });
           }}
-          className="border border-flag bg-flag px-4 py-2 font-sans text-[13px] text-paper transition hover:bg-flag/90 disabled:opacity-60"
+          className={`border border-flag bg-flag px-4 py-2 font-sans text-[13px] text-paper transition hover:bg-flag/90 disabled:opacity-60 ${focusRing}`}
         >
-          {pending ? "Disconnecting…" : "Yes, disconnect"}
+          {pending ? "disconnecting…" : "yes, disconnect"}
         </button>
       </div>
     </div>

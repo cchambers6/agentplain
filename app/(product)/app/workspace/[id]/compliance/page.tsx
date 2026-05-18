@@ -1,5 +1,10 @@
+import {
+  ApEyebrow,
+  ApRootedEmptyState,
+} from "@/components/ui/ap";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
+import { servicePartnerForWorkspace } from "@/lib/onboarding/service-partner";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -27,29 +32,42 @@ export default async function CompliancePage({ params }: PageProps) {
       (a.slaDueAt?.getTime() ?? Infinity) - (b.slaDueAt?.getTime() ?? Infinity),
   );
 
+  const partner = servicePartnerForWorkspace(workspaceId);
+
   return (
     <div>
-      <p className="eyebrow mb-3">Compliance</p>
+      <ApEyebrow className="mb-3">compliance</ApEyebrow>
       <h1 className="font-display text-3xl text-ink">
-        {flags.length === 0 ? "All clear." : `${flags.length} open flag${flags.length === 1 ? "" : "s"}.`}
+        {flags.length === 0
+          ? "Nothing flagged for review."
+          : `${flags.length} open flag${flags.length === 1 ? "" : "s"}.`}
       </h1>
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
-        Compliance Sentinel raises flags on customer-facing drafts before they
-        leave your brokerage. Triage them in order of severity and SLA.
+        Compliance Sentinel raises flags on customer-facing drafts before
+        they leave your brokerage. Triage them in order of severity and
+        SLA — your broker-of-record review still gates every send.
       </p>
 
-      {flags.length === 0 ? null : (
+      {flags.length === 0 ? (
+        <div className="mt-8">
+          <ApRootedEmptyState
+            motif="lone-tree"
+            reality={`Nothing flagged. ${partner} is reading every draft before it goes out.`}
+            change="New flags surface here the moment Sentinel catches one. Severity ordered, SLA tracked."
+          />
+        </div>
+      ) : (
         <ul className="mt-8 divide-y divide-rule border border-rule bg-paper">
           {flags.map((f) => (
             <li key={f.id} className="p-5">
-              <div className="flex items-baseline justify-between gap-4">
-                <div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+                <div className="min-w-0">
                   <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
                     {f.severity} · {f.rule}
                   </p>
                   <p className="mt-1 text-[15px] text-ink">{f.claim}</p>
                 </div>
-                <span className="font-mono text-[11px] uppercase text-mute">
+                <span className="font-mono text-[11px] uppercase text-mute shrink-0">
                   {f.slaDueAt
                     ? `due ${new Date(f.slaDueAt).toLocaleString()}`
                     : "no SLA"}

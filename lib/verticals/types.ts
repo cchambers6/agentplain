@@ -29,6 +29,23 @@
 export type VerticalTier = "regular" | "plus" | "max";
 
 /**
+ * Surface status — distinguishes the ten ratified verticals (with their own
+ * compliance corpus, JTBD tables, and integration roadmap) from on-ramp
+ * surfaces that share the same service partnership but ship without a
+ * vertical-specific compliance corpus.
+ *
+ * - `live` — one of the ten ratified verticals; full per-vertical scaffolding
+ *   (compliance corpus, ratified JTBD tables, vertical-specific integrations).
+ *   Counts toward the locked 10 per `feedback_no_new_verticals_finish_locked.md`.
+ *   Default when `status` is omitted on a `VerticalContent`.
+ * - `on-ramp` — an honest landing surface for businesses outside the ten named
+ *   verticals. Same service partnership, lighter scaffolding (generic JTBDs,
+ *   common-denominator integrations, no per-vertical compliance corpus).
+ *   Does NOT count toward the 10. Reserved for `/general`.
+ */
+export type VerticalStatus = "live" | "on-ramp";
+
+/**
  * REPLACE / INTEGRATE / AUGMENT — the three-column claims framework.
  * Every vertical page MUST populate all three. A truthful entry is shorter
  * than a vague one; if there's nothing to put in a column, leave the array
@@ -146,6 +163,14 @@ export interface VerticalContent {
 
   /** Tier this vertical is sold at — drives the pricing banner. */
   tier: VerticalTier;
+
+  /**
+   * Surface status. Omit (defaults to `live`) on the ten ratified verticals.
+   * Set to `on-ramp` on the `/general` surface so the registry and the
+   * route can distinguish it from a vertical-locked listing — see
+   * `lib/verticals/index.ts` for how the two registries are wired.
+   */
+  status?: VerticalStatus;
 
   /** Hero one-liner — short value prop using REPLACE/INTEGRATE/AUGMENT framing. */
   hero: {

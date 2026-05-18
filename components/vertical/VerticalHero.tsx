@@ -23,6 +23,15 @@ export default function VerticalHero({
   // tolerating any future vertical that lands content-first.
   const audience = content.missionSubject ?? `${content.name.toLowerCase()} firms`;
 
+  // On-ramp surfaces (e.g. `/general`) don't have a Prisma `Vertical` enum
+  // entry, so the sign-up flow can't accept `?vertical=general`. We drop the
+  // prefill on on-ramp pages — the visitor picks one of the ten ratified
+  // verticals during sign-up. The CTA stays the same shape.
+  const signUpHref =
+    content.status === "on-ramp"
+      ? "/app/sign-up"
+      : `/app/sign-up?vertical=${content.slug}`;
+
   return (
     <section className="border-b border-rule bg-paper">
       <div className="container-wide py-20 md:py-28">
@@ -46,10 +55,7 @@ export default function VerticalHero({
         </p>
 
         <div className="mt-10 flex flex-wrap items-center gap-4">
-          <Link
-            href={`/app/sign-up?vertical=${content.slug}`}
-            className="btn-primary"
-          >
+          <Link href={signUpHref} className="btn-primary">
             Start free trial
             <span aria-hidden>→</span>
           </Link>

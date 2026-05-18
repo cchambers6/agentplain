@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import {
   VERTICAL_SLUGS,
+  ON_RAMP_SLUGS,
   getVerticalContent,
 } from "@/lib/verticals";
 
@@ -15,11 +16,15 @@ import PricingTierBanner from "@/components/vertical/PricingTierBanner";
 import IntegrationsList from "@/components/vertical/IntegrationsList";
 import VerticalCta from "@/components/vertical/VerticalCta";
 
-// Static generation for all 10 verticals — no runtime DB lookups, no ISR
-// cache churn. Adding an eleventh requires a new content file and a registry
-// entry; the route picks it up automatically.
+// Static generation for all 10 verticals plus on-ramp surfaces (e.g.
+// `/general`) — no runtime DB lookups, no ISR cache churn. Adding an
+// eleventh ratified vertical requires a new content file and a REGISTRY
+// entry; adding an on-ramp surface requires a content file and an
+// ON_RAMP_REGISTRY entry. The route picks both up automatically.
 export function generateStaticParams() {
-  return VERTICAL_SLUGS.map((vertical) => ({ vertical }));
+  return [...VERTICAL_SLUGS, ...ON_RAMP_SLUGS].map((vertical) => ({
+    vertical,
+  }));
 }
 
 export function generateMetadata({

@@ -69,7 +69,7 @@ export async function signUpAction(
     return {
       ok: false,
       error:
-        "Pick Regular or Partner to self-serve. Max is quote-based — start at /custom?type=max.",
+        "Pick Regular or Partner to begin. Max is quote-based — start at /custom?type=max.",
     };
   }
 

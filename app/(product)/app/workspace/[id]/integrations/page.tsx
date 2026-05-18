@@ -1,3 +1,4 @@
+import { ApEyebrow } from "@/components/ui/ap";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
 import {
@@ -8,6 +9,7 @@ import {
   IntegrationTile,
   type TileStatus,
 } from "@/components/marketplace/IntegrationTile";
+import { ConnectionFlash } from "./ConnectionFlash";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -32,10 +34,6 @@ export default async function WorkspaceIntegrationsPage({
 
   const ctx = { userId: member.userId, workspaceId, isOperator: false };
 
-  // Fetch the workspace's existing credentials. Read under the caller's RLS
-  // context so a stray bug can't surface another workspace's accounts. The
-  // marketplace catalog itself is non-customer data; we read it via the
-  // pure listIntegrations() function.
   const credentials = await withRls(ctx, (tx) =>
     tx.integrationCredential.findMany({
       where: { workspaceId },
@@ -69,19 +67,24 @@ export default async function WorkspaceIntegrationsPage({
   const availableCount = tiles.filter((t) => t.status === "available").length;
   const comingSoonCount = tiles.filter((t) => t.status === "coming-soon").length;
 
+  const connectedEntry = flash.connected
+    ? tiles.find((t) => t.entry.id === flash.connected)?.entry
+    : null;
+
   return (
     <div>
-      <p className="eyebrow mb-3">Your tools</p>
+      <ApEyebrow className="mb-3">your connections</ApEyebrow>
       <h1 className="font-display text-3xl text-ink">
-        Integrations — your service partner connects these for you.
+        Bring us into the tools you already use.
       </h1>
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
-        Tap a tool to start a connection. Your service partner picks it up,
-        finishes the wiring, and tells you when it&apos;s ready. Nothing leaves
-        your accounts and nothing sends without your hand on it.
+        Tap a tool to start a connection. Your service partner picks it
+        up, finishes the wiring, and tells you when it&rsquo;s ready.
+        Nothing leaves your accounts and nothing sends without your hand
+        on it.
       </p>
 
-      <FlashBanner flash={flash} tiles={tiles} />
+      <InlineFlash flash={flash} tiles={tiles} />
 
       <div className="mt-6 flex items-center gap-4 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
         <span>{connectedCount} connected</span>
@@ -92,7 +95,7 @@ export default async function WorkspaceIntegrationsPage({
       </div>
 
       {tiles.length === 0 ? (
-        <div className="mt-8 border border-rule bg-paper p-8 text-center">
+        <div className="mt-8 border border-rule bg-paper p-8">
           <p className="font-display text-xl text-ink">
             Nothing here yet.
           </p>
@@ -115,10 +118,15 @@ export default async function WorkspaceIntegrationsPage({
       )}
 
       <p className="mt-8 max-w-2xl text-[13px] leading-relaxed text-mute">
-        Disconnecting is one tap on the Manage screen. Connections live only
-        as long as you want them to — and your service partner keeps an
-        audit trail either way.
+        Disconnecting is one tap on the Manage screen. Connections live
+        only as long as you want them to — and your service partner
+        keeps an audit trail either way.
       </p>
+
+      <ConnectionFlash
+        workspaceId={workspaceId}
+        connectedName={connectedEntry?.name ?? null}
+      />
     </div>
   );
 }
@@ -132,7 +140,7 @@ function tileStatusFor(
   return "available";
 }
 
-function FlashBanner({
+function InlineFlash({
   flash,
   tiles,
 }: {
@@ -148,17 +156,8 @@ function FlashBanner({
     const entry = tiles.find((t) => t.entry.id === flash.disconnected)?.entry;
     return (
       <div className="mt-6 border border-rule bg-paper px-4 py-3 text-sm">
-        Disconnected {entry?.name ?? flash.disconnected}. Your service partner
-        was notified.
-      </div>
-    );
-  }
-  if (flash.connected) {
-    const entry = tiles.find((t) => t.entry.id === flash.connected)?.entry;
-    return (
-      <div className="mt-6 border border-moss/40 bg-moss/10 px-4 py-3 text-sm text-ink">
-        {entry?.name ?? flash.connected} is connected. Your service partner
-        starts working through your inbox next.
+        Disconnected {entry?.name ?? flash.disconnected}. Your service
+        partner was notified.
       </div>
     );
   }
@@ -174,5 +173,7 @@ function FlashBanner({
       </div>
     );
   }
+  // `connected` is surfaced via the ApPaperSheet slide-over on first
+  // arrival; we intentionally don't render an inline duplicate for it.
   return null;
 }

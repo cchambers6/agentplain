@@ -1,10 +1,18 @@
-import Link from "next/link";
+import {
+  ApEyebrow,
+  ApHeritageButton,
+  ApHeritageTable,
+  ApHeritageTd,
+  ApHeritageTh,
+  ApPaperCard,
+} from "@/components/ui/ap";
 import { withWorkspace } from "@/lib/auth";
 import { withRls } from "@/lib/db";
 import {
   PARTNER_RESERVED_HOURS_PER_MONTH,
   PER_SEAT_MONTHLY_USD_CENTS,
   SEAT_BANDS,
+  TIER_ORDER,
   TIER_TAGLINE,
   tierDisplayName,
   tierFromVerticalTier,
@@ -93,15 +101,18 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
     ? monthlyChargeUsdCents(tier, subscription.seats)
     : null;
   const hasPaymentMethod = Boolean(subscription?.defaultPaymentMethodId);
+  const currentSeats = subscription?.seats ?? 1;
 
   return (
     <div>
-      <p className="eyebrow mb-3">Settings · billing</p>
-      <h1 className="font-display text-3xl text-ink">Billing.</h1>
+      <ApEyebrow className="mb-3">settings · billing</ApEyebrow>
+      <h1 className="font-display text-3xl text-ink">
+        Your plan and invoices.
+      </h1>
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
-        Per-seat, monthly, month-to-month. First 30 days are on us — no card
-        required to start. Add a card any time before your trial ends and your
-        subscription rolls over without a gap.
+        Per-seat, monthly, month-to-month. First 30 days are on us — no
+        card required to start. Add a card any time before your trial
+        ends and your subscription rolls over without a gap.
       </p>
 
       {flash ? (
@@ -114,7 +125,6 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
         <MissingSubscriptionState />
       ) : (
         <>
-          {/* Trial banner */}
           {subscription.status === "TRIALING" && daysToTrialEnd !== null ? (
             <TrialBanner
               days={daysToTrialEnd}
@@ -124,190 +134,213 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
             />
           ) : null}
 
-          {/* Past-due banner */}
           {subscription.status === "PAST_DUE" ? (
             <div className="mt-6 border border-flag bg-paper p-4 text-[14px] text-ink">
               <p className="font-medium">
-                Your last invoice didn't go through.
+                Your last invoice didn&rsquo;t go through.
               </p>
               <p className="mt-2 text-ink-soft">
-                Open the customer portal to update your payment method. Your
-                fleet keeps running through {formatDate(subscription.currentPeriodEnd)};
-                after that, agents pause until billing is current.
+                Open the billing portal to update your payment method.
+                Your fleet keeps running through{" "}
+                {formatDate(subscription.currentPeriodEnd)}; after that,
+                agents pause until billing is current.
               </p>
-              <form action={openPortalAction.bind(null, workspaceId)} className="mt-3">
-                <button type="submit" className="btn-primary inline-flex">
-                  Update payment method
-                </button>
+              <form
+                action={openPortalAction.bind(null, workspaceId)}
+                className="mt-3"
+              >
+                <ApHeritageButton variant="primary" type="submit">
+                  update payment method
+                </ApHeritageButton>
               </form>
             </div>
           ) : null}
 
-          {/* Cancellation scheduled banner */}
           {subscription.cancelAtPeriodEnd ? (
             <div className="mt-6 border border-rule bg-paper-deep p-4 text-[14px] text-ink">
               <p>
                 Cancellation scheduled for{" "}
                 <strong>{formatDate(subscription.currentPeriodEnd)}</strong>.
-                Your fleet stays online until then. Open the portal to undo.
+                Your fleet stays online until then. Open the portal to
+                undo.
               </p>
             </div>
           ) : null}
 
-          {/* Current plan card */}
-          <section className="mt-8 border border-rule bg-paper p-6">
-            <div className="grid gap-6 md:grid-cols-3">
-              <div>
-                <p className="eyebrow mb-2">Plan</p>
-                <p className="font-display text-2xl text-ink">
-                  agentplain {tierDisplayName(tier)}
-                </p>
-                <p className="mt-1 text-[13px] text-ink-soft">
-                  {statusLabel(subscription.status)}
-                  {tier === "max"
-                    ? " · Quote-based engagement"
-                    : ` · ${SEAT_BANDS[subscription.seatBand].label}`}
-                </p>
-              </div>
-              {tier === "max" ? (
-                <div className="md:col-span-2">
-                  <p className="eyebrow mb-2">Engagement</p>
-                  <p className="font-display text-2xl text-ink">Custom scope</p>
+          <section className="mt-8">
+            <ApPaperCard
+              eyebrow="current plan"
+              title={`agentplain ${tierDisplayName(tier)}`}
+            >
+              <div className="grid gap-6 md:grid-cols-3">
+                <div>
+                  <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                    status
+                  </p>
+                  <p className="mt-1 font-display text-xl text-ink">
+                    {statusLabel(subscription.status)}
+                  </p>
                   <p className="mt-1 text-[13px] text-ink-soft">
-                    Billed per your signed engagement. Invoices appear below
-                    as they&rsquo;re issued.
+                    {tier === "max"
+                      ? "Quote-based engagement"
+                      : SEAT_BANDS[subscription.seatBand].label}
                   </p>
                 </div>
-              ) : (
-                <>
-                  <div>
-                    <p className="eyebrow mb-2">Seats</p>
-                    <p className="font-display text-2xl text-ink">
-                      {subscription.seats}
+                {tier === "max" ? (
+                  <div className="md:col-span-2">
+                    <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                      engagement
+                    </p>
+                    <p className="mt-1 font-display text-xl text-ink">
+                      Custom scope
                     </p>
                     <p className="mt-1 text-[13px] text-ink-soft">
-                      {formatCents(charge?.perSeatCents ?? 0)}/seat/mo
+                      Billed per your signed engagement. Invoices appear
+                      below as they&rsquo;re issued.
                     </p>
                   </div>
-                  <div>
-                    <p className="eyebrow mb-2">Monthly</p>
-                    <p className="font-display text-2xl text-ink">
-                      {formatCents(charge?.totalCents ?? 0)}
-                    </p>
-                    <p className="mt-1 text-[13px] text-ink-soft">
-                      Next charge {formatDate(subscription.currentPeriodEnd)}
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
-            <p className="mt-5 text-[13px] leading-relaxed text-ink-soft">
-              {TIER_TAGLINE[tier]}
-              {tier === "plus" ? (
-                <>
-                  {" "}
-                  Your named service partner reserves{" "}
-                  {PARTNER_RESERVED_HOURS_PER_MONTH} hours/month for this
-                  workspace.
-                </>
-              ) : null}
-            </p>
+                ) : (
+                  <>
+                    <div>
+                      <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                        seats
+                      </p>
+                      <p className="mt-1 font-display text-xl text-ink">
+                        {subscription.seats}
+                      </p>
+                      <p className="mt-1 text-[13px] text-ink-soft">
+                        {formatCents(charge?.perSeatCents ?? 0)}/seat/mo
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                        monthly
+                      </p>
+                      <p className="mt-1 font-display text-xl text-ink">
+                        {formatCents(charge?.totalCents ?? 0)}
+                      </p>
+                      <p className="mt-1 text-[13px] text-ink-soft">
+                        Next charge {formatDate(subscription.currentPeriodEnd)}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+              <p className="mt-5 text-[13px] leading-relaxed text-ink-soft">
+                {TIER_TAGLINE[tier]}
+              </p>
 
-            <div className="mt-6 flex flex-wrap gap-3">
-              {tier === "max" ? (
-                <Link
-                  href="/custom?type=max#custom-contact"
-                  className="btn-primary inline-flex"
-                >
-                  Manage your engagement
-                  <span aria-hidden>→</span>
-                </Link>
-              ) : (
-                <>
-                  <form
-                    action={addPaymentMethodAction.bind(null, workspaceId)}
+              <div className="mt-6 flex flex-wrap gap-3">
+                {tier === "max" ? (
+                  <ApHeritageButton
+                    variant="primary"
+                    withArrow
+                    href="/custom?type=max#custom-contact"
                   >
-                    <button
-                      type="submit"
-                      className={
-                        hasPaymentMethod
-                          ? "btn-secondary inline-flex"
-                          : "btn-primary inline-flex"
-                      }
-                    >
-                      {hasPaymentMethod
-                        ? "Update payment method"
-                        : "Add payment method"}
-                    </button>
-                  </form>
-                  <form action={openPortalAction.bind(null, workspaceId)}>
-                    <button type="submit" className="btn-secondary inline-flex">
-                      View invoices + receipts
-                    </button>
-                  </form>
-                  {!subscription.cancelAtPeriodEnd ? (
+                    manage your engagement
+                  </ApHeritageButton>
+                ) : (
+                  <>
                     <form
-                      action={cancelSubscriptionAction.bind(null, workspaceId)}
+                      action={addPaymentMethodAction.bind(null, workspaceId)}
                     >
-                      <button
+                      <ApHeritageButton
+                        variant={hasPaymentMethod ? "secondary" : "primary"}
                         type="submit"
-                        className="btn-secondary inline-flex"
                       >
-                        Cancel subscription
-                      </button>
+                        {hasPaymentMethod
+                          ? "update payment method"
+                          : "add payment method"}
+                      </ApHeritageButton>
                     </form>
-                  ) : null}
-                </>
-              )}
-            </div>
+                    <form
+                      action={openPortalAction.bind(null, workspaceId)}
+                    >
+                      <ApHeritageButton variant="secondary" type="submit">
+                        view invoices + receipts
+                      </ApHeritageButton>
+                    </form>
+                    {!subscription.cancelAtPeriodEnd ? (
+                      <form
+                        action={cancelSubscriptionAction.bind(
+                          null,
+                          workspaceId,
+                        )}
+                      >
+                        <button
+                          type="submit"
+                          className="inline-flex items-center justify-center rounded-none px-3 py-2 font-sans text-sm text-mute underline-offset-4 hover:text-ink hover:underline"
+                        >
+                          cancel subscription
+                        </button>
+                      </form>
+                    ) : null}
+                  </>
+                )}
+              </div>
+            </ApPaperCard>
           </section>
 
-          {/* Tier-aware upgrade / downgrade UI */}
-          <TierActionsCard
+          {tier !== "max" ? (
+            <SeatAdjuster
+              currentTier={tier}
+              currentSeats={subscription.seats}
+              workspaceId={workspaceId}
+            />
+          ) : null}
+
+          <TierPicker
             currentTier={tier}
-            currentSeats={subscription.seats}
+            currentSeats={currentSeats}
             workspaceId={workspaceId}
           />
 
-          {/* Invoices */}
-          <section className="mt-10">
-            <p className="eyebrow mb-3">Recent invoices</p>
+          <section className="mt-12">
+            <ApEyebrow className="mb-4">invoices</ApEyebrow>
             {invoices.length === 0 ? (
               <p className="border border-rule bg-paper p-5 text-[15px] text-mute">
-                None yet. First invoice arrives at trial end.
+                None yet. Your first invoice arrives at trial end.
               </p>
             ) : (
-              <table className="w-full border border-rule bg-paper text-left text-[14px]">
+              <ApHeritageTable aria-label="Invoices">
                 <thead>
-                  <tr className="border-b border-rule bg-paper-deep text-[11px] font-mono uppercase tracking-eyebrow text-mute">
-                    <th className="px-4 py-3">Issued</th>
-                    <th className="px-4 py-3">Period</th>
-                    <th className="px-4 py-3">Amount</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Open</th>
+                  <tr>
+                    <ApHeritageTh>issued</ApHeritageTh>
+                    <ApHeritageTh>period</ApHeritageTh>
+                    <ApHeritageTh align="right">amount</ApHeritageTh>
+                    <ApHeritageTh>status</ApHeritageTh>
+                    <ApHeritageTh>open</ApHeritageTh>
                   </tr>
                 </thead>
                 <tbody>
                   {invoices.map((inv) => (
                     <tr
                       key={inv.id}
-                      className="border-b border-rule last:border-b-0"
+                      className="border-t border-rule"
                     >
-                      <td className="px-4 py-3 font-mono text-[12px] uppercase text-mute">
-                        {formatDate(inv.issuedAt)}
-                      </td>
-                      <td className="px-4 py-3 text-ink-soft">
-                        {inv.periodStart && inv.periodEnd
-                          ? `${formatDate(inv.periodStart)} – ${formatDate(inv.periodEnd)}`
-                          : "—"}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-ink">
+                      <ApHeritageTd>
+                        <span className="font-mono text-[12px] uppercase text-mute">
+                          {formatDate(inv.issuedAt)}
+                        </span>
+                      </ApHeritageTd>
+                      <ApHeritageTd>
+                        <span className="text-ink-soft">
+                          {inv.periodStart && inv.periodEnd
+                            ? `${formatDate(inv.periodStart)} – ${formatDate(
+                                inv.periodEnd,
+                              )}`
+                            : "—"}
+                        </span>
+                      </ApHeritageTd>
+                      <ApHeritageTd align="right">
                         {formatCents(inv.amountUsdCents)}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-[12px] uppercase text-mute">
-                        {inv.status}
-                      </td>
-                      <td className="px-4 py-3 text-[13px]">
+                      </ApHeritageTd>
+                      <ApHeritageTd>
+                        <span className="font-mono text-[12px] uppercase text-mute">
+                          {inv.status}
+                        </span>
+                      </ApHeritageTd>
+                      <ApHeritageTd>
                         {inv.hostedInvoiceUrl ? (
                           <a
                             href={inv.hostedInvoiceUrl}
@@ -318,25 +351,24 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
                             view
                           </a>
                         ) : (
-                          "—"
+                          <span className="text-mute">—</span>
                         )}
-                      </td>
+                      </ApHeritageTd>
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </ApHeritageTable>
             )}
           </section>
 
-          {/* Recent events */}
           {recentEvents.length > 0 ? (
-            <section className="mt-10">
-              <p className="eyebrow mb-3">Recent billing events</p>
+            <section className="mt-12">
+              <ApEyebrow className="mb-4">recent billing events</ApEyebrow>
               <ul className="border border-rule bg-paper">
                 {recentEvents.map((e) => (
                   <li
                     key={e.id}
-                    className="flex items-center justify-between border-b border-rule px-4 py-3 text-[13px] last:border-b-0"
+                    className="flex items-center justify-between border-b border-rule px-5 py-3 text-[13px] last:border-b-0"
                   >
                     <span className="font-mono text-ink-soft">{e.type}</span>
                     <span className="font-mono text-[12px] text-mute">
@@ -347,213 +379,212 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
               </ul>
             </section>
           ) : null}
+
+          <p className="mt-12 border-t border-rule pt-6 text-[13px] leading-relaxed text-mute">
+            Cancel anytime. Your service partner stays on through the
+            end of the current period.
+          </p>
         </>
       )}
     </div>
   );
 }
 
-function TrialBanner(props: {
-  days: number;
-  endsAt: Date | null;
-  hasPaymentMethod: boolean;
-  workspaceId: string;
-}) {
-  const verb = props.days === 0 ? "ends today" : `ends in ${props.days} day${props.days === 1 ? "" : "s"}`;
-  return (
-    <div className="mt-6 border border-ink bg-paper-deep p-5">
-      <p className="eyebrow mb-1">Trial</p>
-      <p className="text-[15px] text-ink">
-        Your free trial {verb}
-        {props.endsAt ? ` (${formatDate(props.endsAt)})` : ""}.{" "}
-        {props.hasPaymentMethod
-          ? "Card on file — your subscription rolls over automatically."
-          : "Add a card to keep your fleet running when trial ends."}
-      </p>
-      {!props.hasPaymentMethod ? (
-        <form
-          action={addPaymentMethodAction.bind(null, props.workspaceId)}
-          className="mt-3"
-        >
-          <button type="submit" className="btn-primary inline-flex">
-            Add payment method
-          </button>
-        </form>
-      ) : null}
-    </div>
-  );
-}
+// ─── Seat adjuster ──────────────────────────────────────────────────────────
 
-function MissingSubscriptionState() {
-  return (
-    <div className="mt-8 border border-rule bg-paper p-5 text-[15px] text-mute">
-      We're still provisioning your trial. Refresh in a moment. If this
-      persists, check the workspace audit log or reach out — your workspace
-      still works without the subscription wired up.
-    </div>
-  );
-}
-
-// Tier-aware upgrade/downgrade surface. Three branches drive the same
-// `changePlanAction` (and one /custom link), gated by the workspace's
-// current tier:
-//
-//   Regular → "Upgrade to Partner" (Stripe Checkout swap)
-//   Partner → "Downgrade to Regular" (confirm-gated) + "Upgrade to Max"
-//             link routing to /custom?type=max#custom-contact
-//   Max     → "Manage your engagement" link (no self-serve downgrade —
-//             Max engagements are scoped per customer, so re-scoping is
-//             an out-of-band conversation with Conner).
-//
-// Per the 2026-05-15 amendment to `project_stripe_both_surfaces.md`, Max
-// has no Stripe Product / Checkout flow; the link routes through the
-// same `Inquiry` queue that powers /custom.
-function TierActionsCard(props: {
+function SeatAdjuster({
+  currentTier,
+  currentSeats,
+  workspaceId,
+}: {
   currentTier: TierName;
   currentSeats: number;
   workspaceId: string;
 }) {
-  if (props.currentTier === "max") {
-    return (
-      <section className="mt-10 border border-rule bg-paper p-6">
-        <p className="eyebrow mb-2">Manage your engagement</p>
-        <p className="text-[14px] leading-relaxed text-ink-soft">
-          Max engagements are scoped per customer — re-scoping, white-label
-          updates, additional dedicated hours, multi-state expansion all
-          happen through the same intake. A human reads every note and gets
-          back inside two business days.
-        </p>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Link
-            href="/custom?type=max#custom-contact"
-            className="btn-primary inline-flex"
-          >
-            Talk to your service partner
-            <span aria-hidden>→</span>
-          </Link>
-          <a
-            href="mailto:hello@agentplain.com"
-            className="text-[13px] text-ink underline"
-          >
-            Or email a human directly
-          </a>
-        </div>
-      </section>
-    );
-  }
-
   return (
-    <section className="mt-10 border border-rule bg-paper p-6">
-      <p className="eyebrow mb-2">Tier + seats</p>
-      <p className="text-[14px] leading-relaxed text-ink-soft">
-        Seat count updates route through Stripe Checkout — promotion codes
-        work there. Existing trial period is preserved on upgrade. 100+
-        seats route to a Custom engagement.
-      </p>
-      <form
-        action={changePlanAction.bind(null, props.workspaceId)}
-        className="mt-4 flex flex-wrap items-end gap-3"
-      >
-        <input type="hidden" name="tier" value={props.currentTier} />
-        <label className="flex flex-col gap-1 text-[13px]">
-          <span className="font-mono uppercase tracking-eyebrow text-[11px] text-mute">
-            Seats
-          </span>
-          <input
-            type="number"
-            name="seats"
-            min={1}
-            max={99}
-            defaultValue={props.currentSeats}
-            className="w-28 border border-rule bg-paper px-3 py-2 text-[14px] text-ink"
-          />
-        </label>
-        <button type="submit" className="btn-secondary inline-flex">
-          Update seats
-        </button>
-      </form>
+    <section className="mt-10">
+      <ApPaperCard eyebrow="seats" title="Adjust seats on your current plan.">
+        <p className="text-[14px] leading-relaxed text-ink-soft">
+          Seat-count changes route through Stripe Checkout — promotion
+          codes work there. Your trial period is preserved.
+        </p>
+        <form
+          action={changePlanAction.bind(null, workspaceId)}
+          className="mt-5 flex flex-wrap items-end gap-3"
+        >
+          <input type="hidden" name="tier" value={currentTier} />
+          <label className="flex flex-col gap-1 text-[13px]">
+            <span className="font-mono uppercase tracking-eyebrow text-[11px] text-mute">
+              seats
+            </span>
+            <input
+              type="number"
+              name="seats"
+              min={1}
+              max={99}
+              defaultValue={currentSeats}
+              className="w-28 rounded-none border border-rule bg-paper px-3 py-2 text-[14px] text-ink focus:border-ink focus:outline-none"
+            />
+          </label>
+          <ApHeritageButton variant="secondary" type="submit">
+            update seats
+          </ApHeritageButton>
+        </form>
+      </ApPaperCard>
+    </section>
+  );
+}
 
-      <div className="mt-6 grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
-        {props.currentTier === "regular" ? (
-          <UpgradeToPartner
-            workspaceId={props.workspaceId}
-            currentSeats={props.currentSeats}
+// ─── Tier picker (three columns) ────────────────────────────────────────────
+
+interface TierBullets {
+  bullets: string[];
+}
+
+const TIER_BULLETS: Record<TierName, TierBullets> = {
+  regular: {
+    bullets: [
+      "Standard managed AI ops",
+      "Onboarding bundled",
+      "Compliance Sentinel + Buyer Inquiry Router + Showing Scheduler",
+      "Weekly briefings + activity feed",
+    ],
+  },
+  plus: {
+    bullets: [
+      "Everything in Regular",
+      `${PARTNER_RESERVED_HOURS_PER_MONTH} hours/month of a named service partner`,
+      "Priority handling on flags + drafts",
+      "Service-partner check-in each week",
+    ],
+  },
+  max: {
+    bullets: [
+      "Quote-based engagement",
+      "Multi-state operations + compliance gates",
+      "White-label deployment",
+      "Dedicated team",
+    ],
+  },
+};
+
+function TierPicker({
+  currentTier,
+  currentSeats,
+  workspaceId,
+}: {
+  currentTier: TierName;
+  currentSeats: number;
+  workspaceId: string;
+}) {
+  return (
+    <section className="mt-10">
+      <ApEyebrow className="mb-4">change plan</ApEyebrow>
+      <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-3">
+        {TIER_ORDER.map((tier) => (
+          <TierCard
+            key={tier}
+            tier={tier}
+            isCurrent={tier === currentTier}
+            currentSeats={currentSeats}
+            workspaceId={workspaceId}
           />
-        ) : (
-          <DowngradeToRegular
-            workspaceId={props.workspaceId}
-            currentSeats={props.currentSeats}
-          />
-        )}
-        <UpgradeToMax />
+        ))}
       </div>
     </section>
   );
 }
 
-function UpgradeToPartner({
-  workspaceId,
+function TierCard({
+  tier,
+  isCurrent,
   currentSeats,
+  workspaceId,
 }: {
-  workspaceId: string;
+  tier: TierName;
+  isCurrent: boolean;
   currentSeats: number;
+  workspaceId: string;
 }) {
-  const partnerSoloCents = PER_SEAT_MONTHLY_USD_CENTS.plus.SEATS_1;
+  const bullets = TIER_BULLETS[tier].bullets;
+  const isMax = tier === "max";
+  const priceLabel = isMax
+    ? "Quote-based"
+    : `from ${formatCents(PER_SEAT_MONTHLY_USD_CENTS[tier].SEATS_50_99)}/seat`;
+
   return (
-    <div className="bg-paper p-5">
-      <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
-        Upgrade · Partner
+    <div className="bg-paper p-6 md:p-7">
+      {isCurrent ? (
+        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+          current plan
+        </p>
+      ) : (
+        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+          {tier === "regular" ? "standard service" : tier === "plus" ? "with a named partner" : "custom"}
+        </p>
+      )}
+      <p className="mt-2 font-display text-2xl leading-tight text-ink">
+        agentplain {tierDisplayName(tier)}
       </p>
-      <p className="mt-2 font-display text-xl leading-tight text-ink">
-        Add a named service partner.
+      <p className="mt-1 text-[13px] text-ink-soft">{priceLabel}</p>
+      <p className="mt-4 text-[14px] leading-relaxed text-ink-soft">
+        {TIER_TAGLINE[tier]}
       </p>
-      <p className="mt-2 text-[13px] leading-relaxed text-ink-soft">
-        Everything in Regular, plus {PARTNER_RESERVED_HOURS_PER_MONTH} hours
-        per month of a dedicated service partner. From{" "}
-        {formatCents(partnerSoloCents)}/seat/mo at 1 seat — drops with the
-        ladder.
-      </p>
-      <form
-        action={changePlanAction.bind(null, workspaceId)}
-        className="mt-4"
-      >
-        <input type="hidden" name="tier" value="plus" />
-        <input type="hidden" name="seats" value={currentSeats} />
-        <button type="submit" className="btn-primary inline-flex">
-          Upgrade to Partner
-          <span aria-hidden>→</span>
-        </button>
-      </form>
+      <ul className="mt-4 space-y-2 text-[13px] leading-relaxed text-ink">
+        {bullets.map((b) => (
+          <li key={b} className="flex items-baseline gap-2">
+            <span aria-hidden className="text-mute">—</span>
+            <span>{b}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-6">
+        {isCurrent ? (
+          <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+            you&rsquo;re on this plan
+          </p>
+        ) : isMax ? (
+          <ApHeritageButton
+            variant="secondary"
+            withArrow
+            href="/custom?type=max#custom-contact"
+          >
+            talk to a partner
+          </ApHeritageButton>
+        ) : (
+          <TierChangeForm
+            tier={tier}
+            currentSeats={currentSeats}
+            workspaceId={workspaceId}
+          />
+        )}
+      </div>
     </div>
   );
 }
 
-function DowngradeToRegular({
-  workspaceId,
+function TierChangeForm({
+  tier,
   currentSeats,
+  workspaceId,
 }: {
-  workspaceId: string;
+  tier: TierName;
   currentSeats: number;
+  workspaceId: string;
 }) {
+  // Per existing changePlanAction contract: downgrades from Partner to
+  // Regular require `confirm=downgrade` to acknowledge losing reserved
+  // hours. We surface that as a checkbox under the CTA so the action
+  // doesn't silently fail.
+  const isDowngradeFromPartner = tier === "regular";
   return (
-    <div className="bg-paper p-5">
-      <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-        Downgrade · Regular
-      </p>
-      <p className="mt-2 font-display text-xl leading-tight text-ink">
-        Drop the named service partner.
-      </p>
-      <p className="mt-2 text-[13px] leading-relaxed text-ink-soft">
-        Keeps the fleet running on standard managed AI ops. You lose the{" "}
-        {PARTNER_RESERVED_HOURS_PER_MONTH} hours/month of a named partner
-        and drop to the Regular ladder.
-      </p>
-      <form
-        action={changePlanAction.bind(null, workspaceId)}
-        className="mt-4 space-y-2"
-      >
-        <input type="hidden" name="tier" value="regular" />
-        <input type="hidden" name="seats" value={currentSeats} />
+    <form
+      action={changePlanAction.bind(null, workspaceId)}
+      className="space-y-3"
+    >
+      <input type="hidden" name="tier" value={tier} />
+      <input type="hidden" name="seats" value={currentSeats} />
+      {isDowngradeFromPartner ? (
         <label className="flex items-start gap-2 text-[12px] leading-relaxed text-ink-soft">
           <input
             type="checkbox"
@@ -563,39 +594,61 @@ function DowngradeToRegular({
             className="mt-[3px]"
           />
           <span>
-            I understand I&rsquo;ll lose my named service partner and the{" "}
-            {PARTNER_RESERVED_HOURS_PER_MONTH} reserved hours per month.
+            I understand I&rsquo;ll lose the named service partner and
+            the {PARTNER_RESERVED_HOURS_PER_MONTH} reserved hours per
+            month. (Only applies if downgrading from Partner.)
           </span>
         </label>
-        <button type="submit" className="btn-secondary inline-flex">
-          Confirm downgrade
-        </button>
-      </form>
+      ) : null}
+      <ApHeritageButton variant="primary" type="submit">
+        choose {tierDisplayName(tier)}
+      </ApHeritageButton>
+    </form>
+  );
+}
+
+function TrialBanner(props: {
+  days: number;
+  endsAt: Date | null;
+  hasPaymentMethod: boolean;
+  workspaceId: string;
+}) {
+  const verb =
+    props.days === 0
+      ? "ends today"
+      : `ends in ${props.days} day${props.days === 1 ? "" : "s"}`;
+  return (
+    <div className="mt-6 border border-ink bg-paper-deep p-5">
+      <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+        trial
+      </p>
+      <p className="mt-1 text-[15px] text-ink">
+        Your trial {verb}
+        {props.endsAt ? ` (${formatDate(props.endsAt)})` : ""}.{" "}
+        {props.hasPaymentMethod
+          ? "Card on file — your subscription rolls over automatically."
+          : "Add a card to keep your fleet running when the trial ends."}
+      </p>
+      {!props.hasPaymentMethod ? (
+        <form
+          action={addPaymentMethodAction.bind(null, props.workspaceId)}
+          className="mt-3"
+        >
+          <ApHeritageButton variant="primary" type="submit">
+            add payment method
+          </ApHeritageButton>
+        </form>
+      ) : null}
     </div>
   );
 }
 
-function UpgradeToMax() {
+function MissingSubscriptionState() {
   return (
-    <div className="bg-paper p-5">
-      <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
-        Upgrade · Max
-      </p>
-      <p className="mt-2 font-display text-xl leading-tight text-ink">
-        Scope a Max engagement.
-      </p>
-      <p className="mt-2 text-[13px] leading-relaxed text-ink-soft">
-        Multi-state operations, white-label deployment, dedicated team,
-        regulated-vertical compliance gates. Quote-based — we scope on a
-        call, write the spec, then talk price.
-      </p>
-      <Link
-        href="/custom?type=max#custom-contact"
-        className="btn-primary mt-4 inline-flex"
-      >
-        Talk to us about Max
-        <span aria-hidden>→</span>
-      </Link>
+    <div className="mt-8 border border-rule bg-paper p-5 text-[15px] text-mute">
+      We&rsquo;re still provisioning your trial. Refresh in a moment.
+      If this persists, your service partner is notified — your
+      workspace still works without the subscription wired up.
     </div>
   );
 }

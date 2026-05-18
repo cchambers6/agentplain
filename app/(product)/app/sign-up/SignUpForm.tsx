@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { ApHeritageButton, ApHeritageField } from "@/components/ui/ap";
 import {
   PARTNER_RESERVED_HOURS_PER_MONTH,
   PER_SEAT_MONTHLY_USD_CENTS,
@@ -21,15 +21,9 @@ export interface VerticalOption {
 
 // Three customer-facing tiers per the 2026-05-15 amendment to
 // `project_stripe_both_surfaces.md`:
-//   * Regular — self-serve checkout (DB enum: regular)
-//   * Partner — self-serve checkout (DB enum: plus)
-//   * Max     — quote-based, no self-serve checkout (routes to /custom)
-//
-// Picker is a three-up segmented control. Selecting Regular or Partner keeps
-// the workspace-creation form intact and forwards the chosen tier as a
-// hidden field to `signUpAction`. Selecting Max replaces the form with a
-// CTA card to /custom?type=max — sign-up never creates a Max workspace
-// (operator provisions it manually after the engagement signs).
+//   * Regular — direct checkout (DB enum: regular)
+//   * Partner — direct checkout (DB enum: plus)
+//   * Max     — quote-based, no direct checkout (routes to /custom)
 
 type Selection = TierName;
 
@@ -41,17 +35,17 @@ const PICKER_OPTIONS: ReadonlyArray<{
   {
     tier: "regular",
     headline: tierDisplayName("regular"),
-    priceLabel: `From $${PER_SEAT_MONTHLY_USD_CENTS.regular.SEATS_50_99 / 100}/seat`,
+    priceLabel: `from $${PER_SEAT_MONTHLY_USD_CENTS.regular.SEATS_50_99 / 100}/seat`,
   },
   {
     tier: "plus",
     headline: tierDisplayName("plus"),
-    priceLabel: `From $${PER_SEAT_MONTHLY_USD_CENTS.plus.SEATS_50_99 / 100}/seat`,
+    priceLabel: `from $${PER_SEAT_MONTHLY_USD_CENTS.plus.SEATS_50_99 / 100}/seat`,
   },
   {
     tier: "max",
-    headline: "Talk to us about Max",
-    priceLabel: "Quote-based",
+    headline: "talk to us about Max",
+    priceLabel: "quote-based",
   },
 ];
 
@@ -60,14 +54,14 @@ export function SignUpForm({
   defaultVerticalSlug,
   defaultTier = "regular",
 }: {
-  /** Server-rendered to avoid pulling the marketing content bundle into the client. */
   verticals: VerticalOption[];
-  /** Pre-selected vertical slug from /(marketing)/[vertical] → /app/sign-up?vertical=… */
   defaultVerticalSlug?: string;
-  /** Pre-selected tier from /(marketing)/pricing → /app/sign-up?tier=… */
   defaultTier?: TierName;
 }) {
   const [tier, setTier] = useState<Selection>(defaultTier);
+  const [verticalSlug, setVerticalSlug] = useState<string>(
+    defaultVerticalSlug ?? "real-estate",
+  );
   const [state, formAction] = useFormState<ActionResult, FormData>(
     signUpAction,
     initial,
@@ -82,35 +76,39 @@ export function SignUpForm({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <TierPicker selected={tier} onSelect={setTier} />
 
       {tier === "max" ? (
         <MaxCta />
       ) : (
-        <form action={formAction} className="space-y-4">
+        <form action={formAction} className="space-y-5">
           <input type="hidden" name="tier" value={tier} />
+          <input type="hidden" name="vertical" value={verticalSlug} />
           <TierSummary tier={tier} />
-          <VerticalField
+
+          <VerticalChipRow
             verticals={verticals}
-            defaultValue={defaultVerticalSlug ?? "real-estate"}
+            selected={verticalSlug}
+            onSelect={setVerticalSlug}
           />
-          <Field
-            label="Brokerage / firm name"
+
+          <ApHeritageField
+            label="brokerage / firm name"
             name="brokerageName"
             required
             placeholder="Acme Realty"
             autoComplete="organization"
           />
-          <Field
-            label="Your email"
+          <ApHeritageField
+            label="your email"
             name="email"
             type="email"
             required
             autoComplete="email"
           />
-          <Field
-            label="Your name (optional)"
+          <ApHeritageField
+            label="your name (optional)"
             name="ownerName"
             autoComplete="name"
           />
@@ -136,7 +134,7 @@ function TierPicker({
   return (
     <fieldset>
       <legend className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-        Pick a tier
+        service cadence
       </legend>
       <div
         role="radiogroup"
@@ -183,7 +181,8 @@ function TierSummary({ tier }: { tier: Exclude<Selection, "max"> }) {
       <span className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
         {tierDisplayName(tier)}
       </span>{" "}
-      · {TIER_TAGLINE[tier]} First month free — no card required to start.
+      · {TIER_TAGLINE[tier]} First month is on us — no card required to
+      start.
       {tier === "plus" ? (
         <>
           {" "}
@@ -205,102 +204,93 @@ function MaxCta() {
         {TIER_TAGLINE.max}
       </p>
       <p className="mt-3 text-[14px] leading-relaxed text-ink-soft">
-        Max engagements are scoped per customer — high-intensity operations,
-        multi-state compliance, white-label deployment, dedicated team. We
-        scope on a call, write the spec, and only then talk price. A real
-        human reads every inquiry.
+        Max engagements are scoped per customer — high-intensity
+        operations, multi-state compliance, white-label deployment,
+        dedicated team. We scope on a call, write the spec, and only
+        then talk price. A real human reads every inquiry.
       </p>
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <Link
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <ApHeritageButton
+          variant="primary"
+          withArrow
           href="/custom?type=max#custom-contact"
-          className="btn-primary inline-flex"
         >
-          Tell us what you need
-          <span aria-hidden>→</span>
-        </Link>
+          tell us what you need
+        </ApHeritageButton>
         <a
           href="mailto:hello@agentplain.com"
           className="text-[13px] text-ink underline"
         >
-          Or email a human directly
+          or email a human directly
         </a>
       </div>
     </div>
   );
 }
 
-function VerticalField({
+function VerticalChipRow({
   verticals,
-  defaultValue,
+  selected,
+  onSelect,
 }: {
   verticals: VerticalOption[];
-  defaultValue: string;
+  selected: string;
+  onSelect: (slug: string) => void;
 }) {
-  return (
-    <label className="block text-sm">
-      <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-        Vertical
-      </span>
-      <select
-        name="vertical"
-        required
-        defaultValue={defaultValue}
-        className="mt-1 block w-full border border-rule bg-paper px-3 py-2 text-[15px] text-ink outline-none focus:border-ink"
-      >
-        {verticals.map((v) => (
-          <option key={v.slug} value={v.slug}>
-            {v.name}
-            {v.slug === "real-estate" ? "" : " — early access"}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
+  // Per design language §3.3 (chip row), with a /general fallback so
+  // shops outside the 10 launch verticals can self-select. Tens of
+  // chips fit on one line at md and wrap on mobile.
+  const options: VerticalOption[] = [
+    ...verticals,
+    { slug: "general", name: "Something else" },
+  ];
 
-function Field({
-  label,
-  name,
-  type = "text",
-  required = false,
-  placeholder,
-  autoComplete,
-}: {
-  label: string;
-  name: string;
-  type?: string;
-  required?: boolean;
-  placeholder?: string;
-  autoComplete?: string;
-}) {
   return (
-    <label className="block text-sm">
-      <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-        {label}
-      </span>
-      <input
-        name={name}
-        type={type}
-        required={required}
-        placeholder={placeholder}
-        autoComplete={autoComplete}
-        className="mt-1 block w-full border border-rule bg-paper px-3 py-2 text-[15px] text-ink outline-none focus:border-ink"
-      />
-    </label>
+    <fieldset>
+      <legend className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+        the work you do
+      </legend>
+      <div
+        role="radiogroup"
+        aria-label="Vertical"
+        className="mt-2 flex flex-wrap gap-2"
+      >
+        {options.map((v) => {
+          const active = v.slug === selected;
+          return (
+            <button
+              key={v.slug}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => onSelect(v.slug)}
+              className={`rounded-none border px-3 py-2 font-mono text-[11px] tracking-eyebrow uppercase transition focus:outline-none ${
+                active
+                  ? "border-clay bg-clay text-paper"
+                  : "border-rule bg-paper text-mute hover:border-ink hover:text-ink"
+              }`}
+            >
+              {v.name}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-2 text-[13px] leading-relaxed text-mute">
+        Real-estate brokerages get the full agent fleet today. Others
+        start with the compliance-and-drafting stack; your service
+        partner extends it for your shop.
+      </p>
+    </fieldset>
   );
 }
 
 function Submit({ tier }: { tier: Exclude<Selection, "max"> }) {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="btn-primary disabled:opacity-50"
-    >
+    <ApHeritageButton variant="primary" type="submit" disabled={pending}>
       {pending
-        ? "Creating workspace…"
-        : `Create ${tierDisplayName(tier)} workspace`}
-    </button>
+        ? "rooting your workspace…"
+        : `begin with us — ${tierDisplayName(tier)} workspace`}
+    </ApHeritageButton>
   );
 }

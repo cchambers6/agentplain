@@ -21,12 +21,16 @@ export default async function AppRootPage() {
   return (
     <div className="container-wide py-16">
       <div className="mx-auto max-w-2xl">
-        <p className="eyebrow mb-4">No workspace</p>
+        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute mb-4">
+          no workspace
+        </p>
         <h1 className="font-display text-3xl leading-tight text-ink">
-          You're signed in, but no workspace is attached to this account.
+          You&rsquo;re signed in, but no workspace is attached to this
+          account.
         </h1>
         <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
-          Reach out to the agentplain operator to be added to a workspace.
+          Reach out to your service partner at agentplain to be added
+          to a workspace.
         </p>
       </div>
     </div>

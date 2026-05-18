@@ -1,9 +1,24 @@
 import Link from "next/link";
+import {
+  ApEyebrow,
+  ApHairlineList,
+  ApHairlineRow,
+  ApHeritageGrid,
+  ApHeritageGridCell,
+} from "@/components/ui/ap";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withSystemContext } from "@/lib/db";
+import { servicePartnerForWorkspace } from "@/lib/onboarding/service-partner";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+interface SectionLink {
+  href: string;
+  label: string;
+  description: string;
+  status?: "available" | "coming-soon";
 }
 
 export default async function SettingsPage({ params }: PageProps) {
@@ -33,70 +48,123 @@ export default async function SettingsPage({ params }: PageProps) {
     }),
   );
 
+  const partner = servicePartnerForWorkspace(workspaceId);
+
+  const sections: SectionLink[] = [
+    {
+      href: `/app/workspace/${workspaceId}/integrations`,
+      label: "connections",
+      description: "Connect or manage the tools your fleet reads from.",
+    },
+    {
+      href: `/app/workspace/${workspaceId}/settings/work-thresholds`,
+      label: "work thresholds",
+      description:
+        "Tell your service team which agent decisions need explicit ratification.",
+    },
+    {
+      href: `/app/workspace/${workspaceId}/settings/billing`,
+      label: "billing",
+      description: "Plan, seats, invoices, payment method.",
+    },
+    {
+      href: `/app/workspace/${workspaceId}/activity`,
+      label: "activity",
+      description: "Every handoff your fleet has executed.",
+    },
+    {
+      href: "#",
+      label: "team members",
+      description: "Add, remove, and assign roles.",
+      status: "coming-soon",
+    },
+    {
+      href: "#",
+      label: "drafting tone",
+      description: "How your fleet sounds in customer-facing drafts.",
+      status: "coming-soon",
+    },
+    {
+      href: "#",
+      label: "notifications",
+      description: "When your service team pings you and how.",
+      status: "coming-soon",
+    },
+  ];
+
   return (
     <div>
-      <p className="eyebrow mb-3">Settings</p>
+      <ApEyebrow className="mb-3">settings</ApEyebrow>
       <h1 className="font-display text-3xl text-ink">Workspace settings</h1>
-
-      <dl className="mt-8 grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2">
-        <Row label="Workspace name" value={workspace.name} />
-        <Row label="Slug" value={workspace.slug} />
-        <Row label="Tier" value={workspace.tier} />
-        <Row label="State" value={workspace.stateCode} />
-        <Row label="Billing mode" value={workspace.billingMode} />
-        <Row label="Active members" value={String(memberCount)} />
-        <Row
-          label="Created"
-          value={new Date(workspace.createdAt).toLocaleString()}
-        />
-      </dl>
-
-      <div className="mt-8 grid gap-3 sm:grid-cols-2">
-        <Link
-          href={`/app/workspace/${workspaceId}/integrations`}
-          className="border border-rule bg-paper p-5 transition hover:border-ink"
-        >
-          <p className="eyebrow mb-2">Integrations</p>
-          <p className="text-[15px] text-ink">
-            Connect or manage the tools the fleet reads from.
-          </p>
-        </Link>
-        <Link
-          href={`/app/workspace/${workspaceId}/settings/work-thresholds`}
-          className="border border-rule bg-paper p-5 transition hover:border-ink"
-        >
-          <p className="eyebrow mb-2">Work thresholds</p>
-          <p className="text-[15px] text-ink">
-            Configure which agent decisions need explicit ratification.
-          </p>
-        </Link>
-        <Link
-          href={`/app/workspace/${workspaceId}/settings/billing`}
-          className="border border-rule bg-paper p-5 transition hover:border-ink"
-        >
-          <p className="eyebrow mb-2">Billing</p>
-          <p className="text-[15px] text-ink">
-            Invoices, payment method, billing mode.
-          </p>
-        </Link>
-      </div>
-
-      <p className="mt-8 max-w-2xl text-[13px] leading-relaxed text-mute">
-        Phase 1 settings are minimal — agent enablement, tool connections,
-        team management land in Phase 2 / Phase 3. Reach out to the
-        agentplain operator to change anything you don't see here.
+      <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
+        Tell {partner} how you like things. Every setting here is a note
+        to your service team, not a knob you have to fiddle with.
       </p>
-    </div>
-  );
-}
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-paper p-5">
-      <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-        {label}
+      <section className="mt-8">
+        <ApEyebrow className="mb-3">workspace</ApEyebrow>
+        <ApHeritageGrid columnsClass="grid-cols-1 sm:grid-cols-2">
+          <ApHeritageGridCell label="workspace name" value={workspace.name} />
+          <ApHeritageGridCell label="slug" value={workspace.slug} />
+          <ApHeritageGridCell label="tier" value={workspace.tier} />
+          <ApHeritageGridCell label="state" value={workspace.stateCode} />
+          <ApHeritageGridCell
+            label="billing mode"
+            value={workspace.billingMode}
+          />
+          <ApHeritageGridCell
+            label="active members"
+            value={String(memberCount)}
+          />
+          <ApHeritageGridCell
+            label="created"
+            value={new Date(workspace.createdAt).toLocaleString()}
+          />
+        </ApHeritageGrid>
+      </section>
+
+      <section className="mt-10">
+        <ApEyebrow className="mb-3">sections</ApEyebrow>
+        <ApHairlineList aria-label="Settings sections">
+          {sections.map((s) => (
+            <ApHairlineRow
+              key={s.label}
+              right={
+                s.status === "coming-soon" ? (
+                  <span className="text-mute">coming soon</span>
+                ) : (
+                  <span>open →</span>
+                )
+              }
+            >
+              {s.status === "coming-soon" ? (
+                <div>
+                  <p className="font-display text-base leading-tight text-ink">
+                    {s.label}
+                  </p>
+                  <p className="mt-1 text-[13px] leading-relaxed text-mute">
+                    {s.description}
+                  </p>
+                </div>
+              ) : (
+                <Link href={s.href} className="block">
+                  <p className="font-display text-base leading-tight text-ink">
+                    {s.label}
+                  </p>
+                  <p className="mt-1 text-[13px] leading-relaxed text-mute">
+                    {s.description}
+                  </p>
+                </Link>
+              )}
+            </ApHairlineRow>
+          ))}
+        </ApHairlineList>
+      </section>
+
+      <p className="mt-10 border-t border-rule pt-6 max-w-2xl text-[13px] leading-relaxed text-mute">
+        Reach out to {partner}, your service partner, to change anything
+        you don&rsquo;t see here.
       </p>
-      <p className="mt-1 font-display text-lg text-ink">{value}</p>
     </div>
   );
 }

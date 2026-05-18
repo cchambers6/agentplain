@@ -53,6 +53,15 @@ export default async function SettingsPage({ params }: PageProps) {
 
       <div className="mt-8 grid gap-3 sm:grid-cols-2">
         <Link
+          href={`/app/workspace/${workspaceId}/integrations`}
+          className="border border-rule bg-paper p-5 transition hover:border-ink"
+        >
+          <p className="eyebrow mb-2">Integrations</p>
+          <p className="text-[15px] text-ink">
+            Connect or manage the tools the fleet reads from.
+          </p>
+        </Link>
+        <Link
           href={`/app/workspace/${workspaceId}/settings/work-thresholds`}
           className="border border-rule bg-paper p-5 transition hover:border-ink"
         >

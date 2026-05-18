@@ -5,13 +5,13 @@
  *   1. Loads the WebhookSubscription + IntegrationCredential
  *   2. Builds a GmailMessageAdapter (production MessageFetcher + DraftPersister)
  *   3. Runs the skill chain via `lib/skills/runner.ts`
- *   4. Marks the WebhookEvent processed (or records the error for retry)
+ *   4. Persists the artifacts (HandoffLogEntry rows + WorkApprovalQueueItem
+ *      when a draft was produced) via `lib/skills/persist-artifacts.ts`
+ *   5. Marks the WebhookEvent processed (or records the error for retry)
  *
- * **DECLARED, NOT CRON-ACTIVE.** Per the PR brief: this function ships
- * with NO `triggers` so it does not fire automatically. Conner flips
- * the cron on post-GCP by adding a `cron` entry to the function config
- * once Gmail is OAuth-connected. The function shape + skill wiring is
- * what we want validated before the live data arrives.
+ * Cron: every 5 minutes. Gmail Pub/Sub pushes typically arrive within
+ * seconds; the 5-minute sweep ensures backlog drains promptly without
+ * pummeling the LLM provider on every single Pub/Sub callback.
  *
  * Per `feedback_cold_start_safe_agents.md`: the function reads durable
  * state on every fire. There is no in-memory cache across runs.
@@ -27,12 +27,21 @@
  */
 
 import { prisma } from '@/lib/db/prisma';
+import { withSystemContext } from '@/lib/db';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
 import { GmailMessageAdapter } from '@/lib/skills/gmail-fetcher';
 import { runSkillChain } from '@/lib/skills/runner';
+import {
+  persistSkillRunArtifacts,
+  summarizeOutcome,
+} from '@/lib/skills/persist-artifacts';
 
 export const PROCESS_WEBHOOK_EVENT_FUNCTION_ID = 'agentplain-process-webhook-event';
+/** Every 5 minutes (UTC). Drains backlog without hammering the LLM. */
+export const PROCESS_WEBHOOK_EVENT_CRON = '*/5 * * * *';
+/** On-demand trigger for smoke-testing from the Inngest dev console. */
+export const PROCESS_WEBHOOK_EVENT_TRIGGER_EVENT = 'agentplain/process-webhook-event.requested';
 
 export interface ProcessWebhookEventResult {
   considered: number;
@@ -83,12 +92,18 @@ export async function processUnprocessedWebhookEvents(
     }
     try {
       const adapter = new GmailMessageAdapter({ workspaceId: workspace.id });
-      const { record } = await runSkillChain({
+      const { record, outcome } = await runSkillChain({
         workspace,
         event,
         fetcher: adapter,
         persister: adapter,
       });
+
+      const artifacts = await persistSkillRunArtifacts({
+        workspaceId: workspace.id,
+        record,
+      });
+
       await prisma.webhookEvent.update({
         where: { id: event.id },
         data: {
@@ -97,19 +112,23 @@ export async function processUnprocessedWebhookEvents(
           error: null,
         },
       });
-      await prisma.auditLog.create({
-        data: {
-          workspaceId: workspace.id,
-          action: 'skills.loop.completed',
-          targetTable: 'WebhookEvent',
-          targetId: event.id,
-          payload: {
-            category: record.outcome.category,
-            draftPersisted: record.outcome.draft?.persisted ?? false,
-            steps: record.steps.map((s) => ({ step: s.step, ok: s.ok })),
+      await withSystemContext((tx) =>
+        tx.auditLog.create({
+          data: {
+            workspaceId: workspace.id,
+            action: 'skills.loop.completed',
+            targetTable: 'WebhookEvent',
+            targetId: event.id,
+            payload: {
+              summary: summarizeOutcome(outcome),
+              handoffsWritten: artifacts.handoffsWritten,
+              approvalsWritten: artifacts.approvalsWritten,
+              approvalId: artifacts.approvalId,
+              steps: record.steps.map((s) => ({ step: s.step, ok: s.ok })),
+            },
           },
-        },
-      });
+        }),
+      );
       result.succeeded += 1;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -124,32 +143,21 @@ export async function processUnprocessedWebhookEvents(
 }
 
 /**
- * Inngest function — DECLARED, NOT TRIGGERED. To activate post-GCP:
+ * Inngest function — fires on a 5-minute cron AND on the on-demand
+ * `agentplain/process-webhook-event.requested` event (use from the dev
+ * console to drain queued events ahead of the next tick).
  *
- *   1. Add a `triggers: [{ cron: '*\\u002f5 * * * *' }]` (or event trigger)
- *      to the createFunction call below.
- *   2. Set `INNGEST_FN_DISABLE_AGENTPLAIN_PROCESS_WEBHOOK_EVENT=false` (or
- *      leave unset). The disable-gate defaults to active.
- *   3. Confirm Conner's Gmail is OAuth-connected (`IntegrationCredential`
- *      row exists, `WebhookSubscription` is ACTIVE).
- *
- * Leaving the trigger empty means Inngest registers the function but
- * never fires it on its own. It can still be invoked via the dev
- * console for smoke-testing once Gmail is connected.
+ * Disable-gate: set `INNGEST_FN_DISABLE_AGENTPLAIN_PROCESS_WEBHOOK_EVENT=true`
+ * to pause without redeploying.
  */
-/**
- * Event-only trigger — Conner adds a `{ cron: ... }` here once Gmail is
- * connected. The event trigger means the function is callable via
- * `inngest.send({ name: 'agentplain/process-webhook-event.requested' })`
- * for smoke-testing on demand, but does NOT fire on a schedule.
- */
-export const PROCESS_WEBHOOK_EVENT_TRIGGER_EVENT = 'agentplain/process-webhook-event.requested';
-
 export const processWebhookEventFn = inngest.createFunction(
   {
     id: PROCESS_WEBHOOK_EVENT_FUNCTION_ID,
     name: 'agentplain process unprocessed WebhookEvent rows',
-    triggers: [{ event: PROCESS_WEBHOOK_EVENT_TRIGGER_EVENT }],
+    triggers: [
+      { cron: PROCESS_WEBHOOK_EVENT_CRON },
+      { event: PROCESS_WEBHOOK_EVENT_TRIGGER_EVENT },
+    ],
   },
   async () =>
     runWithDisableGate(PROCESS_WEBHOOK_EVENT_FUNCTION_ID, () =>

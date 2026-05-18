@@ -74,12 +74,16 @@ export default function AboutPage() {
               is the other half. Together they replace the recurring drudge
               work for any of ten verticals: real estate, mortgage,
               insurance, property management, title &amp; escrow, recruiting,
-              home services, CPA / tax, law, and RIA / wealth.
+              home services, CPA / tax, law, and RIA / wealth. The fleet
+              hands off to a human at the steps where a human still has to
+              decide; we hand off to you at the steps where licensed
+              judgment lives.
             </p>
             <p className="text-ink">
               The fleet handles the systematic work. The service team runs
               the operation. The practitioner does the relationship work.
-              That&apos;s the inversion.
+              That&apos;s the inversion — and we run it for you, not the
+              other way around.
             </p>
           </div>
         </div>
@@ -88,27 +92,36 @@ export default function AboutPage() {
       <section className="border-b border-rule bg-paper-deep">
         <div className="container-wide grid gap-12 py-20 md:grid-cols-[1fr_2fr] md:py-28">
           <div>
-            <p className="eyebrow mb-4">We eat our own cooking</p>
+            <p className="eyebrow mb-4">We run it on ourselves first</p>
           </div>
           <div className="max-w-prose space-y-5 text-[15px] leading-relaxed text-ink-soft">
             <p>
-              agentplain has no traditional engineering team. The same fleet
-              model we sell builds the product, and a small service team —
-              the same shape we sell to customers — runs the operation:
-              installs new capabilities, runs the weekly review, decides
-              what&apos;s ready to ship, and surfaces the calls that need a
-              human.
+              flatsbo is our own brokerage. We run the agentplain service
+              partnership on flatsbo before we sell it to anyone else — the
+              same install, the same fleet, the same ongoing config. The
+              brokerage in production today is ~35 cron-fired agents
+              covering lead intake, listing coordination, contracts, CRM
+              hygiene, recruiting, and production reporting. That&apos;s
+              the service partnership running on a real local business.
             </p>
             <p>
-              We also run a flat-fee real-estate brokerage in production
-              today — ~35 cron-fired agents covering lead intake, listing
-              coordination, contracts, CRM hygiene, recruiting. That
-              brokerage is where we run our own service partnership against
-              real customers, real deadlines, and real licensure. It&apos;s
-              how we learn what works at a local-business scale before we
-              package it into a tier. When you hire agentplain, you&apos;re
-              hiring the team that has been running this pattern on itself
-              long enough to know where the human still has to decide.
+              We sell what we already operate. Every skill in the fleet
+              earned its way into the product by working on flatsbo first.
+              Every handoff we promise customers — where the fleet stops
+              and the human decides — is a handoff we&apos;ve already
+              mapped against a real brokerage&apos;s compliance posture and
+              its owner&apos;s tolerance for AI work. When you hire
+              agentplain, you&apos;re hiring the team that has been running
+              this pattern on itself long enough to know where the human
+              still has to decide.
+            </p>
+            <p>
+              agentplain itself is built BY the same fleet model we sell.
+              The service team — the same shape we sell to customers —
+              proposes capabilities, decomposes them into work, runs the
+              tests, decides what&apos;s ready to ship, and surfaces the
+              calls that need a human. We dogfood the partnership at every
+              layer of the company.
             </p>
           </div>
         </div>
@@ -143,6 +156,15 @@ export default function AboutPage() {
             <p className="eyebrow mb-4">What we are not</p>
           </div>
           <div className="max-w-prose space-y-5 text-[15px] leading-relaxed text-ink-soft">
+            <p>
+              <span className="text-ink">
+                Not a tool for you to figure out.
+              </span>{" "}
+              agentplain is a service partnership — we install, we run, we
+              customize. Signing up gets you a partner who handles the AI
+              ops, not a platform you operate. If you want to wire your own
+              agents together from scratch, that&apos;s a different product.
+            </p>
             <p>
               <span className="text-ink">Not magic.</span> Intelligence
               rooted in reality means real product, real operators, real

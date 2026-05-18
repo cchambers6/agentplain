@@ -70,3 +70,36 @@ body {
     @apply mx-auto w-full max-w-wide px-6 sm:px-8 lg:px-12;
   }
 }
+
+/* Rooted loader — single hairline strip slides left-to-right inside a paper-deep band.
+   No spinner. No skeleton shimmer. Per design language §1.5 + §3.6. */
+@keyframes ap-rooted-loader {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(220%); }
+}
+
+.ap-rooted-loader-bar {
+  animation: ap-rooted-loader 1200ms cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ap-rooted-loader-bar {
+    animation-duration: 3000ms;
+  }
+}
+
+/* Sheet slide-in for ApPaperSheet — 180ms translate-x only, no fade. Per §3.4. */
+@keyframes ap-paper-sheet-in {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+.ap-paper-sheet-in {
+  animation: ap-paper-sheet-in 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ap-paper-sheet-in {
+    animation: none;
+  }
+}

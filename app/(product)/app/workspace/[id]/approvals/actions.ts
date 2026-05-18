@@ -63,3 +63,53 @@ export async function decideApprovalAction(form: FormData): Promise<void> {
   revalidatePath(`/app/workspace/${workspaceId}/approvals`);
   redirect(`/app/workspace/${workspaceId}/approvals`);
 }
+
+export async function editApprovalDraftAction(form: FormData): Promise<void> {
+  const workspaceId = formStr(form, "workspaceId");
+  const itemId = formStr(form, "itemId");
+  const body = formStr(form, "body");
+
+  if (!workspaceId || !itemId) {
+    throw new Error("Missing workspaceId or itemId");
+  }
+  if (body.length > 50_000) {
+    throw new Error("Draft body too long");
+  }
+
+  const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
+  const ctx = { userId: member.userId, workspaceId, isOperator: false };
+
+  await withRls(ctx, async (tx) => {
+    const item = await tx.workApprovalQueueItem.findFirst({
+      where: { id: itemId, workspaceId },
+    });
+    if (!item) throw new Error("Item not found");
+    if (item.status !== "PENDING") {
+      throw new Error(`Item already decided (${item.status})`);
+    }
+
+    const existing =
+      item.payload && typeof item.payload === "object" && !Array.isArray(item.payload)
+        ? (item.payload as Record<string, unknown>)
+        : {};
+    const next = { ...existing, body, editedAt: new Date().toISOString() };
+
+    await tx.workApprovalQueueItem.update({
+      where: { id: itemId },
+      data: { payload: next },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId: member.userId,
+        workspaceId,
+        action: "work_approval.edited",
+        targetTable: "WorkApprovalQueueItem",
+        targetId: itemId,
+        payload: { kind: item.kind, agentSlug: item.agentSlug },
+      },
+    });
+  });
+
+  revalidatePath(`/app/workspace/${workspaceId}/approvals`);
+}

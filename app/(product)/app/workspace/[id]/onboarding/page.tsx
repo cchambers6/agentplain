@@ -2,6 +2,7 @@ import Link from "next/link";
 import { withWorkspace } from "@/lib/auth";
 import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
 import { withRls } from "@/lib/db";
+import { listIntegrations } from "@/lib/integrations/marketplace";
 import {
   STEP_META,
   STEP_ORDER,
@@ -40,6 +41,18 @@ export default async function OnboardingPage({ params }: PageProps) {
       tx.onboardingState.create({ data: { workspaceId } }),
     );
   }
+
+  // Surface connected integrations so the connect_integration step can
+  // either celebrate ("Gmail connected — keep going") or push to /integrations.
+  // Per feedback_low_friction_over_margin: never force the connect — we
+  // make the next action obvious and keep "Skip for now" intact.
+  const connectedIntegrations = await withRls(rls, (tx) =>
+    tx.integrationCredential.findMany({
+      where: { workspaceId, status: "ACTIVE" },
+      select: { provider: true, accountEmail: true },
+      orderBy: { createdAt: "desc" },
+    }),
+  );
 
   const verticalSlug = verticalSlugFromEnum(workspace.vertical);
   const verticalContent = verticalSlug
@@ -134,7 +147,11 @@ export default async function OnboardingPage({ params }: PageProps) {
               verticalIsLive={verticalIsLive}
             />
           ) : currentStep === "connect_integration" ? (
-            <ConnectIntegration verticalContent={verticalContent} />
+            <ConnectIntegration
+              workspaceId={workspaceId}
+              verticalContent={verticalContent}
+              connectedIntegrations={connectedIntegrations}
+            />
           ) : (
             <SetPreferences />
           )}
@@ -273,22 +290,85 @@ function ConfirmDetails({
 }
 
 function ConnectIntegration({
+  workspaceId,
   verticalContent,
+  connectedIntegrations,
 }: {
+  workspaceId: string;
   verticalContent: VerticalContent | null;
+  connectedIntegrations: Array<{ provider: string; accountEmail: string | null }>;
 }) {
   const planned = verticalContent?.integrations.planned ?? [];
   const plannedWindow = verticalContent?.integrations.plannedWindow ?? "Q3 2026";
+  // Per feedback_low_friction_over_margin: we encourage, we don't gate.
+  // The marketplace lists 2 available connectors today (Gmail + Outlook);
+  // surface the primary one as the obvious next action.
+  const available = listIntegrations().filter((m) => m.status === "available");
+  const primary = available[0] ?? null;
+  const hasConnection = connectedIntegrations.length > 0;
   return (
     <div className="space-y-5">
       <p className="text-[15px] leading-relaxed text-ink-soft">
-        The fleet reads from the tools you already pay for. Read-only on
-        arrival — we watch for messages, you stay in control. We never send
-        outbound on your behalf; your existing CRM and inbox handle every send.
+        We read from the tools you already pay for. Read-only on arrival —
+        we watch for messages, you stay in control. We never send outbound
+        on your behalf; your existing inbox handles every send.
       </p>
 
+      {hasConnection ? (
+        <div className="border border-moss bg-paper p-5">
+          <p className="font-mono text-[11px] tracking-eyebrow uppercase text-moss">
+            Connected
+          </p>
+          <ul className="mt-3 space-y-2 text-[15px] text-ink">
+            {connectedIntegrations.map((c) => (
+              <li key={`${c.provider}:${c.accountEmail ?? ""}`}>
+                <span className="font-mono text-[12px] text-mute">
+                  {c.provider}
+                </span>
+                {c.accountEmail ? (
+                  <span className="ml-2">{c.accountEmail}</span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-[13px] leading-relaxed text-ink-soft">
+            We'll start watching for new messages on the next sweep. Add
+            another tool any time from the integrations marketplace.
+          </p>
+          <Link
+            href={`/app/workspace/${workspaceId}/integrations`}
+            className="mt-4 inline-flex btn-secondary"
+          >
+            Manage integrations
+            <span aria-hidden>→</span>
+          </Link>
+        </div>
+      ) : (
+        <div className="border border-ink bg-paper-deep p-5">
+          <p className="eyebrow mb-2">Connect a tool</p>
+          <p className="text-[15px] leading-relaxed text-ink">
+            {primary
+              ? `One-click read-only ${primary.name} OAuth is live. We'll start watching your inbox the moment you finish.`
+              : "Pick a tool to connect from the marketplace."}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link
+              href={`/app/workspace/${workspaceId}/integrations`}
+              className="btn-primary"
+            >
+              {primary ? `Connect ${primary.name}` : "Open marketplace"}
+              <span aria-hidden>→</span>
+            </Link>
+          </div>
+          <p className="mt-3 text-[12px] leading-relaxed text-mute">
+            Nothing about the workspace blocks on a connector — skip below
+            if you'd rather wire it on the welcome call.
+          </p>
+        </div>
+      )}
+
       <div>
-        <p className="eyebrow mb-3">Integrations planned · {plannedWindow}</p>
+        <p className="eyebrow mb-3">Also planned · {plannedWindow}</p>
         {planned.length === 0 ? (
           <p className="text-[14px] text-mute">
             No integrations on the roadmap for this vertical yet.
@@ -307,19 +387,6 @@ function ConnectIntegration({
             ))}
           </ul>
         )}
-      </div>
-
-      <div className="border border-rule bg-paper-deep p-4 text-[13px] leading-relaxed text-ink-soft">
-        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
-          What "easy" looks like
-        </p>
-        <p className="mt-2">
-          One-click read-only OAuth where it's live. Where it's not yet, the
-          agentplain team wires the connection during your welcome call —
-          reply to the welcome email or click <em>Skip for now</em> to keep
-          moving. The fleet drafts against manually-entered data in the
-          meantime; nothing about the workspace blocks on a connector.
-        </p>
       </div>
     </div>
   );

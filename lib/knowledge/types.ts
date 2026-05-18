@@ -24,6 +24,8 @@
 
 import type { ContextKind } from '@prisma/client';
 
+export type { ContextKind };
+
 // ── Result shape ─────────────────────────────────────────────────────────
 
 export type KnowledgeResult<T> =

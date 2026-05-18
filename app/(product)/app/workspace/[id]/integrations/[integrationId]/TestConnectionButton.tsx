@@ -45,24 +45,30 @@ export function TestConnectionButton({
               router.refresh();
             } catch (err) {
               setState("fail");
-              setDetail(err instanceof Error ? err.message : "Network error");
+              setDetail(
+                err instanceof Error
+                  ? err.message
+                  : "We couldn't reach the connection.",
+              );
             }
           });
         }}
-        className="inline-flex items-center gap-2 border border-ink/30 bg-paper px-4 py-2 font-sans text-[13px] text-ink transition hover:border-ink hover:bg-paper-deep disabled:opacity-60"
+        className="inline-flex items-center gap-2 border border-ink/30 bg-paper px-4 py-2 font-sans text-[13px] text-ink transition hover:border-ink hover:bg-paper-deep disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
       >
-        {pending ? "Checking…" : "Test connection"}
+        {pending ? "checking…" : "test connection"}
       </button>
-      {state === "ok" && (
-        <span className="font-mono text-[11px] tracking-eyebrow uppercase text-moss">
-          Healthy
-        </span>
-      )}
-      {state === "fail" && (
-        <span className="font-mono text-[11px] tracking-eyebrow uppercase text-flag">
-          Failed — {detail}
-        </span>
-      )}
+      <div role="status" aria-live="polite" aria-atomic="true">
+        {state === "ok" && (
+          <span className="font-mono text-[11px] tracking-eyebrow uppercase text-moss">
+            healthy
+          </span>
+        )}
+        {state === "fail" && (
+          <span className="font-mono text-[11px] tracking-eyebrow uppercase text-flag">
+            failed — {detail}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

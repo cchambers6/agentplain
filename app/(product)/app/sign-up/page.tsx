@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ApEyebrow, ApMotif } from "@/components/ui/ap";
 import { getAllVerticals, getVerticalContent } from "@/lib/verticals";
 import { TIER_ORDER, type TierName } from "@/lib/pricing/tiers";
 import { SignUpForm } from "./SignUpForm";
@@ -24,13 +25,9 @@ function resolveDefaultTier(raw: string | undefined): TierName {
 export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   const params = await searchParams;
   const raw = (params.vertical ?? "").toLowerCase();
-  // Marketing pages link with the slug; if the value matches a known vertical
-  // we pre-select it. Otherwise default to real-estate (Pin 1).
   const defaultVerticalSlug = getVerticalContent(raw) ? raw : "real-estate";
   const defaultTier = resolveDefaultTier(params.tier);
 
-  // Server-rendered list keeps the marketing content bundle out of the
-  // client. The form only needs {slug, name}.
   const verticals = getAllVerticals().map((v) => ({
     slug: v.slug,
     name: v.name,
@@ -38,27 +35,30 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
 
   return (
     <div className="container-wide py-16">
-      <div className="mx-auto max-w-md">
-        <p className="eyebrow mb-4">Create a workspace</p>
+      <div className="mx-auto max-w-xl">
+        <div className="mb-6 text-ink">
+          <ApMotif name="wheat" size={88} />
+        </div>
+        <ApEyebrow className="mb-4">begin with us</ApEyebrow>
         <h1 className="font-display text-4xl leading-tight text-ink">
-          Set up your workspace on agentplain.
+          Root your workspace on agentplain.
         </h1>
-        <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
-          Pick a tier, name your firm, and we&rsquo;ll send a sign-in link.
-          First month is on us across the self-serve tiers — Max is scoped
-          per engagement.
+        <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-ink-soft">
+          Tell us your shop and the work you do. Your service partner
+          picks up your install within one business day — first month is
+          on us.
         </p>
-        <div className="mt-8">
+        <div className="mt-10">
           <SignUpForm
             verticals={verticals}
             defaultVerticalSlug={defaultVerticalSlug}
             defaultTier={defaultTier}
           />
         </div>
-        <p className="mt-8 text-sm text-mute">
-          Already have an account?{" "}
+        <p className="mt-10 border-t border-rule pt-6 text-sm text-mute">
+          We email you a link. No password to lose.{" "}
           <Link href="/app/sign-in" className="text-ink underline">
-            Sign in
+            already with us? sign in →
           </Link>
         </p>
       </div>

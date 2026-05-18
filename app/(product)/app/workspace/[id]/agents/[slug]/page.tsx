@@ -1,3 +1,9 @@
+import {
+  ApEyebrow,
+  ApHairlineList,
+  ApHairlineRow,
+  ApRootedEmptyState,
+} from "@/components/ui/ap";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
 
@@ -32,19 +38,32 @@ export default async function AgentDetailPage({ params }: PageProps) {
 
   return (
     <div>
-      <p className="eyebrow mb-3">{agentSlug}</p>
-      <h1 className="font-display text-3xl text-ink">Agent activity</h1>
+      <ApEyebrow className="mb-3">{agentSlug}</ApEyebrow>
+      <h1 className="font-display text-3xl text-ink">
+        What this capability has been doing.
+      </h1>
 
       <section className="mt-8">
-        <h2 className="eyebrow mb-3">Awaiting your decision ({pendingItems.length})</h2>
+        <ApEyebrow className="mb-3">
+          awaiting your decision ({pendingItems.length})
+        </ApEyebrow>
         {pendingItems.length === 0 ? (
-          <p className="text-[15px] text-mute">
-            No pending items from this agent.
-          </p>
+          <ApRootedEmptyState
+            motif="wheat"
+            reality="Nothing waiting from this capability."
+            change="Drafts queue here when this agent surfaces a decision above your threshold."
+          />
         ) : (
-          <ul className="divide-y divide-rule border border-rule bg-paper">
+          <ApHairlineList aria-label="Pending decisions">
             {pendingItems.map((item) => (
-              <li key={item.id} className="flex items-baseline justify-between gap-4 p-4">
+              <ApHairlineRow
+                key={item.id}
+                right={
+                  <span className="font-mono text-[11px] uppercase text-mute">
+                    {new Date(item.proposedAt).toLocaleString()}
+                  </span>
+                }
+              >
                 <div>
                   <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
                     {item.kind}
@@ -53,37 +72,40 @@ export default async function AgentDetailPage({ params }: PageProps) {
                     {item.refTable}:{item.refId}
                   </p>
                 </div>
-                <span className="font-mono text-[11px] uppercase text-mute">
-                  {new Date(item.proposedAt).toLocaleString()}
-                </span>
-              </li>
+              </ApHairlineRow>
             ))}
-          </ul>
+          </ApHairlineList>
         )}
       </section>
 
       <section className="mt-10">
-        <h2 className="eyebrow mb-3">Recent handoffs</h2>
+        <ApEyebrow className="mb-3">recent handoffs</ApEyebrow>
         {recentHandoffs.length === 0 ? (
-          <p className="text-[15px] text-mute">
-            No handoffs involving this agent yet.
-          </p>
+          <ApRootedEmptyState
+            motif="horizon"
+            reality="No handoffs logged involving this capability yet."
+            change="Handoffs land here as soon as the fleet routes work through this agent."
+          />
         ) : (
-          <ul className="divide-y divide-rule border border-rule bg-paper">
+          <ApHairlineList aria-label="Recent handoffs">
             {recentHandoffs.map((h) => (
-              <li key={h.id} className="flex items-baseline justify-between gap-4 p-4 text-[14px]">
-                <span className="truncate">
-                  <span className="font-mono">{h.fromAgent}</span>
-                  <span className="mx-1 text-mute">→</span>
-                  <span className="font-mono">{h.toAgent}</span>
-                  <span className="ml-2 text-mute">{h.handoffType}</span>
+              <ApHairlineRow
+                key={h.id}
+                right={
+                  <span className="font-mono text-[11px] uppercase text-mute">
+                    {new Date(h.occurredAt).toLocaleString()}
+                  </span>
+                }
+              >
+                <span className="text-ink-soft">
+                  <span className="font-mono text-ink">{h.fromAgent}</span>
+                  <span className="mx-2 text-mute">→</span>
+                  <span className="font-mono text-ink">{h.toAgent}</span>
+                  <span className="ml-2 text-mute">· {h.handoffType}</span>
                 </span>
-                <span className="font-mono text-[11px] uppercase text-mute">
-                  {new Date(h.occurredAt).toLocaleString()}
-                </span>
-              </li>
+              </ApHairlineRow>
             ))}
-          </ul>
+          </ApHairlineList>
         )}
       </section>
     </div>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withSystemContext } from "@/lib/db";
+import { ApWorkspaceStrip } from "@/components/ui/ap";
 import { signOutAction } from "../../actions";
 
 interface WorkspaceLayoutProps {
@@ -10,8 +11,9 @@ interface WorkspaceLayoutProps {
 
 const NAV: Array<{ href: string; label: string }> = [
   { href: "", label: "Overview" },
-  { href: "/agents", label: "Agents" },
+  { href: "/activity", label: "Activity" },
   { href: "/approvals", label: "Approvals" },
+  { href: "/agents", label: "Agents" },
   { href: "/compliance", label: "Compliance" },
   { href: "/briefings", label: "Briefings" },
   { href: "/integrations", label: "Integrations" },
@@ -37,40 +39,34 @@ export default async function WorkspaceLayout({
 
   return (
     <div>
-      <div className="border-b border-rule bg-paper-deep">
-        <div className="container-wide flex flex-col gap-3 py-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-              {workspace.slug}
-            </p>
-            <p className="font-display text-2xl text-ink">{workspace.name}</p>
-          </div>
-          <div className="flex items-center gap-3 text-[11px] font-mono tracking-wide uppercase text-mute">
+      <ApWorkspaceStrip
+        slug={workspace.slug}
+        name={workspace.name}
+        right={
+          <>
             <span>{member.email}</span>
             <span aria-hidden>·</span>
             <span>{member.role.replace("_", " ").toLowerCase()}</span>
             <form action={signOutAction}>
               <button
                 type="submit"
-                className="text-mute underline-offset-4 hover:text-ink hover:underline"
+                className="text-mute underline-offset-4 hover:text-ink hover:underline focus:outline-none focus-visible:text-ink focus-visible:underline"
               >
                 sign out
               </button>
             </form>
-          </div>
-        </div>
-        <nav className="container-wide flex gap-5 overflow-x-auto pb-3 text-sm">
-          {NAV.map((item) => (
-            <Link
-              key={item.label}
-              href={`${base}${item.href}`}
-              className="whitespace-nowrap text-ink/70 transition hover:text-ink"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-      </div>
+          </>
+        }
+        nav={NAV.map((item) => (
+          <Link
+            key={item.label}
+            href={`${base}${item.href}`}
+            className="whitespace-nowrap rounded-none text-ink/70 transition hover:text-ink focus:outline-none focus-visible:text-ink focus-visible:underline focus-visible:underline-offset-4"
+          >
+            {item.label}
+          </Link>
+        ))}
+      />
       <div className="container-wide py-10">{children}</div>
     </div>
   );

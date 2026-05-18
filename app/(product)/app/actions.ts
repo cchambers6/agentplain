@@ -69,7 +69,7 @@ export async function signUpAction(
     return {
       ok: false,
       error:
-        "Pick Regular or Partner to self-serve. Max is quote-based — start at /custom?type=max.",
+        "Pick Regular or Partner to begin. Max is quote-based — start at /custom?type=max.",
     };
   }
 
@@ -131,4 +131,4 @@ export async function signOutAction(): Promise<void> {
 }
 
 const errorMessage = (err: unknown): string =>
-  err instanceof Error ? err.message : "Something went wrong";
+  err instanceof Error ? err.message : "We hit a snag on our side.";

@@ -1,3 +1,8 @@
+import {
+  ApEyebrow,
+  ApHeritageButton,
+  ApPaperCard,
+} from "@/components/ui/ap";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
 import { saveThresholdAction } from "./actions";
@@ -58,52 +63,58 @@ export default async function WorkThresholdsPage({ params }: PageProps) {
 
   return (
     <div>
-      <p className="eyebrow mb-3">Settings · work thresholds</p>
+      <ApEyebrow className="mb-3">settings · work thresholds</ApEyebrow>
       <h1 className="font-display text-3xl text-ink">
         Decide what needs your eyes.
       </h1>
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
-        Phase 1 ships with one knob per work-execution kind: the minimum
-        severity that requires your explicit approval. Items below threshold
-        flow through automatically. Per-action allowlists land in Phase 2.
+        One knob per work kind: the minimum severity that requires your
+        explicit approval. Items below threshold flow through
+        automatically. Per-action allowlists land in the next release.
       </p>
 
       <ul className="mt-8 space-y-4">
         {KINDS.map((k) => {
           const current = byKind.get(k.kind);
           const currentSeverity = current?.requiresApprovalAboveSeverity ?? "NONE";
+          const fieldId = `threshold-${k.kind.toLowerCase()}`;
           return (
-            <li key={k.kind} className="border border-rule bg-paper p-5">
-              <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-                {k.kind}
-              </p>
-              <p className="mt-1 font-display text-xl text-ink">{k.label}</p>
-              <p className="mt-2 text-[14px] leading-relaxed text-ink-soft">
-                {k.description}
-              </p>
-              <form action={saveThresholdAction} className="mt-4 flex flex-wrap items-center gap-3">
-                <input type="hidden" name="workspaceId" value={workspaceId} />
-                <input type="hidden" name="kind" value={k.kind} />
-                <label className="text-sm">
-                  <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-                    Approve when severity ≥
-                  </span>
-                  <select
-                    name="severity"
-                    defaultValue={currentSeverity}
-                    className="ml-3 border border-rule bg-paper px-2 py-1 text-[14px] text-ink"
-                  >
-                    {SEVERITIES.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button type="submit" className="btn-primary">
-                  Save
-                </button>
-              </form>
+            <li key={k.kind}>
+              <ApPaperCard
+                eyebrow={k.kind}
+                title={k.label}
+              >
+                <p className="text-[14px] leading-relaxed text-ink-soft">
+                  {k.description}
+                </p>
+                <form
+                  action={saveThresholdAction}
+                  className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end"
+                >
+                  <input type="hidden" name="workspaceId" value={workspaceId} />
+                  <input type="hidden" name="kind" value={k.kind} />
+                  <label htmlFor={fieldId} className="flex flex-col gap-1 text-sm">
+                    <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                      approve when severity ≥
+                    </span>
+                    <select
+                      id={fieldId}
+                      name="severity"
+                      defaultValue={currentSeverity}
+                      className="border border-rule bg-paper px-3 py-2 text-[14px] text-ink focus:border-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+                    >
+                      {SEVERITIES.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <ApHeritageButton variant="secondary" type="submit">
+                    save
+                  </ApHeritageButton>
+                </form>
+              </ApPaperCard>
             </li>
           );
         })}

@@ -16,3 +16,4 @@ export const CATEGORIZE_PROMPT_MARKER = '[[agentplain.skill.categorize.v1]]';
 export const COORDINATE_PROMPT_MARKER = '[[agentplain.skill.coordinate.v1]]';
 export const SCHEDULE_PROMPT_MARKER = '[[agentplain.skill.schedule.v1]]';
 export const DRAFT_PROMPT_MARKER = '[[agentplain.skill.draft.v1]]';
+export const OFFICE_ADMIN_PROMPT_MARKER = '[[agentplain.skill.office-admin.v1]]';

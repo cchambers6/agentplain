@@ -286,7 +286,14 @@ export interface SkillRunRecord {
 }
 
 export interface SkillStepRecord {
-  step: 'read' | 'categorize' | 'coordinate' | 'schedule' | 'draft' | 'mark-processed';
+  step:
+    | 'read'
+    | 'office-admin-classify'
+    | 'categorize'
+    | 'coordinate'
+    | 'schedule'
+    | 'draft'
+    | 'mark-processed';
   ok: boolean;
   /** Compact summary — full payload stays in the typed return for tests. */
   summary: string;
@@ -300,4 +307,16 @@ export interface SkillRunOutcome {
   scheduledProposal: SchedulingProposal | null;
   draft: DraftReply | null;
   markedProcessed: boolean;
+  /** Office-admin classification when the office-admin classifier ran.
+   *  Populated for every run that reached the classifier (even when the
+   *  category resolved to `not-admin`), so the audit log + UI can show
+   *  what the classifier decided. NULL when the run never reached the
+   *  classifier (e.g. read failed). */
+  officeAdmin: import('./office-admin/types').OfficeAdminClassification | null;
+  /** Prebuilt approval payload for an actionable admin classification —
+   *  populated only when `officeAdmin.category` is one of the 9 admin
+   *  categories (NOT `not-admin`) AND confidence passed the floor. The
+   *  runner builds this so `persist-artifacts.ts` can write the approval
+   *  row without needing the original `ParsedMessage` back. */
+  officeAdminPayload: import('./office-admin/types').OfficeAdminApprovalPayload | null;
 }

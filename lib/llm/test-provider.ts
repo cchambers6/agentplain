@@ -122,12 +122,16 @@ import {
   CATEGORIZE_PROMPT_MARKER,
   COORDINATE_PROMPT_MARKER,
   DRAFT_PROMPT_MARKER,
+  OFFICE_ADMIN_PROMPT_MARKER,
   SCHEDULE_PROMPT_MARKER,
 } from '../skills/prompts/markers';
 
 function heuristicResponse(req: LlmCompletionRequest): string {
   const system = req.system;
   const userText = lastUserText(req).toLowerCase();
+  if (system.includes(OFFICE_ADMIN_PROMPT_MARKER)) {
+    return officeAdminHeuristic(userText);
+  }
   if (system.includes(CATEGORIZE_PROMPT_MARKER)) {
     return categorizeHeuristic(userText, system);
   }
@@ -141,6 +145,89 @@ function heuristicResponse(req: LlmCompletionRequest): string {
     return coordinateHeuristic(userText);
   }
   return JSON.stringify({ note: 'no-heuristic-match' });
+}
+
+function officeAdminHeuristic(user: string): string {
+  // Routing order matters — most specific first. Per
+  // `feedback_integration_acceptance_is_functional.md`: the heuristic
+  // must surface exactly the categorization signals that a real model
+  // would land on so the test asserts the wiring, not a fixture choice.
+  if (
+    /(suspicious sign-?in|unusual sign-?in|new device|new sign-?in|account (?:locked|suspended)|security alert)/i.test(
+      user,
+    )
+  ) {
+    return JSON.stringify({
+      category: 'account-suspension',
+      confidence: 0.9,
+      reason: 'security incident language detected (suspicious / new-device / account-locked)',
+    });
+  }
+  if (/(reset (?:your )?password|set a new password|password reset)/i.test(user)) {
+    return JSON.stringify({
+      category: 'password-reset',
+      confidence: 0.92,
+      reason: 'explicit password-reset language with a reset link',
+    });
+  }
+  if (/(verification code|security code|one-?time (?:code|password|pin)|otp|sign-?in code|your code is|\bcode:\s*\d{4,8}\b|\b\d{6}\b)/i.test(user)) {
+    return JSON.stringify({
+      category: 'verification-code',
+      confidence: 0.88,
+      reason: 'message carries a one-time code / 2FA code',
+    });
+  }
+  if (/(verify (?:your )?(?:email|address)|confirm (?:your )?(?:email|address|sign-?up)|email verification|please verify)/i.test(user)) {
+    return JSON.stringify({
+      category: 'email-verification',
+      confidence: 0.85,
+      reason: 'explicit verify-email language',
+    });
+  }
+  if (/(trial (?:ends?|expir|will expire)|free trial|subscription (?:ends?|expir|will renew)|renews on|cancel before|will be charged)/i.test(user)) {
+    return JSON.stringify({
+      category: 'trial-expiration',
+      confidence: 0.83,
+      reason: 'trial / renewal expiration language',
+    });
+  }
+  if (
+    /(invoice (?:attached|number|#|due|total)|payment failed|payment declined|card (?:expir|declined)|past[-\s]due (?:amount|invoice|balance)|amount due|billing notice|billing update|your invoice|receipt for your (?:purchase|payment|subscription)|payment receipt)/i.test(
+      user,
+    )
+  ) {
+    return JSON.stringify({
+      category: 'billing-notice',
+      confidence: 0.8,
+      reason: 'billing / invoice / payment language',
+    });
+  }
+  if (/(welcome to\s+|thanks? for (?:signing up|subscrib)|your subscription is (?:active|live|confirmed))/i.test(user)) {
+    return JSON.stringify({
+      category: 'subscription-confirmation',
+      confidence: 0.78,
+      reason: 'subscription-confirmed welcome language',
+    });
+  }
+  if (/(scheduled maintenance|service (?:disruption|status|incident)|incident report|partial outage|degraded performance)/i.test(user)) {
+    return JSON.stringify({
+      category: 'service-status',
+      confidence: 0.78,
+      reason: 'service-status / maintenance language',
+    });
+  }
+  if (/(email preferences|notification preferences|manage (?:your )?(?:email|notification) preferences|update your preferences|unsubscribe)/i.test(user)) {
+    return JSON.stringify({
+      category: 'email-preferences',
+      confidence: 0.72,
+      reason: 'email-preferences housekeeping language',
+    });
+  }
+  return JSON.stringify({
+    category: 'not-admin',
+    confidence: 0.85,
+    reason: 'no decisive admin signal — let vertical chain handle it',
+  });
 }
 
 function categorizeHeuristic(user: string, system: string): string {

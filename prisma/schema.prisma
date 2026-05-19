@@ -95,6 +95,13 @@ enum WorkApprovalKind {
   LISTING_RECOMMENDATION
   BUYER_INQUIRY_REPLY_DRAFT
   PRICING_RECOMMENDATION
+  // Office-admin kinds — surfaced by lib/skills/office-admin. Each kind
+  // maps to a distinct render in app/(product)/app/workspace/[id]/approvals.
+  ADMIN_VERIFICATION_CODE
+  ADMIN_PASSWORD_RESET
+  ADMIN_TRIAL_ENDING
+  ADMIN_BILLING_NOTICE
+  ADMIN_SECURITY_ALERT
 }
 
 enum WorkApprovalStatus {

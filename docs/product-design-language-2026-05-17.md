@@ -877,6 +877,7 @@ Build tasks should ask for these by name. Each one corresponds to a pattern abov
 | `ApIntegrationTile` | Marketplace tile (icon + status + body + action) | Shipped at `components/marketplace/IntegrationTile.tsx` — rename to `ApIntegrationTile` on next pass |
 | `ApMotif` | Single line-illustrated plains motif (lone-tree, silo, wheat) | New — bundle as a small SVG set |
 | `ApFlashBanner` | Connected / disconnected / error banner | Pattern at `integrations/page.tsx:135-178` |
+| `PlainoAvatar` | The Plaino character avatar (sizes xs / sm / md / lg / xl). Placeholder line-art robot until logo v3 lands. | Shipped at `components/ui/ap/PlainoAvatar.tsx` — see §10. |
 
 When a future build task references a name not on this list, the task is either (a) wrong about what they want, or (b) discovering a new primitive — add it to this doc in the same PR rather than smuggling it in.
 
@@ -899,6 +900,77 @@ If any of these is "no," the PR isn't ready. The rulebook is the gate.
 
 ---
 
+## 10. The Plaino character
+
+The service-partnership voice is anchored to a single named character: **Plaino**. The name is a kitschy contraction of "agent + the plains" — the brand semantic locked in `memory/feedback_brand_is_plain_not_plane.md`. Plaino is the warmth on top of the heritage wordmark — the Geico-gecko model — not a replacement for it.
+
+### 10.1 Identity
+
+- **Name:** Plaino. Hardcoded, one-per-product. Never randomized, never per-workspace. The earlier name-pool implementation (Sarah / James / Emma / Daniel / Maya / Owen) is removed.
+- **Role:** "your service partner at agentplain." Plaino is part of "we" — not a third-party tool the brokerage adopted, not an AI assistant the operator drives.
+- **Pronoun:** they.
+- **Source of truth:** `lib/onboarding/service-partner.ts` exports `PLAINO_PARTNER = { name: "Plaino", pronoun: "they", role: "your service partner" }`. Every surface reads from there.
+
+### 10.2 Avatar usage
+
+The avatar is `<PlainoAvatar />` (re-exported from `@/components/ui/ap`). Until logo v3 lands, the mark is a placeholder line-art robot drawn in the same hairline-stroke language as `ApMotif` (1.5px stroke, currentColor, square corners).
+
+| Size | px | When to use |
+|---|---|---|
+| `xs` | 16 | Footer markers ("drafted by Plaino"), tiny inline mentions, dense table rows. |
+| `sm` | 24 | Activity-feed rows, list items where Plaino took action. |
+| `md` | 32 | Workspace eyebrow band paired with the "your service partner" sentence. |
+| `lg` | 48 | Onboarding hero card, settings landing. |
+| `xl` | 96 | First-load / sign-up surface only — never inside working surfaces. |
+
+Accessibility:
+
+- When the avatar appears alongside the name "Plaino" in body text, pass `decorative` (default true) — the screen reader reads the name only and skips the avatar.
+- When the avatar appears alone (footer marker with no name beside it), pass `decorative={false}` to expose `aria-label="Plaino"`.
+
+### 10.3 Voice — Plaino has a name, not a personality disorder
+
+Plaino's voice is the rooted/heritage voice already specified in §1. The name is attached to the same restraint, not a new personality. Same audit, same word ceiling, same forbidden vocabulary.
+
+What Plaino sounds like:
+
+> "I noticed three new inquiries this morning. Drafts are in your queue."
+>
+> "Two showings need a slot before Friday. Proposed times are on your calendar."
+>
+> "Compliance flagged one draft before it left the brokerage. It's waiting on you."
+
+What Plaino does NOT sound like:
+
+- "Hey friend! 👋" — chirpy mascot energy. Banned.
+- "Hi! I'm an AI assistant…" — Plaino is not a tool the operator drives. Banned.
+- "I'm SO excited to help you today!!" — first-person enthusiasm. Banned.
+- "Let me know if you have any questions!" — closer-energy filler. Banned.
+- "🌱 Rooting in! 🌾" — emoji-led copy on customer surfaces. Banned.
+
+Plaino is calm, not chipper. Plaino reports what the fleet did and what the operator needs to decide. Plaino's restraint is what makes the warmth credible.
+
+### 10.4 Email signatures
+
+Transactional emails (auth magic-links, billing trial warnings, future operator notices) sign off with:
+
+```
+Plaino, your service partner at agentplain
+```
+
+— not "— agentplain" alone and not a tool-vendor sign-off ("The agentplain team," "From the agentplain crew"). The signed name is the same name that meets the customer in onboarding.
+
+### 10.5 Banned framings
+
+- ❌ Randomized partner names. The fleet does not assign Sarah to one workspace and James to another. There is one Plaino.
+- ❌ "AI assistant" / "chatbot" / "bot" as Plaino's role. Plaino is your service partner.
+- ❌ Mascot voice (exclamation points, emoji-led copy, first-person enthusiasm). Plaino is calm.
+- ❌ Treating Plaino as a third-party. Plaino is "we," not "Plaino did X for agentplain."
+- ❌ Replacing the heritage wordmark with the Plaino avatar in marketing-surface contexts. The wordmark stays the serious mark; the avatar is the warmth layered on top.
+
+---
+
 ## Changelog
 
 - 2026-05-17 — v1. Initial spec drafted on `chore/product-design-language-2026-05-17`. Anchored to `agentplain_brand_standards_v0.md`, `project_agentplain_mission_and_positioning.md`, `feedback_everything_tells_a_story.md`, `docs/customer-surface-audit-2026-05-15.md`, `docs/copy-reframe-guidance-for-inflight-tasks.md`, and verified token surface in `lib/brand/tokens.ts` / `app/globals.css` / `tailwind.config.ts`. Memory-file gaps for `project_service_partnership_positioning.md` and `feedback_brand_is_plain_not_plane.md` flagged in front-matter — file before PR-D.
+- 2026-05-19 — §10 added. The Plaino character — name, role, avatar component (`PlainoAvatar`), voice, banned framings. Replaces the prior randomized name-pool implementation. Drafted on `feat/plaino-named-agent-2026-05-19`.

@@ -67,7 +67,7 @@ async function main() {
 
   const assembly = buildSeedAssembly();
   console.log(
-    `Plan: SKILL=${assembly.skill.length} VERTICAL=${assembly.vertical.length} COMPLIANCE=${assembly.compliance.length}`,
+    `Plan: SKILL=${assembly.skill.length} VERTICAL=${assembly.vertical.length} COMPLIANCE=${assembly.compliance.length} CROSS_CUSTOMER=${assembly.crossCustomer.length}`,
   );
   console.log(
     `Compliance corpus: ${assembly.diagnostics.skippedUnverifiedCompliance} unverified entries skipped (placeholder text — counsel red-line gates them in).`,
@@ -81,12 +81,17 @@ async function main() {
   const skillCounts = await seedBucket('SKILL', assembly.skill);
   const verticalCounts = await seedBucket('VERTICAL', assembly.vertical);
   const complianceCounts = await seedBucket('COMPLIANCE', assembly.compliance);
+  const crossCustomerCounts = await seedBucket('CROSS_CUSTOMER', assembly.crossCustomer);
   const elapsed = Date.now() - start;
 
-  const totalFailed = skillCounts.failed + verticalCounts.failed + complianceCounts.failed;
+  const totalFailed =
+    skillCounts.failed +
+    verticalCounts.failed +
+    complianceCounts.failed +
+    crossCustomerCounts.failed;
   console.log(
     `\nDone in ${elapsed}ms. Total failures: ${totalFailed}. ` +
-      `Customer + cross-customer empty (intentional per spec).`,
+      `Customer empty (intentional — fills on tool connect).`,
   );
   if (totalFailed > 0) {
     console.error(

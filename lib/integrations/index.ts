@@ -29,6 +29,10 @@ import { decrypt, encrypt } from '@/lib/security/encryption';
 import { GmailProvider } from './google/gmail-provider';
 import { GoogleOAuth } from './google/oauth';
 import { GmailWebhookHandler } from './google/webhook-handler';
+import { M365Provider } from './microsoft/m365-provider';
+import { MicrosoftOAuth } from './microsoft/oauth';
+import { MicrosoftSubscriptionClient } from './microsoft/subscriptions';
+import { MicrosoftWebhookHandler } from './microsoft/webhook-handler';
 import { TestIntegrationProvider } from './test-provider';
 import type {
   DecryptedCredential,
@@ -97,7 +101,31 @@ function buildProvider(provider: DbProvider): IntegrationProvider {
     return new GmailProvider({ oauth, webhookHandler, pubsubTopicName });
   }
 
-  throw new Error(`getProvider: provider ${provider} is not implemented (Phase 1 ships GOOGLE only).`);
+  if (provider === 'M365') {
+    const clientId = process.env.MICROSOFT_OAUTH_CLIENT_ID;
+    const clientSecret = process.env.MICROSOFT_OAUTH_CLIENT_SECRET;
+    const authority =
+      process.env.MICROSOFT_OAUTH_AUTHORITY ?? 'https://login.microsoftonline.com/common';
+    const clientState = process.env.MICROSOFT_WEBHOOK_CLIENT_STATE;
+    if (!clientId || !clientSecret) {
+      throw new Error(
+        'getProvider(M365): MICROSOFT_OAUTH_CLIENT_ID and MICROSOFT_OAUTH_CLIENT_SECRET are required. ' +
+          'See docs/operator-integrations-setup.md for Azure app registration setup.',
+      );
+    }
+    if (!clientState) {
+      throw new Error(
+        'getProvider(M365): MICROSOFT_WEBHOOK_CLIENT_STATE is required (32-byte random hex). ' +
+          'This shared secret is echoed by Graph on every notification and verifies authenticity.',
+      );
+    }
+    const oauth = new MicrosoftOAuth({ clientId, clientSecret, authority });
+    const subscriptions = new MicrosoftSubscriptionClient({ clientState });
+    const webhookHandler = new MicrosoftWebhookHandler({ clientState });
+    return new M365Provider({ oauth, subscriptions, webhookHandler });
+  }
+
+  throw new Error(`getProvider: provider ${provider} is not implemented.`);
 }
 
 // ── Credential codec ────────────────────────────────────────────────────

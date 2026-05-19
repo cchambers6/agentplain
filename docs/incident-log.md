@@ -132,13 +132,18 @@ server.
 a human user happened to land on the broken flow and tell us. Two follow-ups
 worth scheduling:
 
-1. Add Vercel log drain → alert on any 500-class response from `/app/*`
+1. ~~Add Vercel log drain → alert on any 500-class response from `/app/*`
    routes (or at minimum, an end-of-day digest of error-level runtime logs).
    The digest fingerprint (`2234350772` in this incident) is stable across
-   occurrences and is the right de-dup key.
+   occurrences and is the right de-dup key.~~ **Closed 2026-05-18** by
+   `chore/runtime-alerting-2026-05-18` — wired Sentry via `@sentry/nextjs`
+   behind the `lib/observability` adapter. The Next.js `captureRequestError`
+   hook (re-exported from `instrumentation.ts` as `onRequestError`) catches
+   Server Component / Server Action / Route Handler throws — the exact class
+   of failure that produced this incident. Setup details + Sentry alert-rule
+   configuration in `docs/runtime-alerting-2026-05-18.md`. The `error.digest`
+   value is forwarded as a Sentry `extra` so the same de-dup key is preserved.
 2. Add an end-to-end test that issues a real magic link via `TestAuthProvider`
    and follows the verify URL against a running Next.js server. The current
-   suite tested everything except the round trip that actually broke.
-
-Neither follow-up was widened into this fix per the hotfix scope. Tracked as
-TODO for the observability + testing strategy passes.
+   suite tested everything except the round trip that actually broke. **Still
+   open** — tracked for the testing-strategy pass.

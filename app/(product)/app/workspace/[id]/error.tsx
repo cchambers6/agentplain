@@ -6,6 +6,7 @@ import {
   ApHeritageButton,
   ApRootedEmptyState,
 } from "@/components/ui/ap";
+import { reportError } from "@/lib/observability";
 
 // Workspace-scoped error boundary. Sits inside the workspace strip so
 // the chrome stays visible when a single screen fails. Per design
@@ -22,6 +23,10 @@ export default function WorkspaceError({
   useEffect(() => {
     // eslint-disable-next-line no-console
     console.error("[workspace] error boundary:", error);
+    reportError(error, {
+      tags: { boundary: "workspace" },
+      extra: error.digest ? { digest: error.digest } : undefined,
+    });
   }, [error]);
 
   return (

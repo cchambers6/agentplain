@@ -6,6 +6,7 @@ import {
   ApHeritageButton,
   ApRootedEmptyState,
 } from "@/components/ui/ap";
+import { reportError } from "@/lib/observability";
 
 // Calm error boundary for the product surface. No stack trace, no scary
 // error code — service-partnership voice, one rooted motif, one retry.
@@ -23,6 +24,13 @@ export default function ProductError({
     // Avoid leaking it into the customer-facing UI.
     // eslint-disable-next-line no-console
     console.error("[product] error boundary:", error);
+    // Route to the observability adapter (Sentry in prod, noop otherwise).
+    // This is the gap that let the 2026-05-17 login crash reach Conner
+    // before we did — see docs/incident-log.md.
+    reportError(error, {
+      tags: { boundary: "product" },
+      extra: error.digest ? { digest: error.digest } : undefined,
+    });
   }, [error]);
 
   return (

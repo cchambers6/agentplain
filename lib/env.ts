@@ -132,4 +132,35 @@ export const env = {
   // provider behavior in lib/llm/index.ts). Per
   // feedback_no_prod_secrets_in_dev: dev should use a dev-tier key.
   openaiApiKey: () => optional("OPENAI_API_KEY"),
+
+  // Observability (runtime error reporting). Sentry is the default
+  // implementation; the noop provider runs when no DSN is configured so
+  // dev / preview don't try to ship to a real project. Per
+  // feedback_no_prod_secrets_in_dev: the DSN ships in Production Vercel
+  // only initially. See docs/runtime-alerting-2026-05-18.md.
+  observabilityProvider: (): "sentry" | "noop" => {
+    const explicit = optional("OBSERVABILITY_PROVIDER");
+    if (explicit) {
+      return oneOf(
+        "OBSERVABILITY_PROVIDER",
+        ["sentry", "noop"] as const,
+        "noop",
+      );
+    }
+    return optional("SENTRY_DSN") ? "sentry" : "noop";
+  },
+  sentryDsn: () => optional("SENTRY_DSN"),
+  // Public DSN exposed to the browser bundle. Sentry DSNs are public-by-
+  // design (ingest-only), so this can equal SENTRY_DSN — kept separate so
+  // we can disable client-side reporting without taking down server-side.
+  sentryClientDsn: () => optional("NEXT_PUBLIC_SENTRY_DSN"),
+  sentryEnvironment: () =>
+    optional("SENTRY_ENVIRONMENT") ??
+    optional("VERCEL_ENV") ??
+    process.env.NODE_ENV ??
+    "development",
+  // Release tag for Sentry's "first seen in / regression detection" logic.
+  // Vercel injects VERCEL_GIT_COMMIT_SHA on every deploy.
+  sentryRelease: () =>
+    optional("SENTRY_RELEASE") ?? optional("VERCEL_GIT_COMMIT_SHA"),
 };

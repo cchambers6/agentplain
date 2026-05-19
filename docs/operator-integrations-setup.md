@@ -161,3 +161,140 @@ collects. Acceptance for the integration as a whole is a recorded
 
 Until that lands, the `agent-state/integrations_audit_log.md` entry for
 the integration reads `plumbing landed, behavior pending`.
+
+---
+
+# Operator: Microsoft (Azure) setup for agentplain Outlook integration
+
+**Audience:** Conner. One-time setup before the first Outlook OAuth
+connect.
+**Time:** ~15 min if the Azure portal is open already (no Pub/Sub
+equivalent — Graph pushes directly to our webhook URL).
+
+## What this gets you
+
+After all steps below complete:
+
+- An Azure AD app registration that owns the OAuth client + the Graph
+  subscription create permission.
+- A redirect URI pointing at
+  `https://agentplain.com/api/integrations/outlook/oauth/callback`.
+- A delegated permission set (`Mail.Read`, `Mail.ReadWrite`,
+  `offline_access`, `openid`, `email`, `profile`). **`Mail.Send` is
+  intentionally omitted** per the no-outbound architecture.
+- A 32-byte shared secret (`clientState`) that Graph echoes back on every
+  webhook notification.
+- The env vars agentplain needs in Vercel.
+
+## Step 1 — Create the Azure AD app registration
+
+1. Open https://entra.microsoft.com → Applications → App registrations.
+2. New registration:
+   - **Name:** `agentplain-prod` (or `agentplain-preview`)
+   - **Supported account types:** "Accounts in any organizational
+     directory (Any Microsoft Entra ID tenant — Multitenant) and personal
+     Microsoft accounts". This is the `/common` authority — broadest
+     audience, since Conner's M365 mailbox lives in one tenant but future
+     customers will be in other tenants.
+   - **Redirect URI:** Web → `https://agentplain.com/api/integrations/outlook/oauth/callback`.
+     (Preview environment: also add the preview URL.)
+3. Note the **Application (client) ID** and the **Directory (tenant) ID**.
+
+## Step 2 — Create a client secret
+
+Path: Certificates & secrets → "New client secret".
+
+- **Description:** `agentplain-oauth`
+- **Expires:** 24 months (set a calendar reminder to rotate).
+- Copy the **Value** (not the Secret ID) — it's only shown once.
+
+## Step 3 — Configure API permissions
+
+Path: API permissions → "Add a permission" → "Microsoft Graph" →
+"Delegated permissions".
+
+Add:
+- `Mail.Read`
+- `Mail.ReadWrite`
+- `offline_access`
+- `openid`
+- `email`
+- `profile`
+
+**Do NOT add `Mail.Send`** — agentplain's no-outbound rule means we never
+want that grant.
+
+If your tenant requires admin consent, click "Grant admin consent for
+`<tenant>`" so the broker-owner can complete the connect flow without an
+extra approval round-trip.
+
+## Step 4 — Generate the webhook shared secret
+
+Microsoft Graph subscriptions verify authenticity via a `clientState`
+field, set at subscription create time and echoed back on every
+notification. Generate a 32-byte hex string:
+
+```powershell
+# PowerShell
+[Convert]::ToHexString([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+```
+
+or
+
+```bash
+# bash / git-bash
+openssl rand -hex 32
+```
+
+Save the output. It goes into `MICROSOFT_WEBHOOK_CLIENT_STATE` in
+Vercel. Never log it; never commit it.
+
+## Step 5 — Wire the env vars into Vercel
+
+Set in **Vercel Production** (per `feedback_no_prod_secrets_in_dev`,
+production secrets do NOT live in `.env.local`):
+
+- `MICROSOFT_OAUTH_CLIENT_ID` — Step 1 Application (client) ID
+- `MICROSOFT_OAUTH_CLIENT_SECRET` — Step 2 Value
+- `MICROSOFT_OAUTH_AUTHORITY` — defaults to
+  `https://login.microsoftonline.com/common`; override only for
+  single-tenant lockdown
+- `MICROSOFT_WEBHOOK_CLIENT_STATE` — Step 4 hex string
+
+For local dev, use a dev-tier Azure app registration with `localhost`
+redirect URIs and a separate `MICROSOFT_WEBHOOK_CLIENT_STATE`. The
+Microsoft Graph subscription notificationUrl MUST be HTTPS — local dev
+typically tunnels through `ngrok` or `cloudflared` to satisfy this.
+
+## Step 6 — Connect Conner's Outlook
+
+1. Visit `https://agentplain.com/app/workspace/<your-workspace>/integrations`.
+2. Click "Connect Outlook →" on the tile.
+3. Microsoft's consent screen displays agentplain + the requested
+   delegated permissions. Approve.
+4. You land back on the integrations page with `?connected=outlook`.
+5. The integrations page shows Outlook as connected.
+
+If anything fails, the redirect lands at
+`/app/workspace/<id>/integrations?error=<code>&detail=<short-detail>`.
+Common codes:
+
+- `microsoft_oauth_not_configured` — Step 5 env vars missing
+- `token_exchange_failed` — Step 1 redirect URI doesn't match
+- `state_mismatch` — the OAuth state cookie expired; restart the flow
+- `token_missing_refresh_token` — `offline_access` was not granted; re-run
+  the consent flow
+
+## Step 7 — Subscribe Outlook to push notifications
+
+Phase B ships the OAuth callback + the webhook receiver, but the
+subscription-create call is invoked from the operator integrations panel
+once OAuth lands. The same `integration-renewal-sweep` cron that handles
+Gmail renewals (every 2 hours) renews Outlook subscriptions via Graph
+PATCH before the 48h expiry.
+
+Validation handshake: when the subscription is first created, Graph POSTs
+`?validationToken=…` to `/api/webhooks/microsoft`. The route echoes the
+token back as `text/plain` 200 within 10 seconds. If the handshake fails,
+subscription creation upstream returns 400 — typically a misconfigured
+`notificationUrl` (must be the public HTTPS URL of agentplain).

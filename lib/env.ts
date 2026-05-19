@@ -117,6 +117,12 @@ export const env = {
   microsoftOAuthClientSecret: () => optional("MICROSOFT_OAUTH_CLIENT_SECRET"),
   microsoftOAuthAuthority: () =>
     optional("MICROSOFT_OAUTH_AUTHORITY") ?? "https://login.microsoftonline.com/common",
+  // Shared secret echoed back on every Microsoft Graph webhook notification.
+  // Set to a 32-byte random hex string in Vercel Production. The Graph
+  // subscription create call carries this as `clientState`; every inbound
+  // notification's value[].clientState must match. Forging a notification
+  // requires knowing this secret — keep it out of logs.
+  microsoftWebhookClientState: () => optional("MICROSOFT_WEBHOOK_CLIENT_STATE"),
   encryptionKey: () => required("ENCRYPTION_KEY"),
 
   // Custom-inquiry destination. Submissions from `/custom`'s contact form

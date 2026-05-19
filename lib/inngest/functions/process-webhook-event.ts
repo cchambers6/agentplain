@@ -31,11 +31,13 @@ import { withSystemContext } from '@/lib/db';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
 import { GmailMessageAdapter } from '@/lib/skills/gmail-fetcher';
+import { OutlookMessageAdapter } from '@/lib/skills/outlook-fetcher';
 import { runSkillChain } from '@/lib/skills/runner';
 import {
   persistSkillRunArtifacts,
   summarizeOutcome,
 } from '@/lib/skills/persist-artifacts';
+import type { DraftPersister, MessageFetcher } from '@/lib/skills/types';
 
 export const PROCESS_WEBHOOK_EVENT_FUNCTION_ID = 'agentplain-process-webhook-event';
 /** Every 5 minutes (UTC). Drains backlog without hammering the LLM. */
@@ -91,7 +93,7 @@ export async function processUnprocessedWebhookEvents(
       continue;
     }
     try {
-      const adapter = new GmailMessageAdapter({ workspaceId: workspace.id });
+      const adapter = buildAdapterForProvider(credential.provider, workspace.id);
       const { record, outcome } = await runSkillChain({
         workspace,
         event,
@@ -140,6 +142,29 @@ export async function processUnprocessedWebhookEvents(
     }
   }
   return result;
+}
+
+/**
+ * Pick the right MessageFetcher/DraftPersister for the credential's
+ * provider. Both adapters speak the same `MessageFetcher` + `DraftPersister`
+ * interfaces; the runner does not care which side it gets.
+ *
+ * New providers (Phase B+) plug in here without changing the runner.
+ */
+function buildAdapterForProvider(
+  provider: 'GOOGLE' | 'M365',
+  workspaceId: string,
+): MessageFetcher & DraftPersister {
+  switch (provider) {
+    case 'GOOGLE':
+      return new GmailMessageAdapter({ workspaceId });
+    case 'M365':
+      return new OutlookMessageAdapter({ workspaceId });
+    default: {
+      const _exhaustive: never = provider;
+      throw new Error(`buildAdapterForProvider: unsupported provider ${_exhaustive}`);
+    }
+  }
 }
 
 /**

@@ -53,12 +53,52 @@ and is unit-tested at `lib/inngest/__tests__/disable-flag.test.ts`.
 
 ### Verified after push (cite the deployment)
 
-- **Serve route GET handshake** — `curl -fsS https://<deployment>/api/inngest`
-  on the preview deployment should return 200 with all three function
-  ids in the response body. The recipe lives in
-  `scripts/validate/inngest-health-check.ts --mode=registration --url=…`.
-  Result will be appended to this section as `npm run` output once the
-  preview URL is known.
+- **Serve route GET handshake — FAILING in production right now.**
+  `curl -i https://agentplain.com/api/inngest` returns **HTTP 500** with
+  body `{"code":"internal_server_error"}` and response header
+  `X-Inngest-Sdk-Handled: true`. The `X-Inngest-Sdk-Handled` header
+  proves the serve route loads and the Inngest SDK is processing the
+  request — the 500 is from *inside* the SDK, not a route-load error.
+  Run cited: `iad1::iad1::j9fg6-1779162773052-4e9b469050d2` at
+  2026-05-19 03:52 UTC against `https://agentplain.com/api/inngest`.
+  POST returns the same 500 + same SDK-handled header
+  (`iad1::iad1::7ws89-1779162755709-5800ae910932`). Root `/` returns
+  200, so it's specific to the Inngest route.
+
+  **Most likely cause:** `INNGEST_SIGNING_KEY` is missing or invalid in
+  Vercel Production. `lib/inngest/client.ts:7-12` constructs the
+  client with only `eventKey`; the serve route's signature validation
+  needs `INNGEST_SIGNING_KEY`, which Inngest's SDK reads from the
+  environment automatically. If that env var is unset in prod, the
+  SDK has no key to validate registration handshakes or signed
+  invocations against — so every request hits the failure path.
+
+  **Implication for the value loop:** if registration hasn't
+  completed since the env var was last touched, **none of the three
+  crons are firing in production**. The whole `processWebhookEventFn`
+  → drain WebhookEvents path is silently dark. This was invisible
+  until this audit because the failure mode is "no logs, no rows,
+  nothing happens" — exactly the kind of silent-rot Conner's
+  no-guesses discipline is meant to catch.
+
+  **Conner action:** check Vercel Production env vars
+  (`vercel env ls production | grep INNGEST_`). Both
+  `INNGEST_EVENT_KEY` and `INNGEST_SIGNING_KEY` must be set to the
+  values from Inngest Cloud's `agentplain-prod` app
+  (https://app.inngest.com/env/production/manage/keys). After
+  re-setting, redeploy and re-run
+  `curl -i https://agentplain.com/api/inngest` — expect a 200 with
+  function metadata in the body, and `X-Inngest-Sdk-Handled: true`.
+  Then trigger a manual sync from the Inngest dashboard ("Sync
+  functions" button) and confirm the three function ids appear with
+  their cron schedules.
+
+  **Why this PR does not flip those env vars:** secrets aren't in the
+  repo; Vercel Production env vars require Conner's account auth. The
+  fix is operational, not a code change. The structural improvements
+  this PR ships (refresh README, add the runnable health-check,
+  document the failure mode) make the next regression visible inside
+  5 minutes instead of however long it took to surface this one.
 
 ### NOT verified — requires creds I do not have in this worktree
 
@@ -159,8 +199,14 @@ README and the absence of a reproducible health-check recipe.
 
 ## 5. Decisions for Conner
 
-None of these block the PR; they're "look at the dashboard once and
-decide":
+**P0 — the production serve route is 500'ing** (§2 above). Fix Vercel
+env vars (`INNGEST_SIGNING_KEY` + `INNGEST_EVENT_KEY` matching the
+Inngest Cloud `agentplain-prod` app keys), redeploy, re-curl the route
+expecting 200, then trigger a manual sync from the Inngest dashboard.
+Crons are dark until this is done.
+
+The remaining items are "look at the dashboard once after the fix and
+confirm":
 
 1. **Confirm no `INNGEST_FN_DISABLE_AGENTPLAIN_*` env vars are
    accidentally set to `"true"` in Vercel Production.** The three

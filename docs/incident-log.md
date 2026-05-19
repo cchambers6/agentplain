@@ -5,6 +5,55 @@ documents the user-facing symptom, the actual log evidence, root cause, fix,
 and any monitoring gap that should be closed so the same class of incident is
 caught earlier next time.
 
+## 2026-05-18 pre-push build gate added (broken main shipped twice in one week)
+
+**Trigger.** Two main-breaking pushes inside a single week, both of which
+would have been caught by running the Next.js build locally before push:
+
+1. **TypeScript error in `scripts/verify-knowledge-seed.ts`** — landed on
+   main, broke Vercel preview builds for downstream branches until reverted.
+   `next lint` did not catch it because the script lives outside the App
+   Router compile graph that lint inspects; only `next build` (which runs
+   `tsc` across the whole project) surfaces it.
+2. **`/app/verify` cookie crash** — see the next entry below. Cookie
+   mutation from a Server Component compiled cleanly but threw at runtime
+   on the first request. `next build` would not have caught the runtime
+   throw on its own, but the broader rule still holds: the more of the
+   build pipeline we run pre-push, the fewer ways a broken push reaches
+   Vercel.
+
+Two breakages in seven days is the pattern, not the exception. The pre-push
+hook already runs `npm run lint` (Layer 1) and a staleness gate (Layer 0),
+but nothing actually compiled the project. That's the gap this change
+closes.
+
+**Fix.** Added a Layer 2 build gate to `.husky/pre-push` that runs
+`npm run build:no-migrate` and aborts the push on failure. The
+`build:no-migrate` script is `prisma generate && next build` (no
+`migrate deploy`), so it's safe from any developer machine and doesn't
+need a live `DATABASE_URL`.
+
+**Bypass.** `HUSKY=0 git push ...` skips every husky hook, including the
+new build gate. Use this only for genuine emergencies (e.g. shipping a
+fix to a still-failing build, where the bypass is the point). Every
+bypass should be logged here with: the SHA, the reason, and what
+follow-up brought the build back to green.
+
+| Date | SHA | Reason | Follow-up |
+| --- | --- | --- | --- |
+| — | — | — | — |
+
+**Why not `git push --no-verify`.** `--no-verify` works too and remains
+documented as the Layer 1 bypass, but `HUSKY=0` reads more clearly in
+shell history and matches husky's own documented escape hatch. Either
+form skips every hook — neither is more selective.
+
+**Monitoring gap to close.** This gate runs on the developer machine.
+Vercel's own build will catch the same class of error a few minutes later
+when the push lands, but at that point main is already red and downstream
+branches see the failure on rebase. A pre-merge GitHub Actions build
+would be the next defense; tracked as a follow-up.
+
 ## 2026-05-17 app login crash
 
 **Timestamp.** Detected ~2026-05-18 00:00 UTC (2026-05-17 evening ET). Tied to

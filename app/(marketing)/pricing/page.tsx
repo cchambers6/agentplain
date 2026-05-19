@@ -145,7 +145,7 @@ export default function PricingPage() {
             ctaLabel="Talk to a service partner"
             ctaHref="mailto:hello@agentplain.com?subject=agentplain%20Partner%20tier%20interest"
             ctaStyle="secondary"
-            footnote="Schema-backed Plus tier per project_stripe_both_surfaces.md HISTORICAL."
+            footnote="Schema-backed Partner tier per project_stripe_both_surfaces.md HISTORICAL."
             featured
           />
           <TierColumn
@@ -163,7 +163,7 @@ export default function PricingPage() {
           Source:{" "}
           <code className="text-[12px]">project_stripe_both_surfaces.md</code>{" "}
           (three-tier service-partnership model ratified 2026-05-15;
-          Regular ladder + schema-backed Partner mapping to Plus tier per
+          Regular ladder + Partner per-seat mapping (PLUS in schema) per
           HISTORICAL block).
         </p>
       </Section>

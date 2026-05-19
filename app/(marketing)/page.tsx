@@ -38,9 +38,11 @@ const ladderBands = [
   { band: "50–99 seats", price: "$99" },
 ];
 
-// Partner per-seat numbers map to the schema-backed Plus tier in
+// Partner per-seat numbers map to the schema-backed `PLUS` enum in
 // `prisma/schema.prisma` (kept since 2026-05-09) — the productized uplift
 // covers the named-partner overlay (onboarding, weekly review, customization).
+// Customer copy renders this as "Partner" via `tierDisplayName()` — the
+// schema name itself is internal-only.
 // Source: HISTORICAL block of `project_stripe_both_surfaces.md` —
 // $299 solo → $199 at scale.
 const partnerBands = [
@@ -376,7 +378,7 @@ export default function HomePage() {
             ctaLabel="Talk to a service partner"
             ctaHref="mailto:hello@agentplain.com?subject=agentplain%20Partner%20tier%20interest"
             ctaStyle="secondary"
-            footnote="Schema-backed Plus tier per project_stripe_both_surfaces.md."
+            footnote="Schema-backed Partner tier per project_stripe_both_surfaces.md."
             featured
           />
           <TierCard

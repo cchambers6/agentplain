@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Pre-push hook — staleness gate + full-repo lint.
+# Pre-push hook — staleness gate + full-repo lint + build gate.
 #
 # Layer 0 (staleness gate): refuse pushes when the branch is too far behind origin/main.
 # Stale-base branches keep tripping Vercel preview lint with errors that are already fixed
@@ -12,6 +12,14 @@
 # Catches cross-file rule violations and bypassed pre-commits.
 # Bypass with `git push --no-verify` only in genuine emergencies; document why in the commit.
 # See outputs/systematic_main_protection/design.md §Layer 1.
+#
+# Layer 2 (build gate): refuse pushes that don't compile. Added 2026-05-18 after
+# shipping broken main twice in one week — a TS error in `scripts/verify-knowledge-seed.ts`
+# and the verify-page cookie crash both landed because the pre-push pipeline only ran
+# lint, not the full Next.js build. `build:no-migrate` is the build command without the
+# Prisma `migrate deploy` step, so it's safe to run from any developer machine and
+# doesn't require a live DATABASE_URL. Emergency escape hatch: HUSKY=0 git push ...
+# (documented in docs/incident-log.md alongside the broken-main entries).
 
 # --- Layer 0: staleness gate ---
 if [ "${SKIP_PREPUSH_REBASE_GATE:-0}" != "1" ]; then
@@ -30,4 +38,17 @@ if [ "${SKIP_PREPUSH_REBASE_GATE:-0}" != "1" ]; then
 fi
 
 # --- Layer 1: lint ---
-npm run lint
+npm run lint || exit 1
+
+# --- Layer 2: build gate ---
+echo ""
+echo "▶ Running build gate (npm run build:no-migrate) — catches TS errors + broken pages before push."
+echo "  Emergency bypass: HUSKY=0 git push ...  (document the bypass in docs/incident-log.md)"
+echo ""
+npm run build:no-migrate || {
+  echo ""
+  echo "❌ Push blocked: build:no-migrate failed."
+  echo "   Fix the build before pushing, or bypass with HUSKY=0 git push ... (document in docs/incident-log.md)."
+  echo ""
+  exit 1
+}

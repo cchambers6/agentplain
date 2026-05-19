@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 40" role="img" aria-label="agentplain — furrows mark" style="color:#1A1A1F">
+  <g transform="translate(0 6)">
+    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" transform="scale(1.333)">
+      <line x1="3" y1="6" x2="21" y2="6" stroke-width="0.9"/>
+      <line x1="3" y1="21" x2="10.5" y2="6" stroke-width="1.1"/>
+      <line x1="7" y1="21" x2="11.3" y2="6" stroke-width="1.1"/>
+      <line x1="12" y1="21" x2="12" y2="6" stroke-width="1.1"/>
+      <line x1="17" y1="21" x2="12.7" y2="6" stroke-width="1.1"/>
+      <line x1="21" y1="21" x2="13.5" y2="6" stroke-width="1.1"/>
+    </g>
+  </g>
+  <text x="42" y="29"
+        font-family="'Source Serif 4', 'Source Serif Pro', Georgia, serif"
+        font-size="32" font-weight="500"
+        letter-spacing="-0.5"
+        fill="currentColor">agentplain</text>
+</svg>

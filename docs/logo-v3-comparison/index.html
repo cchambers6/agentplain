@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>agentplain — logo v3 comparison (2026-05-19)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     Canonical brand tokens — pulled from lib/brand/tokens.ts.
+     Task spec listed approximated values; the locked palette is
+     what ships across every customer surface, so the comparison
+     page renders in the same tones the live app uses.
+     ============================================================ */
+  :root {
+    --paper: #F7F4ED;
+    --paper-deep: #EDE9DE;
+    --ink: #1A1A1F;
+    --ink-soft: #2E2E33;
+    --clay: #B65D3A;
+    --clay-deep: #9A4D2F;
+    --moss: #3F5C3F;
+    --moss-deep: #2A3F2A;
+    --mute: #8C8478;
+    --rule: #E0DAC9;
+    --rule-dark: rgba(247, 244, 237, 0.18);
+
+    --display: 'Source Serif 4', 'Source Serif Pro', Georgia, serif;
+    --mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--display);
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+
+  /* ---------- layout ---------- */
+  .shell { max-width: 1180px; margin: 0 auto; padding: 56px 32px 96px; }
+  .header { border-bottom: 1px solid var(--rule); padding-bottom: 28px; margin-bottom: 40px; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--mute);
+    margin: 0 0 12px;
+  }
+  h1 {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 44px;
+    letter-spacing: -0.8px;
+    line-height: 1.1;
+    margin: 0 0 16px;
+  }
+  .lede {
+    font-family: var(--display);
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 65ch;
+    margin: 0;
+  }
+  .meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--mute);
+    margin-top: 20px;
+  }
+  .meta code { color: var(--clay); }
+
+  /* ---------- section heading ---------- */
+  .section { margin-top: 64px; }
+  .section-head {
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 12px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .section-head h2 {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 22px;
+    letter-spacing: -0.3px;
+    margin: 0;
+  }
+  .section-head .note {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--mute);
+  }
+
+  /* ---------- mock-context preview ---------- */
+  .preview-tabs {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    margin-bottom: 16px;
+    width: fit-content;
+  }
+  .preview-tab {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 10px 18px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--rule);
+    color: var(--mute);
+    transition: color 0.15s, background 0.15s;
+  }
+  .preview-tab:last-child { border-right: none; }
+  .preview-tab:hover { color: var(--ink); }
+  .preview-tab.is-active { color: var(--ink); background: var(--paper-deep); }
+
+  .candidate-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    margin-bottom: 24px;
+    width: fit-content;
+  }
+  .candidate-tab {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--rule);
+    color: var(--mute);
+  }
+  .candidate-tab:last-child { border-right: none; }
+  .candidate-tab:hover { color: var(--ink); }
+  .candidate-tab.is-active { color: var(--ink); background: var(--paper-deep); }
+
+  /* ---------- mock contexts ---------- */
+  .mock { display: none; }
+  .mock.is-active { display: block; }
+
+  /* header strip mock */
+  .mock-header {
+    border: 1px solid var(--rule);
+    background: var(--paper);
+  }
+  .mock-header-bar {
+    height: 64px;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--rule);
+  }
+  .mock-header-nav {
+    display: flex;
+    gap: 24px;
+    font-family: var(--display);
+    font-size: 14px;
+    color: var(--ink-soft);
+  }
+  .mock-header-cta {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .mock-header-body {
+    padding: 36px 24px 48px;
+    background: var(--paper);
+  }
+  .mock-header-body .lede { font-size: 22px; max-width: 60ch; }
+
+  /* business card mock */
+  .mock-card {
+    width: 360px;
+    height: 220px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .mock-card-name {
+    font-family: var(--display);
+    font-size: 18px;
+    margin: 0;
+  }
+  .mock-card-role {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--mute);
+    margin: 4px 0 0;
+  }
+  .mock-card-contact {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    line-height: 1.7;
+  }
+
+  /* social avatar mock */
+  .mock-social {
+    width: 320px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    padding: 20px;
+  }
+  .mock-social-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .mock-social-avatar {
+    width: 48px;
+    height: 48px;
+    background: var(--ink);
+    color: var(--paper);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .mock-social-meta {
+    flex: 1;
+  }
+  .mock-social-name {
+    font-family: var(--display);
+    font-size: 15px;
+    font-weight: 500;
+    margin: 0;
+  }
+  .mock-social-handle {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--mute);
+    margin: 2px 0 0;
+  }
+  .mock-social-body {
+    font-family: var(--display);
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+  .mock-social .light-avatar { background: var(--paper-deep); color: var(--ink); border: 1px solid var(--rule); }
+
+  /* ---------- candidate grid ---------- */
+  .candidates {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+  .candidate {
+    border-top: 1px solid var(--rule);
+    padding-top: 24px;
+  }
+  .candidate:first-child { border-top: none; padding-top: 0; }
+  .candidate-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  .candidate-letter {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--clay);
+  }
+  .candidate-title {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 19px;
+    margin: 0;
+  }
+  .candidate-caption {
+    font-family: var(--display);
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 72ch;
+    margin: 0 0 20px;
+  }
+  .candidate-caption .strength { color: var(--moss); font-style: italic; }
+  .candidate-caption .weakness { color: var(--clay-deep); font-style: italic; }
+
+  .size-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+  }
+  .size-col {
+    padding: 0;
+  }
+  .size-col-light { background: var(--paper); }
+  .size-col-dark { background: var(--ink); }
+
+  .size-col-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .size-col-light .size-col-label { color: var(--mute); }
+  .size-col-dark .size-col-label { color: rgba(247, 244, 237, 0.55); border-bottom-color: var(--rule-dark); }
+
+  .size-block {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    border-bottom: 1px dashed var(--rule);
+    min-height: 56px;
+  }
+  .size-col-dark .size-block { border-bottom-color: var(--rule-dark); }
+  .size-block:last-child { border-bottom: none; }
+
+  .size-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--mute);
+    width: 80px;
+    flex-shrink: 0;
+  }
+  .size-col-dark .size-label { color: rgba(247, 244, 237, 0.45); }
+
+  .size-stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  /* dark variant color flip — invert ink/paper inside the SVG */
+  .size-col-dark .lockup { color: var(--paper); }
+  .size-col-light .lockup { color: var(--ink); }
+
+  /* ---------- pick row ---------- */
+  .pick {
+    margin-top: 80px;
+    border-top: 1px solid var(--rule);
+    padding-top: 32px;
+  }
+  .pick-head {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--mute);
+    margin-bottom: 16px;
+  }
+  .pick-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+  }
+  .pick-option {
+    flex: 1 1 0;
+    min-width: 140px;
+    padding: 18px 20px;
+    border-right: 1px solid var(--rule);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .pick-option:last-child { border-right: none; }
+  .pick-option:hover { background: var(--paper-deep); }
+  .pick-option input { margin: 0; accent-color: var(--clay); }
+  .pick-option label {
+    font-family: var(--display);
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .pick-option .pick-letter {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--clay);
+  }
+  .pick-option .pick-row-inner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pick-option:has(input:checked) { background: var(--paper-deep); }
+
+  /* ---------- footer ---------- */
+  footer {
+    margin-top: 80px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--mute);
+    line-height: 1.7;
+  }
+  footer a { color: var(--clay); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 720px) {
+    .shell { padding: 32px 20px 64px; }
+    h1 { font-size: 32px; }
+    .size-row { grid-template-columns: 1fr; }
+    .size-col-dark { border-top: 1px solid var(--rule); }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ===== HEADER ===== -->
+  <header class="header">
+    <p class="eyebrow">brand · logo v3 · comparison set</p>
+    <h1>Pick the agentplain mark.</h1>
+    <p class="lede">Six directions, every one hand-coded against the locked brand: lowercase wordmark in Source Serif 4, the heritage palette, no sleek-tech accents. Each candidate appears at four working sizes on light and dark, and slots into three real-life contexts at the top so you can feel how it lives in the product.</p>
+    <p class="meta">tokens: <code>ink #1A1A1F</code> · <code>paper #F7F4ED</code> · <code>clay #B65D3A</code> · <code>moss #3F5C3F</code> · <code>rule #E0DAC9</code> &nbsp; · &nbsp; type: Source Serif 4 / JetBrains Mono &nbsp; · &nbsp; date: 2026-05-19</p>
+  </header>
+
+  <!-- ===== CONTEXT PREVIEW ===== -->
+  <section class="section" id="contexts">
+    <div class="section-head">
+      <h2>Try it in context</h2>
+      <span class="note">swap a candidate into a real surface</span>
+    </div>
+
+    <div class="preview-tabs" role="tablist" aria-label="Preview context">
+      <button class="preview-tab is-active" data-context="header" role="tab" aria-selected="true">Header strip</button>
+      <button class="preview-tab" data-context="card" role="tab" aria-selected="false">Business card</button>
+      <button class="preview-tab" data-context="social" role="tab" aria-selected="false">Social avatar</button>
+    </div>
+
+    <div class="candidate-tabs" role="tablist" aria-label="Candidate">
+      <button class="candidate-tab is-active" data-candidate="A" role="tab" aria-selected="true">A · pure wordmark</button>
+      <button class="candidate-tab" data-candidate="B" role="tab" aria-selected="false">B · horizon</button>
+      <button class="candidate-tab" data-candidate="C" role="tab" aria-selected="false">C · wheat sheaf</button>
+      <button class="candidate-tab" data-candidate="D" role="tab" aria-selected="false">D · lone tree</button>
+      <button class="candidate-tab" data-candidate="E" role="tab" aria-selected="false">E · Plaino mark</button>
+      <button class="candidate-tab" data-candidate="F" role="tab" aria-selected="false">F · furrows</button>
+    </div>
+
+    <!-- Header strip mock -->
+    <div class="mock mock-header-wrap is-active" data-mock="header">
+      <div class="mock-header">
+        <div class="mock-header-bar">
+          <div class="mock-stage" data-slot="header" style="height: 32px; display: flex; align-items: center;"></div>
+          <nav class="mock-header-nav">
+            <span>Product</span><span>Verticals</span><span>Pricing</span><span>Sign in</span>
+            <span class="mock-header-cta">Book a call</span>
+          </nav>
+        </div>
+        <div class="mock-header-body">
+          <p class="eyebrow" style="margin-bottom: 8px;">For independent brokerages</p>
+          <p class="lede">Hand the inbox, the calendar, and the showing chase to a service partner you can supervise from one page.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Business card mock -->
+    <div class="mock" data-mock="card">
+      <div class="mock-card">
+        <div class="mock-stage" data-slot="card" style="height: 28px; display: flex; align-items: center;"></div>
+        <div>
+          <p class="mock-card-name">Conner Chambers</p>
+          <p class="mock-card-role">Founder</p>
+        </div>
+        <div class="mock-card-contact">
+          conner@agentplain.com<br>
+          agentplain.com
+        </div>
+      </div>
+    </div>
+
+    <!-- Social avatar mock -->
+    <div class="mock" data-mock="social">
+      <div class="mock-social">
+        <div class="mock-social-row">
+          <div class="mock-social-avatar mock-stage" data-slot="social-avatar"></div>
+          <div class="mock-social-meta">
+            <p class="mock-social-name">agentplain</p>
+            <p class="mock-social-handle">@agentplain · sponsored</p>
+          </div>
+        </div>
+        <p class="mock-social-body">A service partnership for independent brokerages — your AMS, your inbox, your calendar, supervised from a single page.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CANDIDATES ===== -->
+  <section class="section" id="candidates">
+    <div class="section-head">
+      <h2>Six candidates at four sizes</h2>
+      <span class="note">each on paper · ink</span>
+    </div>
+
+    <div class="candidates">
+
+      <!-- ====== A. PURE WORDMARK ====== -->
+      <article class="candidate" data-id="A">
+        <div class="candidate-head">
+          <span class="candidate-letter">A</span>
+          <h3 class="candidate-title">Pure heritage wordmark — no mark</h3>
+        </div>
+        <p class="candidate-caption">
+          McKinsey-class restraint. The wordmark carries the whole brand; the Plaino character carries the warmth.
+          <span class="strength">Strength:</span> survives any size, never competes with Plaino's avatar, ages well.
+          <span class="weakness">Weakness:</span> no glanceable mark for favicons or social avatars — would need a separate monogram for square containers.
+        </p>
+        <div class="size-row">
+          <div class="size-col size-col-light">
+            <div class="size-col-label">On paper</div>
+            <div class="size-block"><span class="size-label">16 · shell</span><div class="size-stage" data-render="A" data-size="16"></div></div>
+            <div class="size-block"><span class="size-label">32 · nav</span><div class="size-stage" data-render="A" data-size="32"></div></div>
+            <div class="size-block"><span class="size-label">96 · hero</span><div class="size-stage" data-render="A" data-size="96"></div></div>
+            <div class="size-block"><span class="size-label">240 · social</span><div class="size-stage" data-render="A" data-size="240"></div></div>
+          </div>
+          <div class="size-col size-col-dark">
+            <div class="size-col-label">On ink</div>
+            <div class="size-block"><span class="size-label">16 · shell</span><div class="size-stage" data-render="A" data-size="16"></div></div>
+            <div class="size-block"><span class="size-label">32 · nav</span><div class="size-stage" data-render="A" data-size="32"></div></div>
+            <div class="size-block"><span class="size-label">96 · hero</span><div class="size-stage" data-render="A" data-size="96"></div></div>
+            <div class="size-block"><span class="size-label">240 · social</span><div class="size-stage" data-render="A" data-size="240"></div></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ====== B. HORIZON LINE ====== -->
+      <article class="candidate" data-id="B">
+        <div class="candidate-head">
+          <span class="candidate-letter">B</span>
+          <h3 class="candidate-title">Wordmark + horizon line</h3>
+        </div>
+        <p class="candidate-caption">
+          A short hairline rule above the wordmark — the prairie reduced to its purest gesture. Geometric, calm, abstract.
+          <span class="strength">Strength:</span> reads as "the plains" without being literal; sits quietly next to Plaino without arguing for attention.
+          <span class="weakness">Weakness:</span> the rule vanishes below 24px — at favicon size the wordmark stands alone, so essentially collapses into Candidate A.
+        </p>
+        <div class="size-row">
+          <div class="size-col size-col-light">
+            <div class="size-col-label">On paper</div>
+            <div class="size-block"><span class="size-label">16 · shell</span><div class="size-stage" data-render="B" data-size="16"></div></div>
+            <div class="size-block"><span class="size-label">32 · nav</span><div class="size-stage" data-render="B" data-size="32"></div></div>
+            <div class="size-block"><span class="size-label">96 · hero</span><div class="size-stage" data-render="B" data-size="96"></div></div>
+            <div class="size-block"><span class="size-label">240 · social</span><div class="size-stage" data-render="B" data-size="240"></div></div>
+          </div>
+          <div class="size-col size-col-dark">
+            <div class="size-col-label">On ink</div>
+            <div class="size-block"><span class="size-label">16 · shell</span><div class="size-stage" data-render="B" data-size="16"></div></div>
+            <div class="size-block"><span class="size-label">32 · nav</span><div class="size-stage" data-render="B" data-size="32"></div></div>
+            <div class="size-block"><span class="size-label">96 · hero</span><div class="size-stage" data-render="B" data-size="96"></div></div>
+            <div class="size-block"><span class="size-label">240 · social</span><div class="size-stage" data-render="B" data-size="240"></div></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ====== C. WHEAT SHEAF ====== -->
+      <article class="candidate" data-id="C">
+        <div class="candidate-head">
+          <span class="candidate-letter">C</span>
+          <h3 class="candidate-title">Wordmark + wheat sheaf accent</h3>
+        </div>
+        <p class="candidate-caption">
+          Three hand-drawn stalks of grain to the left of the wordmark — literal heartland iconography in the same hairline language as the rest of the surface.
+          <span class="strength">Strength:</span> the most recognizable "rooted" mark; works as a standalone favicon; signals heritage at first glance.
+          <span class="weakness">Weakness:</span> at 16px the kernels turn to mush; risks reading as "farm-tech" rather than "service partner for brokerages."
+        </p>
+        <div class="size-row">
+          <div class="size-col size-col-light">
+            <div class="size-col-label">On paper</div>
+            <div class="size-block"><span class="size-label">16 · shell</span><div class="size-stage" data-render="C" data-size="16"></div></div>
+            <div class="size-block"><span class="size-label">32 · nav</span><div class="size-stage" data-render="C" data-size="32"></div></div>
+            <div class="size-block"><span class="size-label">96 · hero</span><div class="size-stage" data-render="C" data-size="96"></div></div>
+            <div class="size-block"><span class="size-label">240 · social</span><div class="size-stage" data-render="C" data-size="240"></div></div>
+          </div>
+          <div class="size-col size-col-dark">
+            <div class="size-col-label">On ink</div>
+            <div class="size-block"><span class="size-label">16 · shell</span><div class="size-stage" data-render="C" data-size="16"></div></div>
+            <div class="size-block"><span class="size-label">32 · nav</span><div class="size-stage" data-render="C" data-size="32"></div></div>
+            <div class="size-block"><span class="size-label">96 · hero</span><div class="size-stage" data-render="C" data-size="96"></div></div>
+            <div class="size-block"><span class="size-label">240 · social</span><div class="size-stage" data-render="C" data-size="240"></div></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ====== D. LONE TREE ====== -->
+      <article class="candidate" data-id="D">
+        <div class="candidate-head">
+          <span class="candidate-letter">D</span>
+          <h3 class="candidate-title">Wordmark + lone-tree accent</h3>
+        </div>
+        <p class="candidate-caption">
+          A single tree on a hairline horizon — the lone landmark on the prairie. Conner's earlier top three included this direction.
+          <span class="strength">Strength:</span> distinctive silhouette that holds up at favicon size; reads as "rooted" without being agricultural.
+          <span class="weakness">Weakness:</span> the canopy can read as a balloon or pin at very small sizes; needs the horizon line to anchor it.
+        </p>
+        <div class="size-row">
+          <div class="size-col size-col-light">
+            <div class="size-col-label">On paper</div>
+            <div class="size-block"><span class="size-label">16 · shell</span><div class="size-stage" data-render="D" data-size="16"></div></div>
+            <div class="size-block"><span class="size-label">32 · nav</span><div class="size-stage" data-render="D" data-size="32"></div></div>
+            <div class="size-block"><span class="size-label">96 · hero</span><div class="size-stage" data-render="D" data-size="96"></div></div>
+            <div class="size-block"><span class="size-label">240 · social</span><div class="size-stage" data-render="D" data-size="240"></div></div>
+          </div>
+          <div class="size-col size-col-dark">
+            <div class="size-col-label">On ink</div>
+            <div class="size-block"><span class="size-label">16 · shell</span><div class="size-stage" data-render="D" data-size="16"></div></div>
+            <div class="size-block"><span class="size-label">32 · nav</span><div class="size-stage" data-render="D" data-size="32"></div></div>
+            <div class="size-block"><span class="size-label">96 · hero</span><div class="size-stage" data-render="D" data-size="96"></div></div>
+            <div class="size-block"><span class="size-label">240 · social</span><div class="size-stage" data-render="D" data-size="240"></div></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ====== E. PLAINO MARK ====== -->
+      <article class="candidate" data-id="E">
+        <div class="candidate-head">
+          <span class="candidate-letter">E</span>
+          <h3 class="candidate-title">Plaino-as-mark + wordmark</h3>
+        </div>
+        <p class="candidate-caption">
+          The named character IS the logo — same line-art figure from <code>PlainoAvatar.tsx</code>, anchored to the left of the wordmark.
+          <span class="strength">Strength:</span> the most personable; ties the brand to the character; the Plaino avatar already exists across onboarding and email signatures.
+          <span class="weakness">Weakness:</span> this is the direction Conner rejected as "too cartoonish for a professional AI consulting logo." The Geico-gecko model argues Plaino should stay <em>warmth on top of</em> a serious wordmark, not be the wordmark itself. Shown here so the rejection is documented next to the alternatives.
+        </p>
+        <div class="size-row">
+          <div class="size-col size-col-light">
+            <div class="size-col-label">On paper</div>
+            <div class="size-block"><span class="size-label">16 · shell</span><div class="size-stage" data-render="E" data-size="16"></div></div>
+            <div class="size-block"><span class="size-label">32 · nav</span><div class="size-stage" data-render="E" data-size="32"></div></div>
+            <div class="size-block"><span class="size-label">96 · hero</span><div class="size-stage" data-render="E" data-size="96"></div></div>
+            <div class="size-block"><span class="size-label">240 · social</span><div class="size-stage" data-render="E" data-size="240"></div></div>
+          </div>
+          <div class="size-col size-col-dark">
+            <div class="size-col-label">On ink</div>
+            <div class="size-block"><span class="size-label">16 · shell</span><div class="size-stage" data-render="E" data-size="16"></div></div>
+            <div class="size-block"><span class="size-label">32 · nav</span><div class="size-stage" data-render="E" data-size="32"></div></div>
+            <div class="size-block"><span class="size-label">96 · hero</span><div class="size-stage" data-render="E" data-size="96"></div></div>
+            <div class="size-block"><span class="size-label">240 · social</span><div class="size-stage" data-render="E" data-size="240"></div></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ====== F. FURROWS ====== -->
+      <article class="candidate" data-id="F">
+        <div class="candidate-head">
+          <span class="candidate-letter">F</span>
+          <h3 class="candidate-title">Wordmark + plowed-rows accent</h3>
+        </div>
+        <p class="candidate-caption">
+          Furrows converging to a vanishing point — the prairie in single-point perspective. Geometric, structural, suggests order without an animal or plant in sight.
+          <span class="strength">Strength:</span> abstract enough to feel professional, literal enough to feel rooted; the geometry holds up at small sizes better than wheat heads.
+          <span class="weakness">Weakness:</span> low immediate recognition — reads as a graphic device before it reads as "plowed fields"; benefits from the wordmark next to it to disambiguate.
+        </p>
+        <div class="size-row">
+          <div class="size-col size-col-light">
+            <div class="size-col-label">On paper</div>
+            <div class="size-block"><span class="size-label">16 · shell</span><div class="size-stage" data-render="F" data-size="16"></div></div>
+            <div class="size-block"><span class="size-label">32 · nav</span><div class="size-stage" data-render="F" data-size="32"></div></div>
+            <div class="size-block"><span class="size-label">96 · hero</span><div class="size-stage" data-render="F" data-size="96"></div></div>
+            <div class="size-block"><span class="size-label">240 · social</span><div class="size-stage" data-render="F" data-size="240"></div></div>
+          </div>
+          <div class="size-col size-col-dark">
+            <div class="size-col-label">On ink</div>
+            <div class="size-block"><span class="size-label">16 · shell</span><div class="size-stage" data-render="F" data-size="16"></div></div>
+            <div class="size-block"><span class="size-label">32 · nav</span><div class="size-stage" data-render="F" data-size="32"></div></div>
+            <div class="size-block"><span class="size-label">96 · hero</span><div class="size-stage" data-render="F" data-size="96"></div></div>
+            <div class="size-block"><span class="size-label">240 · social</span><div class="size-stage" data-render="F" data-size="240"></div></div>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ===== PICK ROW ===== -->
+  <section class="pick">
+    <p class="pick-head">Conner's pick</p>
+    <form class="pick-row" onsubmit="return false;">
+      <label class="pick-option"><div class="pick-row-inner"><input type="radio" name="pick" value="A"><span class="pick-letter">A</span><span>pure wordmark</span></div></label>
+      <label class="pick-option"><div class="pick-row-inner"><input type="radio" name="pick" value="B"><span class="pick-letter">B</span><span>horizon line</span></div></label>
+      <label class="pick-option"><div class="pick-row-inner"><input type="radio" name="pick" value="C"><span class="pick-letter">C</span><span>wheat sheaf</span></div></label>
+      <label class="pick-option"><div class="pick-row-inner"><input type="radio" name="pick" value="D"><span class="pick-letter">D</span><span>lone tree</span></div></label>
+      <label class="pick-option"><div class="pick-row-inner"><input type="radio" name="pick" value="E"><span class="pick-letter">E</span><span>Plaino mark</span></div></label>
+      <label class="pick-option"><div class="pick-row-inner"><input type="radio" name="pick" value="F"><span class="pick-letter">F</span><span>furrows</span></div></label>
+    </form>
+  </section>
+
+  <footer>
+    <p>Static comparison artifact. No build step, no tracking, no analytics. Single file — view source, save the SVG you want, or extract the inline markup of the candidate you pick.</p>
+    <p>Brand tokens canonical to <code>lib/brand/tokens.ts</code>. Wordmark locked: <code>agentplain</code> lowercase, no space. Per <code>project_brand_locked.md</code>.</p>
+  </footer>
+
+</div>
+
+<!-- ============================================================
+     SVG library — every candidate at every size. Marked up once,
+     positioned inline by the renderer. Each <symbol> is a complete
+     wordmark lockup tuned for one of three size classes (shell /
+     nav / hero/social). The "lockup" class sets currentColor, so
+     dark-bg containers can flip the whole mark by changing color.
+     ============================================================ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+
+    <!-- ============================================
+         Shared mark glyphs — used by C / D / E / F
+         All drawn in a 24x24 viewBox so they slot
+         beside the wordmark at consistent cap-height.
+         ============================================ -->
+
+    <!-- C — wheat sheaf -->
+    <symbol id="mark-wheat" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <!-- ground line -->
+        <line x1="4" y1="22" x2="20" y2="22" stroke-width="0.7" opacity="0.55"/>
+        <!-- left stalk -->
+        <path d="M8 22 C8 18 7.5 14 7 10" stroke-width="1.2"/>
+        <path d="M7 10 L5 8" stroke-width="1"/>
+        <path d="M7 10 L9 8" stroke-width="1"/>
+        <path d="M7.2 12 L5.4 10.4" stroke-width="0.9"/>
+        <path d="M7.2 12 L9 10.4" stroke-width="0.9"/>
+        <path d="M7.4 14 L5.8 12.6" stroke-width="0.9"/>
+        <path d="M7.4 14 L9 12.6" stroke-width="0.9"/>
+        <!-- center stalk (tallest) -->
+        <path d="M12 22 L12 6" stroke-width="1.3"/>
+        <path d="M12 6 L10 4" stroke-width="1"/>
+        <path d="M12 6 L14 4" stroke-width="1"/>
+        <path d="M12 8 L10 6.4" stroke-width="0.95"/>
+        <path d="M12 8 L14 6.4" stroke-width="0.95"/>
+        <path d="M12 10 L10 8.4" stroke-width="0.9"/>
+        <path d="M12 10 L14 8.4" stroke-width="0.9"/>
+        <path d="M12 12 L10.2 10.4" stroke-width="0.9"/>
+        <path d="M12 12 L13.8 10.4" stroke-width="0.9"/>
+        <!-- right stalk -->
+        <path d="M16 22 C16 18 16.5 14 17 10" stroke-width="1.2"/>
+        <path d="M17 10 L15 8" stroke-width="1"/>
+        <path d="M17 10 L19 8" stroke-width="1"/>
+        <path d="M16.8 12 L15 10.4" stroke-width="0.9"/>
+        <path d="M16.8 12 L18.6 10.4" stroke-width="0.9"/>
+        <path d="M16.6 14 L15 12.6" stroke-width="0.9"/>
+        <path d="M16.6 14 L18.2 12.6" stroke-width="0.9"/>
+      </g>
+    </symbol>
+
+    <!-- D — lone tree -->
+    <symbol id="mark-tree" viewBox="0 0 24 24">
+      <g stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <!-- horizon -->
+        <line x1="2" y1="20" x2="22" y2="20" stroke-width="0.9" fill="none"/>
+        <!-- trunk -->
+        <line x1="12" y1="20" x2="12" y2="13" stroke-width="1.4" fill="none"/>
+        <!-- canopy (lobed, organic, not a circle) -->
+        <path d="M12 13
+                 C8.5 13 6.5 10.5 6.5 7.5
+                 C6.5 4.5 9 3 11 4
+                 C11.5 2 13 2 14 4
+                 C16.5 3.5 17.8 5.5 17.5 7.8
+                 C17.2 11 14.5 13 12 13 Z"
+              fill="currentColor" stroke="none"/>
+      </g>
+    </symbol>
+
+    <!-- E — Plaino (line-art robot, mirrors PlainoAvatar.tsx geometry) -->
+    <symbol id="mark-plaino" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">
+        <!-- antenna -->
+        <path d="M12 3 V5"/>
+        <circle cx="12" cy="2.5" r="0.7"/>
+        <!-- head -->
+        <rect x="6" y="5.5" width="12" height="9"/>
+        <!-- eyes -->
+        <path d="M9 9.5 H10"/>
+        <path d="M14 9.5 H15"/>
+        <!-- mouth -->
+        <path d="M9.5 12 H14.5"/>
+        <!-- neck -->
+        <path d="M11 14.5 V16"/>
+        <path d="M13 14.5 V16"/>
+        <!-- body -->
+        <rect x="7" y="16" width="10" height="5"/>
+        <!-- chest mark -->
+        <path d="M11 18.5 H13"/>
+      </g>
+    </symbol>
+
+    <!-- F — furrows / plowed rows -->
+    <symbol id="mark-furrows" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <!-- horizon -->
+        <line x1="3" y1="6" x2="21" y2="6" stroke-width="0.9"/>
+        <!-- 5 furrows converging on vanishing point (12, 6) -->
+        <line x1="3" y1="21" x2="10.5" y2="6" stroke-width="1.1"/>
+        <line x1="7" y1="21" x2="11.3" y2="6" stroke-width="1.1"/>
+        <line x1="12" y1="21" x2="12" y2="6" stroke-width="1.1"/>
+        <line x1="17" y1="21" x2="12.7" y2="6" stroke-width="1.1"/>
+        <line x1="21" y1="21" x2="13.5" y2="6" stroke-width="1.1"/>
+      </g>
+    </symbol>
+
+    <!-- B — horizon (a short rule above the wordmark; rendered inline by the lockup) -->
+
+    <!-- ============================================
+         Lockup symbols — full wordmark + mark per candidate.
+         viewBox sized to keep the wordmark at a consistent
+         baseline; renderers pick a height in CSS.
+         ============================================ -->
+
+    <!-- LOCKUP A — wordmark alone -->
+    <symbol id="lockup-A" viewBox="0 0 200 40">
+      <text x="0" y="29"
+            font-family="'Source Serif 4', Georgia, serif"
+            font-size="32" font-weight="500"
+            letter-spacing="-0.5"
+            fill="currentColor">agentplain</text>
+    </symbol>
+
+    <!-- LOCKUP B — horizon line above wordmark -->
+    <symbol id="lockup-B" viewBox="0 0 200 50">
+      <line x1="78" y1="6" x2="122" y2="6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      <text x="0" y="39"
+            font-family="'Source Serif 4', Georgia, serif"
+            font-size="32" font-weight="500"
+            letter-spacing="-0.5"
+            fill="currentColor">agentplain</text>
+    </symbol>
+
+    <!-- LOCKUP C — wheat sheaf + wordmark -->
+    <symbol id="lockup-C" viewBox="0 0 240 40">
+      <use href="#mark-wheat" x="0" y="6" width="32" height="32"/>
+      <text x="42" y="29"
+            font-family="'Source Serif 4', Georgia, serif"
+            font-size="32" font-weight="500"
+            letter-spacing="-0.5"
+            fill="currentColor">agentplain</text>
+    </symbol>
+
+    <!-- LOCKUP D — lone tree + wordmark -->
+    <symbol id="lockup-D" viewBox="0 0 240 40">
+      <use href="#mark-tree" x="0" y="6" width="32" height="32"/>
+      <text x="42" y="29"
+            font-family="'Source Serif 4', Georgia, serif"
+            font-size="32" font-weight="500"
+            letter-spacing="-0.5"
+            fill="currentColor">agentplain</text>
+    </symbol>
+
+    <!-- LOCKUP E — Plaino mark + wordmark -->
+    <symbol id="lockup-E" viewBox="0 0 240 40">
+      <use href="#mark-plaino" x="0" y="6" width="32" height="32"/>
+      <text x="42" y="29"
+            font-family="'Source Serif 4', Georgia, serif"
+            font-size="32" font-weight="500"
+            letter-spacing="-0.5"
+            fill="currentColor">agentplain</text>
+    </symbol>
+
+    <!-- LOCKUP F — furrows + wordmark -->
+    <symbol id="lockup-F" viewBox="0 0 240 40">
+      <use href="#mark-furrows" x="0" y="6" width="32" height="32"/>
+      <text x="42" y="29"
+            font-family="'Source Serif 4', Georgia, serif"
+            font-size="32" font-weight="500"
+            letter-spacing="-0.5"
+            fill="currentColor">agentplain</text>
+    </symbol>
+
+    <!-- ============================================
+         Square avatar lockups — used for the social
+         avatar slot. Mark centered, no wordmark.
+         For A: monogram "ap". For others: just the mark.
+         ============================================ -->
+
+    <!-- AVATAR A — monogram "ap" -->
+    <symbol id="avatar-A" viewBox="0 0 48 48">
+      <text x="24" y="31" text-anchor="middle"
+            font-family="'Source Serif 4', Georgia, serif"
+            font-size="24" font-weight="500"
+            letter-spacing="-0.8"
+            fill="currentColor">ap</text>
+    </symbol>
+    <!-- AVATAR B — horizon stacked over monogram -->
+    <symbol id="avatar-B" viewBox="0 0 48 48">
+      <line x1="14" y1="14" x2="34" y2="14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      <text x="24" y="35" text-anchor="middle"
+            font-family="'Source Serif 4', Georgia, serif"
+            font-size="22" font-weight="500"
+            letter-spacing="-0.6"
+            fill="currentColor">ap</text>
+    </symbol>
+    <symbol id="avatar-C" viewBox="0 0 48 48"><use href="#mark-wheat" x="12" y="12" width="24" height="24"/></symbol>
+    <symbol id="avatar-D" viewBox="0 0 48 48"><use href="#mark-tree" x="12" y="12" width="24" height="24"/></symbol>
+    <symbol id="avatar-E" viewBox="0 0 48 48"><use href="#mark-plaino" x="12" y="12" width="24" height="24"/></symbol>
+    <symbol id="avatar-F" viewBox="0 0 48 48"><use href="#mark-furrows" x="12" y="12" width="24" height="24"/></symbol>
+
+  </defs>
+</svg>
+
+<script>
+  // ============================================================
+  // Render lockups into every .size-stage based on data-render and
+  // data-size. Mark library lives in the SVG <defs> above; this just
+  // stamps <svg><use/></svg> at the right dimensions.
+  // ============================================================
+  (function () {
+    const SIZE_HEIGHTS = { 16: 16, 32: 32, 96: 96, 240: 240 };
+    const SIZE_LOCKUP_HEIGHT = { 16: 16, 32: 24, 96: 60, 240: 100 };
+    // For 240px (social) we use the square avatar lockup, not the wide one.
+
+    document.querySelectorAll('.size-stage[data-render][data-size]').forEach(stage => {
+      const id = stage.dataset.render;
+      const size = parseInt(stage.dataset.size, 10);
+      stage.innerHTML = buildLockup(id, size);
+    });
+
+    function buildLockup(id, sizePx) {
+      if (sizePx === 240) {
+        // Social: square avatar lockup
+        return `<svg class="lockup" viewBox="0 0 48 48" width="120" height="120" aria-label="agentplain — candidate ${id}"><use href="#avatar-${id}"/></svg>`;
+      }
+      // Header strip / nav / hero — horizontal lockup
+      const h = SIZE_LOCKUP_HEIGHT[sizePx];
+      // Choose viewBox by candidate (A is narrower since it has no mark)
+      const vb = id === 'A' ? '0 0 200 40' : (id === 'B' ? '0 0 200 50' : '0 0 240 40');
+      const w = id === 'A' ? Math.round(h * 5) : (id === 'B' ? Math.round(h * 4) : Math.round(h * 6));
+      return `<svg class="lockup" viewBox="${vb}" height="${h}" aria-label="agentplain — candidate ${id}"><use href="#lockup-${id}"/></svg>`;
+    }
+
+    // ============================================================
+    // Context preview toggles. Two axes: context (header/card/social)
+    // and candidate (A..F). Both update the .mock-stage slots.
+    // ============================================================
+    let activeContext = 'header';
+    let activeCandidate = 'A';
+
+    document.querySelectorAll('.preview-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeContext = btn.dataset.context;
+        document.querySelectorAll('.preview-tab').forEach(t => {
+          t.classList.toggle('is-active', t === btn);
+          t.setAttribute('aria-selected', t === btn ? 'true' : 'false');
+        });
+        document.querySelectorAll('.mock').forEach(m => {
+          m.classList.toggle('is-active', m.dataset.mock === activeContext);
+        });
+        renderMock();
+      });
+    });
+
+    document.querySelectorAll('.candidate-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeCandidate = btn.dataset.candidate;
+        document.querySelectorAll('.candidate-tab').forEach(t => {
+          t.classList.toggle('is-active', t === btn);
+          t.setAttribute('aria-selected', t === btn ? 'true' : 'false');
+        });
+        renderMock();
+      });
+    });
+
+    function renderMock() {
+      // header strip
+      const headerSlot = document.querySelector('[data-slot="header"]');
+      if (headerSlot) headerSlot.innerHTML = buildLockup(activeCandidate, 32);
+      // business card
+      const cardSlot = document.querySelector('[data-slot="card"]');
+      if (cardSlot) cardSlot.innerHTML = buildLockup(activeCandidate, 32);
+      // social avatar — square, on ink ground
+      const socialSlot = document.querySelector('[data-slot="social-avatar"]');
+      if (socialSlot) {
+        socialSlot.innerHTML = `<svg class="lockup" viewBox="0 0 48 48" width="48" height="48" aria-label="agentplain — candidate ${activeCandidate}" style="color: var(--paper);"><use href="#avatar-${activeCandidate}"/></svg>`;
+      }
+    }
+    renderMock();
+  })();
+</script>
+
+</body>
+</html>

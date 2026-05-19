@@ -36,9 +36,13 @@ const slugify = (s: string): string =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 48) || "workspace";
 
-const buildVerifyUrl = (rawToken: string): string => {
+const buildVerifyUrl = (rawToken: string, remember?: boolean): string => {
   const origin = env.appPublicOrigin().replace(/\/$/, "");
   const params = new URLSearchParams({ token: rawToken });
+  // Encode only when the user explicitly opted OUT of remember-me. Absence of
+  // the param at the verify route defaults to remember=true (persistent), so
+  // existing magic links and the sign-up flow keep working unchanged.
+  if (remember === false) params.set("remember", "0");
   return `${origin}/app/verify?${params.toString()}`;
 };
 
@@ -187,6 +191,13 @@ export async function signUpBrokerOwner(input: SignUpInput): Promise<SignUpResul
 export interface RequestMagicLinkInput {
   email: string;
   purpose: MagicLinkPurpose;
+  /**
+   * Whether the eventual session should persist across browser restarts.
+   * Omit (or true) → standard 30-day persistent cookie. False → session
+   * cookie cleared on browser close. Round-trips to the verify route via
+   * the magic link URL.
+   */
+  remember?: boolean;
 }
 
 export interface RequestMagicLinkResult {
@@ -212,7 +223,7 @@ export async function requestMagicLink(
     }
 
     const rawToken = generateRawToken();
-    const verifyUrl = buildVerifyUrl(rawToken);
+    const verifyUrl = buildVerifyUrl(rawToken, input.remember);
 
     await tx.magicLinkToken.create({
       data: {

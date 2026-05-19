@@ -35,6 +35,10 @@ const classifyError = (message: string): FailureReason => {
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const token = req.nextUrl.searchParams.get("token") ?? "";
   const origin = req.nextUrl.origin;
+  // Absent or any non-"0" value → persistent 30-day cookie. Only an explicit
+  // remember=0 (set by the sign-in form when the user unchecks the box)
+  // downgrades to a session cookie.
+  const remember = req.nextUrl.searchParams.get("remember") !== "0";
 
   if (!token || token.length < 32) {
     return NextResponse.redirect(signInUrlWithReason(origin, "missing"), { status: 303 });
@@ -55,7 +59,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     activeWorkspaceId: result.defaultWorkspaceId,
     issuedAt: new Date().toISOString(),
   };
-  await writeSession(session);
+  await writeSession(session, { remember });
 
   const destination = result.defaultWorkspaceId
     ? `/app/workspace/${result.defaultWorkspaceId}`

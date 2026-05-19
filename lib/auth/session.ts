@@ -2,7 +2,10 @@
 //
 // Iron-session encrypts the session payload with SESSION_PASSWORD; the cookie
 // is sealed (tamper-evident) so we can store user_id + active_workspace_id
-// without a server-side session table.
+// without a server-side session table. There is NO Prisma Session row — the
+// sealed cookie IS the session record. That means the cookie maxAge and the
+// iron-session ttl are the only two TTL knobs, and they must stay aligned so
+// a still-valid cookie can never present a stale seal (or vice versa).
 
 import { sealData, unsealData } from "iron-session";
 import { cookies } from "next/headers";
@@ -18,15 +21,34 @@ export interface SessionPayload {
   issuedAt: string;
 }
 
-const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 14; // 14 days
+export interface WriteSessionOptions {
+  /**
+   * True (default) → 30-day persistent cookie + 30-day seal. Survives browser
+   * restarts. Standard SaaS "remember this device" behavior.
+   * False → session cookie (cleared when the browser closes) + 24-hour seal
+   * cap as a server-side safety net.
+   */
+  remember?: boolean;
+}
 
-const cookieOpts = (origin: string) => ({
+const REMEMBER_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
+const SESSION_COOKIE_SEAL_TTL_SECONDS = 60 * 60 * 24; // 24h cap on session cookies
+
+const cookieBase = (origin: string) => ({
   httpOnly: true,
   secure: origin.startsWith("https://"),
   sameSite: "lax" as const,
   path: "/",
-  maxAge: COOKIE_MAX_AGE_SECONDS,
 });
+
+const cookieOpts = (origin: string, remember: boolean) => {
+  const base = cookieBase(origin);
+  if (!remember) {
+    // Omit maxAge → browser treats as a session cookie and clears on close.
+    return base;
+  }
+  return { ...base, maxAge: REMEMBER_MAX_AGE_SECONDS };
+};
 
 export async function readSession(): Promise<SessionPayload | null> {
   const jar = await cookies();
@@ -41,19 +63,28 @@ export async function readSession(): Promise<SessionPayload | null> {
   }
 }
 
-export async function writeSession(payload: SessionPayload): Promise<void> {
+export async function writeSession(
+  payload: SessionPayload,
+  options: WriteSessionOptions = {},
+): Promise<void> {
+  const remember = options.remember ?? true;
+  const sealTtl = remember ? REMEMBER_MAX_AGE_SECONDS : SESSION_COOKIE_SEAL_TTL_SECONDS;
   const sealed = await sealData(payload, {
     password: env.sessionPassword(),
-    ttl: COOKIE_MAX_AGE_SECONDS,
+    ttl: sealTtl,
   });
   const jar = await cookies();
-  jar.set(env.sessionCookieName(), sealed, cookieOpts(env.appPublicOrigin()));
+  jar.set(
+    env.sessionCookieName(),
+    sealed,
+    cookieOpts(env.appPublicOrigin(), remember),
+  );
 }
 
 export async function clearSession(): Promise<void> {
   const jar = await cookies();
   jar.set(env.sessionCookieName(), "", {
-    ...cookieOpts(env.appPublicOrigin()),
+    ...cookieBase(env.appPublicOrigin()),
     maxAge: 0,
   });
 }

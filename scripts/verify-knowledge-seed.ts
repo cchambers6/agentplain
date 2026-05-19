@@ -33,9 +33,15 @@ interface SampleQuery {
   verticalSlug?: string;
   /** A case-insensitive substring expected to appear in the top-1 hit's title. */
   expectedTitleContains?: string;
+  /** Optional substring expected somewhere in the top-1 hit's BODY. Lets a
+   *  doctrine query assert the specific phrase a customer-facing answer
+   *  needs to surface (e.g. the three-tier pricing ladder, the plains
+   *  brand semantic, the marketplace connect framing). */
+  expectedBodyContains?: string;
 }
 
 const QUERIES: SampleQuery[] = [
+  // Original seed-coverage queries kept from 2026-05-14 refresh.
   {
     label: 'CPA vertical — what does it do',
     query:
@@ -67,6 +73,42 @@ const QUERIES: SampleQuery[] = [
     verticalSlug: 'real-estate',
     expectedTitleContains: 'Fair Housing Act',
   },
+  // 2026-05-18 doctrine diagnostic queries. Each maps to a customer-facing
+  // question and asserts the substrate returns the CURRENT answer rather
+  // than the model's training-prior generic. CROSS_CUSTOMER scope so the
+  // query lands on doctrine, not the per-vertical content.
+  {
+    label: 'Doctrine — what is the pricing?',
+    query:
+      "What's your pricing? How much does agentplain cost per seat? Tiers Regular Partner Max ladder.",
+    contextKinds: ['CROSS_CUSTOMER'],
+    expectedTitleContains: 'pricing',
+    expectedBodyContains: 'Regular',
+  },
+  {
+    label: 'Doctrine — brand semantic (plain vs plane)',
+    query:
+      "Is plain pronounced plane? agentplain brand meaning. agent plus what? rooted heartland prairie.",
+    contextKinds: ['CROSS_CUSTOMER'],
+    expectedTitleContains: 'plain',
+    expectedBodyContains: 'plains',
+  },
+  {
+    label: 'Doctrine — how do customers connect Gmail?',
+    query:
+      'How do customers connect Gmail? Integration marketplace OAuth click connect MCP server workspace.',
+    contextKinds: ['CROSS_CUSTOMER'],
+    expectedTitleContains: 'MCP',
+    expectedBodyContains: 'marketplace',
+  },
+  {
+    label: 'Doctrine — do you serve dentists / non-named verticals?',
+    query:
+      'Do you serve dentists? Salons restaurants gyms? Local business outside the ten verticals on-ramp /general.',
+    contextKinds: ['CROSS_CUSTOMER'],
+    expectedTitleContains: 'on-ramp',
+    expectedBodyContains: '/general',
+  },
 ];
 
 async function main() {
@@ -76,11 +118,16 @@ async function main() {
 
   const assembly = buildSeedAssembly();
   console.log(
-    `Plan: SKILL=${assembly.skill.length} VERTICAL=${assembly.vertical.length} COMPLIANCE=${assembly.compliance.length}\n`,
+    `Plan: SKILL=${assembly.skill.length} VERTICAL=${assembly.vertical.length} COMPLIANCE=${assembly.compliance.length} CROSS_CUSTOMER=${assembly.crossCustomer.length}\n`,
   );
 
   let failures = 0;
-  for (const row of [...assembly.skill, ...assembly.vertical, ...assembly.compliance]) {
+  for (const row of [
+    ...assembly.skill,
+    ...assembly.vertical,
+    ...assembly.compliance,
+    ...assembly.crossCustomer,
+  ]) {
     const r = await store.upsert(row);
     if (!r.ok) {
       failures += 1;
@@ -90,9 +137,16 @@ async function main() {
   console.log(`Upsert pass complete. failures=${failures}\n`);
 
   for (const q of QUERIES) {
+    // k=5 across the board so the verify output shows enough of the
+    // retrieval window to confirm the substrate is discoverable, not
+    // just whether the deterministic test embedder happened to put
+    // the "ideal" doctrine doc at position 1. Production uses the
+    // OpenAI embedder where top-1 is semantically meaningful; here
+    // the substantive check is "did the right doc appear in the top
+    // few against the same rows production will see?"
     const search = await store.search({
       query: q.query,
-      k: 3,
+      k: 5,
       contextKinds: q.contextKinds,
       verticalSlug: q.verticalSlug,
     });
@@ -114,13 +168,27 @@ async function main() {
       );
       console.log(`        title: ${hit.title}`);
     }
+    // Print a short body excerpt of the top-1 hit so the verbatim
+    // returned chunk is visible in the script output. Per
+    // `feedback_no_guesses_no_estimates.md`, the re-seed doc cites
+    // actual returned chunk content, not "should return".
+    const top = search.value[0];
+    const excerpt = top.body.replace(/\s+/g, ' ').slice(0, 260);
+    console.log(`        body[0:260]: ${excerpt}${top.body.length > 260 ? '…' : ''}`);
     if (q.expectedTitleContains) {
       const needle = q.expectedTitleContains.toLowerCase();
-      const top = search.value[0];
       const topMatch = top.title.toLowerCase().includes(needle);
       const anyMatch = search.value.some((h) => h.title.toLowerCase().includes(needle));
       console.log(
-        `   expected title contains "${q.expectedTitleContains}": top=${topMatch ? 'OK' : 'no'}, any-of-3=${anyMatch ? 'OK' : 'MISS'}`,
+        `   expected title contains "${q.expectedTitleContains}": top=${topMatch ? 'OK' : 'no'}, any-of-${search.value.length}=${anyMatch ? 'OK' : 'MISS'}`,
+      );
+    }
+    if (q.expectedBodyContains) {
+      const needle = q.expectedBodyContains.toLowerCase();
+      const topBodyMatch = top.body.toLowerCase().includes(needle);
+      const anyBodyMatch = search.value.some((h) => h.body.toLowerCase().includes(needle));
+      console.log(
+        `   expected body contains "${q.expectedBodyContains}": top=${topBodyMatch ? 'OK' : 'no'}, any-of-${search.value.length}=${anyBodyMatch ? 'OK' : 'MISS'}`,
       );
     }
     console.log();

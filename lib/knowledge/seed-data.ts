@@ -1,8 +1,8 @@
 /**
  * lib/knowledge/seed-data.ts
  *
- * Static seed corpus for the knowledge substrate. Five buckets land at
- * install time:
+ * Static seed corpus for the knowledge substrate. Four buckets land at
+ * install time (SKILL / VERTICAL / COMPLIANCE / CROSS_CUSTOMER):
  *
  *   * SKILL — documentation for the five PR-C value-loop skills
  *     (read / categorize / coordinate / schedule / draft), PLUS
@@ -31,9 +31,13 @@
  * Every row carries a stable `sourceId` so the seed script is idempotent
  * (replaying the seed updates rows in place; it does not duplicate).
  *
- * Per `project_knowledge_substrate.md`: CUSTOMER + CROSS_CUSTOMER stay
- * empty at seed time. CUSTOMER fills as workspaces connect tools;
- * CROSS_CUSTOMER fills offline via the anonymization fleet agent.
+ * Per `project_knowledge_substrate.md`: CUSTOMER stays empty at seed
+ * time (fills as workspaces connect tools). CROSS_CUSTOMER seeds with
+ * the platform-wide doctrine ratified offline between 2026-05-11 and
+ * 2026-05-18 — positioning, pricing, brand semantics, MCP-first
+ * architecture, mission, design language, readiness audit, build
+ * handoffs. Future anonymized fleet learnings land in the same kind
+ * via a separate offline pipeline; this seed is the doctrine baseline.
  *
  * Per `feedback_no_guesses_no_estimates.md`: every entry's body is
  * derived from a real file path (cited in metadata.source). Unverified
@@ -45,7 +49,7 @@
  */
 
 import type { KnowledgeUpsertInput } from './types';
-import { getAllVerticals } from '../verticals';
+import { getAllVerticals, getAllVerticalsIncludingOnRamps } from '../verticals';
 import type { VerticalContent } from '../verticals/types';
 import { listCorpusVerticals, loadCorpusFor } from '../agents/sentinel';
 import { tierDisplayName, type TierName } from '../pricing/tiers';
@@ -586,12 +590,304 @@ export function buildComplianceCorpus(): ComplianceCorpusBuild {
   return { rows, skippedUnverified, verifiedByVertical, unverifiedByVertical };
 }
 
+// ── DOCTRINE corpus (CROSS_CUSTOMER kind) ───────────────────────────────
+//
+// Platform-wide doctrine ratified between 2026-05-11 and 2026-05-18 that
+// did not previously land in the substrate. The CROSS_CUSTOMER context
+// kind is the right surface per `docs/knowledge-substrate.md` and the
+// 2026-05-14 refresh report — "anonymized fleet learnings derived
+// offline." These rows let customer-facing skills retrieve the CURRENT
+// answer to questions like "what's your pricing?" or "is plain
+// pronounced plane?" instead of the model's training-prior generic.
+//
+// Per `feedback_no_guesses_no_estimates.md`: every body is derived from
+// a real memory file. The metadata.source field cites the file path so a
+// future reader can re-pull the canonical text. Sources live in the agent
+// memory dir; this file replays the load-bearing extracts so the seeded
+// substrate stays self-contained and idempotent.
+//
+// Per `feedback_no_silent_vendor_lock.md`: still produces typed
+// `KnowledgeUpsertInput` rows; nothing here imports OpenAI or pgvector.
+//
+// Per `project_knowledge_substrate.md`: CROSS_CUSTOMER is platform-wide,
+// `workspaceId` = NULL, enforced by the `validateContextWorkspaceFit`
+// check in `lib/knowledge/pgvector-store.ts`.
+
+interface DoctrineDoc {
+  slug: string;
+  title: string;
+  body: string;
+  source: string;
+  ratified: string;
+}
+
+const DOCTRINE_CORPUS: DoctrineDoc[] = [
+  {
+    slug: 'mission-vision-tagline',
+    title: 'agentplain mission, vision, tagline (locked 2026-05-11)',
+    body: `Mission: "We lift up local businesses by doing the work that takes their time and money away from the people they serve."
+Vision: "Local businesses can thrive through access to affordable, best-in-class tools and services."
+Tagline: "Intelligence rooted in reality."
+
+Audience language: "local businesses", "local business owners", "entrepreneurs". BANNED: "SMB" (corporate-speak; doesn't fit local), "knowledge workers" (too generic), "white-collar workers" (off-tone). Mechanism term: "capable AI partners" or "the fleet" — never a specific agent count.
+
+The tagline carries the brand thesis. Intelligence = the AI / the fleet. Reality = our expertise built on actual business processes; we know local business owners, their struggles, what they need; we run this same fleet model in production today (flatsbo brokerage, ~35 cron-fired agents); not magic, not ethereal, not vapor — real product, real operators, real outcomes.
+
+Banned variants: "Replace your team with AI", "Automate everything", "AI assistant" (too generic), "Magic" / "AI magic" / "ethereal" / "intelligent automation" (contradicts the tagline). Pricing framings that lose "affordable" are banned — affordable access IS the vision.`,
+    source: 'memory/project_agentplain_mission_and_positioning.md',
+    ratified: '2026-05-11',
+  },
+  {
+    slug: 'nine-questions-every-surface',
+    title: 'The nine questions every customer-facing surface must answer',
+    body: `Each customer-facing surface (page, deck, video, screen) must address SOME subset of these. Homepage + pricing must address ALL. Vertical pages must address Q1-Q5 + Q7-Q9. App empty states + onboarding must address Q3-Q5.
+
+Q1. Why do we exist? — Professional services people spend 60-70% of their week on systematic work. agentplain fixes that ratio; the fleet does the systematic work; the human does the relationship work.
+Q2. What is agentplain? — AI ops layer that runs as a fleet of agents inside your professional services firm. CRITICAL: page 1 of any marketing surface mentions ALL 10 verticals (real estate, mortgage, insurance, property management, title & escrow, recruiting, home services contractors, CPAs, law firms, RIAs). Don't lose a CPA on page one because the hero only said "for realtors."
+Q3. What does the app do? Can everyone use it? — One unified product. 1-seat solo to N-seat workspace.
+Q4. What makes it unique? — Vertical-aware; you stay in control (drafts, never auto-sends); integrates with what you already use; built BY agents; compliance-first.
+Q5. How easy is it to use? — Sign up free, pick your vertical, connect Gmail or CRM in 60 seconds, see drafts within minutes.
+Q6. Why should anyone believe us? — Eat-our-own-cooking; counsel-reviewed compliance corpus; flatsbo brokerage v0; ROI math anchored in concrete per-vertical examples (15-107x).
+Q7. ROI? — 15-107x per realtor anchored in $2,900-$10,600/mo value vs $99-$499/mo subscription.
+Q8. Future of work? — Humans focus on what only humans can do; AI handles what AI is better at.
+Q9. Why now? — Models got good enough in 2025; vendor APIs stabilized; compliance frameworks clear; demand real.`,
+    source: 'memory/project_agentplain_mission_and_positioning.md',
+    ratified: '2026-05-11',
+  },
+  {
+    slug: 'service-partnership-positioning',
+    title: 'Service partnership positioning — agentplain sells the partner who runs AI for you',
+    body: `LOCKED 2026-05-15 in response to Anthropic's Claude for Small Business launch (2026-05-13).
+
+agentplain is not selling AI. agentplain is selling THE PARTNER WHO RUNS AI FOR YOU.
+
+- Anthropic Claude for SMB: "Here's the toolkit. 15 workflows, 15 skills, 8 connectors. Free with your Claude license. Go run it." → DIY AI ops.
+- agentplain: "We install. We run. We customize. You stay focused on serving your customers." → Managed AI ops.
+
+This is not a marketing slogan — it's the operational shape of the product, the pricing justification, and the moat against Anthropic's free-tier commoditization of the tool layer.
+
+Why this is the right answer:
+1. Anthropic commoditized the TOOL, not the SERVICE. Anthropic isn't a services company.
+2. SMB owners are time-starved, not budget-starved. $99-$199/seat is a rounding error vs. the time cost of learning to be an AI ops person.
+3. Aligns with the locked mission verbatim — "doing the work" IS service partnership.
+4. Vertical-specific knowledge substrate IS the codified service expertise.
+5. /custom engagements are the natural extension of the service relationship.
+
+Acceptable framings: "the platform we run for you", "managed AI ops", "your AI ops team", "we install, run, and customize", "service partnership with embedded technology". BANNED: "Self-serve AI platform", "DIY agentic workflows", "Run AI agents in your business" (without "we run them for you"), "Try our tool". We do NOT introduce a freemium tier — that's a tool-company response, not a service-company response.`,
+    source: 'memory/project_service_partnership_positioning.md',
+    ratified: '2026-05-15',
+  },
+  {
+    slug: 'pricing-three-tier-2026-05-15',
+    title:
+      "agentplain pricing — three customer-facing tiers (Regular / Partner / Max), ratified 2026-05-15",
+    body: `LOCKED 2026-05-15. Supersedes the 2026-05-12 simplified Regular-only model.
+
+THREE customer-facing tiers + a separate /custom path:
+
+REGULAR — $99-$199/seat (ladder by volume). Standard managed AI ops + onboarding bundled in. "We install. We run. We customize standard skills for you."
+PARTNER — $199-$299/seat (ladder by volume). Named-service-partner with 4 hrs/mo reserved time. "Same as Regular, plus your named partner with reserved hours each month for skill iteration, deeper integration, and monthly business review."
+MAX — AD-HOC quote-based. High-intensity service / multi-state ops / white-label / dedicated team. NOT a fixed published price-per-seat.
+
+Plus /custom for bespoke capability builds ($5K-$15K + $200-$500/mo maintenance). /custom and Max differ in shape: Max = MORE SERVICE INTENSITY at standard skill scope; /custom = BUILD NEW CAPABILITIES we don't have yet. A customer can be on Max AND have a /custom engagement.
+
+Per-tier ladder (verbatim from lib/pricing/tiers.ts):
+| Volume      | Regular | Partner | Max   |
+| 1 seat      | $199    | $299    | quote |
+| 2-9 seats   | $179    | $279    | quote |
+| 10-24 seats | $149    | $249    | quote |
+| 25-49 seats | $119    | $219    | quote |
+| 50-99 seats | $99     | $199    | quote |
+| 100+ seats  | enterprise quote | enterprise quote | quote |
+
+First month free across Regular + Partner. Month-to-month from day one. NO per-vertical pricing differentiation. NO freemium tier.
+
+Stripe schema: zero changes required. Regular + Partner Products + Prices already provisioned. Max bills via Stripe Invoices using the existing /custom Products as the invoicing path.
+
+BANNED FRAMINGS: 3-column tier comparisons that mention a "vertical→tier" mapping (the 2026-05-12 simplified model is superseded). Single-tier-Regular-only is also superseded. Always cite the 2026-05-15 ratification when referencing pricing.`,
+    source: 'memory/project_stripe_both_surfaces.md',
+    ratified: '2026-05-15',
+  },
+  {
+    slug: 'pricing-low-friction-over-margin',
+    title: 'Pricing companion rule — low friction over margin (no nickel-and-diming)',
+    body: `Companion rule to the three-tier pricing lock. Don't price per-unit on things that cost agentplain pennies. Bundle into the seat fee. Add-ons that have real human-cost are OK; AI-feature paywalls aren't.
+
+Two principles:
+1. AI features cost cents — listing copy, room staging, contract drafting, mortgage Q&A, etc. Marginal cost sub-dollar → bundle into the flat seat fee. Use "included" or "free with your seat". Do NOT use per-room / per-photo / per-disclosure unit pricing.
+2. Real human services CAN have add-on fees. Pro photography, escrow handling, attorney/title services, premium MLS upgrades, paid social spend — these have real cost-per-unit. Add-on pricing is fine here, transparent, opt-in.
+
+Banned phrases in customer-facing copy: "$X per room" / "$X per photo" / "$X per disclosure" / "Premium feature" / "Upgrade to unlock" for sub-dollar-cost AI capabilities.
+
+Audit checklist for any price-mentioning surface: "is this a real human-cost service or a sub-dollar AI feature?" If AI → bundle into seat fee OR make explicitly free. If human service → add-on, but always opt-in.`,
+    source: 'memory/feedback_low_friction_over_margin.md',
+    ratified: '2026-04-27',
+  },
+  {
+    slug: 'pricing-max-friction-reduction',
+    title: 'Pricing companion rule — max friction reduction for trials',
+    body: `Companion rule to the three-tier pricing lock. At the current stage (pre-PMF, hunting for first 20 paid customers), every pricing decision passes the "does this make 'try it' easier or harder?" test. If harder, kill it unless load-bearing for unit economics or compliance.
+
+Locked decisions:
+1. NO pilot fees. Period. The $1,500/$2,750/$4,500 pilot model was killed 2026-05-09. Don't propose them again until past 20 paid customers.
+2. First month free across all three tiers. Card on file at signup, $0 charged month 1, per-seat kicks in month 2.
+3. Month-to-month from day one. No annual lock-in required. Annual SKUs exist as a discount choice, not a default.
+4. Self-serve signup, no sales call required.
+5. NO credit-card-required-to-see-pricing. Pricing is on the public marketing page.
+6. NO minimum-seat requirement. Solo realtor = 1 seat workspace = supported.
+7. NO setup fees, NO implementation fees, NO professional services fees for standard onboarding.
+
+Load-bearing (don't kill): per-seat pricing, tier differentiation (Regular/Partner/Max), annual discount, /custom SKU.`,
+    source: 'memory/feedback_max_friction_reduction_for_trials.md',
+    ratified: '2026-05-09',
+  },
+  {
+    slug: 'brand-plain-not-plane',
+    title:
+      "Brand meaning — agentplain = agent + the PLAINS (where things take root), never 'plane'",
+    body: `LOAD-BEARING 2026-05-15. The brand is agent + the PLAINS — open prairie, heartland, where things take root. The tagline "Intelligence rooted in reality" is the literal metaphor: AI planted in actual local-business soil, not floating in abstract cloud-tech space.
+
+Wrong reads (both rejected):
+- "agent + airplane (plane)" — WRONG; never the brand
+- "agent + plainspoken/clear/unadorned (plain)" — PARTIAL truth, captures heritage feel but misses the place-and-rooted meaning.
+
+CORRECT: agent + the plains (where things take root). The brand is about AI that is GROUNDED — planted in the actual reality of local business life, in the heartland, in the small towns and cities that aren't Silicon Valley.
+
+Visual marks: default to plains/rooted imagery — horizon line, prairie grass, wheat, lone tree, sunrise over flat horizon, soil cross-section with roots, grain silo, plowed rows, single seed, big sky over flat ground. BANNED: sleek tech logos, abstract gradients, aerial-only imagery, anything that floats away from earth.
+
+Copy voice: heritage, grounded, patient. Say "we put down roots in your business" not "we deploy at scale." Plains/agriculture/heartland metaphors generously: rooted, planted, ground, soil, season, harvest, yield, tend, cultivate, weather, deep. AVOID: cloud, scale, deploy, ship, accelerate, viral, hypergrowth.
+
+Banned framings: "agentplane" (wrong word), "Airplane" / "aviation" / "aircraft", "Plainspoken" as the SOLE meaning, "Cloud-based AI" / "deploy in the cloud" / "scale to the cloud", sleek tech aesthetic visual marks, "Disruption" / "hypergrowth" / "blitzscale", floating / aerial / soaring as standalone metaphors.
+
+Acceptable: "agentplain — AI ops rooted in your reality", "We put down roots in your business", "Intelligence with its feet on the ground", "AI that knows your local ground", "Built for the heartland of small business", "Patient, grounded, partner-style AI ops".`,
+    source: 'memory/feedback_brand_is_plain_not_plane.md',
+    ratified: '2026-05-15',
+  },
+  {
+    slug: 'mcp-first-integration-architecture',
+    title: 'MCP-first integration architecture — every integration is an MCP server',
+    body: `LOCKED 2026-05-12. Every customer-facing integration in agentplain is an MCP (Model Context Protocol) server scoped to a customer workspace. Customer clicks "Connect" in the marketplace UI → OAuth flow handled by the per-MCP server → callback wires the credential into a customer-scoped MCP instance. Skills call MCP tools (mcp.call('gmail', 'list_messages', ...)) instead of importing vendor SDKs directly.
+
+The customer experience: "as easy as clicking the plug in in Claude" — Claude's integration model (MCP) is the model. User browses a marketplace, clicks Connect, OAuth happens, done. No per-tool engineering visible to the customer.
+
+What this locks:
+1. Skills consume MCP tools, NOT vendor SDKs.
+2. Each integration is a separately-scoped MCP server per customer. When customer X connects Gmail, a Gmail MCP instance is provisioned with their OAuth credentials. Customer X's skills call X's Gmail MCP; customer Y's call Y's. No credential sharing across workspaces.
+3. The customer-facing marketplace UI (\`app/(app)/workspace/[id]/integrations\`) is the front door.
+4. OAuth + credential storage stays in agentplain. \`IntegrationCredential\`, \`WebhookSubscription\`, renewal cron all per PR-B.
+5. Adding a new integration = define MCP server tools + register URL + scopes + OAuth config + add marketplace tile + ship. No new agentplain core code per provider.
+
+Migration sequencing:
+- Phase A — Convert Gmail to MCP (PR-D scope; shipped).
+- Phase B — Outlook + M365 MCP (shipped).
+- Phase C — Marketplace UI v1 (shipped 2026-05-17).
+- Phase D — Third-party MCP servers (later).
+- Phase E — Customer-built MCPs (post-PMF; becomes /custom upsell path).
+
+Banned framings: "We're building 50 OAuth adapters" (wrong; marketplace of MCP servers), "Per-integration engineering" (wrong; new integrations are config + MCP server), "OAuth complexity is what slows us down" (wrong post-marketplace).
+Acceptable: "agentplain has a marketplace of MCP-based integrations", "Click Connect → OAuth → done", "Every integration is an MCP server scoped to your workspace", "Built on MCP, the open standard for connecting AI tools to services."`,
+    source: 'memory/project_mcp_first_integration_architecture.md',
+    ratified: '2026-05-12',
+  },
+  {
+    slug: 'general-on-ramp-coverage',
+    title: 'Vertical coverage — 10 ratified verticals + /general on-ramp, never an 11th',
+    body: `agentplain serves TEN ratified verticals: real estate, mortgage, insurance, property management, title & escrow, recruiting, home services contractors, CPAs, law firms, RIAs. The ten-vertical lock is policy: adding an eleventh requires a memory ratification, not a code change (\`feedback_no_new_verticals_finish_locked.md\`).
+
+For local businesses OUTSIDE the ten — dentists, salons, restaurants, gyms, plumbers-who-aren't-trades-fleet-shaped, etc. — the on-ramp is \`/general\`. The /general page is honest: same service partnership, lighter scaffolding. The page makes the trade-off explicit:
+- REPLACES the universal admin work — inbox triage, scheduling, follow-up, basic documentation.
+- INTEGRATES with the tools every local business already runs (Gmail, Outlook, Google Calendar, QuickBooks).
+- AUGMENTS the owner's review on every customer-facing draft.
+- NO vertical-specific compliance corpus. If you need one, we scope it as a /custom engagement.
+
+Acceptable response patterns when a prospective customer asks "do you serve dentists / salons / restaurants / [non-listed vertical]?":
+- "Not as a named vertical, but we have an on-ramp at /general — same service partnership, lighter scaffolding."
+- "We serve ten ratified verticals — real estate, mortgage, insurance, property management, title & escrow, recruiting, home services contractors, CPAs, law firms, RIAs — plus a /general on-ramp for local businesses outside those."
+
+BANNED: "We'd love to discuss it!" / "Reach out to talk about it!" — that's a hedging response. The /general on-ramp is the honest answer. If the prospect wants vertical depth that /general doesn't have, route to /custom.`,
+    source: 'memory/project_vertical_tier_mapping.md + lib/verticals/general/content.ts',
+    ratified: '2026-05-15',
+  },
+  {
+    slug: 'product-design-language',
+    title: 'Product UI design language — calm, dense, present-progressive (2026-05-17)',
+    body: `Product surface voice (vs. marketing voice): calm, dense, specific, second-person, present-progressive. The visitor has signed up — they don't need to be sold to. They need to feel that their service team is at work for them.
+
+Voice contrasts (marketing → product):
+- Subject: "agentplain" / "we" / "the fleet" → "your service team" / "your fleet" / "we" (acting on user's behalf).
+- Tense: aspirational present → present-progressive ("Your fleet is drafting the morning replies right now").
+- Stance: pitching → reporting + handing back.
+- Tempo: long lede → two-line stat + one-line context.
+- Punctuation: em dashes earn their keep → same, periods dominate.
+- Volume: confident → quiet confident.
+
+One-line test: if a sentence on a product screen would also belong in a homepage hero, it's marketing voice and doesn't belong.
+
+Empty states (ApRootedEmptyState pattern): one image cue, one sentence reporting reality, one sentence telling the user what changes that, one CTA. No exclamation points. No "All clear!" No emoji. ✅ "No drafts in the queue. Your fleet is reading inbox traffic; the first batch usually lands by 9:14am ET. Connect another tool →" ❌ "All caught up! 🎉"
+
+Success messages: report what's been handed off — never celebrate. ✅ "Approved. Three drafts now sit in your Gmail outbox awaiting your send." ❌ "Success!"
+
+Error messages: what failed → what we're doing about it → what the user can do. ✅ "Gmail OAuth expired. We've paused inbound reads; reconnect from Settings → Integrations to resume." ❌ "Oops! Something went wrong."
+
+Loading states: drop "Loading…". Say what is actually happening — "Reading the last 24 hours of inbox traffic…"`,
+    source: 'docs/product-design-language-2026-05-17.md',
+    ratified: '2026-05-17',
+  },
+  {
+    slug: 'product-readiness-audit-2026-05-17',
+    title: 'Product readiness audit 2026-05-17 — DONE bar gated by wiring, not engineering',
+    body: `Audit of \`origin/main\` @ 63a966b against the DONE bar: "Customer can sign up → land in branded workspace → connect Gmail → see read/categorize/coordinate/schedule/draft value loop on real inbox → add payment via Stripe."
+
+Status as of 2026-05-17:
+- Sign-up, branded workspace, Stripe trial provisioning, OAuth connect, MCP servers — BUILT and shippable.
+- Three-tier sign-up + billing settings (Regular/Partner/Max) — BUILT.
+- The middle of the loop is DEAD in production: \`processWebhookEventFn\` is the only Inngest function that drains \`WebhookEvent\` rows and invokes the skill chain, but it is (a) NOT registered in \`app/api/inngest/route.ts\` and (b) has no cron trigger.
+- Onboarding lets customers finish without connecting anything — \`connect_integration\` step does NOT link to /integrations.
+- Approvals page has UI but \`workApprovalQueueItem.create\` has ZERO callers; queue is permanently empty.
+- Agents page hardcodes realty fleet — not vertical-aware (a CPA workspace sees realty agent slugs).
+- Marketing /pricing on agentplain.com is BEHIND main — still showing the 2026-05-12 single-tier surface; the 3-tier landed in code but hasn't deployed.
+
+Smallest PR that closes the DONE bar (~50 lines): (1) register \`processWebhookEventFn\` in the Inngest serve route, (2) add a cron trigger (every 2 minutes is the natural Gmail Pub/Sub freshness floor), (3) wire \`HandoffLogEntry\` writers in the runner so the workspace overview's "What's running now" populates. After that the value loop runs on real inbound mail, drafts land in Gmail Drafts, and the customer can verify with their own eyes.
+
+The DONE bar is gated by WIRING, not engineering. The hard work — auth, OAuth, MCP servers, skill chain, billing, schema, RLS, vertical fleet of prompts — is done.`,
+    source: 'docs/product-readiness-audit-2026-05-17.md',
+    ratified: '2026-05-17',
+  },
+  {
+    slug: 'overnight-product-build-2026-05-18',
+    title:
+      'Overnight product build 2026-05-18 — Waves A→D shipped; value loop closes on live preview',
+    body: `Overnight build status as of 2026-05-18 (branch \`feat/product-overnight-2026-05-17\` @ ad48a33 + Wave D docs):
+
+The customer-facing product surface is now whole: marketing → /app/sign-up (vertical + tier picker) → magic-link → workspace landing → onboarding → integrations → activity → approvals → settings/billing all render on a single Wave-A2 design-system foundation (Ap* primitives) with Wave-B service-partnership voice applied across every surface and Wave-C polish on empty states, errors, loaders, mobile and a11y.
+
+Wave status:
+- A1 (close end-to-end value loop — Inngest cron + handoff/approval writers + onboarding link + approvals UI) — merged.
+- A1-fix-a (move /app/verify to a Route Handler so writeSession can set cookies) — on branch.
+- A1-fix-b (tighten verify error classifier so 'Invalid or expired link' resolves to 'invalid') — on branch, verified live.
+- A2 (visual foundation — 10 Ap* primitives + canonical chrome) — on branch.
+- B (apply Ap* primitives + service-partnership voice across every customer surface) — on branch.
+- C (rooted empty states, calm errors, contextual loaders, mobile + a11y sweep) — on branch.
+- D (E2E verification on Vercel preview + handoff doc + screenshots) — shipped.
+
+The auth flow's verify cookie-write bug from earlier in the week (digest 2234350772) is FIXED: verify is now a Route Handler and the error classifier correctly resolves "Invalid or expired link" to ?reason=invalid. Sign-up form submission against the live Vercel preview creates the WorkspaceMember and queues a real magic-link send — proving the end-to-end value loop is wired.
+
+3-tier picker is the same shape on sign-up and settings/billing. Regular / Partner / Max — Max routes to /custom?type=max.`,
+    source: 'docs/overnight-product-build-handoff-2026-05-18.md',
+    ratified: '2026-05-18',
+  },
+];
+
 // ── Public assembly ─────────────────────────────────────────────────────
 
 export interface SeedAssembly {
   skill: KnowledgeUpsertInput[];
   vertical: KnowledgeUpsertInput[];
   compliance: KnowledgeUpsertInput[];
+  /** Platform-wide doctrine: positioning, pricing, brand, MCP-first
+   *  architecture, mission, design-language, readiness audit, build
+   *  handoffs. CROSS_CUSTOMER kind per `docs/knowledge-substrate.md`. */
+  crossCustomer: KnowledgeUpsertInput[];
   /** Diagnostics carried through for the seed script + tests. */
   diagnostics: {
     skippedUnverifiedCompliance: number;
@@ -622,8 +918,12 @@ export function buildSeedAssembly(): SeedAssembly {
     })),
   ];
 
+  // Include the /general on-ramp so a customer query like "do you serve
+  // dentists?" can retrieve the on-ramp answer rather than a generic
+  // miss. The registry separates on-ramps from `getAllVerticals()` for
+  // surface enumeration reasons; for substrate ingest we want both.
   const vertical: KnowledgeUpsertInput[] = [];
-  for (const v of getAllVerticals()) {
+  for (const v of getAllVerticalsIncludingOnRamps()) {
     vertical.push(...chunkVertical(v));
     vertical.push(...buildJtbdSynthesisRows(v));
   }
@@ -645,10 +945,23 @@ export function buildSeedAssembly(): SeedAssembly {
     ...corpusBuild.rows,
   ];
 
+  const crossCustomer: KnowledgeUpsertInput[] = DOCTRINE_CORPUS.map<KnowledgeUpsertInput>(
+    (d) => ({
+      contextKind: 'CROSS_CUSTOMER',
+      workspaceId: null,
+      sourceType: 'doctrine-doc',
+      sourceId: `doctrine:${d.slug}`,
+      title: d.title,
+      body: d.body,
+      metadata: { doc: d.source, ratified: d.ratified, slug: d.slug },
+    }),
+  );
+
   return {
     skill,
     vertical,
     compliance,
+    crossCustomer,
     diagnostics: {
       skippedUnverifiedCompliance: corpusBuild.skippedUnverified,
       verifiedComplianceByVertical: corpusBuild.verifiedByVertical,
@@ -664,6 +977,6 @@ export const SEED_COUNTS = (() => {
     VERTICAL: a.vertical.length,
     COMPLIANCE: a.compliance.length,
     CUSTOMER: 0,
-    CROSS_CUSTOMER: 0,
+    CROSS_CUSTOMER: a.crossCustomer.length,
   };
 })();

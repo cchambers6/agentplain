@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 40" role="img" aria-label="agentplain — lone-tree mark" style="color:#1A1A1F">
+  <g transform="translate(0 6)">
+    <g stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" transform="scale(1.333)">
+      <line x1="2" y1="20" x2="22" y2="20" stroke-width="0.9" fill="none"/>
+      <line x1="12" y1="20" x2="12" y2="13" stroke-width="1.4" fill="none"/>
+      <path d="M12 13 C8.5 13 6.5 10.5 6.5 7.5 C6.5 4.5 9 3 11 4 C11.5 2 13 2 14 4 C16.5 3.5 17.8 5.5 17.5 7.8 C17.2 11 14.5 13 12 13 Z" fill="currentColor" stroke="none"/>
+    </g>
+  </g>
+  <text x="42" y="29"
+        font-family="'Source Serif 4', 'Source Serif Pro', Georgia, serif"
+        font-size="32" font-weight="500"
+        letter-spacing="-0.5"
+        fill="currentColor">agentplain</text>
+</svg>

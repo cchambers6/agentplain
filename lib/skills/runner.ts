@@ -37,6 +37,11 @@ import type { LlmProvider } from '../llm/types';
 import { CategorizeSkill } from './categorize';
 import { CoordinateSkill } from './coordinate';
 import { DraftSkill } from './draft';
+import {
+  asActionableAdminClassification,
+  buildAdminApprovalPayload,
+  classifyOfficeAdmin,
+} from './office-admin';
 import { getPromptBundleByEnum } from './prompts/index';
 import { ReadSkill } from './read';
 import { ScheduleSkill } from './schedule';
@@ -84,6 +89,8 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
     scheduledProposal: null,
     draft: null,
     markedProcessed: false,
+    officeAdmin: null,
+    officeAdminPayload: null,
   };
 
   // ── 1. Read ─────────────────────────────────────────────────────────
@@ -106,6 +113,50 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
   }
   const newestMessage = pickNewest(readRes.value.messages);
   outcome.threadId = newestMessage.threadId;
+
+  // ── 1.5 Office-admin classify ──────────────────────────────────────
+  // Runs BEFORE vertical categorize so admin email (verification codes,
+  // password resets, billing notices, security alerts) gets routed to
+  // the admin queue without going through lead/scheduling/draft. When
+  // the classifier returns `not-admin`, the vertical chain proceeds as
+  // before.
+  const tAdmin = Date.now();
+  const adminRes = await classifyOfficeAdmin({ message: newestMessage, llm });
+  steps.push({
+    step: 'office-admin-classify',
+    ok: adminRes.ok,
+    summary: adminRes.ok
+      ? `category=${adminRes.value.category} conf=${adminRes.value.confidence.toFixed(2)} — ${adminRes.value.reason}`
+      : adminRes.error.message,
+    durationMs: Date.now() - tAdmin,
+    errorCode: adminRes.ok ? undefined : adminRes.error.code,
+  });
+  if (adminRes.ok) {
+    outcome.officeAdmin = adminRes.value;
+    const actionable = asActionableAdminClassification(adminRes.value);
+    if (actionable) {
+      // Short-circuit — admin item lands in the approval queue via
+      // persist-artifacts. We do NOT run vertical categorize / draft /
+      // schedule on admin email; that would burn LLM cost and risk
+      // composing a real-looking reply to a no-reply automated sender.
+      outcome.officeAdminPayload = buildAdminApprovalPayload({
+        message: newestMessage,
+        classification: actionable,
+        now: args.now,
+      });
+      outcome.markedProcessed = true;
+      steps.push({
+        step: 'mark-processed',
+        ok: true,
+        summary: `office-admin=${adminRes.value.category} terminates loop without vertical categorize`,
+        durationMs: 0,
+      });
+      return finalize({ startedAt, steps, outcome, args, llm, prompts });
+    }
+  }
+  // adminRes.ok=false is a soft-fail: log it but continue with the
+  // vertical chain. Better to miss an admin classification than to drop
+  // the whole loop.
 
   // ── 2. Categorize ───────────────────────────────────────────────────
   const categorizeSkill = new CategorizeSkill(llm);

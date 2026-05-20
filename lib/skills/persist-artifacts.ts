@@ -26,6 +26,7 @@
 
 import type { Prisma } from '@prisma/client';
 import { withRls, type RlsContext } from '../db';
+import { categoryToApprovalKind, type OfficeAdminApprovalPayload } from './office-admin';
 import type { SkillRunRecord, SkillStepRecord, SkillRunOutcome } from './types';
 
 /**
@@ -155,15 +156,28 @@ function buildHandoffsFromSteps(
 }
 
 /**
- * Build a WorkApprovalQueueItem from a completed run, if the outcome
- * produced a draft. We surface every draft (persisted or not) — that's
- * the whole point of "Decisions waiting for you" per the page copy.
- * Returns null when there's nothing to approve.
+ * Build a WorkApprovalQueueItem from a completed run. Two paths:
+ *
+ *   - office-admin: when the office-admin classifier matched a real
+ *     admin category (verification code, password reset, billing, etc.)
+ *     the runner has already composed the payload. We write an
+ *     `ADMIN_*` kind so the approvals page renders the right affordance.
+ *   - draft (existing): when the vertical chain produced a draft, we
+ *     write a `BUYER_INQUIRY_REPLY_DRAFT` kind as before.
+ *
+ * The runner short-circuits before vertical-categorize when admin
+ * matches, so the two paths are mutually exclusive within one run.
+ *
+ * Returns null when neither produced an actionable approval.
  */
 function buildApprovalFromOutcome(
   args: BuildHandoffsArgs,
 ): Prisma.WorkApprovalQueueItemUncheckedCreateInput | null {
   const { workspaceId, record } = args;
+  const adminPayload = record.outcome.officeAdminPayload;
+  if (adminPayload) {
+    return buildAdminApprovalRow({ workspaceId, record, adminPayload });
+  }
   const draft = record.outcome.draft;
   if (!draft) return null;
   return {
@@ -193,6 +207,34 @@ function buildApprovalFromOutcome(
   };
 }
 
+interface BuildAdminApprovalRowArgs {
+  workspaceId: string;
+  record: SkillRunRecord;
+  adminPayload: OfficeAdminApprovalPayload;
+}
+
+function buildAdminApprovalRow(
+  args: BuildAdminApprovalRowArgs,
+): Prisma.WorkApprovalQueueItemUncheckedCreateInput {
+  const { workspaceId, record, adminPayload } = args;
+  return {
+    workspaceId,
+    agentSlug: SKILL_CHAIN_AGENT_SLUG,
+    kind: categoryToApprovalKind(adminPayload.category),
+    refTable: 'WebhookEvent',
+    refId: record.webhookEventId,
+    status: 'PENDING',
+    payload: {
+      ...adminPayload,
+      verticalSlug: record.verticalSlug,
+      // Surface the step summaries so the audit footer renders without
+      // a separate query.
+      inboundSummary: extractStepSummary(record.steps, 'read'),
+      officeAdminSummary: extractStepSummary(record.steps, 'office-admin-classify'),
+    } as unknown as Prisma.InputJsonValue,
+  };
+}
+
 function extractStepSummary(
   steps: SkillStepRecord[],
   step: SkillStepRecord['step'],
@@ -211,6 +253,8 @@ function stepAgentSlug(step: SkillStepRecord): string {
   switch (step.step) {
     case 'read':
       return 'reader';
+    case 'office-admin-classify':
+      return 'office-admin';
     case 'categorize':
       return 'router';
     case 'coordinate':
@@ -232,6 +276,12 @@ function stepAgentSlug(step: SkillStepRecord): string {
  */
 export function summarizeOutcome(outcome: SkillRunOutcome): string {
   const parts: string[] = [];
+  if (outcome.officeAdminPayload) {
+    parts.push(`office-admin=${outcome.officeAdminPayload.category}`);
+    parts.push(`priority=${outcome.officeAdminPayload.priority}`);
+    parts.push(`conf=${outcome.officeAdminPayload.confidence.toFixed(2)}`);
+    return parts.join(' ');
+  }
   parts.push(`category=${outcome.category ?? 'none'}`);
   if (outcome.scheduledProposal) {
     parts.push(`slots=${outcome.scheduledProposal.proposedSlots.length}`);

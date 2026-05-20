@@ -103,8 +103,10 @@ interface ApprovalArticleProps {
 function ApprovalArticle({ row, workspaceId, onEdit }: ApprovalArticleProps) {
   const { rendered } = row;
   const canEdit = Boolean(rendered.editableBody);
+  const adminCardClass = adminBorderClass(rendered.admin?.priority);
   return (
     <ApPaperCard
+      className={adminCardClass}
       eyebrow={
         <>
           {rendered.kindLabel}
@@ -116,6 +118,10 @@ function ApprovalArticle({ row, workspaceId, onEdit }: ApprovalArticleProps) {
       }
       title={rendered.title}
     >
+      {rendered.admin ? (
+        <AdminCardContent admin={rendered.admin} />
+      ) : null}
+
       {rendered.recipientLine ? (
         <p className="font-mono text-[12px] text-ink-soft">
           {rendered.recipientLine}
@@ -211,6 +217,126 @@ function ApprovalArticle({ row, workspaceId, onEdit }: ApprovalArticleProps) {
       </footer>
     </ApPaperCard>
   );
+}
+
+interface AdminCardContentProps {
+  admin: NonNullable<RenderedApproval["admin"]>;
+}
+
+function AdminCardContent({ admin }: AdminCardContentProps) {
+  return (
+    <div>
+      <p className="font-mono text-[12px] text-ink-soft">
+        From: {admin.fromDisplay}
+      </p>
+      <p className="font-mono text-[12px] text-ink-soft">
+        Subject: {admin.subject}
+      </p>
+      {admin.category === "verification-code" && admin.verificationCode ? (
+        <div className="mt-4 border border-rule bg-paper-deep px-4 py-3">
+          <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+            verification code
+          </p>
+          <p
+            className="mt-1 font-mono text-3xl tracking-[0.25em] text-ink"
+            aria-label={`Verification code ${admin.verificationCode}`}
+          >
+            {admin.verificationCode}
+          </p>
+          <p className="mt-2 text-[12px] leading-relaxed text-mute">
+            Paste this in the surface that asked for it. We do not enter the
+            code anywhere on your behalf.
+          </p>
+        </div>
+      ) : null}
+      {admin.category === "password-reset" && admin.primaryUrl ? (
+        <div className="mt-4 border border-rule bg-paper-deep px-4 py-3">
+          <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+            reset link
+          </p>
+          <a
+            href={admin.primaryUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="mt-2 inline-flex items-center justify-center border border-ink bg-paper px-3 py-2 font-sans text-sm text-ink underline-offset-4 hover:underline"
+          >
+            Open in your browser
+          </a>
+          <p className="mt-2 break-all font-mono text-[11px] text-mute">
+            {admin.primaryUrl}
+          </p>
+          <p className="mt-2 text-[12px] leading-relaxed text-mute">
+            We hand you the link. You open it. If you did not request this,
+            reject the card.
+          </p>
+        </div>
+      ) : null}
+      {admin.category === "email-verification" && admin.primaryUrl ? (
+        <div className="mt-4 border border-rule bg-paper-deep px-4 py-3">
+          <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+            verification link
+          </p>
+          <a
+            href={admin.primaryUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="mt-2 inline-flex items-center justify-center border border-ink bg-paper px-3 py-2 font-sans text-sm text-ink underline-offset-4 hover:underline"
+          >
+            Open to confirm
+          </a>
+          <p className="mt-2 break-all font-mono text-[11px] text-mute">
+            {admin.primaryUrl}
+          </p>
+        </div>
+      ) : null}
+      {admin.category === "trial-expiration" && admin.expiresAt ? (
+        <div className="mt-4 border border-rule bg-paper-deep px-4 py-3">
+          <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+            ends
+          </p>
+          <p className="mt-1 font-mono text-lg text-ink">
+            {formatExpires(admin.expiresAt)}
+          </p>
+          {admin.amount ? (
+            <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">
+              Renewal charge: {admin.amount}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+      {admin.category === "account-suspension" ? (
+        <div className="mt-4 border border-flag bg-paper-deep px-4 py-3">
+          <p className="font-mono text-[11px] tracking-eyebrow uppercase text-flag">
+            confirm this was you
+          </p>
+          <p className="mt-1 text-[13px] leading-relaxed text-ink">
+            Approve only if you recognize the activity. Reject if you did not
+            sign in — we will file the incident in your activity log so you
+            can address it from the originating service.
+          </p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function adminBorderClass(priority?: "critical" | "normal" | "low"): string {
+  if (priority === "critical") return "border-flag";
+  if (priority === "low") return "opacity-90";
+  return "";
+}
+
+function formatExpires(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    });
+  } catch {
+    return iso;
+  }
 }
 
 function formatRelativeTime(iso: string): string {

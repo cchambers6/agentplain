@@ -40,7 +40,9 @@ export interface SkillCatalogEntry {
   slug: string;
   /** Customer-facing name. */
   name: string;
-  /** Vertical slug — matches `lib/verticals/<slug>/`. */
+  /** Vertical slug — matches `lib/verticals/<slug>/`. Use the literal
+   *  string `'all'` for skills that ship to every workspace regardless
+   *  of vertical (e.g. office-admin). */
   vertical: string;
   /** Short description of the workflow. */
   description: string;
@@ -50,9 +52,55 @@ export interface SkillCatalogEntry {
   mcpDependencies: McpDependency[];
   /** Memory rules + content files the skill is grounded in. */
   groundedIn: string[];
+  /** When true, the skill runs by default in every workspace. False (or
+   *  unset) means a customer must opt-in. Office-admin is the first
+   *  default-enabled skill — every business needs verification-code
+   *  routing. */
+  defaultEnabled?: boolean;
 }
 
 export const SKILL_CATALOG: SkillCatalogEntry[] = [
+  {
+    slug: 'office-admin',
+    name: 'Office admin — inbox triage',
+    vertical: 'all',
+    description:
+      'Recognizes admin / IT / account-hygiene email (verification codes, ' +
+      'password-reset links, 2FA codes, trial expirations, billing notices, ' +
+      'subscription confirmations, account suspensions, service-status updates, ' +
+      'and email-preferences housekeeping). Routes each into the approval queue ' +
+      'with the right affordance — the verification code rendered prominently, ' +
+      'the reset link as an "Open" button, the security alert as a red-bordered ' +
+      'confirm-this-was-me card. The skill DRAFTS where helpful (billing-notice ' +
+      'acknowledgements, trial-reminder calendar notes) but never clicks links, ' +
+      'fills forms, or holds credentials.',
+    kind: 'triage',
+    mcpDependencies: [
+      {
+        provider: 'gmail',
+        status: 'built',
+        note:
+          'Inbound email arrives through the existing Gmail integration; the skill ' +
+          'consumes ParsedMessage from any MessageFetcher.',
+      },
+      {
+        provider: 'outlook',
+        status: 'built',
+        note:
+          'Outlook (M365) MessageFetcher is wired through the same provider-neutral ' +
+          'port. Office-admin runs identically against either source.',
+      },
+    ],
+    groundedIn: [
+      'project_office_manager_skill.md',
+      'project_no_outbound_architecture.md',
+      'project_service_partnership_positioning.md',
+      'feedback_brand_is_plain_not_plane.md',
+      'feedback_no_quick_fixes.md',
+      'prohibited_actions (CLAUDE.md)',
+    ],
+    defaultEnabled: true,
+  },
   {
     slug: 'invoice-chasing-realestate',
     name: 'Commission invoice chasing — real estate',

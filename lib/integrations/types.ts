@@ -89,13 +89,22 @@ export interface TokenSet {
 export interface DecryptedCredential {
   id: string;
   workspaceId: string;
-  provider: 'GOOGLE' | 'M365';
+  /** Mirrors the Prisma `IntegrationProvider` enum. The push-subscription
+   *  surface of `IntegrationProvider` (createSubscription/etc.) only ships
+   *  for GOOGLE + M365; DOCUSIGN/QUICKBOOKS/SLACK are served by their own
+   *  self-contained MCP servers that resolve + refresh credentials directly
+   *  (see `lib/integrations/<vendor>-mcp/auth.ts`), so they never flow
+   *  through `getProvider()`. This is the runtime credential view only. */
+  provider: 'GOOGLE' | 'M365' | 'DOCUSIGN' | 'QUICKBOOKS' | 'SLACK';
   accountId: string;
   accountEmail: string;
   accessToken: string;
   refreshToken: string | null;
   scopes: string[];
   expiresAt: Date;
+  /** Non-secret per-account routing data — see the Prisma column comment.
+   *  NULL for providers that need none. */
+  providerMetadata: Record<string, unknown> | null;
 }
 
 /**

@@ -63,7 +63,11 @@ export async function processUnprocessedWebhookEvents(
   limit: number = 25,
 ): Promise<ProcessWebhookEventResult> {
   const events = await prisma.webhookEvent.findMany({
-    where: { processed: false },
+    // This processor runs the EMAIL skill chain (read → categorize → draft),
+    // so it only consumes Gmail/Outlook push events. Other providers
+    // (DocuSign Connect, etc.) land WebhookEvent rows for audit/replay but
+    // are drained by their own consumers, not this one.
+    where: { processed: false, subscription: { provider: { in: ['GOOGLE', 'M365'] } } },
     orderBy: { receivedAt: 'asc' },
     take: limit,
     include: {
@@ -89,6 +93,16 @@ export async function processUnprocessedWebhookEvents(
       result.failures.push({
         webhookEventId: event.id,
         reason: `credential or workspace unavailable (status=${credential?.status})`,
+      });
+      continue;
+    }
+    // Type-narrow + defend: the query already filters to email providers, so
+    // this guard is unreachable in practice — it keeps the call site sound if
+    // the query filter ever drifts.
+    if (credential.provider !== 'GOOGLE' && credential.provider !== 'M365') {
+      result.failures.push({
+        webhookEventId: event.id,
+        reason: `non-email provider ${credential.provider} is not handled by the email skill chain`,
       });
       continue;
     }

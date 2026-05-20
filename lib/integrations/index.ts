@@ -171,6 +171,12 @@ export function decryptCredential(row: IntegrationCredential): DecryptedCredenti
       row.refreshTokenEncrypted !== null ? decrypt(row.refreshTokenEncrypted) : null,
     scopes: row.scopes,
     expiresAt: row.expiresAt,
+    providerMetadata:
+      row.providerMetadata !== null &&
+      typeof row.providerMetadata === 'object' &&
+      !Array.isArray(row.providerMetadata)
+        ? (row.providerMetadata as Record<string, unknown>)
+        : null,
   };
 }
 

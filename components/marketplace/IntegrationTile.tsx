@@ -134,6 +134,8 @@ function IntegrationIcon({ id }: { id: string }) {
       return <CrmIcon className={cls} />;
     case "docusign":
       return <SignatureIcon className={cls} />;
+    case "google-drive":
+      return <DriveIcon className={cls} />;
     case "slack":
       return <ChatIcon className={cls} />;
     case "canva":
@@ -210,6 +212,16 @@ function PaletteIcon({ className }: { className: string }) {
       <circle cx="7.5" cy="10.5" r="1" fill="currentColor" />
       <circle cx="12" cy="7.5" r="1" fill="currentColor" />
       <circle cx="16.5" cy="10.5" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+function DriveIcon({ className }: { className: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M8 3h8l5 9-4 0-5-9Z" />
+      <path d="M8 3 3 12l4 7 4-7-3-9Z" />
+      <path d="M7 19h10l4-7H11l-4 7Z" />
     </svg>
   );
 }

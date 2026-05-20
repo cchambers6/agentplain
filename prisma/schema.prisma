@@ -145,6 +145,11 @@ enum CapabilityProposalState {
 enum IntegrationProvider {
   GOOGLE
   M365
+  // Google Drive reuses the GOOGLE credential (same OAuth app, scopes
+  // merged via include_granted_scopes) — no enum value of its own.
+  DOCUSIGN
+  QUICKBOOKS
+  SLACK
 }
 
 // Credential lifecycle states. ACTIVE = tokens valid and refresh-eligible.
@@ -532,6 +537,12 @@ model IntegrationCredential {
   /// UTC instant of the most recent successful refresh. NULL until first
   /// refresh succeeds.
   lastRefreshedAt       DateTime?
+  /// Non-secret, per-account routing data a provider needs on every call but
+  /// that isn't a token: DocuSign REST base_uri + API account id, QuickBooks
+  /// realmId + environment, Slack team id/name. NULL for providers that need
+  /// none (Gmail, Outlook, Google Drive). Never store secrets here — tokens
+  /// live encrypted in accessTokenEncrypted/refreshTokenEncrypted.
+  providerMetadata      Json?
   status                IntegrationCredentialStatus @default(ACTIVE)
   createdAt             DateTime                    @default(now())
   updatedAt             DateTime                    @updatedAt

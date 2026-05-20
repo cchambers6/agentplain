@@ -129,6 +129,10 @@ export async function GET(req: NextRequest, ctx: RouteContext): Promise<NextResp
       googleClientSecret: env.googleOAuthClientSecret(),
       microsoftClientId: env.microsoftOAuthClientId(),
       microsoftAuthority: env.microsoftOAuthAuthority(),
+      docusignClientId: env.docusignOAuthClientId(),
+      docusignBaseUri: env.docusignOAuthBaseUri(),
+      quickbooksClientId: env.quickbooksOAuthClientId(),
+      slackClientId: env.slackOAuthClientId(),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

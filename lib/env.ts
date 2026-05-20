@@ -125,6 +125,44 @@ export const env = {
   microsoftWebhookClientState: () => optional("MICROSOFT_WEBHOOK_CLIENT_STATE"),
   encryptionKey: () => required("ENCRYPTION_KEY"),
 
+  // ── DocuSign (eSignature) OAuth — authorization-code grant ──────────────
+  // Setup steps live in docs/integrations-setup-docusign-qbo-drive-slack.md.
+  // The "client id" is DocuSign's Integration Key; the secret is a generated
+  // Secret Key on that integration. `DOCUSIGN_OAUTH_BASE_URI` selects the
+  // auth server: https://account-d.docusign.com (demo/sandbox, the default)
+  // or https://account.docusign.com (production). The per-account REST base
+  // URI is NOT an env var — it's discovered at connect time via /oauth/userinfo
+  // and stored on the credential's accountId payload. Per
+  // feedback_no_prod_secrets_in_dev: dev .env.local points at the demo tier.
+  docusignOAuthClientId: () => optional("DOCUSIGN_OAUTH_CLIENT_ID"),
+  docusignOAuthClientSecret: () => optional("DOCUSIGN_OAUTH_CLIENT_SECRET"),
+  docusignOAuthBaseUri: () =>
+    optional("DOCUSIGN_OAUTH_BASE_URI") ?? "https://account-d.docusign.com",
+  // Shared secret on the DocuSign Connect webhook (HMAC key configured in the
+  // DocuSign admin Connect settings). Every inbound Connect POST is verified
+  // against this before we write a WebhookEvent row.
+  docusignConnectHmacKey: () => optional("DOCUSIGN_CONNECT_HMAC_KEY"),
+
+  // ── QuickBooks Online (Intuit) OAuth — authorization-code grant ─────────
+  // The "client id"/secret are the Intuit app's keys. `QUICKBOOKS_ENVIRONMENT`
+  // selects the API base: `sandbox` (sandbox-quickbooks.api.intuit.com, the
+  // default) vs `production` (quickbooks.api.intuit.com). The company file is
+  // identified by a realmId returned on the OAuth callback, NOT an env var —
+  // it's persisted on the credential. Intuit rotates refresh tokens on every
+  // refresh; the auth resolver always persists the returned refresh token.
+  quickbooksOAuthClientId: () => optional("QUICKBOOKS_OAUTH_CLIENT_ID"),
+  quickbooksOAuthClientSecret: () => optional("QUICKBOOKS_OAUTH_CLIENT_SECRET"),
+  quickbooksEnvironment: () =>
+    oneOf("QUICKBOOKS_ENVIRONMENT", ["sandbox", "production"] as const, "sandbox"),
+
+  // ── Slack OAuth (v2) ────────────────────────────────────────────────────
+  // We request USER-token scopes (user_scope) so search works (Slack's search
+  // API is user-token-only) and any post acts as the customer. Slack user
+  // tokens do not expire unless token rotation is enabled on the app, so the
+  // credential is stored with a far-future expiry and no refresh token.
+  slackOAuthClientId: () => optional("SLACK_OAUTH_CLIENT_ID"),
+  slackOAuthClientSecret: () => optional("SLACK_OAUTH_CLIENT_SECRET"),
+
   // Custom-inquiry destination. Submissions from `/custom`'s contact form
   // are emailed to this address. Defaults to the public hello@ inbox so
   // dev/preview submissions don't silently disappear when the var is unset.

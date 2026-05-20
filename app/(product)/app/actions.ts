@@ -106,8 +106,12 @@ export async function requestSignInAction(
   form: FormData,
 ): Promise<ActionResult> {
   const email = formString(form, "email");
+  // Checkbox `name="remember"` is present in the form data only when checked,
+  // matching standard HTML <input type="checkbox"> semantics. The default in
+  // the SignInForm is checked, so omitting it = user unchecked = session cookie.
+  const remember = form.get("remember") != null;
   try {
-    await requestMagicLink({ email, purpose: "sign_in" });
+    await requestMagicLink({ email, purpose: "sign_in", remember });
   } catch (err) {
     return { ok: false, error: errorMessage(err) };
   }

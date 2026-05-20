@@ -31,6 +31,16 @@ export function SignInForm() {
         error={state.error ?? undefined}
         helper="We email you a sign-in link. Good for 15 minutes."
       />
+      <label className="flex items-start gap-2 text-[13px] leading-relaxed text-ink-soft">
+        <input
+          type="checkbox"
+          name="remember"
+          value="1"
+          defaultChecked
+          className="mt-[3px]"
+        />
+        <span>Keep me signed in for 30 days on this device.</span>
+      </label>
       <Submit />
     </form>
   );

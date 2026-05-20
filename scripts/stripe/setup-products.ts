@@ -43,6 +43,12 @@ import {
 } from "../../lib/pricing/tiers";
 import { STRIPE_API_VERSION } from "../../lib/billing/stripe-provider";
 
+// First seat-band lookup_key per tier — used as the real-time-consistent
+// pointer back to the tier's Product when products.search hasn't yet
+// indexed a freshly-created Product (the source of the
+// duplicate-product bug fixed in fix/stripe-e2e-gaps-2026-05-18).
+const FIRST_BAND = SEAT_BAND_ORDER[0];
+
 interface RunOptions {
   dryRun: boolean;
 }
@@ -67,7 +73,14 @@ async function main(): Promise<void> {
   for (const tier of TIER_ORDER) {
     const productLookup = tierProductLookupKey(tier);
     const productName = tierProductName(tier);
-    const existing = await findProductByMetadata(stripe, productLookup);
+    // Prefer the price→product pointer: `prices.list({lookup_keys})` uses
+    // the lookup_key index which is real-time consistent, so this reliably
+    // finds the existing Product even immediately after a previous run.
+    // Fall back to products.search (which has async index latency) only
+    // when no price exists yet for the tier (fresh account / partial run).
+    const existing =
+      (await findProductByExistingPrice(stripe, tier)) ??
+      (await findProductByMetadata(stripe, productLookup));
     if (existing) {
       const nameDrift = existing.name !== productName;
       console.log(
@@ -178,11 +191,40 @@ async function findProductByMetadata(
   // Stripe `products` doesn't expose lookup_keys directly, so we filter
   // by metadata via the search API. agentplain stamps a stable
   // `agentplain_lookup_key` so the script can reconcile.
+  //
+  // Caveat: products.search uses an external index that updates async —
+  // a Product created seconds ago may not yet be returned here. Callers
+  // should try findProductByExistingPrice first.
   const search = await stripe.products.search({
     query: `metadata['agentplain_lookup_key']:'${productLookupKey}' AND active:'true'`,
     limit: 1,
   });
   return search.data[0] ?? null;
+}
+
+async function findProductByExistingPrice(
+  stripe: Stripe,
+  tier: TierName,
+): Promise<Stripe.Product | null> {
+  // Use the (tier, first-band) Price's `product` pointer to find the
+  // tier's Product. prices.list filters via the real-time-consistent
+  // lookup_keys index, so this returns the canonical Product even
+  // immediately after creation.
+  const list = await stripe.prices.list({
+    lookup_keys: [lookupKeyFor(tier, FIRST_BAND)],
+    active: true,
+    limit: 1,
+    expand: ["data.product"],
+  });
+  const price = list.data[0];
+  if (!price) return null;
+  if (typeof price.product === "string") {
+    return stripe.products.retrieve(price.product);
+  }
+  if (price.product && !("deleted" in price.product)) {
+    return price.product as Stripe.Product;
+  }
+  return null;
 }
 
 async function findPriceByLookupKey(

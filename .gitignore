@@ -38,6 +38,9 @@ next-env.d.ts
 # claude worktrees
 .claude/worktrees/
 
+# local render harness for brand assets (downloaded fonts + build script)
+.render-fonts/
+
 # prisma generated
 /prisma/generated/
 

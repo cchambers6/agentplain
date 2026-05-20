@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 140" role="img" aria-label="agentplain mark — robot planted with wheat" style="color:#F7F4ED">
+  <g transform="translate(8 -2)" fill="none" stroke="currentColor"
+     stroke-linecap="round" stroke-linejoin="round">
+    <!-- shared ground line: planted together -->
+    <path d="M16 120 H120" stroke-width="1.6" opacity="0.4"/>
+
+    <!-- ROBOT (left) -->
+    <!-- antennae -->
+    <path d="M34 50 V44" stroke-width="2.2"/>
+    <path d="M46 50 V44" stroke-width="2.2"/>
+    <circle cx="34" cy="42.4" r="1.9" fill="currentColor" stroke="none"/>
+    <circle cx="46" cy="42.4" r="1.9" fill="currentColor" stroke="none"/>
+    <!-- head -->
+    <rect x="23" y="49" width="34" height="28" rx="7.5" stroke-width="2.4"/>
+    <!-- eyes -->
+    <circle cx="34" cy="61" r="2.4" fill="currentColor" stroke="none"/>
+    <circle cx="46" cy="61" r="2.4" fill="currentColor" stroke="none"/>
+    <!-- smile -->
+    <path d="M34.5 67.5 Q40 71.5 45.5 67.5" stroke-width="2.2"/>
+    <!-- neck -->
+    <path d="M36.5 77 V80" stroke-width="2.2"/>
+    <path d="M43.5 77 V80" stroke-width="2.2"/>
+    <!-- body -->
+    <rect x="26" y="80" width="28" height="29" rx="5.5" stroke-width="2.4"/>
+    <!-- chest detail (small button) -->
+    <circle cx="40" cy="90.5" r="2" stroke-width="1.8"/>
+    <path d="M33 98 H47" stroke-width="1.8" opacity="0.85"/>
+    <!-- arms -->
+    <path d="M26 87 C21 88 18.5 92 19 97" stroke-width="2.2"/>
+    <path d="M54 87 C59 88 61.5 92 61 97" stroke-width="2.2"/>
+    <!-- legs -->
+    <path d="M35 109 V120" stroke-width="2.2"/>
+    <path d="M45 109 V120" stroke-width="2.2"/>
+    <!-- little feet -->
+    <path d="M31 120 H37" stroke-width="2.2"/>
+    <path d="M43 120 H49" stroke-width="2.2"/>
+
+    <!-- WHEAT (right) — two stalks, taller than the robot -->
+    <!-- stalk 1 -->
+    <path d="M80 120 C79 100 78 82 78 30" stroke-width="2.3"/>
+    <g stroke-width="1.7">
+      <path d="M78 31 L74.6 26.5"/><path d="M78 31 L81.4 26.5"/>
+      <path d="M78 37 L74 32.5"/><path d="M78 37 L82 32.5"/>
+      <path d="M78 43 L74 38.5"/><path d="M78 43 L82 38.5"/>
+      <path d="M78 49 L74.3 44.5"/><path d="M78 49 L81.7 44.5"/>
+      <path d="M78 55 L74.6 50.5"/><path d="M78 55 L81.4 50.5"/>
+      <path d="M78 61 L75 56.5"/><path d="M78 61 L81 56.5"/>
+    </g>
+    <!-- stalk 2 (taller) -->
+    <path d="M95 120 C96 100 97 80 97 25" stroke-width="2.3"/>
+    <g stroke-width="1.7">
+      <path d="M97 26 L93.6 21.5"/><path d="M97 26 L100.4 21.5"/>
+      <path d="M97 32 L93 27.5"/><path d="M97 32 L101 27.5"/>
+      <path d="M97 38 L93 33.5"/><path d="M97 38 L101 33.5"/>
+      <path d="M97 44 L93.3 39.5"/><path d="M97 44 L100.7 39.5"/>
+      <path d="M97 50 L93.6 45.5"/><path d="M97 50 L100.4 45.5"/>
+      <path d="M97 56 L94 51.5"/><path d="M97 56 L100 51.5"/>
+      <path d="M97 62 L94.3 57.5"/><path d="M97 62 L99.7 57.5"/>
+    </g>
+  </g>
+</svg>

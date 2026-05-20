@@ -21,6 +21,8 @@
     "@notionhq/client": "^5.20.0",
     "@prisma/client": "^6.19.3",
     "@sentry/nextjs": "^10.53.1",
+    "@simplewebauthn/browser": "^13.3.0",
+    "@simplewebauthn/server": "^13.3.0",
     "google-auth-library": "^9.15.1",
     "googleapis": "^144.0.0",
     "inngest": "^4.2.6",

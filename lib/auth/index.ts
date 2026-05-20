@@ -70,3 +70,13 @@ export {
   type MembershipAssertion,
 } from "./server";
 export { withWorkspace, type WorkspaceContext } from "./with-workspace";
+export {
+  listPasskeys,
+  buildRegistrationOptions,
+  verifyAndPersistRegistration,
+  verifyAuthentication,
+  removePasskey,
+  type PasskeySummary,
+  type PasskeyAuthResolution,
+} from "./passkey";
+export { getWebAuthnProvider, getWebAuthnConfig } from "./webauthn";

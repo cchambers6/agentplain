@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ApEyebrow, ApMotif } from "@/components/ui/ap";
+import { PasskeySignInButton } from "./PasskeySignInButton";
 import { SignInForm } from "./SignInForm";
 
 type Reason = "missing" | "invalid" | "expired" | "used";
@@ -34,7 +35,8 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           Step back into your workspace.
         </h1>
         <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-ink-soft">
-          Drop your email. We send a single-use link — no password to lose.
+          Use a passkey if you&rsquo;ve set one up, or drop your email for a
+          single-use link — no password to lose.
         </p>
         {flash ? (
           <p
@@ -44,7 +46,8 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             {flash}
           </p>
         ) : null}
-        <div className="mt-8">
+        <div className="mt-8 space-y-6">
+          <PasskeySignInButton />
           <SignInForm />
         </div>
         <p className="mt-10 border-t border-rule pt-6 text-sm text-mute">

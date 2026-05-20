@@ -219,6 +219,17 @@ enum ContextKind {
   COMPLIANCE
 }
 
+// Customer support routing lifecycle (scaffold — feat/support-routing,
+// 2026-05-20). NEW = freshly submitted, untouched. OPEN = operator has
+// acknowledged / is working it. RESOLVED = closed out. Real ticketing
+// (Intercom/Zendesk-grade) is a later phase; this is the first home for a
+// customer's question so it doesn't vanish into a personal inbox.
+enum SupportRequestStatus {
+  NEW
+  OPEN
+  RESOLVED
+}
+
 model User {
   id                   String                  @id @default(uuid()) @db.Uuid
   email                String                  @unique @db.Citext
@@ -233,6 +244,8 @@ model User {
   auditEntriesActAs    AuditLog[]              @relation("AuditActingAs")
   magicLinkTokens      MagicLinkToken[]
   triagedInquiries     Inquiry[]               @relation("InquiryTriagedBy")
+  passkeys             WebAuthnCredential[]
+  supportRequests      SupportRequest[]        @relation("SupportRequestFrom")
 
   @@index([email])
 }
@@ -272,6 +285,7 @@ model Workspace {
   webhookSubscriptions   WebhookSubscription[]
   knowledgeDocuments     KnowledgeDocument[]
   embeddings             Embedding[]
+  supportRequests        SupportRequest[]
 
   @@index([slug])
   @@index([vertical])
@@ -759,4 +773,81 @@ model MagicLinkToken {
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
+}
+
+// WebAuthn / passkey credential. An ADDITIONAL sign-in option alongside the
+// magic link (feat/passkey-auth, 2026-05-20) — magic link stays the fallback.
+//
+// Scoped to User, NOT Membership: authentication is a user-level act that
+// resolves the default workspace afterward (exactly like verifyMagicLink),
+// so a passkey must work regardless of which workspace the user lands in and
+// must survive a single membership being deactivated. This mirrors
+// MagicLinkToken.userId. (The task brief said "workspaceMemberId FK"; the
+// codebase's auth model is unambiguously user-level, so the credential binds
+// to the person, not a workspace seat.)
+//
+// publicKey + credentialId are NOT secrets (the public key is public by
+// design, the credential id is an opaque handle), so unlike OAuth tokens
+// they are stored in the clear — no lib/security/encryption pass. Replay
+// protection comes from `counter`: every assertion must report a counter
+// strictly greater than the stored value (when the authenticator uses a
+// signature counter at all). Stored as BigInt because the spec permits a
+// full uint32 which overflows Postgres INT.
+model WebAuthnCredential {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @db.Uuid
+  /// Base64URL credential id as returned by the authenticator. Unique across
+  /// the whole table — the authenticate flow looks a credential up by this
+  /// value alone (discoverable credentials carry no email).
+  credentialId String   @unique
+  /// Base64URL-encoded COSE public key (from verifyRegistrationResponse).
+  publicKey    String
+  /// Signature counter; replay-protection watermark. BigInt per spec uint32.
+  counter      BigInt   @default(0)
+  /// Authenticator transports hint (e.g. ["internal","hybrid"]). Stored so
+  /// re-auth can pass allowCredentials transports for a faster prompt.
+  transports   String[] @default([])
+  /// Customer-facing label ("MacBook Touch ID", "YubiKey"). Best-effort; the
+  /// user can rename later. Defaults to a generic label at registration.
+  label        String?
+  /// Device-type + backup hints from registration — surfaced in the settings
+  /// list so the user can tell a synced passkey from a single-device one.
+  deviceType   String?
+  backedUp     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime?
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Customer support request (scaffold — feat/support-routing, 2026-05-20).
+// First home for a customer's question so it lands in a durable, triageable
+// place instead of disappearing into a personal inbox. Mirrors the Inquiry
+// no-outbound posture (project_no_outbound_architecture): persist the row,
+// fire ONE notification email to the support address, render a synchronous
+// ack. No drip, no auto-reply.
+//
+// Framed as "message your service partner," not a helpdesk ticket
+// (project_service_partnership_positioning). Workspace-scoped: the customer
+// submits under their own workspace RLS context; operators read all rows.
+model SupportRequest {
+  id             String               @id @default(uuid()) @db.Uuid
+  workspaceId    String               @db.Uuid
+  /// The member (User) who sent the message. SetNull on user delete so the
+  /// request survives for the operator even if the account is removed.
+  fromUserId     String?              @db.Uuid
+  subject        String
+  body           String
+  status         SupportRequestStatus @default(NEW)
+  /// Resend / test-provider message id from the notification email. Null when
+  /// the send failed; the row is still persisted so nothing is lost.
+  emailMessageId String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  workspace      Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  fromUser       User?                @relation("SupportRequestFrom", fields: [fromUserId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([status, createdAt])
 }

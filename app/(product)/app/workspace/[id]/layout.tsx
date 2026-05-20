@@ -18,6 +18,7 @@ const NAV: Array<{ href: string; label: string }> = [
   { href: "/briefings", label: "Briefings" },
   { href: "/integrations", label: "Integrations" },
   { href: "/settings", label: "Settings" },
+  { href: "/help", label: "Help" },
 ];
 
 export default async function WorkspaceLayout({

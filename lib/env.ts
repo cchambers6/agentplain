@@ -55,6 +55,17 @@ export const env = {
   sessionPassword: () => required("SESSION_PASSWORD"),
   sessionCookieName: () => optional("SESSION_COOKIE_NAME") ?? "agentplain_session",
 
+  // WebAuthn / passkeys (feat/passkey-auth). The Relying Party ID is the
+  // registrable domain the browser binds the credential to — NO scheme, NO
+  // port (e.g. "agentplain.com" or "localhost"). When RP_ID is unset we derive
+  // it from APP_PUBLIC_ORIGIN's hostname, which is correct for both localhost
+  // dev and the apex production host. Override RP_ID only when the served
+  // origin's host differs from the registrable domain you want credentials
+  // scoped to (e.g. serving from www. but wanting apex-scoped passkeys).
+  // RP_NAME is the user-visible name shown in the OS passkey prompt.
+  webauthnRpId: () => optional("RP_ID"),
+  webauthnRpName: () => optional("RP_NAME") ?? "agentplain",
+
   // DB
   databaseUrl: () => required("DATABASE_URL"),
   databasePoolUrl: () => optional("DATABASE_POOL_URL") ?? required("DATABASE_URL"),
@@ -168,6 +179,12 @@ export const env = {
   // dev/preview submissions don't silently disappear when the var is unset.
   customInquiryTo: () =>
     optional("CUSTOM_INQUIRY_TO") ?? "hello@agentplain.com",
+
+  // Customer-support destination (feat/support-routing). In-app support
+  // messages are emailed here so a customer's first question lands in a
+  // shared inbox, not a personal Gmail. Defaults to the public hello@ inbox
+  // when unset so dev/preview submissions still arrive somewhere.
+  supportEmail: () => optional("SUPPORT_EMAIL") ?? "hello@agentplain.com",
 
   // Knowledge substrate (project_knowledge_substrate.md).
   // OPENAI_API_KEY enables the OpenAI embedding provider; when absent the

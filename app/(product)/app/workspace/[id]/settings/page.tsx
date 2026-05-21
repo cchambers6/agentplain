@@ -68,6 +68,11 @@ export default async function SettingsPage({ params }: PageProps) {
       description: "Plan, seats, invoices, payment method.",
     },
     {
+      href: `/app/workspace/${workspaceId}/settings/passkeys`,
+      label: "sign-in & security",
+      description: "Add a passkey for faster sign-in. Email links still work.",
+    },
+    {
       href: `/app/workspace/${workspaceId}/activity`,
       label: "activity",
       description: "Every handoff your fleet has executed.",

@@ -34,14 +34,18 @@ import {
 const WORKSPACE_ID = "11111111-2222-3333-4444-555555555555";
 
 describe("marketplace catalog", () => {
-  it("lists the available connectors plus the remaining Coming Soon ones", () => {
+  it("lists every available connector plus the remaining Coming Soon ones", () => {
     const entries = listIntegrations();
     const ids = entries.map((e) => e.id);
-    // gmail, outlook, quickbooks, docusign, google-drive, slack are available;
-    // hubspot, paypal, canva remain coming-soon.
+    // gmail, outlook, teams, onedrive, excel, quickbooks, docusign,
+    // google-drive, slack are available; hubspot, paypal, canva remain
+    // coming-soon.
     assert.deepEqual(ids, [
       "gmail",
       "outlook",
+      "teams",
+      "onedrive",
+      "excel",
       "quickbooks",
       "hubspot",
       "docusign",
@@ -50,18 +54,30 @@ describe("marketplace catalog", () => {
       "paypal",
       "canva",
     ]);
-    assert.equal(entries.length, 9, "marketplace surface size is the architectural contract");
+    assert.equal(entries.length, 12, "marketplace surface size is the architectural contract");
   });
 
-  it("Gmail + Outlook are available with the right provider keys", () => {
+  it("Gmail + the M365 integrations are available with the right provider keys", () => {
     const gmail = getMarketplaceEntry("gmail");
     const outlook = getMarketplaceEntry("outlook");
+    const teams = getMarketplaceEntry("teams");
+    const onedrive = getMarketplaceEntry("onedrive");
+    const excel = getMarketplaceEntry("excel");
     assert.ok(gmail, "gmail entry exists");
     assert.ok(outlook, "outlook entry exists");
+    assert.ok(teams, "teams entry exists");
+    assert.ok(onedrive, "onedrive entry exists");
+    assert.ok(excel, "excel entry exists");
     assert.equal(gmail.status, "available");
     assert.equal(outlook.status, "available");
+    assert.equal(teams.status, "available");
+    assert.equal(onedrive.status, "available");
+    assert.equal(excel.status, "available");
     assert.equal(gmail.providerKey, "GOOGLE");
     assert.equal(outlook.providerKey, "M365");
+    assert.equal(teams.providerKey, "M365");
+    assert.equal(onedrive.providerKey, "M365");
+    assert.equal(excel.providerKey, "M365");
   });
 
   it("Coming Soon entries surface the remaining connectors with null providerKey", () => {

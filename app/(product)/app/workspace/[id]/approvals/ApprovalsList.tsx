@@ -5,6 +5,7 @@ import {
   ApHeritageButton,
   ApPaperCard,
   ApPaperSheet,
+  PlainoAvatar,
 } from "@/components/ui/ap";
 import { decideApprovalAction, editApprovalDraftAction } from "./actions";
 import type { RenderedApproval } from "./renderApprovalPayload";
@@ -184,6 +185,11 @@ function ApprovalArticle({ row, workspaceId, onEdit }: ApprovalArticleProps) {
           {rendered.metaLine}
         </p>
       ) : null}
+
+      <p className="mt-4 flex items-center gap-2 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+        <PlainoAvatar size="xs" />
+        <span>drafted by Plaino</span>
+      </p>
 
       <footer className="mt-5 flex flex-wrap items-center gap-3 border-t border-rule pt-5">
         <form action={decideApprovalAction}>

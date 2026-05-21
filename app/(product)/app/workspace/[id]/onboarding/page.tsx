@@ -3,6 +3,7 @@ import {
   ApEyebrow,
   ApHeritageButton,
   ApPaperCard,
+  PlainoAvatar,
 } from "@/components/ui/ap";
 import { withWorkspace } from "@/lib/auth";
 import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
@@ -118,10 +119,13 @@ export default async function OnboardingPage({ params }: PageProps) {
     <div className="mx-auto max-w-5xl">
       <header className="mb-10">
         <ApEyebrow>onboarding · welcome</ApEyebrow>
-        <h1 className="mt-3 font-display text-3xl leading-tight text-ink md:text-4xl">
-          Hi {ownerFirstName}. I&rsquo;m {partner}, your service partner
-          at agentplain. Let me get you set up.
-        </h1>
+        <div className="mt-3 flex items-start gap-4">
+          <PlainoAvatar size="lg" />
+          <h1 className="font-display text-3xl leading-tight text-ink md:text-4xl">
+            Hi {ownerFirstName}. I&rsquo;m {partner}, your service partner
+            at agentplain. Let me get you set up.
+          </h1>
+        </div>
         <p className="mt-4 max-w-prose text-[15px] leading-relaxed text-ink-soft">
           Three quick steps — confirm a few details, tell me which tools
           to read from, set your drafting tone. I take it from there.

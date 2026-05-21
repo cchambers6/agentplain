@@ -28,7 +28,7 @@ const renderHtml = (req: MagicLinkDeliveryRequest): string => {
   <p>${cta} by clicking the link below. This link expires in 15 minutes and can only be used once.</p>
   <p><a href="${req.verifyUrl}" style="display:inline-block; padding:12px 20px; background:#1A1A1F; color:#F7F4ED; text-decoration:none; font-weight:500;">${cta}</a></p>
   <p style="font-size:13px; color:#8C8478;">If you didn't request this, ignore the email — nothing happens unless you click.</p>
-  <p style="font-size:13px; color:#8C8478;">— agentplain</p>
+  <p style="font-size:13px; color:#8C8478;">Plaino, your service partner at agentplain</p>
 </body></html>`;
 };
 
@@ -39,7 +39,7 @@ const renderText = (req: MagicLinkDeliveryRequest): string => {
       : req.purpose === "invite_accept"
         ? "Accept your invitation"
         : "Sign in to agentplain";
-  return `${cta}: ${req.verifyUrl}\n\nThis link expires in 15 minutes and can only be used once.\nIf you didn't request this, ignore the email.\n\n— agentplain`;
+  return `${cta}: ${req.verifyUrl}\n\nThis link expires in 15 minutes and can only be used once.\nIf you didn't request this, ignore the email.\n\nPlaino, your service partner at agentplain`;
 };
 
 type ResendEmails = Pick<InstanceType<typeof Resend>["emails"], "send">;

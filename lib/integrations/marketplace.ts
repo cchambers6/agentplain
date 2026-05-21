@@ -42,7 +42,16 @@ export interface MarketplaceEntry {
   /** Display name in the operator UI. */
   name: string;
   /** Category label rendered above the tile name. */
-  category: 'Email' | 'Calendar' | 'CRM' | 'Accounting' | 'Documents' | 'Messaging' | 'Payments' | 'Creative';
+  category:
+    | 'Email'
+    | 'Calendar'
+    | 'CRM'
+    | 'Accounting'
+    | 'Documents'
+    | 'Messaging'
+    | 'Payments'
+    | 'Creative'
+    | 'Spreadsheets';
   /** One-sentence customer-facing description. */
   description: string;
   /** Endpoint template with `{workspaceId}` placeholder. The operator UI
@@ -84,6 +93,69 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     // request `Mail.Send` (Outlook equivalent of `gmail.send`) per the
     // no-outbound rule. `offline_access` is required for refresh tokens.
     scopes: ['Mail.Read', 'Mail.ReadWrite', 'offline_access'],
+    oauthConfigKey: 'MICROSOFT_OAUTH',
+    status: 'available',
+    providerKey: 'M365',
+  },
+  {
+    id: 'teams',
+    name: 'Microsoft Teams',
+    category: 'Messaging',
+    description:
+      'Your service partner reads the chats and channels you point us at, surfaces what needs your attention, and writes back into the threads you already work in.',
+    mcpEndpointTemplate: '/api/integrations/teams-mcp/{workspaceId}',
+    // Chat.ReadWrite covers list/get/post on 1:1 + group chats.
+    // ChannelMessage.Send + ChannelMessage.Read.All cover team channels.
+    // OnlineMeetings.ReadWrite lists meetings; OnlineMeetingTranscript.Read.All
+    // reads transcripts (gated by tenant policy at consent time). Shares the
+    // Outlook OAuth app — same client id / secret in Vercel env.
+    scopes: [
+      'Chat.ReadWrite',
+      'ChannelMessage.Send',
+      'ChannelMessage.Read.All',
+      'OnlineMeetings.ReadWrite',
+      'OnlineMeetingTranscript.Read.All',
+      'offline_access',
+    ],
+    oauthConfigKey: 'MICROSOFT_OAUTH',
+    status: 'available',
+    providerKey: 'M365',
+  },
+  {
+    id: 'onedrive',
+    name: 'OneDrive & SharePoint',
+    category: 'Documents',
+    description:
+      'Your service partner reads the closing docs, contracts, and working files in your OneDrive and SharePoint libraries — then drops the next version back where you keep them.',
+    mcpEndpointTemplate: '/api/integrations/onedrive-mcp/{workspaceId}',
+    // Files.ReadWrite.All covers the user's personal OneDrive plus any
+    // SharePoint files they have access to via membership. Sites.ReadWrite.All
+    // is needed for SharePoint site-level operations (library listing,
+    // metadata reads) that ride alongside the file API. Shares the
+    // Outlook OAuth app.
+    scopes: [
+      'Files.ReadWrite.All',
+      'Sites.ReadWrite.All',
+      'offline_access',
+    ],
+    oauthConfigKey: 'MICROSOFT_OAUTH',
+    status: 'available',
+    providerKey: 'M365',
+  },
+  {
+    id: 'excel',
+    name: 'Excel',
+    category: 'Spreadsheets',
+    description:
+      'Your service partner reads the workbooks you keep your books, pipelines, and pricing in — writes new rows when the work is done, never overwrites the cells you maintain by hand.',
+    mcpEndpointTemplate: '/api/integrations/excel-mcp/{workspaceId}',
+    // Excel-via-Graph is file-typed; the same Files.ReadWrite.All scope
+    // OneDrive uses unlocks workbook reads + writes. Shares the OneDrive
+    // consent — connecting one connects the file surface for both.
+    scopes: [
+      'Files.ReadWrite.All',
+      'offline_access',
+    ],
     oauthConfigKey: 'MICROSOFT_OAUTH',
     status: 'available',
     providerKey: 'M365',

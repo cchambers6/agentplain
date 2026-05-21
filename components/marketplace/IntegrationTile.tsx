@@ -137,9 +137,14 @@ function IntegrationIcon({ id }: { id: string }) {
     case "google-drive":
       return <DriveIcon className={cls} />;
     case "slack":
+    case "teams":
       return <ChatIcon className={cls} />;
     case "canva":
       return <PaletteIcon className={cls} />;
+    case "onedrive":
+      return <FolderIcon className={cls} />;
+    case "excel":
+      return <SpreadsheetIcon className={cls} />;
     default:
       return <PlugIcon className={cls} />;
   }
@@ -232,6 +237,23 @@ function PlugIcon({ className }: { className: string }) {
       <path d="M9 7V3M15 7V3" />
       <rect x="6" y="7" width="12" height="6" rx="1" />
       <path d="M12 13v4a4 4 0 0 1-4 4" />
+    </svg>
+  );
+}
+
+function FolderIcon({ className }: { className: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
+    </svg>
+  );
+}
+
+function SpreadsheetIcon({ className }: { className: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <rect x="3" y="4" width="18" height="16" rx="1" />
+      <path d="M3 10h18M3 16h18M9 4v16M15 4v16" />
     </svg>
   );
 }

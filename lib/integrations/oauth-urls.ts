@@ -141,6 +141,33 @@ export function buildAuthorizeUrl(args: BuildAuthorizeUrlArgs): string {
       state: args.state,
     });
   }
+  // Post-Outlook M365 integrations (Teams, OneDrive, Excel) share ONE
+  // OAuth app and one shared callback at /api/integrations/microsoft/oauth/callback.
+  // Conner adds that callback as an additional redirect URI on the same
+  // Entra app registration; per-integration scope sets come from the
+  // marketplace catalog and ride on `args.scopes` here.
+  if (
+    args.integrationId === "teams" ||
+    args.integrationId === "onedrive" ||
+    args.integrationId === "excel"
+  ) {
+    if (!args.microsoftClientId) {
+      throw new Error(
+        "Microsoft OAuth not configured. Set MICROSOFT_OAUTH_CLIENT_ID and MICROSOFT_OAUTH_CLIENT_SECRET.",
+      );
+    }
+    const redirectUri = new URL(
+      "/api/integrations/microsoft/oauth/callback",
+      args.origin,
+    ).toString();
+    return buildMicrosoftAuthorizeUrl({
+      authority: args.microsoftAuthority,
+      clientId: args.microsoftClientId,
+      redirectUri,
+      scopes: args.scopes,
+      state: args.state,
+    });
+  }
   throw new Error(`OAuth start not implemented for integration: ${args.integrationId}`);
 }
 

@@ -68,6 +68,7 @@ describe('TestIntegrationProvider — basic contract', () => {
         refreshToken: 'r',
         scopes: [],
         expiresAt: new Date(now + 3600_000),
+        providerMetadata: null,
       },
       notificationUrl: 'https://example.com/webhook',
     });
@@ -90,6 +91,7 @@ describe('TestIntegrationProvider — basic contract', () => {
       refreshToken: 'r',
       scopes: [],
       expiresAt: new Date(),
+      providerMetadata: null,
     };
     const res = await p.renewSubscription({
       credential,

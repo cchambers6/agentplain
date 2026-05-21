@@ -28,7 +28,13 @@ export type MarketplaceStatus = 'available' | 'coming-soon' | 'beta';
  * whose status is `available`. `null` for `coming-soon` entries that
  * have no DB rows yet.
  */
-export type MarketplaceProviderKey = 'GOOGLE' | 'M365' | null;
+export type MarketplaceProviderKey =
+  | 'GOOGLE'
+  | 'M365'
+  | 'DOCUSIGN'
+  | 'QUICKBOOKS'
+  | 'SLACK'
+  | null;
 
 export interface MarketplaceEntry {
   /** Slug used in the MCP endpoint path. */
@@ -91,12 +97,12 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     name: 'QuickBooks',
     category: 'Accounting',
     description:
-      'Have your service partner reconcile invoices and surface the books your bookkeeper actually needs.',
+      'We keep your invoices straight, chase the ones that are overdue, and pull the books your bookkeeper actually needs.',
     mcpEndpointTemplate: '/api/integrations/quickbooks-mcp/{workspaceId}',
     scopes: ['com.intuit.quickbooks.accounting'],
     oauthConfigKey: 'QUICKBOOKS_OAUTH',
-    status: 'coming-soon',
-    providerKey: null,
+    status: 'available',
+    providerKey: 'QUICKBOOKS',
   },
   {
     id: 'hubspot',
@@ -115,24 +121,56 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     name: 'DocuSign',
     category: 'Documents',
     description:
-      'Your service partner prepares envelopes, tracks signatures, and flags the docs that need follow-up.',
+      'We prepare your envelopes, send agreements out for signature, and flag the ones still waiting on a signer.',
     mcpEndpointTemplate: '/api/integrations/docusign-mcp/{workspaceId}',
     scopes: ['signature', 'extended'],
     oauthConfigKey: 'DOCUSIGN_OAUTH',
-    status: 'coming-soon',
-    providerKey: null,
+    status: 'available',
+    providerKey: 'DOCUSIGN',
+  },
+  {
+    id: 'google-drive',
+    name: 'Google Drive',
+    category: 'Documents',
+    description:
+      'We find your files, pull what we need, and file new documents where they belong. Sharing always waits for your go-ahead.',
+    mcpEndpointTemplate: '/api/integrations/google-drive-mcp/{workspaceId}',
+    // Drive reuses the Gmail Google OAuth app. These Drive scopes merge with
+    // any already-granted Gmail scopes via include_granted_scopes, so one
+    // Google account can power both connectors. `drive.file` covers files we
+    // create/open; `drive.readonly` covers reading the customer's wider Drive.
+    scopes: [
+      'https://www.googleapis.com/auth/drive.file',
+      'https://www.googleapis.com/auth/drive.readonly',
+    ],
+    oauthConfigKey: 'GOOGLE_OAUTH',
+    status: 'available',
+    providerKey: 'GOOGLE',
   },
   {
     id: 'slack',
     name: 'Slack',
     category: 'Messaging',
     description:
-      'Your service partner reads the channels you point them at and surfaces what matters — never posts on your behalf.',
+      'We read the channels you point us at and surface what matters. Anything we post waits for your say-so.',
     mcpEndpointTemplate: '/api/integrations/slack-mcp/{workspaceId}',
-    scopes: ['channels:history', 'channels:read', 'users:read'],
+    // Slack user-token scopes. We request a user token (not a bot token) so
+    // search works (Slack's search API is user-token-only) and any post acts
+    // as the customer, per the no-outbound model. Posting still routes through
+    // the approval queue — never auto-fired.
+    scopes: [
+      'channels:read',
+      'channels:history',
+      'groups:read',
+      'groups:history',
+      'chat:write',
+      'im:write',
+      'users:read',
+      'search:read',
+    ],
     oauthConfigKey: 'SLACK_OAUTH',
-    status: 'coming-soon',
-    providerKey: null,
+    status: 'available',
+    providerKey: 'SLACK',
   },
   {
     id: 'paypal',

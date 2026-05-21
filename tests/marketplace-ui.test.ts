@@ -34,21 +34,23 @@ import {
 const WORKSPACE_ID = "11111111-2222-3333-4444-555555555555";
 
 describe("marketplace catalog", () => {
-  it("lists Gmail, Outlook, and the six Coming Soon connectors", () => {
+  it("lists the available connectors plus the remaining Coming Soon ones", () => {
     const entries = listIntegrations();
     const ids = entries.map((e) => e.id);
-    // Gmail + Outlook are available, the other six are coming-soon.
+    // gmail, outlook, quickbooks, docusign, google-drive, slack are available;
+    // hubspot, paypal, canva remain coming-soon.
     assert.deepEqual(ids, [
       "gmail",
       "outlook",
       "quickbooks",
       "hubspot",
       "docusign",
+      "google-drive",
       "slack",
       "paypal",
       "canva",
     ]);
-    assert.equal(entries.length, 8, "marketplace surface size is the architectural contract");
+    assert.equal(entries.length, 9, "marketplace surface size is the architectural contract");
   });
 
   it("Gmail + Outlook are available with the right provider keys", () => {
@@ -62,11 +64,30 @@ describe("marketplace catalog", () => {
     assert.equal(outlook.providerKey, "M365");
   });
 
-  it("Coming Soon entries surface six connectors with null providerKey", () => {
+  it("Coming Soon entries surface the remaining connectors with null providerKey", () => {
     const soon = listIntegrations().filter((e) => e.status === "coming-soon");
-    assert.equal(soon.length, 6);
+    assert.deepEqual(
+      soon.map((e) => e.id),
+      ["hubspot", "paypal", "canva"],
+    );
     for (const e of soon) {
       assert.equal(e.providerKey, null, `${e.id} has no DB rows yet`);
+    }
+  });
+
+  it("the four newly-wired connectors are available with the right provider keys", () => {
+    const expectations: Record<string, string> = {
+      docusign: "DOCUSIGN",
+      quickbooks: "QUICKBOOKS",
+      slack: "SLACK",
+      // Drive reuses the Gmail Google OAuth app + credential.
+      "google-drive": "GOOGLE",
+    };
+    for (const [id, providerKey] of Object.entries(expectations)) {
+      const entry = getMarketplaceEntry(id);
+      assert.ok(entry, `${id} entry exists`);
+      assert.equal(entry.status, "available", `${id} is available`);
+      assert.equal(entry.providerKey, providerKey, `${id} providerKey`);
     }
   });
 
@@ -173,12 +194,13 @@ describe("OAuth start URL builders", () => {
     assert.doesNotMatch(scope, /Mail\.Send/);
   });
 
-  it("Coming-soon OAuth start raises rather than building a URL", () => {
+  it("an integration with no OAuth builder raises rather than building a URL", () => {
+    // hubspot is still coming-soon and has no buildAuthorizeUrl branch.
     assert.throws(
       () =>
         buildAuthorizeUrl({
-          integrationId: "quickbooks",
-          scopes: ["com.intuit.quickbooks.accounting"],
+          integrationId: "hubspot",
+          scopes: ["crm.objects.contacts.read"],
           state: "x",
           origin: "https://app.agentplain.test",
           googleClientId: "g",
@@ -188,6 +210,77 @@ describe("OAuth start URL builders", () => {
         }),
       /not implemented/i,
     );
+  });
+
+  it("DocuSign authorize URL targets the account server with signature scope", () => {
+    const url = buildAuthorizeUrl({
+      integrationId: "docusign",
+      scopes: getMarketplaceEntry("docusign")!.scopes,
+      state: "ds-state",
+      origin: "https://app.agentplain.test",
+      microsoftAuthority: "https://login.microsoftonline.com/common",
+      docusignClientId: "ds-client",
+      docusignBaseUri: "https://account-d.docusign.com",
+    });
+    const parsed = new URL(url);
+    assert.equal(parsed.host, "account-d.docusign.com");
+    assert.equal(parsed.pathname, "/oauth/auth");
+    assert.equal(parsed.searchParams.get("client_id"), "ds-client");
+    assert.equal(parsed.searchParams.get("response_type"), "code");
+    const scope = parsed.searchParams.get("scope") ?? "";
+    assert.match(scope, /signature/);
+    assert.match(scope, /extended/);
+  });
+
+  it("QuickBooks authorize URL targets appcenter.intuit.com with the accounting scope", () => {
+    const url = buildAuthorizeUrl({
+      integrationId: "quickbooks",
+      scopes: getMarketplaceEntry("quickbooks")!.scopes,
+      state: "qbo-state",
+      origin: "https://app.agentplain.test",
+      microsoftAuthority: "https://login.microsoftonline.com/common",
+      quickbooksClientId: "qbo-client",
+    });
+    const parsed = new URL(url);
+    assert.equal(parsed.host, "appcenter.intuit.com");
+    assert.equal(parsed.searchParams.get("client_id"), "qbo-client");
+    assert.match(parsed.searchParams.get("scope") ?? "", /com\.intuit\.quickbooks\.accounting/);
+  });
+
+  it("Google Drive authorize URL reuses Google's app but lands on the Drive callback", () => {
+    const url = buildAuthorizeUrl({
+      integrationId: "google-drive",
+      scopes: getMarketplaceEntry("google-drive")!.scopes,
+      state: "drive-state",
+      origin: "https://app.agentplain.test",
+      googleClientId: "google-client-test",
+      googleClientSecret: "google-secret-test",
+      microsoftAuthority: "https://login.microsoftonline.com/common",
+    });
+    const parsed = new URL(url);
+    assert.equal(parsed.host, "accounts.google.com");
+    assert.equal(
+      parsed.searchParams.get("redirect_uri"),
+      "https://app.agentplain.test/api/integrations/google-drive/oauth/callback",
+    );
+    assert.match(parsed.searchParams.get("scope") ?? "", /drive\.readonly/);
+  });
+
+  it("Slack authorize URL targets slack.com with user_scope, never bot scope", () => {
+    const url = buildAuthorizeUrl({
+      integrationId: "slack",
+      scopes: getMarketplaceEntry("slack")!.scopes,
+      state: "slack-state",
+      origin: "https://app.agentplain.test",
+      microsoftAuthority: "https://login.microsoftonline.com/common",
+      slackClientId: "slack-client",
+    });
+    const parsed = new URL(url);
+    assert.equal(parsed.host, "slack.com");
+    assert.equal(parsed.pathname, "/oauth/v2/authorize");
+    assert.equal(parsed.searchParams.get("client_id"), "slack-client");
+    assert.ok(parsed.searchParams.get("user_scope"), "requests a user token, not a bot token");
+    assert.equal(parsed.searchParams.get("scope"), null, "no bot scope requested");
   });
 
   it("Outlook authorize URL throws when MICROSOFT_OAUTH_CLIENT_ID is unset", () => {
@@ -224,7 +317,7 @@ describe("marketplace tile prop mapping", () => {
   });
 
   it("coming-soon entries always map to status=coming-soon, even if a row exists", () => {
-    const entry = getMarketplaceEntry("docusign")!;
+    const entry = getMarketplaceEntry("hubspot")!;
     // No DB rows ever exist for coming-soon entries (providerKey is null),
     // but the derivation must still hold if a future migration backfilled.
     const connectedByProvider = new Map<string, unknown>();

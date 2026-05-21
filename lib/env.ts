@@ -79,7 +79,7 @@ export const env = {
   // Resend
   resendApiKey: () => required("RESEND_API_KEY"),
   resendFromEmail: () =>
-    optional("RESEND_FROM_EMAIL") ?? "agentplain <noreply@agentplain.com>",
+    optional("RESEND_FROM_EMAIL") ?? "agentplain <claude@agentplain.com>",
 
   // Stripe — Prices resolved by lookup_key (see lib/pricing/tiers.ts +
   // scripts/stripe/setup-products.ts). No per-tier Price-id env vars.

@@ -206,7 +206,7 @@ function renderHtml(args: {
   <p>If you haven't added a card yet, your fleet pauses when the trial ends. Add one in under a minute:</p>
   <p><a href="${billingUrl}" style="display:inline-block; padding:12px 20px; background:#1A1A1F; color:#F7F4ED; text-decoration:none; font-weight:500;">Open billing</a></p>
   <p style="font-size:13px; color:#8C8478;">Month-to-month. Cancel any time from the same page.</p>
-  <p style="font-size:13px; color:#8C8478;">— agentplain</p>
+  <p style="font-size:13px; color:#8C8478;">Plaino, your service partner at agentplain</p>
 </body></html>`;
 }
 
@@ -224,7 +224,7 @@ Open billing: ${billingUrl}
 
 Month-to-month. Cancel any time.
 
-— agentplain`;
+Plaino, your service partner at agentplain`;
 }
 
 function formatCents(cents: number): string {

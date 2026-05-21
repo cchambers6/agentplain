@@ -6,6 +6,7 @@ import {
   ApHeritageButton,
   ApPaperCard,
   ApRootedEmptyState,
+  PlainoAvatar,
 } from "@/components/ui/ap";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
@@ -106,10 +107,13 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
         <h1 className="mt-3 font-display text-3xl leading-tight text-ink md:text-4xl">
           {headline}
         </h1>
-        <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
-          {partner} is your service partner. Your fleet is doing the
-          work that doesn&rsquo;t need you so you can focus on what
-          does. Approve, edit, or reject — your existing tools send.
+        <p className="mt-3 flex max-w-2xl items-start gap-3 text-[15px] leading-relaxed text-ink-soft">
+          <PlainoAvatar size="md" className="shrink-0" />
+          <span>
+            {partner} is your service partner. Your fleet is doing the
+            work that doesn&rsquo;t need you so you can focus on what
+            does. Approve, edit, or reject — your existing tools send.
+          </span>
         </p>
 
         <div className="mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[12px] text-mute">

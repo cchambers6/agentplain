@@ -5,6 +5,7 @@ import {
   ApHairlineList,
   ApHairlineRow,
   ApPaperSheet,
+  PlainoAvatar,
 } from "@/components/ui/ap";
 
 export interface ActivityRow {
@@ -41,21 +42,24 @@ export function ActivityFeed({ rows, partner }: ActivityFeedProps) {
               <button
                 type="button"
                 onClick={() => setOpenId(row.id)}
-                className="w-full rounded-none text-left text-ink-soft transition hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+                className="flex w-full items-start gap-3 rounded-none text-left text-ink-soft transition hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
               >
-                <span className="block">
-                  <span className="font-mono text-ink">{row.fromAgent}</span>
-                  <span className="mx-2 text-mute">→</span>
-                  <span className="font-mono text-ink">{row.toAgent}</span>
-                  <span className="ml-2 text-mute">· {row.handoffType}</span>
-                  {flagged ? (
-                    <span className="ml-2 text-flag" aria-label="flagged">
-                      ●
-                    </span>
-                  ) : null}
-                </span>
-                <span className="mt-1 block text-[13px] leading-relaxed text-mute">
-                  {row.summary}
+                <PlainoAvatar size="sm" className="mt-0.5 shrink-0" />
+                <span className="min-w-0 flex-1">
+                  <span className="block">
+                    <span className="font-mono text-ink">{row.fromAgent}</span>
+                    <span className="mx-2 text-mute">→</span>
+                    <span className="font-mono text-ink">{row.toAgent}</span>
+                    <span className="ml-2 text-mute">· {row.handoffType}</span>
+                    {flagged ? (
+                      <span className="ml-2 text-flag" aria-label="flagged">
+                        ●
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="mt-1 block text-[13px] leading-relaxed text-mute">
+                    {row.summary}
+                  </span>
                 </span>
               </button>
             </ApHairlineRow>

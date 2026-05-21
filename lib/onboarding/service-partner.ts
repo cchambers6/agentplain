@@ -1,39 +1,32 @@
-// Service-partner name derivation.
+// Service-partner identity.
 //
-// Per the product brief, the customer-facing onboarding surface and
-// workspace overview must name a real person ("Hi, I'm Sarah, your
-// service partner") rather than referring to the fleet abstractly.
-// Until partner identities are assigned in a join table, derive the
-// name from the workspace ID — same input always returns the same
-// person, so the customer doesn't experience an identity swap on
-// refresh.
+// The customer-facing service partner is a single named character —
+// Plaino — across every workspace. The earlier name-pool hashing
+// (Sarah / James / Emma / Daniel / Maya / Owen) is removed: the brand
+// is one rooted character, not a rotating cast.
 //
-// When we wire real assignments (Phase 2: WorkspacePartner join), drop
-// this fallback and read the assignment directly.
+// The Geico-gecko model: the heritage agentplain wordmark stays the
+// serious surface; Plaino is the warmth on top — a small avatar plus
+// a named voice that introduces the work the fleet is doing.
+//
+// See memory/feedback_brand_is_plain_not_plane.md for brand semantics
+// (agent + the PLAINS) and docs/product-design-language-2026-05-17.md
+// §10 for the Plaino character spec.
 
-const SERVICE_PARTNERS: readonly string[] = [
-  "Sarah",
-  "James",
-  "Emma",
-  "Daniel",
-  "Maya",
-  "Owen",
-];
+export const PLAINO_PARTNER = {
+  name: "Plaino",
+  pronoun: "they",
+  role: "your service partner",
+} as const;
 
-// Cheap, deterministic, no crypto dependency. Output stable across
-// platforms. Not security-sensitive — we just need a stable index.
-function hashStringToInt(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) {
-    h = (h * 31 + s.charCodeAt(i)) | 0;
-  }
-  return Math.abs(h);
+export type ServicePartner = typeof PLAINO_PARTNER;
+
+// Kept for backwards compatibility with existing call sites that
+// destructure a string. The workspaceId argument is unused — every
+// workspace meets the same Plaino — but the signature is preserved so
+// the call sites don't need to churn.
+export function servicePartnerForWorkspace(
+  _workspaceId: string,
+): string {
+  return PLAINO_PARTNER.name;
 }
-
-export function servicePartnerForWorkspace(workspaceId: string): string {
-  if (!workspaceId) return SERVICE_PARTNERS[0]!;
-  const idx = hashStringToInt(workspaceId) % SERVICE_PARTNERS.length;
-  return SERVICE_PARTNERS[idx]!;
-}
-
-export const SERVICE_PARTNER_POOL = SERVICE_PARTNERS;

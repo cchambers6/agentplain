@@ -79,6 +79,33 @@ const uniques = [
   },
 ];
 
+// "Why pay vs. free?" — names the real alternative plainly and answers the
+// objection head-on (B5). LEFT = a free chatbot; RIGHT = agentplain run for
+// you. Marketing voice (confident), no banned words. The "us" side carries a
+// moss checkmark as a verified-good signal only — never decorative.
+const chatbotContrast = [
+  {
+    free: "Waits for you to prompt it.",
+    us: "Works overnight, and hands you drafts before you open the laptop.",
+  },
+  {
+    free: "Starts blank every session.",
+    us: "Pre-trained on your vertical, with a counsel-reviewed compliance corpus.",
+  },
+  {
+    free: "Gives you text to copy-paste.",
+    us: "Puts the draft in your own Gmail or CRM for one-click approve, edit, or reject.",
+  },
+  {
+    free: "You write the prompts and wire the tools.",
+    us: "Your service partner installs, connects, and tunes it for you.",
+  },
+  {
+    free: "No memory of your business.",
+    us: "Rooted in your real systems and the way your shop works.",
+  },
+];
+
 // Q6 — proof points. Each item must cite a memory rule or a concrete artifact.
 // "Why should anyone believe us?"
 const proof = [
@@ -274,6 +301,43 @@ export default function HomePage() {
               label={u.label}
               body={u.body}
             />
+          ))}
+        </div>
+      </Section>
+
+      {/* Q4 follow-on — the "why pay vs. free" objection, answered head-on.
+          Names the real alternative plainly ("a free chatbot", "ChatGPT").
+          Two columns (product-vs-alternative axis — NOT a 3-column pricing
+          grid). Reuses the gap-px / bg-rule hairline pattern so the rule
+          shows through as the divider between columns and rows. */}
+      <Section
+        eyebrow="Why pay for this"
+        title={
+          <>
+            A free chatbot, or a service partner who{" "}
+            <span className="text-clay">runs it for you?</span>
+          </>
+        }
+        intro="ChatGPT and Claude for Small Business are real, useful tools — and they're cheap or free. Here's the honest difference. One is a blank box you have to drive. The other is a fleet your service partner installs, connects to your systems, and runs for you."
+      >
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
+          {/* LEFT column head — a free chatbot */}
+          <div className="bg-paper p-7 md:p-8">
+            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+              a free chatbot
+            </p>
+          </div>
+          {/* RIGHT column head — agentplain, run for you */}
+          <div className="bg-paper p-7 md:p-8">
+            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+              agentplain, run for you
+            </p>
+          </div>
+
+          {/* Rows. Each contrast renders LEFT then RIGHT so the hairline
+              grid keeps the two columns aligned across breakpoints. */}
+          {chatbotContrast.map((row) => (
+            <ContrastRow key={row.us} free={row.free} us={row.us} />
           ))}
         </div>
       </Section>
@@ -559,6 +623,26 @@ function UniqueCard({
       </div>
       <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">{body}</p>
     </div>
+  );
+}
+
+// One contrast in the "why pay vs. free" block. Renders the LEFT (free
+// chatbot) cell then the RIGHT (us) cell as two sibling grid cells so the
+// gap-px / bg-rule hairline aligns the columns. The moss checkmark on the
+// "us" side is a verified-good status signal only — never decorative.
+function ContrastRow({ free, us }: { free: string; us: string }) {
+  return (
+    <>
+      <div className="bg-paper p-7 md:p-8">
+        <p className="text-[15px] leading-relaxed text-ink-soft">{free}</p>
+      </div>
+      <div className="flex items-start gap-3 bg-paper p-7 md:p-8">
+        <span aria-hidden className="mt-1 font-mono text-sm text-moss">
+          ✓
+        </span>
+        <p className="text-[15px] leading-relaxed text-ink">{us}</p>
+      </div>
+    </>
   );
 }
 

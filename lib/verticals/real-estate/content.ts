@@ -12,6 +12,48 @@ export const realEstate: VerticalContent = {
   tier: "regular",
   missionSubject: "realtors and brokerages",
 
+  // The pre-trained realty fleet, surfaced in-product on /agents. Names + slugs
+  // match the static FLEET the agents page hardcoded before B4 made the page
+  // vertical-aware — zero regression for existing realty workspaces, whose
+  // HandoffLogEntry rows already key on these `realty-*` slugs.
+  agentRoster: [
+    {
+      slug: "realty-listing-coordinator",
+      name: "Listing Coordinator",
+      job: "Runs listing intake and keeps every new listing's follow-up moving.",
+    },
+    {
+      slug: "realty-buyer-inquiry-router",
+      name: "Buyer Inquiry Router",
+      job: "Classifies inbound buyer inquiries and drafts the first-touch reply.",
+    },
+    {
+      slug: "realty-showing-scheduler",
+      name: "Showing Scheduler",
+      job: "Coordinates showing times across buyers, agents, and calendars.",
+    },
+    {
+      slug: "realty-compliance-sentinel",
+      name: "Compliance Sentinel",
+      job: "Pre-checks every customer-facing draft before the broker signs.",
+    },
+    {
+      slug: "realty-crm-hygiene",
+      name: "CRM Hygiene",
+      job: "Dedupes, normalizes, and surfaces stale records in the CRM.",
+    },
+    {
+      slug: "realty-production-reporter",
+      name: "Production Reporter",
+      job: "Drafts the production read against MLS and the workspace median.",
+    },
+    {
+      slug: "realty-recruiter-assistant",
+      name: "Recruiter Assistant",
+      job: "Drafts recruiting outreach with one substantiated production reference.",
+    },
+  ],
+
   hero: {
     eyebrow: "Built for independent real-estate brokerages",
     headline: "The operating layer behind the independent brokerage.",

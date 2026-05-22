@@ -28,8 +28,8 @@ describe("brand tokens — canonical (spec §4)", () => {
     assert.equal(tokens.colors.flag.hex, "#B43A3A");
     assert.equal(tokens.colors.flag.derived, undefined);
   });
-  it("mute is #8C8478 (warm secondary text, not cool slate)", () => {
-    assert.equal(tokens.colors.mute.hex, "#8C8478");
+  it("mute is #726A5E (warm secondary text, not cool slate; darkened for WCAG AA)", () => {
+    assert.equal(tokens.colors.mute.hex, "#726A5E");
     assert.equal(tokens.colors.mute.derived, undefined);
   });
 });
@@ -73,7 +73,7 @@ describe("colorHex — tailwind consumption surface", () => {
     assert.equal(colorHex.clay, "#B65D3A");
     assert.equal(colorHex.moss, "#3F5C3F");
     assert.equal(colorHex.flag, "#B43A3A");
-    assert.equal(colorHex.mute, "#8C8478");
+    assert.equal(colorHex.mute, "#726A5E");
     assert.equal(colorHex["paper-deep"], "#EDE9DE");
     assert.equal(colorHex["ink-soft"], "#2E2E33");
     assert.equal(colorHex["clay-deep"], "#9A4D2F");

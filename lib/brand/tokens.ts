@@ -49,8 +49,8 @@ export const tokens: BrandTokens = {
       source: "spec §4 (compliance flag / error utility only)",
     },
     mute: {
-      hex: "#8C8478",
-      source: "spec §4 (captions, citations, secondary text)",
+      hex: "#726A5E",
+      source: "spec §4 (captions, citations, secondary text); darkened from #8C8478 for WCAG AA — 4.85:1 on paper",
     },
     rule: {
       // Derived: hairline rule color, mute-family.

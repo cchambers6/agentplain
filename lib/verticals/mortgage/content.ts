@@ -19,6 +19,45 @@ export const mortgage: VerticalContent = {
   tier: "regular",
   missionSubject: "mortgage brokers and loan officers",
 
+  // Fleet surfaced in-product on /agents, grounded in the mortgage JTBD tables.
+  agentRoster: [
+    {
+      slug: "mortgage-borrower-triage",
+      name: "Borrower Triage",
+      job: "Classifies inbound borrower intent and drafts the first touch.",
+    },
+    {
+      slug: "mortgage-document-chase",
+      name: "Document Chase",
+      job: "Runs the per-file doc-collection cadence and escalates only when stuck.",
+    },
+    {
+      slug: "mortgage-status-updater",
+      name: "Status Updater",
+      job: "Drafts a borrower status note on every milestone for the LO to send.",
+    },
+    {
+      slug: "mortgage-pre-qual",
+      name: "Pre-Qual Assistant",
+      job: "Pulls pricing and AUS eligibility to draft a pre-qual letter in minutes.",
+    },
+    {
+      slug: "mortgage-conditions",
+      name: "Conditions Coordinator",
+      job: "Translates UW conditions into a borrower note and the doc list to clear them.",
+    },
+    {
+      slug: "mortgage-vendor-coordination",
+      name: "Vendor Coordination",
+      job: "Orders appraisal and title, tracks status, and flags slipping files.",
+    },
+    {
+      slug: "mortgage-production-reporter",
+      name: "Production Reporter",
+      job: "Drafts the weekly LO production read against plan.",
+    },
+  ],
+
   hero: {
     eyebrow: "Built for independent mortgage brokerages",
     headline: "The fleet for the independent loan-officer office.",

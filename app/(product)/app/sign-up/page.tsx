@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ApEyebrow, ApMotif } from "@/components/ui/ap";
 import { getAllVerticals, getVerticalContent } from "@/lib/verticals";
 import { TIER_ORDER, type TierName } from "@/lib/pricing/tiers";
+import { PLAINO_PARTNER } from "@/lib/onboarding/service-partner";
 import { SignUpForm } from "./SignUpForm";
 
 interface SignUpPageProps {
@@ -44,9 +45,9 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
           Root your workspace on agentplain.
         </h1>
         <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-ink-soft">
-          Tell us your shop and the work you do. Your service partner
-          picks up your install within one business day — first month is
-          on us.
+          Tell us your shop and the work you do. {PLAINO_PARTNER.name}, your
+          service partner, picks up your install within one business day —
+          first month is on us.
         </p>
         <div className="mt-10">
           <SignUpForm

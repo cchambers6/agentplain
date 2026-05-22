@@ -9,6 +9,7 @@ import { withWorkspace } from "@/lib/auth";
 import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
 import { withRls } from "@/lib/db";
 import { listIntegrations, oauthStartPath } from "@/lib/integrations/marketplace";
+import { isIntegrationConfigured } from "@/lib/integrations/config-status";
 import {
   STEP_META,
   STEP_ORDER,
@@ -123,7 +124,7 @@ export default async function OnboardingPage({ params }: PageProps) {
           <PlainoAvatar size="lg" />
           <h1 className="font-display text-3xl leading-tight text-ink md:text-4xl">
             Hi {ownerFirstName}. I&rsquo;m {partner}, your service partner
-            at agentplain. Let me get you set up.
+            at agentplain. Let me get your fleet rooted in your shop.
           </h1>
         </div>
         <p className="mt-4 max-w-prose text-[15px] leading-relaxed text-ink-soft">
@@ -324,6 +325,11 @@ function ConnectIntegration({
   const plannedWindow = verticalContent?.integrations.plannedWindow ?? "Q3 2026";
   const available = listIntegrations().filter((m) => m.status === "available");
   const primary = available[0] ?? null;
+  // Only claim a connection is "live" and offer the one-tap CTA when the
+  // provider's OAuth credentials are actually configured. Otherwise the CTA
+  // dead-ends at the start route's `oauth_not_configured` branch — so we show
+  // an honest "your service partner wires it with you" state instead.
+  const primaryConfigured = primary ? isIntegrationConfigured(primary) : false;
   const hasConnection = connectedIntegrations.length > 0;
   return (
     <div className="space-y-5">
@@ -371,42 +377,65 @@ function ConnectIntegration({
           <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
             connect a tool
           </p>
-          <p className="mt-2 text-[15px] leading-relaxed text-ink">
-            {primary
-              ? `One-tap read-only ${primary.name} OAuth is live. The fleet starts watching your inbox the moment you finish.`
-              : "Pick a tool to connect from your connections."}
-          </p>
-          <div className="mt-4 flex flex-wrap gap-3">
-            {primary ? (
-              <ApHeritageButton
-                variant="primary"
-                withArrow
-                href={oauthStartPath(
-                  primary,
-                  workspaceId,
-                  `/app/workspace/${workspaceId}/onboarding`,
-                )}
-              >
-                connect {primary.name.toLowerCase()}
-              </ApHeritageButton>
-            ) : (
-              <ApHeritageButton
-                variant="primary"
-                withArrow
-                href={`/app/workspace/${workspaceId}/integrations`}
-              >
-                open connections
-              </ApHeritageButton>
-            )}
-            {primary ? (
-              <Link
-                href={`/app/workspace/${workspaceId}/integrations`}
-                className="self-center text-sm text-mute underline-offset-4 hover:text-ink hover:underline focus:outline-none focus-visible:text-ink focus-visible:underline"
-              >
-                see all connections
-              </Link>
-            ) : null}
-          </div>
+          {primary && primaryConfigured ? (
+            <>
+              <p className="mt-2 text-[15px] leading-relaxed text-ink">
+                One-tap read-only {primary.name} connection. The fleet starts
+                reading your inbox the moment you finish.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <ApHeritageButton
+                  variant="primary"
+                  withArrow
+                  href={oauthStartPath(
+                    primary,
+                    workspaceId,
+                    `/app/workspace/${workspaceId}/onboarding`,
+                  )}
+                >
+                  connect {primary.name.toLowerCase()}
+                </ApHeritageButton>
+                <Link
+                  href={`/app/workspace/${workspaceId}/integrations`}
+                  className="self-center text-sm text-mute underline-offset-4 hover:text-ink hover:underline focus:outline-none focus-visible:text-ink focus-visible:underline"
+                >
+                  see all connections
+                </Link>
+              </div>
+            </>
+          ) : primary ? (
+            <>
+              <p className="mt-2 text-[15px] leading-relaxed text-ink">
+                Your {primary.name} connection opens for your workspace on the
+                welcome call — {partner} wires it with you, then the fleet
+                starts reading. Nothing here blocks; continue setup and{" "}
+                {partner} picks it up.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Link
+                  href={`/app/workspace/${workspaceId}/integrations`}
+                  className="self-center text-sm text-mute underline-offset-4 hover:text-ink hover:underline focus:outline-none focus-visible:text-ink focus-visible:underline"
+                >
+                  see all connections
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="mt-2 text-[15px] leading-relaxed text-ink">
+                Pick a tool to connect from your connections.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <ApHeritageButton
+                  variant="primary"
+                  withArrow
+                  href={`/app/workspace/${workspaceId}/integrations`}
+                >
+                  open connections
+                </ApHeritageButton>
+              </div>
+            </>
+          )}
           <p className="mt-3 text-[12px] leading-relaxed text-mute">
             Nothing about the workspace blocks on a connector — skip
             below if you&rsquo;d rather wire it on the welcome call with

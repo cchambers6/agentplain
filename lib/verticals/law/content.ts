@@ -31,6 +31,45 @@ export const law: VerticalContent = {
   tier: "max",
   missionSubject: "law firms and solo practitioners",
 
+  // Fleet surfaced in-product on /agents, grounded in the law JTBD tables.
+  agentRoster: [
+    {
+      slug: "law-intake-onboarding",
+      name: "Intake & Onboarding",
+      job: "Runs the conflict check and drafts the engagement letter scoped to the matter.",
+    },
+    {
+      slug: "law-drafting",
+      name: "Drafting",
+      job: "Drafts the first pass of a pleading or contract with the matter facts inserted.",
+    },
+    {
+      slug: "law-doc-chase",
+      name: "Document Chase",
+      job: "Runs the doc-collection cadence with clients and opposing counsel per channel.",
+    },
+    {
+      slug: "law-compliance-sentinel",
+      name: "Compliance Sentinel",
+      job: "Flags privilege and ABA Model Rule 1.6 concerns before a draft is sent.",
+    },
+    {
+      slug: "law-discovery-review",
+      name: "Discovery Review",
+      job: "Runs first-pass responsiveness and privilege tagging, citing the rule basis.",
+    },
+    {
+      slug: "law-status-updater",
+      name: "Status Updater",
+      job: "Drafts the client matter-status update on every state change for the attorney.",
+    },
+    {
+      slug: "law-billing",
+      name: "Milestone Billing",
+      job: "Drafts the milestone invoice and the aged-AR escalation for the partner.",
+    },
+  ],
+
   hero: {
     eyebrow: "Built for small law firms and solo practitioners",
     headline: "The fleet for the small law firm.",

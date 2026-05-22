@@ -5,6 +5,7 @@ import {
   listIntegrations,
   type MarketplaceEntry,
 } from "@/lib/integrations/marketplace";
+import { isIntegrationConfigured } from "@/lib/integrations/config-status";
 import {
   IntegrationTile,
   type TileStatus,
@@ -18,6 +19,8 @@ interface PageProps {
     error?: string;
     detail?: string;
     disconnected?: string;
+    notice?: string;
+    integration?: string;
   }>;
 }
 
@@ -69,7 +72,12 @@ export default async function WorkspaceIntegrationsPage({
       entry.providerKey !== null
         ? connectedByProvider.get(entry.providerKey)
         : undefined;
-    return { entry, status, accountLabel: cred?.accountEmail };
+    return {
+      entry,
+      status,
+      accountLabel: cred?.accountEmail,
+      configured: isIntegrationConfigured(entry),
+    };
   });
 
   const connectedCount = tiles.filter((t) => t.status === "connected").length;
@@ -113,13 +121,14 @@ export default async function WorkspaceIntegrationsPage({
         </div>
       ) : (
         <div className="mt-8 grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-3">
-          {tiles.map(({ entry, status, accountLabel }) => (
+          {tiles.map(({ entry, status, accountLabel, configured }) => (
             <IntegrationTile
               key={entry.id}
               entry={entry}
               status={status}
               workspaceId={workspaceId}
               accountLabel={accountLabel}
+              configured={configured}
             />
           ))}
         </div>
@@ -158,9 +167,24 @@ function InlineFlash({
     error?: string;
     detail?: string;
     disconnected?: string;
+    notice?: string;
+    integration?: string;
   };
   tiles: Array<{ entry: MarketplaceEntry; status: TileStatus }>;
 }) {
+  if (flash.notice === "not-configured") {
+    const entry = flash.integration
+      ? tiles.find((t) => t.entry.id === flash.integration)?.entry
+      : undefined;
+    const name = entry?.name ?? "That connection";
+    return (
+      <div className="mt-6 border border-rule bg-paper-deep px-4 py-3 text-sm leading-relaxed text-ink">
+        {name} isn&rsquo;t open for self-connect yet. Your service partner
+        wires it with you on the welcome call — nothing in your workspace
+        blocks while it&rsquo;s pending.
+      </div>
+    );
+  }
   if (flash.disconnected) {
     const entry = tiles.find((t) => t.entry.id === flash.disconnected)?.entry;
     return (

@@ -30,6 +30,45 @@ export const ria: VerticalContent = {
   tier: "max",
   missionSubject: "RIAs and wealth advisors",
 
+  // Fleet surfaced in-product on /agents, grounded in the RIA JTBD tables.
+  agentRoster: [
+    {
+      slug: "ria-meeting-prep",
+      name: "Meeting Prep",
+      job: "Drafts the agenda, delta-since-last-meeting, and open task list per client.",
+    },
+    {
+      slug: "ria-meeting-notes",
+      name: "Meeting Notes",
+      job: "Drafts the recap and task list from the meeting capture for the advisor.",
+    },
+    {
+      slug: "ria-compliance-sentinel",
+      name: "Compliance Sentinel",
+      job: "Runs an ADV, suitability, and Marketing Rule check before a draft is sent.",
+    },
+    {
+      slug: "ria-planning-refresh",
+      name: "Planning Refresh",
+      job: "Drafts refreshed plan inputs scoped to a client's life event.",
+    },
+    {
+      slug: "ria-rebalance",
+      name: "Rebalance",
+      job: "Drafts the per-model trade list with drift cited for the PM to submit.",
+    },
+    {
+      slug: "ria-performance-reporter",
+      name: "Performance Reporter",
+      job: "Drafts the quarterly per-client performance narrative with cited attribution.",
+    },
+    {
+      slug: "ria-aum-billing",
+      name: "AUM Billing",
+      job: "Drafts the quarter-close fee schedule; operations reviews exceptions.",
+    },
+  ],
+
   hero: {
     eyebrow: "Built for independent RIAs and wealth practices",
     headline: "The fleet for the independent RIA.",

@@ -18,6 +18,45 @@ export const titleEscrow: VerticalContent = {
   tier: "regular",
   missionSubject: "title and escrow agencies",
 
+  // Fleet surfaced in-product on /agents, grounded in the title-escrow JTBD tables.
+  agentRoster: [
+    {
+      slug: "title-file-intake",
+      name: "File Intake",
+      job: "Parses realtor and lender source documents and drafts the file to confirm.",
+    },
+    {
+      slug: "title-doc-chase",
+      name: "Document Chase",
+      job: "Runs the doc-collection cadence per channel and escalates only when stuck.",
+    },
+    {
+      slug: "title-search",
+      name: "Title Search",
+      job: "Drafts the chain of title from the plant feed; examiner reviews defects only.",
+    },
+    {
+      slug: "title-closing-prep",
+      name: "Closing Prep",
+      job: "Drafts the closing packet against file state for the closer to review.",
+    },
+    {
+      slug: "title-recording",
+      name: "Recording Coordinator",
+      job: "Prepares the recording package per county schema for the clerk to submit.",
+    },
+    {
+      slug: "title-trust-recon",
+      name: "Trust Reconciler",
+      job: "Drafts the per-file trust reconciliation citing each disbursement against the CD.",
+    },
+    {
+      slug: "title-compliance-sentinel",
+      name: "Compliance Sentinel",
+      job: "Runs a CFPB-aware check on every customer-facing draft before send.",
+    },
+  ],
+
   hero: {
     eyebrow: "Built for local title and escrow agencies",
     headline: "The fleet for the local title agency.",

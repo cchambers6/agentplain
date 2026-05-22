@@ -49,8 +49,6 @@ function rosterById(id: string) {
   return a;
 }
 
-async function noopAction(): Promise<void> {}
-
 // ---------------------------------------------------------------------------
 // classifyAgent
 // ---------------------------------------------------------------------------
@@ -347,7 +345,6 @@ function renderBoard(snapshot: LeadershipSnapshot): string {
     createElement(LeadershipBoardView, {
       board,
       now: REFERENCE_NOW,
-      refreshAction: noopAction,
     }),
   );
 }
@@ -359,6 +356,16 @@ describe("LeadershipBoardView — render", () => {
     assert.match(html, /Leadership tier hasn/); // empty-state copy
     // Empty-state counter row should still show 0 / 21.
     assert.match(html, new RegExp(`0 / ${LEADERSHIP_ROSTER.length}`));
+  });
+
+  it("has no no-op Refresh control, and states how the snapshot updates", () => {
+    // The route is force-dynamic (re-reads the snapshot every render), so a
+    // Refresh button would be a no-op. It was removed in favor of an honest
+    // line telling the operator the snapshot is regenerated out-of-band.
+    const html = renderBoard(EMPTY_SNAPSHOT);
+    assert.doesNotMatch(html, />\s*Refresh\s*</);
+    assert.match(html, /Regenerated out-of-band/);
+    assert.match(html, /Reload to\s+re-read the latest/);
   });
 
   it("renders a populated snapshot with at least one agent summary line", () => {

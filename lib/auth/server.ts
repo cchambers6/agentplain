@@ -34,6 +34,9 @@ export interface MembershipAssertion {
   email: string;
   workspaceId: string;
   role: Role;
+  /** Operator flag from the session — lets workspace surfaces show the
+   *  internal operator entry point without a second session read. */
+  isOperator: boolean;
 }
 
 /**
@@ -64,6 +67,7 @@ export async function requireWorkspaceMember(
     email: session.email,
     workspaceId,
     role: membership.role,
+    isOperator: session.isOperator,
   };
 }
 

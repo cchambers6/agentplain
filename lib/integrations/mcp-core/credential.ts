@@ -19,6 +19,7 @@
 import type { IntegrationProvider as DbProvider } from '@prisma/client';
 import { prisma } from '@/lib/db/prisma';
 import { decryptCredential, encryptTokenSet } from '@/lib/integrations';
+import { isEncryptionConfigured } from '@/lib/security/encryption';
 import type { DecryptedCredential, IntegrationResult, TokenSet } from '@/lib/integrations/types';
 import { mcpError, type McpResult } from './types';
 
@@ -48,6 +49,15 @@ export async function resolveWorkspaceCredential(
     return mcpError(
       'CREDENTIAL_NOT_FOUND',
       `No active ${args.provider} credential for workspace ${args.workspaceId}. Connect ${args.connectorName} first.`,
+    );
+  }
+
+  // Fail clearly (not a raw MissingKeyError crash) when the master key is
+  // absent — the credential exists but cannot be decrypted in this env.
+  if (!isEncryptionConfigured()) {
+    return mcpError(
+      'UPSTREAM_ERROR',
+      `Cannot decrypt the ${args.connectorName} credential for workspace ${args.workspaceId}: ENCRYPTION_KEY is not configured in this environment. The connection is intact; access resumes once the key is restored.`,
     );
   }
 

@@ -5,6 +5,7 @@ import {
   decrypt,
   encrypt,
   isEncrypted,
+  isEncryptionConfigured,
   loadMasterKey,
   safeEqualSecret,
   InvalidCiphertextError,
@@ -15,6 +16,31 @@ import {
 
 const TEST_KEY = randomBytes(32)
 const TEST_KEY_HEX = TEST_KEY.toString('hex')
+
+describe('encryption: isEncryptionConfigured (non-throwing seam)', () => {
+  it('is true for a valid 64-hex key and never throws', () => {
+    assert.equal(isEncryptionConfigured(TEST_KEY_HEX), true)
+  })
+
+  it('is false (not a throw) for a missing key', () => {
+    assert.equal(isEncryptionConfigured(undefined), false)
+    assert.equal(isEncryptionConfigured(''), false)
+  })
+
+  it('is false (not a throw) for a malformed key', () => {
+    assert.equal(isEncryptionConfigured('too-short'), false)
+    assert.equal(isEncryptionConfigured('z'.repeat(64)), false) // non-hex
+  })
+
+  it('agrees with loadMasterKey: when the seam says configured, loadMasterKey succeeds', () => {
+    assert.equal(isEncryptionConfigured(TEST_KEY_HEX), true)
+    assert.doesNotThrow(() => loadMasterKey(TEST_KEY_HEX))
+    // and when the seam says NOT configured, loadMasterKey throws — so callers
+    // that guard on the seam will never reach a thrown MissingKeyError.
+    assert.equal(isEncryptionConfigured(''), false)
+    assert.throws(() => loadMasterKey(''), MissingKeyError)
+  })
+})
 
 describe('encryption: round-trip', () => {
   it('decrypts what it encrypted (ascii)', () => {

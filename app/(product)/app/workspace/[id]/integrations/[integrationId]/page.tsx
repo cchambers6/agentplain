@@ -12,6 +12,7 @@ import {
   oauthStartPath,
   waitlistPath,
 } from "@/lib/integrations/marketplace";
+import { isIntegrationConfigured } from "@/lib/integrations/config-status";
 import { DisconnectButton } from "./DisconnectButton";
 import { TestConnectionButton } from "./TestConnectionButton";
 
@@ -60,6 +61,11 @@ export default async function IntegrationSettingsPage({
 
   const isComingSoon = entry.status === "coming-soon";
   const isConnected = credential !== null && credential.status === "ACTIVE";
+  // Same honesty seam the marketplace tiles + onboarding gate on: when the
+  // provider's OAuth credentials aren't wired in this environment, the
+  // connect CTA would dead-end at the start route's not-configured redirect,
+  // so we show the service-partnership state instead of a live-looking button.
+  const isConfigured = isIntegrationConfigured(entry);
 
   return (
     <div>
@@ -106,7 +112,7 @@ export default async function IntegrationSettingsPage({
         </div>
       )}
 
-      {!isComingSoon && !isConnected && (
+      {!isComingSoon && !isConnected && isConfigured && (
         <div className="mt-8">
           <ApRootedEmptyState
             motif="lone-tree"
@@ -121,6 +127,16 @@ export default async function IntegrationSettingsPage({
                 connect {entry.name.toLowerCase()}
               </ApHeritageButton>
             }
+          />
+        </div>
+      )}
+
+      {!isComingSoon && !isConnected && !isConfigured && (
+        <div className="mt-8">
+          <ApRootedEmptyState
+            motif="lone-tree"
+            reality={`${entry.name} isn't open for self-connect yet.`}
+            change={`Your service partner wires it with you on the welcome call — nothing in your workspace blocks while it's pending.`}
           />
         </div>
       )}

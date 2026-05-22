@@ -67,6 +67,18 @@ export default async function AgentsPage({ params }: PageProps) {
       <div className="mt-8 grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-3">
         {fleet.map((agent) => {
           const handoffCount = counts.get(agent.slug) ?? 0;
+          // Truthful status, never a perpetual spinner:
+          //  - rooting capability → say what it's waiting on (no fake imminence).
+          //  - live + work logged  → the real count.
+          //  - live + nothing yet  → honest "first handoff lands soon" (it will,
+          //    once matching email flows). Verticals with no `runtime` binding
+          //    keep the legacy count-only line.
+          const isRooting = agent.runtime === "rooting";
+          const status = isRooting
+            ? (agent.rootingNote ?? "rooting now — runtime still being built.")
+            : handoffCount === 0
+              ? "rooting in — first handoff lands soon"
+              : `${handoffCount} handoff${handoffCount === 1 ? "" : "s"} logged`;
           return (
             <Link
               key={agent.slug}
@@ -80,11 +92,7 @@ export default async function AgentsPage({ params }: PageProps) {
               <p className="mt-2 text-[13px] leading-relaxed text-ink-soft">
                 {agent.job}
               </p>
-              <p className="mt-3 text-[13px] text-mute">
-                {handoffCount === 0
-                  ? "rooting in — first handoff lands soon"
-                  : `${handoffCount} handoff${handoffCount === 1 ? "" : "s"} logged`}
-              </p>
+              <p className="mt-3 text-[13px] text-mute">{status}</p>
             </Link>
           );
         })}

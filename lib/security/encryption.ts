@@ -50,6 +50,22 @@ export function loadMasterKey(envValue?: string): Buffer {
   return Buffer.from(raw, 'hex')
 }
 
+/**
+ * Non-throwing presence + format check for the master key. The honesty seam
+ * the credential-use paths gate on: a missing/malformed ENCRYPTION_KEY means
+ * we genuinely cannot decrypt saved tokens, so callers return a CLEAR typed
+ * failure instead of letting `decrypt()` throw and 500 the surface / crash the
+ * cron. This does NOT weaken encryption — when the key is present and valid,
+ * the codec is unchanged; this only lets callers fail gracefully when it isn't.
+ *
+ * Mirrors the `lib/integrations/config-status.ts` `isIntegrationConfigured`
+ * seam and the briefings `NOTION_API_KEY` graceful-degrade pattern.
+ */
+export function isEncryptionConfigured(envValue?: string): boolean {
+  const raw = envValue ?? process.env.ENCRYPTION_KEY
+  return typeof raw === 'string' && /^[0-9a-fA-F]{64}$/.test(raw)
+}
+
 export function isEncrypted(value: string): boolean {
   return typeof value === 'string' && value.startsWith(`${FORMAT_VERSION}:`)
 }

@@ -48,6 +48,17 @@ export default async function WorkspaceLayout({
             <span>{member.email}</span>
             <span aria-hidden>·</span>
             <span>{member.role.replace("_", " ").toLowerCase()}</span>
+            {member.isOperator ? (
+              <>
+                <span aria-hidden>·</span>
+                <Link
+                  href="/operator/leadership-board"
+                  className="text-mute underline-offset-4 hover:text-ink hover:underline focus:outline-none focus-visible:text-ink focus-visible:underline"
+                >
+                  operator
+                </Link>
+              </>
+            ) : null}
             <form action={signOutAction}>
               <button
                 type="submit"

@@ -40,6 +40,7 @@
 import type { IntegrationCredential } from '@prisma/client';
 import { prisma } from '@/lib/db/prisma';
 import { decryptCredential, encryptTokenSet } from '@/lib/integrations';
+import { isEncryptionConfigured } from '@/lib/security/encryption';
 import type { DecryptedCredential, TokenSet } from '@/lib/integrations/types';
 import { mcpError, type McpResult } from './mcp-common';
 
@@ -135,6 +136,15 @@ export async function resolveM365Credential(
       'CREDENTIAL_NOT_FOUND',
       `No active M365 IntegrationCredential for workspace ${args.workspaceId}. ` +
         `Connect ${args.integrationLabel} at /app/workspace/${args.workspaceId}/integrations.`,
+    );
+  }
+
+  // Fail clearly (not a raw MissingKeyError crash) when the master key is
+  // absent — the credential exists but cannot be decrypted in this env.
+  if (!isEncryptionConfigured()) {
+    return mcpError(
+      'UPSTREAM_ERROR',
+      `Cannot decrypt the ${args.integrationLabel} credential for workspace ${args.workspaceId}: ENCRYPTION_KEY is not configured in this environment. The connection is intact; access resumes once the key is restored.`,
     );
   }
 

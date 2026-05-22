@@ -34,7 +34,6 @@ import { TestLlmProvider } from '@/lib/llm/test-provider';
 import {
   persistSkillRunArtifacts,
   summarizeOutcome,
-  SKILL_CHAIN_AGENT_SLUG,
 } from '@/lib/skills/persist-artifacts';
 import { loadAllFixtures } from './fixtures/webhook-events/_loader';
 import type { Vertical, Workspace } from '@prisma/client';
@@ -122,9 +121,28 @@ describe('persistSkillRunArtifacts — HandoffLogEntry writes', () => {
     );
   });
 
-  it('first row uses synthetic "inbound" as fromAgent', async () => {
+  it('attributes a buyer-inquiry run to the owning roster agent as the trace root', async () => {
+    // re-01 is draft-needed → owned by realty-buyer-inquiry-router, so the
+    // trace root (and thus the agents-page groupBy(fromAgent) count) resolves
+    // to that capability instead of the synthetic "inbound" label.
     const { handoffRows } = await runAndPersist('re-01-buyer-inquiry');
     assert.ok(handoffRows.length > 0, 'expected handoff rows');
+    assert.equal(handoffRows[0].fromAgent, 'realty-buyer-inquiry-router');
+  });
+
+  it('attributes a scheduling run to the showing scheduler', async () => {
+    const { handoffRows } = await runAndPersist('re-02-listing-consult-scheduling');
+    assert.ok(handoffRows.length > 0, 'expected handoff rows');
+    assert.equal(handoffRows[0].fromAgent, 'realty-showing-scheduler');
+  });
+
+  it('falls back to synthetic "inbound" when no roster agent owns the run', async () => {
+    // A noise run produces no owned work, so it is NOT attributed to any
+    // capability — it must not inflate a card's count.
+    const fixtures = await loadAllFixtures();
+    const noiseFixture = fixtures.find((f) => f.expectedCategory === 'noise');
+    assert.ok(noiseFixture, 'expected at least one noise fixture');
+    const { handoffRows } = await runAndPersist(noiseFixture!.id);
     assert.equal(handoffRows[0].fromAgent, 'inbound');
   });
 
@@ -178,7 +196,8 @@ describe('persistSkillRunArtifacts — WorkApprovalQueueItem writes', () => {
     assert.equal(row.refTable, 'WebhookEvent');
     assert.equal(row.refId, record.webhookEventId);
     assert.equal(row.status, 'PENDING');
-    assert.equal(row.agentSlug, SKILL_CHAIN_AGENT_SLUG);
+    // Attributed to the owning capability so its /agents card resolves.
+    assert.equal(row.agentSlug, 'realty-buyer-inquiry-router');
   });
 
   it('payload carries subject + body so /approvals can render without raw JSON', async () => {

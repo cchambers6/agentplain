@@ -12,45 +12,72 @@ export const realEstate: VerticalContent = {
   tier: "regular",
   missionSubject: "realtors and brokerages",
 
-  // The pre-trained realty fleet, surfaced in-product on /agents. Names + slugs
-  // match the static FLEET the agents page hardcoded before B4 made the page
-  // vertical-aware — zero regression for existing realty workspaces, whose
-  // HandoffLogEntry rows already key on these `realty-*` slugs.
+  // The pre-trained realty fleet, surfaced in-product on /agents. Each entry
+  // declares its runtime binding so the agents page renders a TRUTHFUL state
+  // instead of a perpetual "rooting in" spinner:
+  //   - `live`  → the V1 inbox loop attributes real work to this slug. The
+  //               attribution resolver (lib/skills/persist-artifacts.ts) writes
+  //               the slug as the handoff trace root + approval agentSlug, so
+  //               `counts.get(slug)` reads the real number once email flows.
+  //   - `rooting` → declared capability whose runtime skill is not wired into
+  //               the live loop yet; the card states what it's waiting on.
+  // Two agents are live today (the inbox chain produces buyer-inquiry replies
+  // and showing-time proposals); the other five are honestly rooting — see
+  // docs/realty-fleet-binding-2026-05-22.md for which can't be live yet + why.
   agentRoster: [
     {
       slug: "realty-listing-coordinator",
       name: "Listing Coordinator",
       job: "Runs listing intake and keeps every new listing's follow-up moving.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your transaction system is connected.",
     },
     {
       slug: "realty-buyer-inquiry-router",
       name: "Buyer Inquiry Router",
       job: "Classifies inbound buyer inquiries and drafts the first-touch reply.",
+      runtime: "live",
+      owns: ["buyer-inquiry"],
     },
     {
       slug: "realty-showing-scheduler",
       name: "Showing Scheduler",
       job: "Coordinates showing times across buyers, agents, and calendars.",
+      runtime: "live",
+      owns: ["scheduling"],
     },
     {
       slug: "realty-compliance-sentinel",
       name: "Compliance Sentinel",
       job: "Pre-checks every customer-facing draft before the broker signs.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — the compliance corpus is loaded; draft scoring activates after counsel review.",
     },
     {
       slug: "realty-crm-hygiene",
       name: "CRM Hygiene",
       job: "Dedupes, normalizes, and surfaces stale records in the CRM.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your CRM is connected.",
     },
     {
       slug: "realty-production-reporter",
       name: "Production Reporter",
       job: "Drafts the production read against MLS and the workspace median.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your MLS feed is connected.",
     },
     {
       slug: "realty-recruiter-assistant",
       name: "Recruiter Assistant",
       job: "Drafts recruiting outreach with one substantiated production reference.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online alongside the Production Reporter's data.",
     },
   ],
 

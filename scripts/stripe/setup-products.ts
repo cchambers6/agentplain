@@ -26,9 +26,20 @@
  *     `prices.list({lookup_keys: [...]})`.
  *
  * Usage:
+ *   # Test mode (safe rehearsal — default):
  *   STRIPE_SECRET_KEY=sk_test_... npx tsx scripts/stripe/setup-products.ts
  *
- * Add `--dry-run` to see the planned operations without writing.
+ *   # Live mode (Conner-gated — provisions the REAL catalog):
+ *   STRIPE_SECRET_KEY=sk_live_... npx tsx scripts/stripe/setup-products.ts --live
+ *
+ * Add `--dry-run` to see the planned operations without writing (works in
+ * either mode and never requires --live, since it writes nothing).
+ *
+ * SAFETY GATE: a live secret key (`sk_live_`/`rk_live_`) is REFUSED unless
+ * `--live` is passed, and `--live` is refused unless the key is actually
+ * live. This makes live provisioning a single deliberate command and makes
+ * it impossible to write the live catalog by accident. See
+ * docs/stripe-live-catalog-runbook-2026-05-22.md.
  */
 
 import Stripe from "stripe";
@@ -51,6 +62,17 @@ const FIRST_BAND = SEAT_BAND_ORDER[0];
 
 interface RunOptions {
   dryRun: boolean;
+  live: boolean;
+}
+
+type StripeKeyMode = "live" | "test" | "unknown";
+
+/** Classify the secret key by its documented prefix. Stripe live keys are
+ *  `sk_live_` / `rk_live_`; test keys are `sk_test_` / `rk_test_`. */
+function stripeKeyMode(secret: string): StripeKeyMode {
+  if (secret.startsWith("sk_live_") || secret.startsWith("rk_live_")) return "live";
+  if (secret.startsWith("sk_test_") || secret.startsWith("rk_test_")) return "test";
+  return "unknown";
 }
 
 async function main(): Promise<void> {
@@ -58,13 +80,45 @@ async function main(): Promise<void> {
   const secret = process.env.STRIPE_SECRET_KEY;
   if (!secret) {
     throw new Error(
-      "STRIPE_SECRET_KEY not set. Use a test-mode key for preview/dev — never prod for setup.",
+      "STRIPE_SECRET_KEY not set. Use a test-mode key (sk_test_…) for preview/dev. " +
+        "Live provisioning needs a sk_live_ key AND the explicit --live flag.",
     );
   }
+
+  const keyMode = stripeKeyMode(secret);
+
+  // ── Live-mode safety gate ──────────────────────────────────────────
+  // A dry-run writes nothing, so it bypasses the gate (rehearse against any
+  // key). For an applying run, a live key MUST be paired with --live, and
+  // --live MUST be paired with a live key — so the live catalog can never be
+  // written by accident, and --live can never silently hit a test account.
+  if (!opts.dryRun) {
+    if (keyMode === "unknown") {
+      throw new Error(
+        "STRIPE_SECRET_KEY is not a recognized sk_test_/sk_live_/rk_ key. " +
+          "Refusing to run. Re-check the key, or add --dry-run to rehearse.",
+      );
+    }
+    if (keyMode === "live" && !opts.live) {
+      throw new Error(
+        "Refusing to run against a LIVE Stripe key without --live.\n" +
+          "  This would create real Products/Prices in your live account.\n" +
+          "  Re-run with --live after reading docs/stripe-live-catalog-runbook-2026-05-22.md,\n" +
+          "  or use an sk_test_ key (or add --dry-run) for a safe rehearsal.",
+      );
+    }
+    if (opts.live && keyMode !== "live") {
+      throw new Error(
+        `--live was passed but STRIPE_SECRET_KEY is mode=${keyMode} (expected sk_live_…).\n` +
+          "  Set a live secret key, or drop --live to provision the test catalog.",
+      );
+    }
+  }
+
   const stripe = new Stripe(secret, { apiVersion: STRIPE_API_VERSION });
 
   console.log(
-    `[setup-products] mode=${opts.dryRun ? "dry-run" : "apply"} stripe-api=${STRIPE_API_VERSION}`,
+    `[setup-products] mode=${opts.dryRun ? "dry-run" : "apply"} target=${keyMode.toUpperCase()} stripe-api=${STRIPE_API_VERSION}`,
   );
 
   const productByTier = new Map<TierName, Stripe.Product>();
@@ -240,7 +294,10 @@ async function findPriceByLookupKey(
 }
 
 function parseArgs(args: string[]): RunOptions {
-  return { dryRun: args.includes("--dry-run") };
+  return {
+    dryRun: args.includes("--dry-run"),
+    live: args.includes("--live"),
+  };
 }
 
 main().catch((err) => {

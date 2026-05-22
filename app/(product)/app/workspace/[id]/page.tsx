@@ -273,38 +273,41 @@ function TodaysWork({
       </header>
 
       {handoffs.length === 0 ? (
-        <ApRootedEmptyState
-          motif="lone-tree"
-          reality={
-            onboardingComplete
-              ? `Nothing has come in yet. ${partner} is watching your inbox.`
-              : "Nothing yet — the fleet needs to know where to read from."
-          }
-          change={
-            onboardingComplete
-              ? "The first handoff lands once new mail or a webhook fires."
-              : "Finish onboarding to point the fleet at your tools."
-          }
-          cta={
-            onboardingComplete ? (
-              <ApHeritageButton
-                variant="secondary"
-                withArrow
-                href={`/app/workspace/${workspaceId}/integrations`}
-              >
-                connect another tool
-              </ApHeritageButton>
-            ) : (
-              <ApHeritageButton
-                variant="primary"
-                withArrow
-                href={`/app/workspace/${workspaceId}/onboarding`}
-              >
-                continue onboarding
-              </ApHeritageButton>
-            )
-          }
-        />
+        <>
+          <ApRootedEmptyState
+            motif="lone-tree"
+            reality={
+              onboardingComplete
+                ? `Nothing has come in yet. ${partner} is watching your inbox.`
+                : "Nothing yet — the fleet needs to know where to read from."
+            }
+            change={
+              onboardingComplete
+                ? "The first handoff lands once new mail or a webhook fires."
+                : "Finish onboarding to point the fleet at your tools."
+            }
+            cta={
+              onboardingComplete ? (
+                <ApHeritageButton
+                  variant="secondary"
+                  withArrow
+                  href={`/app/workspace/${workspaceId}/integrations`}
+                >
+                  connect another tool
+                </ApHeritageButton>
+              ) : (
+                <ApHeritageButton
+                  variant="primary"
+                  withArrow
+                  href={`/app/workspace/${workspaceId}/onboarding`}
+                >
+                  continue onboarding
+                </ApHeritageButton>
+              )
+            }
+          />
+          <LoopPreview />
+        </>
       ) : (
         <ApHairlineList>
           {handoffs.map((h) => (
@@ -326,6 +329,67 @@ function TodaysWork({
         </ApHairlineList>
       )}
     </section>
+  );
+}
+
+// ─── Loop preview ─────────────────────────────────────────────────────────
+// A clearly-labeled illustrative sample shown only while the real handoff
+// feed is empty, so a customer who hasn't connected a tool yet (or whose
+// loop hasn't fired) can still see the SHAPE of what the fleet surfaces.
+// Marked "example" throughout — it is never mistaken for live data.
+
+const LOOP_PREVIEW_ROWS: Array<{
+  from: string;
+  to: string;
+  type: string;
+  detail: string;
+}> = [
+  {
+    from: "reader",
+    to: "router",
+    type: "categorize",
+    detail: "New buyer inquiry on 142 Peachtree — tagged scheduling-needed.",
+  },
+  {
+    from: "router",
+    to: "scheduler",
+    type: "schedule",
+    detail: "Proposed Tuesday 10:30 and Thursday 2:00 from your open calendar.",
+  },
+  {
+    from: "scheduler",
+    to: "drafter",
+    type: "draft",
+    detail: "Reply drafted for your review — waiting in your approvals queue.",
+  },
+];
+
+function LoopPreview() {
+  return (
+    <div className="mt-6 border border-rule bg-paper-deep p-5">
+      <p className="font-mono text-[10px] tracking-eyebrow uppercase text-mute">
+        example · what lands here once mail flows
+      </p>
+      <ul className="mt-3 divide-y divide-rule border-y border-rule">
+        {LOOP_PREVIEW_ROWS.map((r) => (
+          <li key={`${r.from}-${r.to}`} className="py-3">
+            <span className="text-[14px] text-ink-soft">
+              <span className="font-mono text-ink">{r.from}</span>
+              <span className="mx-2 text-mute">→</span>
+              <span className="font-mono text-ink">{r.to}</span>
+              <span className="ml-2 text-mute">· {r.type}</span>
+            </span>
+            <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">
+              {r.detail}
+            </p>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 text-[12px] leading-relaxed text-mute">
+        An illustration, not your data. Your fleet&rsquo;s real handoffs replace
+        this the moment your first message comes in.
+      </p>
+    </div>
   );
 }
 
@@ -428,6 +492,10 @@ function TodaysQueue({
           <dd className="font-display text-xl text-ink">{openFlags}</dd>
         </div>
       </dl>
+      <p className="mt-4 border-t border-rule pt-3 text-[13px] leading-relaxed text-mute">
+        Drafts wait here for your approve, edit, or reject. Your own tools do
+        the sending — nothing leaves without your hand on it.
+      </p>
     </ApPaperCard>
   );
 }

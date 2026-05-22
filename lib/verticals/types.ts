@@ -146,6 +146,29 @@ export interface ValueLoopExample {
 }
 
 /**
+ * One capability in the vertical's pre-trained fleet, as surfaced in-product
+ * on `/app/workspace/[id]/agents`. This is the source of truth for the
+ * roster the operator-facing agents page renders — it replaces the static
+ * realty-only `FLEET` array that page used to hardcode, so a CPA / law /
+ * insurance workspace sees its own fleet.
+ *
+ * - `slug` — stable agent identifier, used in handoff logs + the per-agent
+ *   route (`/agents/[slug]`). MUST match the `fromAgent` / `toAgent` values
+ *   the runtime writes to `HandoffLogEntry`, or the activity count reads 0.
+ * - `name` — human-readable capability name, brand voice (calm, no hype).
+ * - `job` — one-line plain-English description of the single job it owns.
+ *
+ * Grounded in each vertical's JTBD tables — the roster names the agents the
+ * `withAgentplain` column already references, so the in-product fleet and the
+ * marketing page describe the same capabilities.
+ */
+export interface AgentRosterEntry {
+  slug: string;
+  name: string;
+  job: string;
+}
+
+/**
  * Top-level shape for one vertical's landing page.
  *
  * Renderer contract: every field is required except `jtbdTables[*].draft`
@@ -217,4 +240,17 @@ export interface VerticalContent {
    * verticals in this PR.
    */
   missionSubject?: string;
+
+  /**
+   * The vertical's pre-trained fleet — the capabilities the in-product
+   * `/app/workspace/[id]/agents` page renders for a workspace in this
+   * vertical. Each entry is a single-job capability (see `AgentRosterEntry`).
+   *
+   * Populated on all ten ratified verticals in this PR. Optional in the type
+   * for backward-compat with the `/general` on-ramp surface, which shares the
+   * `VerticalContent` shape but has no vertical-specific fleet — the agents
+   * page falls back to the real-estate roster when this is absent so the page
+   * never renders empty.
+   */
+  agentRoster?: AgentRosterEntry[];
 }

@@ -94,6 +94,13 @@ export const env = {
 
   // Notion
   notionApiKey: () => required("NOTION_API_KEY"),
+  // Briefings are an optional, additive feature — not part of the core
+  // value loop. The non-throwing accessor lets the briefings factory fall
+  // back to the empty/test provider when no key is configured, so a missing
+  // NOTION_API_KEY degrades the briefings card to "no briefings yet" instead
+  // of throwing and taking down the entire workspace overview. Mirrors the
+  // OPENAI_API_KEY embedder fallback (see knowledgeEmbeddingProvider above).
+  notionApiKeyOptional: () => optional("NOTION_API_KEY"),
   // Notion 2025-09 API: this is a data source id, not a database id.
   notionBriefingsDataSourceId: () =>
     optional("NOTION_BRIEFINGS_DATA_SOURCE_ID") ??

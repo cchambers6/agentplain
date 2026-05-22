@@ -30,6 +30,45 @@ export const homeServices: VerticalContent = {
   tier: "plus",
   missionSubject: "home services contractors",
 
+  // Fleet surfaced in-product on /agents, grounded in the home-services JTBD tables.
+  agentRoster: [
+    {
+      slug: "home-services-lead-router",
+      name: "Lead Router",
+      job: "Scores and routes inbound leads across every source into one queue.",
+    },
+    {
+      slug: "home-services-estimate",
+      name: "Estimate",
+      job: "Builds the bid from measurements and drafts the homeowner-facing proposal.",
+    },
+    {
+      slug: "home-services-supplement",
+      name: "Supplement",
+      job: "Reads the adjuster scope and drafts the line-item rebuttal for owner sign-off.",
+    },
+    {
+      slug: "home-services-dispatch",
+      name: "Dispatch",
+      job: "Ranks same-day calls by SLA and skill match, then drafts and re-drafts the route.",
+    },
+    {
+      slug: "home-services-eta-updater",
+      name: "ETA Updater",
+      job: "Drafts homeowner updates on every job-state change for the dispatcher to send.",
+    },
+    {
+      slug: "home-services-project-coordinator",
+      name: "Project Coordinator",
+      job: "Sequences material order, crew window, and inspection scheduling on a signed contract.",
+    },
+    {
+      slug: "home-services-reviews",
+      name: "Reviews",
+      job: "Runs the T+7 review-and-referral cadence on every completed job.",
+    },
+  ],
+
   hero: {
     eyebrow: "Built for residential trades operations",
     headline: "The fleet for the residential trades operation.",

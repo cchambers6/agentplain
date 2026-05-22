@@ -449,7 +449,7 @@ interface TierBullets {
 const TIER_BULLETS: Record<TierName, TierBullets> = {
   regular: {
     bullets: [
-      "Standard managed AI ops",
+      "Your fleet, run for you",
       "Onboarding bundled",
       "Compliance Sentinel + Buyer Inquiry Router + Showing Scheduler",
       "Weekly briefings + activity feed",

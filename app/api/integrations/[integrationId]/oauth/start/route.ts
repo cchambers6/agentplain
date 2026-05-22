@@ -28,6 +28,7 @@ import { sealData } from "iron-session";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { getMarketplaceEntry } from "@/lib/integrations/marketplace";
+import { isIntegrationConfigured } from "@/lib/integrations/config-status";
 import { buildAuthorizeUrl } from "@/lib/integrations/oauth-urls";
 
 export const runtime = "nodejs";
@@ -63,6 +64,26 @@ function safeReturnTo(raw: string | null, workspaceId: string): string | undefin
   // No protocol-relative or absolute URLs sneak through (defense in depth).
   if (raw.startsWith("//") || /^[a-z]+:/i.test(raw)) return undefined;
   return raw;
+}
+
+/**
+ * The calm, branded landing for an OAuth start that can't proceed because
+ * the provider isn't configured in this environment. The integrations page
+ * renders a `notice=not-configured` banner explaining the service partner
+ * wires it on the welcome call.
+ */
+function notConfiguredUrl(
+  req: NextRequest,
+  workspaceId: string,
+  integrationId: string,
+): URL {
+  const url = new URL(
+    `/app/workspace/${workspaceId}/integrations`,
+    req.nextUrl.origin,
+  );
+  url.searchParams.set("notice", "not-configured");
+  url.searchParams.set("integration", integrationId);
+  return url;
 }
 
 interface RouteContext {
@@ -101,6 +122,15 @@ export async function GET(req: NextRequest, ctx: RouteContext): Promise<NextResp
   // navigation so the redirect is the right shape.
   await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
 
+  // If the provider's OAuth credentials aren't wired in this environment,
+  // buildAuthorizeUrl would throw. This is a GET navigation (the user clicked
+  // a link), so a raw JSON 503 is a dead end. Redirect to the connections
+  // surface with a calm, branded notice instead — the UI should already be
+  // gating the CTA on isIntegrationConfigured, so this is defense in depth.
+  if (!isIntegrationConfigured(entry)) {
+    return NextResponse.redirect(notConfiguredUrl(req, workspaceId, integrationId));
+  }
+
   const nonce = randomBytes(32).toString("hex");
   const returnTo = safeReturnTo(
     req.nextUrl.searchParams.get("returnTo"),
@@ -134,15 +164,10 @@ export async function GET(req: NextRequest, ctx: RouteContext): Promise<NextResp
       quickbooksClientId: env.quickbooksOAuthClientId(),
       slackClientId: env.slackOAuthClientId(),
     });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json(
-      {
-        error: "oauth_not_configured",
-        message,
-      },
-      { status: 503 },
-    );
+  } catch {
+    // Same calm landing as the pre-check above — never strand the user on a
+    // raw JSON error for a navigation they initiated.
+    return NextResponse.redirect(notConfiguredUrl(req, workspaceId, integrationId));
   }
 
   const res = NextResponse.redirect(authorizeUrl);

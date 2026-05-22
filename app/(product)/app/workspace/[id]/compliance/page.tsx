@@ -74,7 +74,7 @@ export default async function CompliancePage({ params }: PageProps) {
                 </span>
               </div>
               {f.suggestedRewrite ? (
-                <p className="mt-3 border-l-2 border-moss bg-paper-deep p-3 text-[14px] leading-relaxed text-ink-soft">
+                <p className="mt-3 border-l-2 border-rule bg-paper-deep p-3 text-[14px] leading-relaxed text-ink-soft">
                   {f.suggestedRewrite}
                 </p>
               ) : null}

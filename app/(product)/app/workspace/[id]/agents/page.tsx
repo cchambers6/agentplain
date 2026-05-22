@@ -1,42 +1,55 @@
 import Link from "next/link";
 import { ApEyebrow } from "@/components/ui/ap";
 import { requireWorkspaceMember } from "@/lib/auth";
+import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
 import { withRls } from "@/lib/db";
+import { getVerticalContent } from "@/lib/verticals";
+import type { AgentRosterEntry } from "@/lib/verticals/types";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-// Phase 1 has a static fleet — agent definitions aren't editable in product
-// (per product_spec §7.3, the product is "not the agent runtime itself").
+// Agent definitions aren't editable in product (per product_spec §7.3, the
+// product is "not the agent runtime itself"). The fleet is read from the
+// workspace's vertical roster (`lib/verticals/<slug>/content.ts → agentRoster`)
+// so a CPA / law / insurance workspace sees its own fleet, not the realty one.
 // Activity counts come from real workspace state.
-const FLEET = [
-  { slug: "realty-listing-coordinator", name: "Listing Coordinator" },
-  { slug: "realty-buyer-inquiry-router", name: "Buyer Inquiry Router" },
-  { slug: "realty-showing-scheduler", name: "Showing Scheduler" },
-  { slug: "realty-compliance-sentinel", name: "Compliance Sentinel" },
-  { slug: "realty-crm-hygiene", name: "CRM Hygiene" },
-  { slug: "realty-production-reporter", name: "Production Reporter" },
-  { slug: "realty-recruiter-assistant", name: "Recruiter Assistant" },
-];
 
 export default async function AgentsPage({ params }: PageProps) {
   const { id: workspaceId } = await params;
   const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
   const ctx = { userId: member.userId, workspaceId, isOperator: false };
 
-  const counts = await withRls(ctx, async (tx) => {
-    const grouped = await tx.handoffLogEntry.groupBy({
-      by: ["fromAgent"],
-      where: { workspaceId },
-      _count: { _all: true },
-    });
-    const byAgent = new Map<string, number>();
-    for (const row of grouped) {
-      byAgent.set(row.fromAgent, row._count._all);
-    }
-    return byAgent;
-  });
+  const [counts, workspace] = await Promise.all([
+    withRls(ctx, async (tx) => {
+      const grouped = await tx.handoffLogEntry.groupBy({
+        by: ["fromAgent"],
+        where: { workspaceId },
+        _count: { _all: true },
+      });
+      const byAgent = new Map<string, number>();
+      for (const row of grouped) {
+        byAgent.set(row.fromAgent, row._count._all);
+      }
+      return byAgent;
+    }),
+    withRls(ctx, (tx) =>
+      tx.workspace.findUniqueOrThrow({
+        where: { id: workspaceId },
+        select: { vertical: true },
+      }),
+    ),
+  ]);
+
+  // Resolve the workspace's vertical to its content roster. The slug bridge
+  // is the single boundary between the Prisma enum and the content layer.
+  // Real estate is the fallback when a surface has no roster (e.g. the
+  // `/general` on-ramp content), so the page never renders empty.
+  const verticalSlug = verticalSlugFromEnum(workspace.vertical);
+  const realEstateRoster = getVerticalContent("real-estate")?.agentRoster ?? [];
+  const fleet: AgentRosterEntry[] =
+    getVerticalContent(verticalSlug)?.agentRoster ?? realEstateRoster;
 
   return (
     <div>
@@ -52,18 +65,21 @@ export default async function AgentsPage({ params }: PageProps) {
       </p>
 
       <div className="mt-8 grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-3">
-        {FLEET.map((agent) => {
+        {fleet.map((agent) => {
           const handoffCount = counts.get(agent.slug) ?? 0;
           return (
             <Link
               key={agent.slug}
               href={`/app/workspace/${workspaceId}/agents/${agent.slug}`}
-              className="block bg-paper p-5 transition hover:bg-paper-deep focus:outline-none focus-visible:bg-paper-deep focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-inset"
+              className="block border border-transparent bg-paper p-5 transition hover:border-ink focus:outline-none focus-visible:border-ink focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-inset"
             >
               <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
                 {agent.slug}
               </p>
               <p className="mt-2 font-display text-xl text-ink">{agent.name}</p>
+              <p className="mt-2 text-[13px] leading-relaxed text-ink-soft">
+                {agent.job}
+              </p>
               <p className="mt-3 text-[13px] text-mute">
                 {handoffCount === 0
                   ? "rooting in — first handoff lands soon"

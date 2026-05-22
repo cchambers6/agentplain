@@ -28,6 +28,45 @@ export const cpa: VerticalContent = {
   tier: "plus",
   missionSubject: "CPAs and tax practices",
 
+  // Fleet surfaced in-product on /agents, grounded in the CPA JTBD tables.
+  agentRoster: [
+    {
+      slug: "cpa-onboarding",
+      name: "Engagement Onboarding",
+      job: "Drafts the engagement letter and doc checklist scoped to entity type and state.",
+    },
+    {
+      slug: "cpa-doc-chase",
+      name: "Document Chase",
+      job: "Runs the missing-document cadence per client through the season.",
+    },
+    {
+      slug: "cpa-compliance-sentinel",
+      name: "Compliance Sentinel",
+      job: "Runs the federal and state checklist before a return hits the partner's desk.",
+    },
+    {
+      slug: "cpa-books-recon",
+      name: "Books Reconciler",
+      job: "Drafts the books reconciliation against bank feeds; staff reviews exceptions.",
+    },
+    {
+      slug: "cpa-collections",
+      name: "Collections",
+      job: "Drafts the 30/60/90 aged-AR escalation for the partner to sign.",
+    },
+    {
+      slug: "cpa-billing",
+      name: "Milestone Billing",
+      job: "Drafts the invoice on each milestone trigger for the admin to send.",
+    },
+    {
+      slug: "cpa-client-inbound",
+      name: "Client Inbound",
+      job: "Classifies inbound questions by engagement and drafts the response.",
+    },
+  ],
+
   hero: {
     eyebrow: "Built for small CPA and tax practices",
     headline: "The fleet for the small-firm CPA.",

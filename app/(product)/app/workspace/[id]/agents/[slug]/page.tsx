@@ -5,7 +5,9 @@ import {
   ApRootedEmptyState,
 } from "@/components/ui/ap";
 import { requireWorkspaceMember } from "@/lib/auth";
+import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
 import { withRls } from "@/lib/db";
+import { getVerticalContent } from "@/lib/verticals";
 
 interface PageProps {
   params: Promise<{ id: string; slug: string }>;
@@ -16,7 +18,7 @@ export default async function AgentDetailPage({ params }: PageProps) {
   const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
   const ctx = { userId: member.userId, workspaceId, isOperator: false };
 
-  const [pendingItems, recentHandoffs] = await Promise.all([
+  const [pendingItems, recentHandoffs, workspace] = await Promise.all([
     withRls(ctx, (tx) =>
       tx.workApprovalQueueItem.findMany({
         where: { workspaceId, agentSlug, status: "PENDING" },
@@ -34,14 +36,33 @@ export default async function AgentDetailPage({ params }: PageProps) {
         take: 20,
       }),
     ),
+    withRls(ctx, (tx) =>
+      tx.workspace.findUniqueOrThrow({
+        where: { id: workspaceId },
+        select: { vertical: true },
+      }),
+    ),
   ]);
+
+  // Resolve the slug to its human name + job from the workspace's vertical
+  // roster. Unknown slugs (e.g. a retired or runtime-only agent) fall back to
+  // the raw slug so the page never breaks for an unmapped capability.
+  const roster =
+    getVerticalContent(verticalSlugFromEnum(workspace.vertical))?.agentRoster ??
+    [];
+  const agent = roster.find((a) => a.slug === agentSlug);
 
   return (
     <div>
-      <ApEyebrow className="mb-3">{agentSlug}</ApEyebrow>
+      <ApEyebrow className="mb-3">{agent?.name ?? agentSlug}</ApEyebrow>
       <h1 className="font-display text-3xl text-ink">
         What this capability has been doing.
       </h1>
+      {agent ? (
+        <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
+          {agent.job}
+        </p>
+      ) : null}
 
       <section className="mt-8">
         <ApEyebrow className="mb-3">

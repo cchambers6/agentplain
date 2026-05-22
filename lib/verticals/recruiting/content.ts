@@ -19,6 +19,45 @@ export const recruiting: VerticalContent = {
   tier: "regular",
   missionSubject: "recruiters and staffing firms",
 
+  // Fleet surfaced in-product on /agents, grounded in the recruiting JTBD tables.
+  agentRoster: [
+    {
+      slug: "recruiting-sourcing",
+      name: "Sourcing",
+      job: "Drafts a ranked candidate list with a substantiated reference per name.",
+    },
+    {
+      slug: "recruiting-outreach",
+      name: "Outreach",
+      job: "Drafts the first-touch with one production reference, plain CTA, and opt-out line.",
+    },
+    {
+      slug: "recruiting-cadence",
+      name: "Cadence",
+      job: "Runs the second and third touch timing for the recruiter to send.",
+    },
+    {
+      slug: "recruiting-intake-brief",
+      name: "Intake Brief",
+      job: "Drafts the role brief from the hiring-manager call and surfaces open questions.",
+    },
+    {
+      slug: "recruiting-pipeline-recap",
+      name: "Pipeline Recap",
+      job: "Drafts the weekly client recap with candidates moved and bottlenecks flagged.",
+    },
+    {
+      slug: "recruiting-scheduler",
+      name: "Scheduler",
+      job: "Runs the multi-party interview search; coordinator reviews conflicts only.",
+    },
+    {
+      slug: "recruiting-ats-hygiene",
+      name: "ATS Hygiene",
+      job: "Dedupes, normalizes, and surfaces stale records in the ATS each week.",
+    },
+  ],
+
   hero: {
     eyebrow: "Built for boutique recruiting firms and in-house talent teams",
     headline: "The fleet for the boutique recruiting practice.",

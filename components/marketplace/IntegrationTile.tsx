@@ -10,6 +10,14 @@ interface IntegrationTileProps {
   workspaceId: string;
   /** Account label rendered under the title when connected (e.g. "you@firm.com"). */
   accountLabel?: string;
+  /**
+   * Whether the provider's OAuth credentials are configured in this
+   * environment. When false on an `available` tile, the connect CTA would
+   * dead-end at the start route's `oauth_not_configured` branch, so we show
+   * an honest "your service partner connects this" state instead. Defaults
+   * to true so existing call sites and tests keep the connect CTA.
+   */
+  configured?: boolean;
 }
 
 export function IntegrationTile({
@@ -17,6 +25,7 @@ export function IntegrationTile({
   status,
   workspaceId,
   accountLabel,
+  configured = true,
 }: IntegrationTileProps) {
   const isComingSoon = status === "coming-soon";
   const isConnected = status === "connected";
@@ -45,7 +54,12 @@ export function IntegrationTile({
         {entry.description}
       </p>
       <div className="mt-5">
-        <TileAction entry={entry} status={status} workspaceId={workspaceId} />
+        <TileAction
+          entry={entry}
+          status={status}
+          workspaceId={workspaceId}
+          configured={configured}
+        />
       </div>
     </div>
   );
@@ -55,10 +69,12 @@ function TileAction({
   entry,
   status,
   workspaceId,
+  configured,
 }: {
   entry: MarketplaceEntry;
   status: TileStatus;
   workspaceId: string;
+  configured: boolean;
 }) {
   const focusRing =
     "focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper";
@@ -74,6 +90,16 @@ function TileAction({
     );
   }
   if (status === "available") {
+    // Credentials not wired in this environment yet — the connect CTA would
+    // dead-end at the start route. Report the honest service-partnership
+    // state instead of a button that errors.
+    if (!configured) {
+      return (
+        <span className="inline-flex items-center font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+          your service partner connects this
+        </span>
+      );
+    }
     return (
       <Link
         prefetch={false}

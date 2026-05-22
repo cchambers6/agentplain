@@ -18,6 +18,45 @@ export const propertyManagement: VerticalContent = {
   tier: "regular",
   missionSubject: "property managers and management companies",
 
+  // Fleet surfaced in-product on /agents, grounded in the property-management JTBD tables.
+  agentRoster: [
+    {
+      slug: "pm-tenant-inbound",
+      name: "Tenant Inbound",
+      job: "Classifies tenant messages and drafts the first-touch reply.",
+    },
+    {
+      slug: "pm-work-order",
+      name: "Work-Order Router",
+      job: "Routes maintenance to the right vendor by trade and zone with an access window.",
+    },
+    {
+      slug: "pm-lease-renewal",
+      name: "Renewal Coordinator",
+      job: "Runs the 90/60/30-day renewal cadence with market-rent context attached.",
+    },
+    {
+      slug: "pm-collections",
+      name: "Collections",
+      job: "Runs the late-rent cadence with tenant payment history attached.",
+    },
+    {
+      slug: "pm-owner-reporter",
+      name: "Owner Reporter",
+      job: "Drafts the monthly per-owner report for the principal to send.",
+    },
+    {
+      slug: "pm-application-screening",
+      name: "Application Screening",
+      job: "Normalizes applications against policy and drafts the approve/deny letter.",
+    },
+    {
+      slug: "pm-books-recon",
+      name: "Books Reconciler",
+      job: "Drafts the owner-draw and trust-account reconciliation for review.",
+    },
+  ],
+
   hero: {
     eyebrow: "Built for small-portfolio property managers",
     headline: "The fleet for the small-portfolio property manager.",

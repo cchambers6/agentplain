@@ -266,7 +266,7 @@ function AdminCardContent({ admin }: AdminCardContentProps) {
             rel="noreferrer noopener"
             className="mt-2 inline-flex items-center justify-center border border-ink bg-paper px-3 py-2 font-sans text-sm text-ink underline-offset-4 hover:underline"
           >
-            Open in your browser
+            open in your browser
           </a>
           <p className="mt-2 break-all font-mono text-[11px] text-mute">
             {admin.primaryUrl}
@@ -288,7 +288,7 @@ function AdminCardContent({ admin }: AdminCardContentProps) {
             rel="noreferrer noopener"
             className="mt-2 inline-flex items-center justify-center border border-ink bg-paper px-3 py-2 font-sans text-sm text-ink underline-offset-4 hover:underline"
           >
-            Open to confirm
+            open to confirm
           </a>
           <p className="mt-2 break-all font-mono text-[11px] text-mute">
             {admin.primaryUrl}

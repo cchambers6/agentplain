@@ -9,12 +9,13 @@
  * `LeadershipDataSource`. The page never knows whether it came from a
  * JSON snapshot or a future DB-backed adapter.
  *
- * Per `project_no_outbound_architecture.md`: the only mutation is
- * `revalidatePath('/operator/leadership-board')`. No outbound vendor
- * calls fire from this route.
+ * Per `project_no_outbound_architecture.md`: this route is read-only — no
+ * mutations, no outbound vendor calls. `force-dynamic` re-reads the snapshot
+ * on every render, so there is no manual "refresh" affordance (it would be a
+ * no-op against an always-fresh page); the snapshot is regenerated out-of-band
+ * by `scripts/snapshot-leadership-state.ts`.
  */
 
-import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/server";
 import {
   classifyBoard,
@@ -36,22 +37,5 @@ export default async function OperatorLeadershipBoardPage() {
   const now = new Date();
   const board: ClassifiedBoard = classifyBoard(snapshot, now);
 
-  return (
-    <LeadershipBoardView
-      board={board}
-      now={now}
-      refreshAction={refreshAction}
-    />
-  );
-}
-
-async function refreshAction(): Promise<void> {
-  "use server";
-  // The snapshot file is regenerated out-of-band by
-  // `scripts/snapshot-leadership-state.ts`. The action's job is to drop
-  // any Next.js data cache so the page re-reads the file on next
-  // render. Re-running the build-time script from inside a serverless
-  // function is intentionally out of scope — the v2 DB-backed adapter
-  // makes this action a no-op for cache busting only.
-  revalidatePath("/operator/leadership-board");
+  return <LeadershipBoardView board={board} now={now} />;
 }

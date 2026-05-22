@@ -12,8 +12,14 @@
  *   3. empty-state    → "why is this view blank — and when will it fill?"
  *
  * Per `project_no_outbound_architecture.md`: this is a READ-ONLY surface.
- * No action triggers from here. The single form (Refresh) submits a
- * server action that revalidates the route — no third-party calls fire.
+ * No action triggers from here.
+ *
+ * There is intentionally no "Refresh" control: the route is `force-dynamic`
+ * and re-reads the snapshot file on every render, so a reload already shows
+ * the latest. The snapshot itself is regenerated out-of-band by
+ * `scripts/snapshot-leadership-state.ts` (a serverless action cannot run it),
+ * so a button would only ever re-render what a reload already gives — a
+ * no-op affordance. The header states how the snapshot updates instead.
  */
 
 // `import React` is required because `tsconfig.json` uses `jsx: preserve`
@@ -31,13 +37,11 @@ import {
 interface LeadershipBoardViewProps {
   board: ClassifiedBoard;
   now: Date;
-  refreshAction: () => Promise<void>;
 }
 
 export default function LeadershipBoardView({
   board,
   now,
-  refreshAction,
 }: LeadershipBoardViewProps) {
   const anyObservations = board.tiers.some((t) =>
     t.rows.some((r) => r.observation !== null),
@@ -64,11 +68,10 @@ export default function LeadershipBoardView({
           <div className="font-mono text-[11px] uppercase tracking-eyebrow text-mute">
             source {board.source}
           </div>
-          <form action={refreshAction}>
-            <button type="submit" className="btn-secondary px-4 py-2 text-xs">
-              Refresh
-            </button>
-          </form>
+          <p className="max-w-xs text-[11px] leading-relaxed text-mute md:text-right">
+            Regenerated out-of-band by the leadership snapshot job. Reload to
+            re-read the latest.
+          </p>
         </div>
       </header>
 

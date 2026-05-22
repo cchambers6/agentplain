@@ -21,6 +21,7 @@ describe("withWorkspace surface", () => {
         email: "e@x.test",
         workspaceId: "w",
         role: "BROKER_OWNER",
+        isOperator: false,
       },
       workspace: {
         id: "w",

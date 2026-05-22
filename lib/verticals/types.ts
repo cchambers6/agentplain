@@ -157,15 +157,43 @@ export interface ValueLoopExample {
  *   the runtime writes to `HandoffLogEntry`, or the activity count reads 0.
  * - `name` — human-readable capability name, brand voice (calm, no hype).
  * - `job` — one-line plain-English description of the single job it owns.
+ * - `runtime` — what backs this capability in the product today. `live` means
+ *   the V1 inbox loop attributes real work to this agent's slug (so the card
+ *   shows real handoff counts once email flows through it). `rooting` means
+ *   the capability is declared in the fleet but its runtime is still being
+ *   built — the card says so honestly via `rootingNote` instead of implying a
+ *   handoff is imminent. Omitting `runtime` keeps the legacy count-only
+ *   rendering (used by verticals that have not yet declared bindings).
+ * - `owns` — the loop outcomes the persist layer attributes to this agent.
+ *   Only meaningful when `runtime === "live"`; the attribution resolver in
+ *   `lib/skills/persist-artifacts.ts` writes this slug as the handoff trace
+ *   root + the approval `agentSlug` so the contract above actually holds.
+ * - `rootingNote` — required when `runtime === "rooting"`: one calm,
+ *   service-partner line stating what the capability is waiting on.
  *
  * Grounded in each vertical's JTBD tables — the roster names the agents the
  * `withAgentplain` column already references, so the in-product fleet and the
  * marketing page describe the same capabilities.
  */
+
+/**
+ * Loop outcomes the live inbox chain can attribute to a roster agent. This is
+ * the bridge between the runner's `SkillRunOutcome` (intent / schedule) and a
+ * named capability the customer sees on `/agents`. Keep in sync with
+ * `workFromOutcome` in `lib/skills/persist-artifacts.ts`.
+ */
+export type AgentLoopWork = "buyer-inquiry" | "scheduling";
+
+/** Whether a roster capability runs in the live V1 loop or is still rooting. */
+export type AgentRuntimeStatus = "live" | "rooting";
+
 export interface AgentRosterEntry {
   slug: string;
   name: string;
   job: string;
+  runtime?: AgentRuntimeStatus;
+  owns?: AgentLoopWork[];
+  rootingNote?: string;
 }
 
 /**

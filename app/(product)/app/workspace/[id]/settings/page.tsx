@@ -15,7 +15,9 @@ interface PageProps {
 }
 
 interface SectionLink {
-  href: string;
+  /** Omitted for coming-soon rows — they render as a disabled label, never
+   *  a clickable link, so there is no placeholder "#" href to dead-end on. */
+  href?: string;
   label: string;
   description: string;
   status?: "available" | "coming-soon";
@@ -78,19 +80,16 @@ export default async function SettingsPage({ params }: PageProps) {
       description: "Every handoff your fleet has executed.",
     },
     {
-      href: "#",
       label: "team members",
       description: "Add, remove, and assign roles.",
       status: "coming-soon",
     },
     {
-      href: "#",
       label: "drafting tone",
       description: "How your fleet sounds in customer-facing drafts.",
       status: "coming-soon",
     },
     {
-      href: "#",
       label: "notifications",
       description: "When your service team pings you and how.",
       status: "coming-soon",
@@ -142,16 +141,7 @@ export default async function SettingsPage({ params }: PageProps) {
                 )
               }
             >
-              {s.status === "coming-soon" ? (
-                <div>
-                  <p className="font-display text-base leading-tight text-ink">
-                    {s.label}
-                  </p>
-                  <p className="mt-1 text-[13px] leading-relaxed text-mute">
-                    {s.description}
-                  </p>
-                </div>
-              ) : (
+              {s.href && s.status !== "coming-soon" ? (
                 <Link href={s.href} className="block">
                   <p className="font-display text-base leading-tight text-ink">
                     {s.label}
@@ -160,6 +150,15 @@ export default async function SettingsPage({ params }: PageProps) {
                     {s.description}
                   </p>
                 </Link>
+              ) : (
+                <div aria-disabled={s.status === "coming-soon"}>
+                  <p className="font-display text-base leading-tight text-ink">
+                    {s.label}
+                  </p>
+                  <p className="mt-1 text-[13px] leading-relaxed text-mute">
+                    {s.description}
+                  </p>
+                </div>
               )}
             </ApHairlineRow>
           ))}

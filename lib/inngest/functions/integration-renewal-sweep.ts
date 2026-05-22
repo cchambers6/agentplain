@@ -33,6 +33,7 @@ import {
   encryptTokenSet,
   getProvider,
 } from '@/lib/integrations';
+import { isEncryptionConfigured } from '@/lib/security/encryption';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
 
@@ -71,6 +72,23 @@ export async function runIntegrationRenewalSweep(
     renewed: 0,
     failures: [],
   };
+
+  // Without the master key we cannot decrypt any stored token. Fail the
+  // sweep CLEARLY (the cron records every skipped subscription with a
+  // reason) instead of throwing a MissingKeyError per credential and
+  // crashing the run. No tokens are touched and nothing is marked REVOKED —
+  // the connections are intact; only the renewal is deferred until the key
+  // is restored.
+  if (!isEncryptionConfigured()) {
+    for (const sub of candidates) {
+      result.failures.push({
+        subscriptionId: sub.id,
+        reason:
+          'ENCRYPTION_KEY not configured — cannot decrypt credentials; renewal skipped',
+      });
+    }
+    return result;
+  }
 
   for (const sub of candidates) {
     if (sub.credential.status !== 'ACTIVE') {

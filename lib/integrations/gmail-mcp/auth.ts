@@ -31,6 +31,7 @@
 import type { IntegrationCredential } from '@prisma/client';
 import { prisma } from '@/lib/db/prisma';
 import { decryptCredential, encryptTokenSet, getProvider } from '@/lib/integrations';
+import { isEncryptionConfigured } from '@/lib/security/encryption';
 import type { DecryptedCredential } from '@/lib/integrations/types';
 import { gmailError, type GmailMcpResult } from './types';
 
@@ -71,6 +72,15 @@ export async function resolveCredential(
     return gmailError(
       'CREDENTIAL_NOT_FOUND',
       `No active GOOGLE IntegrationCredential for workspace ${args.workspaceId}. Connect Gmail at /operator/integrations.`,
+    );
+  }
+
+  // Fail clearly (not a raw MissingKeyError crash) when the master key is
+  // absent — the credential exists but cannot be decrypted in this env.
+  if (!isEncryptionConfigured()) {
+    return gmailError(
+      'UPSTREAM_ERROR',
+      `Cannot decrypt the Gmail credential for workspace ${args.workspaceId}: ENCRYPTION_KEY is not configured in this environment. The connection is intact; renewal resumes once the key is restored.`,
     );
   }
 

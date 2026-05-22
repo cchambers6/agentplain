@@ -26,17 +26,60 @@
 
 import type { Prisma } from '@prisma/client';
 import { withRls, type RlsContext } from '../db';
+import { getVerticalContent } from '../verticals';
+import type { AgentLoopWork } from '../verticals/types';
 import { categoryToApprovalKind, type OfficeAdminApprovalPayload } from './office-admin';
 import type { SkillRunRecord, SkillStepRecord, SkillRunOutcome } from './types';
 
 /**
- * Stable agent slug — every handoff + approval surfaces this so the
- * agents page can group by agent. We use one slug for the V1 chain
- * because the five skills are a single agent's pipeline, not five agents.
- * When the fleet expands to per-agent chains, this becomes the agent's
- * slug rather than this constant.
+ * Fallback agent slug for runs the vertical roster does not claim — e.g.
+ * office-admin triage (cross-vertical, no roster card) and noise/vendor
+ * outcomes that produce no owned work. The five chain skills are one
+ * pipeline, so a single slug is correct here.
+ *
+ * Runs that DO map to a named roster capability (a buyer inquiry, a
+ * showing request) are attributed to that capability's slug instead —
+ * see `resolveOwningAgentSlug`. That is what makes the `/agents` cards
+ * resolve to real activity instead of a perpetual "rooting in" spinner.
  */
 export const SKILL_CHAIN_AGENT_SLUG = 'inbox-triage-fleet';
+
+/**
+ * Map a completed run's outcome to the loop-work bucket a roster agent can
+ * own. Returns null when the run is admin triage or produced no owned work
+ * (noise / transactional / vendor) — those fall back to SKILL_CHAIN_AGENT_SLUG.
+ *
+ * Keep the buckets in sync with `AgentLoopWork` in `lib/verticals/types.ts`.
+ * Scheduling wins over draft because a scheduling-needed run produces both a
+ * proposal AND a reply draft, and the showing scheduler owns that run.
+ */
+function workFromOutcome(outcome: SkillRunOutcome): AgentLoopWork | null {
+  if (outcome.officeAdminPayload) return null;
+  if (outcome.scheduledProposal || outcome.category === 'scheduling-needed') {
+    return 'scheduling';
+  }
+  if (outcome.category === 'draft-needed' || outcome.category === 'lead') {
+    return 'buyer-inquiry';
+  }
+  return null;
+}
+
+/**
+ * Resolve the roster agent that owns this run, or null to use the fallback.
+ * Looks up the workspace's vertical roster and finds the single `live` agent
+ * whose `owns` list claims the run's work bucket. Verticals that have not yet
+ * declared `runtime`/`owns` bindings resolve to null (legacy behavior — the
+ * run is attributed to SKILL_CHAIN_AGENT_SLUG, exactly as before).
+ */
+function resolveOwningAgentSlug(record: SkillRunRecord): string | null {
+  const work = workFromOutcome(record.outcome);
+  if (!work) return null;
+  const roster = getVerticalContent(record.verticalSlug)?.agentRoster ?? [];
+  const owner = roster.find(
+    (a) => a.runtime === 'live' && (a.owns?.includes(work) ?? false),
+  );
+  return owner?.slug ?? null;
+}
 
 export interface PersistArtifactsResult {
   /** Number of HandoffLogEntry rows written this call. */
@@ -79,9 +122,15 @@ async function writeArtifacts(
   workspaceId: string,
   record: SkillRunRecord,
 ): Promise<PersistArtifactsResult> {
+  // Resolve once: the roster agent that owns this run (or null → fallback).
+  // Both the handoff trace root and the approval agentSlug use it so the
+  // /agents card for the owning capability resolves to real activity.
+  const owningAgentSlug = resolveOwningAgentSlug(record);
+
   const handoffs = buildHandoffsFromSteps({
     workspaceId,
     record,
+    owningAgentSlug,
   });
   if (handoffs.length > 0) {
     await tx.handoffLogEntry.createMany({ data: handoffs });
@@ -90,6 +139,7 @@ async function writeArtifacts(
   const approval = buildApprovalFromOutcome({
     workspaceId,
     record,
+    owningAgentSlug,
   });
   let approvalId: string | null = null;
   if (approval) {
@@ -110,6 +160,8 @@ async function writeArtifacts(
 interface BuildHandoffsArgs {
   workspaceId: string;
   record: SkillRunRecord;
+  /** Roster agent that owns this run, or null when none claims it. */
+  owningAgentSlug: string | null;
 }
 
 /**
@@ -118,15 +170,18 @@ interface BuildHandoffsArgs {
  * handoff label so the overview UI shows "read → categorize · intent=…"
  * instead of opaque ids.
  *
- * The first step has no "from" agent — we use a synthetic `inbound`
- * label so the row still renders cleanly.
+ * The trace root is the owning roster agent (e.g. `realty-buyer-inquiry-
+ * router`) when one claims the run, so the agents page's `groupBy(fromAgent)`
+ * count resolves to that capability. When no roster agent owns the run
+ * (admin triage, noise), we fall back to the synthetic `inbound` label so
+ * the row still renders cleanly without inflating any capability's count.
  */
 function buildHandoffsFromSteps(
   args: BuildHandoffsArgs,
 ): Prisma.HandoffLogEntryCreateManyInput[] {
-  const { workspaceId, record } = args;
+  const { workspaceId, record, owningAgentSlug } = args;
   const rows: Prisma.HandoffLogEntryCreateManyInput[] = [];
-  let prev = 'inbound';
+  let prev = owningAgentSlug ?? 'inbound';
   // Spread handoff timestamps by a millisecond each so they sort
   // deterministically in the UI (the overview orders by occurredAt desc).
   const base = new Date(record.startedAt).getTime();
@@ -173,7 +228,7 @@ function buildHandoffsFromSteps(
 function buildApprovalFromOutcome(
   args: BuildHandoffsArgs,
 ): Prisma.WorkApprovalQueueItemUncheckedCreateInput | null {
-  const { workspaceId, record } = args;
+  const { workspaceId, record, owningAgentSlug } = args;
   const adminPayload = record.outcome.officeAdminPayload;
   if (adminPayload) {
     return buildAdminApprovalRow({ workspaceId, record, adminPayload });
@@ -182,7 +237,7 @@ function buildApprovalFromOutcome(
   if (!draft) return null;
   return {
     workspaceId,
-    agentSlug: SKILL_CHAIN_AGENT_SLUG,
+    agentSlug: owningAgentSlug ?? SKILL_CHAIN_AGENT_SLUG,
     kind: 'BUYER_INQUIRY_REPLY_DRAFT',
     refTable: 'WebhookEvent',
     refId: record.webhookEventId,

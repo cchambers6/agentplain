@@ -1,7 +1,21 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import Logo from "@/components/brand/Logo";
 import { requireUser } from "@/lib/auth/server";
+
+// Internal operator console nav. These pages cross-linked each other ad hoc
+// but the surface had no cohesive entry point — an operator could only reach
+// a page by typing its URL. The strip makes the whole console navigable from
+// anywhere inside it; the entry point into the console lives on the workspace
+// strip (operators only) in app/(product)/app/workspace/[id]/layout.tsx.
+const OPERATOR_NAV: Array<{ href: string; label: string }> = [
+  { href: "/operator/leadership-board", label: "Leadership" },
+  { href: "/operator/workspaces", label: "Workspaces" },
+  { href: "/operator/inquiries", label: "Inquiries" },
+  { href: "/operator/support", label: "Support" },
+  { href: "/operator/integrations", label: "Integrations" },
+];
 
 // Operator surface chrome. Restricted to operators (Conner). Phase 1 is
 // operator-only; customer self-serve OAuth UI lands in a follow-on PR
@@ -32,10 +46,32 @@ export default async function OperatorLayout({
               operator
             </span>
           </div>
-          <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-            {session.email}
-          </span>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/app"
+              className="font-mono text-[11px] tracking-eyebrow uppercase text-mute underline-offset-4 hover:text-ink hover:underline focus:outline-none focus-visible:text-ink focus-visible:underline"
+            >
+              ← app
+            </Link>
+            <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+              {session.email}
+            </span>
+          </div>
         </div>
+        <nav
+          className="container-wide flex gap-5 overflow-x-auto pb-3 text-sm scrollbar-thin"
+          aria-label="operator sections"
+        >
+          {OPERATOR_NAV.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="whitespace-nowrap text-ink/70 transition hover:text-ink focus:outline-none focus-visible:text-ink focus-visible:underline focus-visible:underline-offset-4"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
       </header>
       <main className="flex-1">{children}</main>
     </div>

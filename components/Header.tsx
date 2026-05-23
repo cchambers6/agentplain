@@ -11,52 +11,74 @@ import Logo from "./brand/Logo";
 //                 project_stripe_both_surfaces.md simplification)
 //   About      → "who are these people?"
 //
+// Mobile: a server-rendered <details>/<summary> menu (no JS) exposes the
+// secondary nav items. The previous "hidden md:inline" approach left mobile
+// visitors looking at only Sign in + Start free trial — they couldn't
+// reach Verticals or Pricing without scrolling to the footer. That was a
+// WCAG-2.4.5 issue (multiple ways to navigate) and a story-arc issue
+// (visitors can't answer Q2 / Q4 / Q6 on phone).
+//
 // Routes:
-//   /verticals   — index of all 10 verticals (single per-seat tier per
-//                  project_stripe_both_surfaces.md 2026-05-12 simplification)
+//   /verticals   — index of all 10 verticals
 //   /#how        — How it works anchor on the marketing home
-//   /pricing     — Standalone pricing page (single tier + ROI calc)
-//   /custom      — Custom-engagement page (per-scope work for anything Regular doesn't cover)
+//   /pricing     — Standalone pricing page
+//   /custom      — Custom-engagement page
 //   /about       — Long-form positioning page
 //   /app/sign-in — Product sign-in surface
-//   /app/sign-up — Start free trial (signup; first month free; per
-//                  project_app_build_now_not_gated.md, customer surface is open)
+//   /app/sign-up — Start free trial (first month free)
+
+const PRIMARY_NAV: Array<{ href: string; label: string }> = [
+  { href: "/verticals", label: "Verticals" },
+  { href: "/#how", label: "How it works" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/custom", label: "Custom" },
+  { href: "/about", label: "About" },
+];
+
 export default function Header() {
   return (
     <header className="border-b border-rule bg-paper">
       <div className="container-wide flex items-center justify-between py-5">
         <Logo />
-        <nav className="flex items-center gap-6 text-sm">
-          <Link
-            href="/verticals"
-            className="hidden text-ink/70 transition hover:text-ink md:inline"
-          >
-            Verticals
-          </Link>
-          <Link
-            href="/#how"
-            className="hidden text-ink/70 transition hover:text-ink lg:inline"
-          >
-            How it works
-          </Link>
-          <Link
-            href="/pricing"
-            className="hidden text-ink/70 transition hover:text-ink md:inline"
-          >
-            Pricing
-          </Link>
-          <Link
-            href="/custom"
-            className="hidden text-ink/70 transition hover:text-ink md:inline"
-          >
-            Custom
-          </Link>
-          <Link
-            href="/about"
-            className="hidden text-ink/70 transition hover:text-ink md:inline"
-          >
-            About
-          </Link>
+        <nav className="flex items-center gap-6 text-sm" aria-label="primary">
+          {/* Desktop nav — links inline at md+ */}
+          {PRIMARY_NAV.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="hidden text-ink/70 transition hover:text-ink md:inline"
+            >
+              {item.label}
+            </Link>
+          ))}
+
+          {/* Mobile menu — server-rendered details/summary, no JS. Shown
+              below md, hidden at md+. */}
+          <details className="relative md:hidden">
+            <summary
+              className="flex h-8 cursor-pointer list-none items-center gap-1.5 text-ink/70 transition hover:text-ink [&::-webkit-details-marker]:hidden"
+              aria-label="open menu"
+            >
+              Menu
+              <span aria-hidden className="text-[10px]">▾</span>
+            </summary>
+            <div
+              role="menu"
+              className="absolute right-0 top-full z-30 mt-2 w-56 border border-rule bg-paper py-1 shadow-sm"
+            >
+              {PRIMARY_NAV.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  role="menuitem"
+                  className="block px-4 py-2.5 text-sm text-ink/80 transition hover:bg-paper-deep hover:text-ink"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </details>
+
           <Link
             href="/app/sign-in"
             className="text-ink/70 transition hover:text-ink"

@@ -396,6 +396,53 @@ describe('TestKnowledgeStore — RLS isolation', () => {
     assert.equal(r.error.code, 'NON_CUSTOMER_HAS_WORKSPACE');
   });
 
+  it('rejects CROSS_CUSTOMER upsert WITH workspaceId — closes the tenant-leak vector', async () => {
+    // Hardens the invariant the substrate trusts: CROSS_CUSTOMER is platform-
+    // wide doctrine, never tenant-scoped. If a future seeder or skill
+    // misclassifies a CUSTOMER row as CROSS_CUSTOMER and attaches a
+    // workspaceId, this assertion must fire — otherwise the row would land
+    // workspaceId-NULL and become visible to every tenant.
+    // Defense-in-depth: same check in lib/knowledge/pgvector-store.ts:370
+    // (validateContextWorkspaceFit) + Postgres CHECK constraint.
+    const { store } = freshStore();
+    store.setContext(TEST_OPERATOR_CONTEXT);
+    const r = await store.upsert({
+      contextKind: 'CROSS_CUSTOMER',
+      workspaceId: WS_A,
+      title: 'bogus',
+      body: 'wrongly scoped doctrine',
+    });
+    assert.equal(r.ok, false);
+    if (r.ok) return;
+    assert.equal(r.error.code, 'NON_CUSTOMER_HAS_WORKSPACE');
+  });
+
+  it('CROSS_CUSTOMER rows are visible to customer queries (platform-wide doctrine)', async () => {
+    // Customer-facing skills MUST be able to retrieve the canonical pricing
+    // / mission / brand doctrine. This is the inverse of the leak check
+    // above: with workspaceId=null, both customers see the same rows.
+    const { store } = freshStore();
+    store.setContext(TEST_OPERATOR_CONTEXT);
+    const body = 'agentplain pricing — Regular tier ladders $99 to $199 per seat';
+    await store.upsert({
+      contextKind: 'CROSS_CUSTOMER',
+      workspaceId: null,
+      title: 'Pricing doctrine',
+      body,
+    });
+    store.setContext({ workspaceId: WS_A, isOperator: false });
+    const r = await store.search({
+      query: body,
+      k: 5,
+      contextKinds: ['CROSS_CUSTOMER'],
+    });
+    assert.ok(r.ok);
+    if (!r.ok) return;
+    assert.ok(r.value.length >= 1);
+    assert.equal(r.value[0].title, 'Pricing doctrine');
+    assert.equal(r.value[0].workspaceId, null);
+  });
+
   it('verticalSlug filter limits results to that vertical', async () => {
     const { store } = freshStore();
     store.setContext(TEST_OPERATOR_CONTEXT);
@@ -472,8 +519,15 @@ describe('seed assembly', () => {
     assert.equal(SEED_COUNTS.SKILL, a.skill.length);
     assert.equal(SEED_COUNTS.VERTICAL, a.vertical.length);
     assert.equal(SEED_COUNTS.COMPLIANCE, a.compliance.length);
+    // CUSTOMER stays 0 by design — customer rows seed at workspace-connect
+    // time, never at install time (`docs/knowledge-substrate.md` §lifecycle).
     assert.equal(SEED_COUNTS.CUSTOMER, 0);
-    assert.equal(SEED_COUNTS.CROSS_CUSTOMER, 0);
+    // CROSS_CUSTOMER tracks the platform-wide DOCTRINE_CORPUS that landed in
+    // the 2026-05-18 reseed (`docs/knowledge-substrate-reseed-2026-05-18.md`
+    // §3). Assert the count tracks the assembly — not a hardcoded literal —
+    // so adding doctrine never silently desyncs the SEED_COUNTS export.
+    assert.equal(SEED_COUNTS.CROSS_CUSTOMER, a.crossCustomer.length);
+    assert.ok(a.crossCustomer.length > 0, 'doctrine corpus must seed > 0 rows');
   });
 
   it('seeds round-trip through the test store', async () => {

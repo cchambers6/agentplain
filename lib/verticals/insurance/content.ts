@@ -18,6 +18,69 @@ export const insurance: VerticalContent = {
   tier: "regular",
   missionSubject: "insurance brokers and agencies",
 
+  // Fleet surfaced in-product on /agents, grounded in the insurance JTBD
+  // tables. Inbound Triage owns the V1 inbox loop's buyer-inquiry bucket
+  // (intent classify + first-touch draft for COI / FNOL / billing /
+  // service inbound). Every other agent rooting on an AMS + carrier-
+  // portal connection.
+  agentRoster: [
+    {
+      slug: "insurance-inbound-triage",
+      name: "Inbound Triage",
+      job: "Classifies COI requests, claim FNOLs, and service questions and drafts the first-touch reply.",
+      runtime: "live",
+      owns: ["buyer-inquiry"],
+    },
+    {
+      slug: "insurance-coi-generator",
+      name: "COI Generator",
+      job: "Reads the COI request, pulls the policy, and drafts the certificate for one-click issue.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your AMS (EZLynx / Applied Epic / AMS360 / HawkSoft) is connected for policy lookup.",
+    },
+    {
+      slug: "insurance-renewal-coordinator",
+      name: "Renewal Coordinator",
+      job: "Drafts 60/30/15-day renewal proposals with coverage-gap flags and carrier-appetite context.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your AMS and comparative rater are connected for declarations + rerate data.",
+    },
+    {
+      slug: "insurance-claims-status",
+      name: "Claims Status",
+      job: "Drafts the insured-facing status note on every carrier-side claim movement.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once carrier claim portals or the AMS claims feed are connected.",
+    },
+    {
+      slug: "insurance-endorsement",
+      name: "Endorsement Coordinator",
+      job: "Drafts the AMS update and the carrier-portal endorsement submission from the insured request.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your AMS and the carrier portals you write the most premium with are connected.",
+    },
+    {
+      slug: "insurance-billing-recon",
+      name: "Billing Reconciler",
+      job: "Reconciles direct-bill carrier statements against the AMS and drafts the insured-facing explanation.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your AMS billing module and carrier direct-bill statements are connected.",
+    },
+    {
+      slug: "insurance-carrier-intel",
+      name: "Carrier Intel",
+      job: "Posts the weekly carrier-appetite pulse and flags appetite shifts on in-flight accounts.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your AMS account book and carrier bulletin feeds are connected.",
+    },
+  ],
+
   hero: {
     eyebrow: "Built for independent P&C agencies",
     headline: "The fleet for the independent P&C agency.",

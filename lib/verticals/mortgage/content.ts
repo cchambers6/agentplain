@@ -20,41 +20,68 @@ export const mortgage: VerticalContent = {
   missionSubject: "mortgage brokers and loan officers",
 
   // Fleet surfaced in-product on /agents, grounded in the mortgage JTBD tables.
+  // Runtime bindings follow the realty pattern (lib/verticals/real-estate/content.ts):
+  // `live` agents are wired into the V1 inbox loop so /agents shows real handoff
+  // counts as soon as borrower email flows. `rooting` agents declare the capability
+  // but state honestly what integration unlocks the runtime — no perpetual spinner.
+  // Borrower Triage maps 1:1 to the loop's buyer-inquiry bucket (intent classify +
+  // first-touch reply); every other agent in this roster needs a system-of-record
+  // integration that does not yet exist (LOS / AUS / wholesale portals / pricing).
   agentRoster: [
     {
       slug: "mortgage-borrower-triage",
       name: "Borrower Triage",
       job: "Classifies inbound borrower intent and drafts the first touch.",
+      runtime: "live",
+      owns: ["buyer-inquiry"],
     },
     {
       slug: "mortgage-document-chase",
       name: "Document Chase",
       job: "Runs the per-file doc-collection cadence and escalates only when stuck.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your LOS (Encompass / LendingPad / Calyx) is connected.",
     },
     {
       slug: "mortgage-status-updater",
       name: "Status Updater",
       job: "Drafts a borrower status note on every milestone for the LO to send.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your LOS milestones webhook is connected.",
     },
     {
       slug: "mortgage-pre-qual",
       name: "Pre-Qual Assistant",
       job: "Pulls pricing and AUS eligibility to draft a pre-qual letter in minutes.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once Optimal Blue and DU / LP are connected.",
     },
     {
       slug: "mortgage-conditions",
       name: "Conditions Coordinator",
       job: "Translates UW conditions into a borrower note and the doc list to clear them.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your LOS conditions feed is connected.",
     },
     {
       slug: "mortgage-vendor-coordination",
       name: "Vendor Coordination",
       job: "Orders appraisal and title, tracks status, and flags slipping files.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once appraisal-management and title vendor portals are connected.",
     },
     {
       slug: "mortgage-production-reporter",
       name: "Production Reporter",
       job: "Drafts the weekly LO production read against plan.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your LOS pipeline export is connected.",
     },
   ],
 

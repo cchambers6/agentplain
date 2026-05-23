@@ -83,25 +83,24 @@ const KIND_LABEL: Record<WorkApprovalKind, string> = {
   ADMIN_SECURITY_ALERT: "security alert",
 };
 
-const ADMIN_KINDS: ReadonlyArray<WorkApprovalKind> = [
-  "ADMIN_VERIFICATION_CODE",
-  "ADMIN_PASSWORD_RESET",
-  "ADMIN_TRIAL_ENDING",
-  "ADMIN_BILLING_NOTICE",
-  "ADMIN_SECURITY_ALERT",
-];
-
 export function renderApprovalPayload(
   kind: WorkApprovalKind,
   payload: unknown,
 ): RenderedApproval {
   const p = isRecord(payload) ? payload : {};
 
-  if (ADMIN_KINDS.includes(kind)) {
-    return renderAdmin(kind, p);
-  }
-
+  // Exhaustive switch — every WorkApprovalKind enum value gets an explicit
+  // renderer. Adding a new kind without updating this switch produces a
+  // TypeScript error via `_exhaustive: never` rather than silently falling
+  // through to a generic "item for review" line. Approvals is the customer
+  // trust-stake surface — never render unknown JSON shape to the user.
   switch (kind) {
+    case "ADMIN_VERIFICATION_CODE":
+    case "ADMIN_PASSWORD_RESET":
+    case "ADMIN_TRIAL_ENDING":
+    case "ADMIN_BILLING_NOTICE":
+    case "ADMIN_SECURITY_ALERT":
+      return renderAdmin(kind, p);
     case "BUYER_INQUIRY_REPLY_DRAFT":
       return renderReplyDraft(p);
     case "LISTING_RECOMMENDATION":
@@ -110,11 +109,19 @@ export function renderApprovalPayload(
       return renderPricingRecommendation(p);
     case "COMPLIANCE_FLAG":
       return renderComplianceFlag(p);
-    default:
+    default: {
+      const _exhaustive: never = kind;
+      // Runtime safety: if a new enum value reaches production before the
+      // renderer ships, log + render a calm fallback rather than crash
+      // the approvals screen. The compile-time check above is the primary
+      // defense; this is the belt to its suspenders.
+      // eslint-disable-next-line no-console
+      console.warn(`[approvals] unhandled WorkApprovalKind: ${String(_exhaustive)}`);
       return {
-        kindLabel: KIND_LABEL[kind] ?? String(kind).toLowerCase(),
+        kindLabel: String(kind).toLowerCase().replace(/_/g, " "),
         body: ["The fleet surfaced an item for your review."],
       };
+    }
   }
 }
 

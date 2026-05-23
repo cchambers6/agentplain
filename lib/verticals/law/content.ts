@@ -32,41 +32,71 @@ export const law: VerticalContent = {
   missionSubject: "law firms and solo practitioners",
 
   // Fleet surfaced in-product on /agents, grounded in the law JTBD tables.
+  // All seven capabilities are honestly rooting today: each one needs the
+  // matter-management / privilege-review surface a law firm runs in (Clio,
+  // MyCase, Smokeball, NetDocuments) plus counsel-approved privilege rules
+  // before runtime can attribute work. The V1 inbox loop still produces
+  // draft replies for law workspaces — those land in Approvals under the
+  // generic inbox triage attribution. We are NOT pretending Intake &
+  // Onboarding runs the conflict check today; the conflict check needs the
+  // matter system. Discipline matches the realty content file and the
+  // AgentRosterEntry runtime contract.
   agentRoster: [
     {
       slug: "law-intake-onboarding",
       name: "Intake & Onboarding",
       job: "Runs the conflict check and drafts the engagement letter scoped to the matter.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your matter-management system (Clio / MyCase / Smokeball) is connected for the conflict check.",
     },
     {
       slug: "law-drafting",
       name: "Drafting",
       job: "Drafts the first pass of a pleading or contract with the matter facts inserted.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your document-mgmt system (NetDocuments / iManage / SharePoint) is connected for matter facts.",
     },
     {
       slug: "law-doc-chase",
       name: "Document Chase",
       job: "Runs the doc-collection cadence with clients and opposing counsel per channel.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your client portal (Clio Connect / MyCase) is connected.",
     },
     {
       slug: "law-compliance-sentinel",
       name: "Compliance Sentinel",
       job: "Flags privilege and ABA Model Rule 1.6 concerns before a draft is sent.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — privilege and ABA 1.6 corpus is loaded; draft scoring activates after counsel review.",
     },
     {
       slug: "law-discovery-review",
       name: "Discovery Review",
       job: "Runs first-pass responsiveness and privilege tagging, citing the rule basis.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once a Relativity / Everlaw connection is established for the discovery corpus.",
     },
     {
       slug: "law-status-updater",
       name: "Status Updater",
       job: "Drafts the client matter-status update on every state change for the attorney.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once matter-state webhooks from your practice-management system are connected.",
     },
     {
       slug: "law-billing",
       name: "Milestone Billing",
       job: "Drafts the milestone invoice and the aged-AR escalation for the partner.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your billing module (Clio Manage / TimeSolv) is connected.",
     },
   ],
 

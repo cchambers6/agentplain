@@ -31,41 +31,71 @@ export const ria: VerticalContent = {
   missionSubject: "RIAs and wealth advisors",
 
   // Fleet surfaced in-product on /agents, grounded in the RIA JTBD tables.
+  // All seven capabilities are honestly rooting today. Each one depends on
+  // a portfolio / CRM / planning surface that the RIA runs in (Wealthbox /
+  // Redtail / Schwab Advisor Center / Fidelity Wealthscape / eMoney /
+  // MoneyGuide / Black Diamond / Tamarac) plus Marketing-Rule corpus
+  // counsel review before the runtime can attribute work. The V1 inbox
+  // loop still produces draft client replies for RIA workspaces — those
+  // land in Approvals under the generic inbox triage attribution. No
+  // hollow shells: we are NOT pretending Meeting Prep runs without the
+  // CRM + custodian feeds.
   agentRoster: [
     {
       slug: "ria-meeting-prep",
       name: "Meeting Prep",
       job: "Drafts the agenda, delta-since-last-meeting, and open task list per client.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your CRM (Wealthbox / Redtail) and your custodian feed are connected.",
     },
     {
       slug: "ria-meeting-notes",
       name: "Meeting Notes",
       job: "Drafts the recap and task list from the meeting capture for the advisor.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your meeting-capture tool (Zocks / Jump / Otter) is connected.",
     },
     {
       slug: "ria-compliance-sentinel",
       name: "Compliance Sentinel",
       job: "Runs an ADV, suitability, and Marketing Rule check before a draft is sent.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — the ADV, suitability, and Marketing Rule corpus is loaded; draft scoring activates after counsel review.",
     },
     {
       slug: "ria-planning-refresh",
       name: "Planning Refresh",
       job: "Drafts refreshed plan inputs scoped to a client's life event.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your planning software (eMoney / MoneyGuidePro / RightCapital) is connected.",
     },
     {
       slug: "ria-rebalance",
       name: "Rebalance",
       job: "Drafts the per-model trade list with drift cited for the PM to submit.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your portfolio system (Tamarac / Black Diamond / Orion) is connected.",
     },
     {
       slug: "ria-performance-reporter",
       name: "Performance Reporter",
       job: "Drafts the quarterly per-client performance narrative with cited attribution.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your performance system (Tamarac / Black Diamond / Orion) is connected for return + benchmark data.",
     },
     {
       slug: "ria-aum-billing",
       name: "AUM Billing",
       job: "Drafts the quarter-close fee schedule; operations reviews exceptions.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your custodian feed is connected for quarter-end balances.",
     },
   ],
 

@@ -29,41 +29,65 @@ export const cpa: VerticalContent = {
   missionSubject: "CPAs and tax practices",
 
   // Fleet surfaced in-product on /agents, grounded in the CPA JTBD tables.
+  // Client Inbound is the live capability — it owns the inbox loop's
+  // buyer-inquiry bucket (classify + first-touch draft). Every other agent
+  // declares honestly via rootingNote what integration unlocks the runtime,
+  // matching the realty 2-live/5-rooting discipline.
   agentRoster: [
     {
       slug: "cpa-onboarding",
       name: "Engagement Onboarding",
       job: "Drafts the engagement letter and doc checklist scoped to entity type and state.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your practice-management system (TaxDome / Karbon / Canopy) is connected.",
     },
     {
       slug: "cpa-doc-chase",
       name: "Document Chase",
       job: "Runs the missing-document cadence per client through the season.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your tax-software client portal is connected.",
     },
     {
       slug: "cpa-compliance-sentinel",
       name: "Compliance Sentinel",
       job: "Runs the federal and state checklist before a return hits the partner's desk.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — federal and per-state checklist corpus is loaded; draft scoring activates after counsel review.",
     },
     {
       slug: "cpa-books-recon",
       name: "Books Reconciler",
       job: "Drafts the books reconciliation against bank feeds; staff reviews exceptions.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once QuickBooks Online or Xero plus the bank feed is connected.",
     },
     {
       slug: "cpa-collections",
       name: "Collections",
       job: "Drafts the 30/60/90 aged-AR escalation for the partner to sign.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your AR feed (QuickBooks Online / practice-mgmt billing) is connected.",
     },
     {
       slug: "cpa-billing",
       name: "Milestone Billing",
       job: "Drafts the invoice on each milestone trigger for the admin to send.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your practice-management billing module is connected.",
     },
     {
       slug: "cpa-client-inbound",
       name: "Client Inbound",
       job: "Classifies inbound questions by engagement and drafts the response.",
+      runtime: "live",
+      owns: ["buyer-inquiry"],
     },
   ],
 

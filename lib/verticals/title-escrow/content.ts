@@ -18,42 +18,70 @@ export const titleEscrow: VerticalContent = {
   tier: "regular",
   missionSubject: "title and escrow agencies",
 
-  // Fleet surfaced in-product on /agents, grounded in the title-escrow JTBD tables.
+  // Fleet surfaced in-product on /agents, grounded in the title-escrow
+  // JTBD tables. All seven capabilities are honestly rooting today — each
+  // depends on the title production system (SoftPro / Qualia / RamQuest),
+  // the county title-plant feed, or the underwriter portal. File Intake's
+  // job is parsing inbound realtor/lender source documents into structured
+  // file fields, not classifying email — the V1 inbox loop produces a
+  // generic draft reply for inbound email today and lands it in Approvals
+  // under the generic inbox triage attribution. No hollow shells.
   agentRoster: [
     {
       slug: "title-file-intake",
       name: "File Intake",
       job: "Parses realtor and lender source documents and drafts the file to confirm.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your title production system (SoftPro / Qualia / RamQuest) is connected to receive the parsed file.",
     },
     {
       slug: "title-doc-chase",
       name: "Document Chase",
       job: "Runs the doc-collection cadence per channel and escalates only when stuck.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your file-status feed (SoftPro / Qualia / RamQuest) is connected.",
     },
     {
       slug: "title-search",
       name: "Title Search",
       job: "Drafts the chain of title from the plant feed; examiner reviews defects only.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your county title plant or DataTrace / NetROnline feed is connected.",
     },
     {
       slug: "title-closing-prep",
       name: "Closing Prep",
       job: "Drafts the closing packet against file state for the closer to review.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your underwriter portal and production-system file state are connected.",
     },
     {
       slug: "title-recording",
       name: "Recording Coordinator",
       job: "Prepares the recording package per county schema for the clerk to submit.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your county recording integration (Simplifile / CSC) is connected.",
     },
     {
       slug: "title-trust-recon",
       name: "Trust Reconciler",
       job: "Drafts the per-file trust reconciliation citing each disbursement against the CD.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your escrow trust-account ledger is connected.",
     },
     {
       slug: "title-compliance-sentinel",
       name: "Compliance Sentinel",
       job: "Runs a CFPB-aware check on every customer-facing draft before send.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — CFPB-aware checklist corpus is loaded; draft scoring activates after counsel review.",
     },
   ],
 

@@ -43,6 +43,61 @@ body {
     font-weight: 400;
     letter-spacing: -0.01em;
   }
+
+  /* WCAG 2.4.7 — keyboard focus must be visible on every interactive element.
+     Suppresses the default browser focus *only* when focus isn't keyboard-
+     driven (focus-visible matches keyboard nav, not mouse clicks). The clay
+     ring + offset reads cleanly on paper while staying brand-on. Component
+     authors can still override with their own focus-visible:* utilities. */
+  a:focus-visible,
+  button:focus-visible,
+  summary:focus-visible,
+  [role="button"]:focus-visible,
+  [role="link"]:focus-visible {
+    outline: 2px solid var(--color-clay);
+    outline-offset: 2px;
+  }
+
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 2px solid var(--color-clay);
+    outline-offset: 0;
+  }
+
+  /* Suppress the visible outline when focus is mouse-driven (matches
+     keyboard-vs-mouse convention every modern browser supports). */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+
+/* Skip-to-content link — visible on focus only. Lets keyboard users skip the
+   header + workspace strip and jump directly to the page body. Per WCAG
+   2.4.1 bypass blocks. */
+.skip-to-content {
+  position: absolute;
+  left: -10000px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.skip-to-content:focus {
+  position: fixed;
+  left: 1rem;
+  top: 1rem;
+  width: auto;
+  height: auto;
+  padding: 0.5rem 1rem;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  z-index: 100;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
 @layer components {

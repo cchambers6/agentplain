@@ -19,42 +19,66 @@ export const recruiting: VerticalContent = {
   tier: "regular",
   missionSubject: "recruiters and staffing firms",
 
-  // Fleet surfaced in-product on /agents, grounded in the recruiting JTBD tables.
+  // Fleet surfaced in-product on /agents, grounded in the recruiting JTBD
+  // tables. Outreach owns the inbox loop's buyer-inquiry bucket — classify
+  // an inbound candidate reply and draft the next touch. Scheduler owns
+  // scheduling — the multi-party interview slot proposals the loop produces
+  // on scheduling-needed inbound. Every other agent is honestly rooting on
+  // an ATS / sequence-tool / call-capture connection.
   agentRoster: [
     {
       slug: "recruiting-sourcing",
       name: "Sourcing",
       job: "Drafts a ranked candidate list with a substantiated reference per name.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your ATS (Greenhouse / Lever / Workable / Bullhorn) is connected.",
     },
     {
       slug: "recruiting-outreach",
       name: "Outreach",
       job: "Drafts the first-touch with one production reference, plain CTA, and opt-out line.",
+      runtime: "live",
+      owns: ["buyer-inquiry"],
     },
     {
       slug: "recruiting-cadence",
       name: "Cadence",
       job: "Runs the second and third touch timing for the recruiter to send.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once a sequence tool (Gem / Outreach / SalesLoft) or your ATS cadence is connected.",
     },
     {
       slug: "recruiting-intake-brief",
       name: "Intake Brief",
       job: "Drafts the role brief from the hiring-manager call and surfaces open questions.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your call-capture tool (Gong / Fireflies / Otter) is connected for the intake transcript.",
     },
     {
       slug: "recruiting-pipeline-recap",
       name: "Pipeline Recap",
       job: "Drafts the weekly client recap with candidates moved and bottlenecks flagged.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your ATS is connected for stage-transition history.",
     },
     {
       slug: "recruiting-scheduler",
       name: "Scheduler",
       job: "Runs the multi-party interview search; coordinator reviews conflicts only.",
+      runtime: "live",
+      owns: ["scheduling"],
     },
     {
       slug: "recruiting-ats-hygiene",
       name: "ATS Hygiene",
       job: "Dedupes, normalizes, and surfaces stale records in the ATS each week.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your ATS is connected with read + write scope.",
     },
   ],
 

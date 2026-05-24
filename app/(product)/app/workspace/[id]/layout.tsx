@@ -3,6 +3,7 @@ import { requireWorkspaceMember } from "@/lib/auth";
 import { withSystemContext } from "@/lib/db";
 import { ApWorkspaceStrip } from "@/components/ui/ap";
 import { signOutAction } from "../../actions";
+import { WorkspaceNavLink } from "./WorkspaceNavLink";
 
 interface WorkspaceLayoutProps {
   children: React.ReactNode;
@@ -40,6 +41,9 @@ export default async function WorkspaceLayout({
 
   return (
     <div>
+      <a href="#workspace-main" className="skip-to-content">
+        skip to content
+      </a>
       <ApWorkspaceStrip
         slug={workspace.slug}
         name={workspace.name}
@@ -70,16 +74,26 @@ export default async function WorkspaceLayout({
           </>
         }
         nav={NAV.map((item) => (
-          <Link
+          <WorkspaceNavLink
             key={item.label}
             href={`${base}${item.href}`}
-            className="whitespace-nowrap rounded-none text-ink/70 transition hover:text-ink focus:outline-none focus-visible:text-ink focus-visible:underline focus-visible:underline-offset-4"
+            exact={item.href === ""}
           >
             {item.label}
-          </Link>
+          </WorkspaceNavLink>
         ))}
       />
-      <div className="container-wide py-10">{children}</div>
+      {/* tabIndex=-1 so the skip-to-content anchor moves focus here without
+          adding a permanent tab stop. <section> not <main> because
+          ApAppShell already wraps children in a single <main>. */}
+      <section
+        id="workspace-main"
+        tabIndex={-1}
+        aria-label="workspace content"
+        className="container-wide py-10 focus:outline-none"
+      >
+        {children}
+      </section>
     </div>
   );
 }

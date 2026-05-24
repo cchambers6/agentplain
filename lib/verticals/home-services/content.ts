@@ -30,42 +30,65 @@ export const homeServices: VerticalContent = {
   tier: "plus",
   missionSubject: "home services contractors",
 
-  // Fleet surfaced in-product on /agents, grounded in the home-services JTBD tables.
+  // Fleet surfaced in-product on /agents, grounded in the home-services
+  // JTBD tables. Lead Router owns the inbox loop's buyer-inquiry bucket
+  // (score + route + draft first-touch). Every other agent rooting on
+  // FSM / measurement / adjuster connections.
   agentRoster: [
     {
       slug: "home-services-lead-router",
       name: "Lead Router",
       job: "Scores and routes inbound leads across every source into one queue.",
+      runtime: "live",
+      owns: ["buyer-inquiry"],
     },
     {
       slug: "home-services-estimate",
       name: "Estimate",
       job: "Builds the bid from measurements and drafts the homeowner-facing proposal.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your measurement tool (EagleView / AccuLynx / Hover) is connected.",
     },
     {
       slug: "home-services-supplement",
       name: "Supplement",
       job: "Reads the adjuster scope and drafts the line-item rebuttal for owner sign-off.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once Symbility or Xactimate adjuster scopes are connected.",
     },
     {
       slug: "home-services-dispatch",
       name: "Dispatch",
       job: "Ranks same-day calls by SLA and skill match, then drafts and re-drafts the route.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your FSM (ServiceTitan / Housecall Pro / Jobber) is connected for the crew + skill matrix.",
     },
     {
       slug: "home-services-eta-updater",
       name: "ETA Updater",
       job: "Drafts homeowner updates on every job-state change for the dispatcher to send.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your FSM job-state webhooks are connected.",
     },
     {
       slug: "home-services-project-coordinator",
       name: "Project Coordinator",
       job: "Sequences material order, crew window, and inspection scheduling on a signed contract.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your project-management surface (AccuLynx / JobNimbus) and supplier connections are in place.",
     },
     {
       slug: "home-services-reviews",
       name: "Reviews",
       job: "Runs the T+7 review-and-referral cadence on every completed job.",
+      runtime: "rooting",
+      rootingNote:
+        "rooting now — comes online once your FSM completed-job feed is connected.",
     },
   ],
 

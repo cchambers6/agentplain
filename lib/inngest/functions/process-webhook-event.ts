@@ -30,6 +30,10 @@ import { prisma } from '@/lib/db/prisma';
 import { withSystemContext, SYSTEM_OPERATOR_CONTEXT } from '@/lib/db';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
+import {
+  reportInngestItemFailure,
+  withInngestErrorReporting,
+} from '../with-error-reporting';
 import { GmailMessageAdapter } from '@/lib/skills/gmail-fetcher';
 import { OutlookMessageAdapter } from '@/lib/skills/outlook-fetcher';
 import { runSkillChain } from '@/lib/skills/runner';
@@ -167,6 +171,18 @@ export async function processUnprocessedWebhookEvents(
       result.succeeded += 1;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      // Per-event capture: this is the load-bearing path that previously
+      // went silent when the skill chain or adapter threw mid-batch. Tag
+      // with workspace + event ids so Sentry's "issues by tag" view groups
+      // by workspace and the cron sweep stays loud, not lossy.
+      reportInngestItemFailure(err, {
+        functionId: PROCESS_WEBHOOK_EVENT_FUNCTION_ID,
+        extraTags: {
+          webhook_event_id: event.id,
+          workspace_id: workspace.id,
+          provider: credential.provider,
+        },
+      });
       result.failures.push({ webhookEventId: event.id, reason: message });
       await prisma.webhookEvent.update({
         where: { id: event.id },
@@ -219,6 +235,9 @@ export const processWebhookEventFn = inngest.createFunction(
   },
   async () =>
     runWithDisableGate(PROCESS_WEBHOOK_EVENT_FUNCTION_ID, () =>
-      processUnprocessedWebhookEvents(),
+      withInngestErrorReporting(
+        { functionId: PROCESS_WEBHOOK_EVENT_FUNCTION_ID },
+        () => processUnprocessedWebhookEvents(),
+      ),
     ),
 );

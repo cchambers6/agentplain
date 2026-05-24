@@ -25,6 +25,10 @@ import {
 } from "@/lib/pricing/tiers";
 import { inngest } from "../client";
 import { runWithDisableGate } from "../run-with-disable-gate";
+import {
+  reportInngestItemFailure,
+  withInngestErrorReporting,
+} from "../with-error-reporting";
 
 export const TRIAL_WARNINGS_FUNCTION_ID = "agentplain-trial-warnings";
 export const TRIAL_WARNINGS_CRON = "0 10 * * *";
@@ -171,26 +175,37 @@ export const trialExpirationWarningsFn = inngest.createFunction(
     name: "agentplain trial-end warnings",
     triggers: [{ cron: TRIAL_WARNINGS_CRON }],
   },
-  async () => {
-    const gate = await runWithDisableGate(TRIAL_WARNINGS_FUNCTION_ID, async () => {
-      const candidates = await findTrialWarningCandidates();
-      const origin = process.env.APP_PUBLIC_ORIGIN ?? "http://localhost:3000";
-      let sent = 0;
-      for (const c of candidates) {
-        try {
-          await emitTrialWarning(c, origin);
-          sent++;
-        } catch (err) {
-          console.error(
-            `trial warning failed for ${c.brokerOwnerEmail}`,
-            err,
-          );
-        }
-      }
-      return { candidates: candidates.length, sent };
-    });
-    return gate;
-  },
+  async () =>
+    runWithDisableGate(TRIAL_WARNINGS_FUNCTION_ID, () =>
+      withInngestErrorReporting(
+        { functionId: TRIAL_WARNINGS_FUNCTION_ID },
+        async () => {
+          const candidates = await findTrialWarningCandidates();
+          const origin = process.env.APP_PUBLIC_ORIGIN ?? "http://localhost:3000";
+          let sent = 0;
+          for (const c of candidates) {
+            try {
+              await emitTrialWarning(c, origin);
+              sent++;
+            } catch (err) {
+              reportInngestItemFailure(err, {
+                functionId: TRIAL_WARNINGS_FUNCTION_ID,
+                extraTags: {
+                  workspace_id: c.workspaceId,
+                  subscription_id: c.subscriptionId,
+                  threshold_days: String(c.threshold),
+                },
+              });
+              console.error(
+                `trial warning failed for ${c.brokerOwnerEmail}`,
+                err,
+              );
+            }
+          }
+          return { candidates: candidates.length, sent };
+        },
+      ),
+    ),
 );
 
 function renderHtml(args: {

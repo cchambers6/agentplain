@@ -17,6 +17,13 @@ import {
   type StepId,
 } from "@/lib/onboarding/steps";
 import { servicePartnerForWorkspace } from "@/lib/onboarding/service-partner";
+import {
+  CALENDAR_WINDOWS,
+  DRAFTING_TONES,
+  getWorkspacePreference,
+  type DraftingTone,
+  type WorkspacePreferenceView,
+} from "@/lib/preferences";
 import { getVerticalContent } from "@/lib/verticals";
 import type { VerticalContent } from "@/lib/verticals/types";
 import { advanceOnboardingAction } from "./actions";
@@ -58,6 +65,11 @@ export default async function OnboardingPage({ params }: PageProps) {
       orderBy: { createdAt: "desc" },
     }),
   );
+
+  // Load any prior preferences so a returning visitor sees their last
+  // selections pre-filled — the form posts the same axes back, the
+  // server upserts.
+  const existingPreference = await getWorkspacePreference(rls, workspaceId);
 
   const verticalSlug = verticalSlugFromEnum(workspace.vertical);
   const verticalContent = verticalSlug
@@ -166,7 +178,10 @@ export default async function OnboardingPage({ params }: PageProps) {
                   partner={partner}
                 />
               ) : (
-                <SetPreferences partner={partner} />
+                <SetPreferences
+                  partner={partner}
+                  existing={existingPreference}
+                />
               )}
             </div>
 
@@ -471,51 +486,118 @@ function ConnectIntegration({
   );
 }
 
-function SetPreferences({ partner }: { partner: string }) {
+const TONE_LABELS: Record<DraftingTone, string> = {
+  plain: "Plain",
+  "warm-professional": "Warm-professional",
+  formal: "Formal",
+};
+
+function SetPreferences({
+  partner,
+  existing,
+}: {
+  partner: string;
+  existing: WorkspacePreferenceView | null;
+}) {
+  const selectedTone: DraftingTone = existing?.draftingTone ?? "warm-professional";
+  const selectedCalendar = existing?.calendarWindow ?? "9-5 weekdays";
+  const notes = existing?.categorizationNotes ?? "";
   return (
     <div className="space-y-6">
       <p className="text-[15px] leading-relaxed text-ink-soft">
-        These are the defaults {partner} starts with. They&rsquo;re
-        read-only today — they become editable in the next release. We
-        wanted you to see what&rsquo;s in play.
+        Tell {partner} once. He honors these on every draft and adjusts as
+        you edit. You can revisit any of this from Settings later.
       </p>
 
       <FieldGroup
         label="drafting tone"
         helper="How the fleet sounds in customer-facing drafts. Your broker-of-record review still gates every send."
       >
-        <ToggleRow
-          options={["Plain", "Warm-professional", "Formal"]}
-          selected="Warm-professional"
+        <RadioPills
+          name="draftingTone"
+          options={DRAFTING_TONES.map((value) => ({
+            value,
+            label: TONE_LABELS[value],
+          }))}
+          selected={selectedTone}
         />
       </FieldGroup>
 
       <FieldGroup
-        label="inbound categorization defaults"
-        helper="The Buyer Inquiry Router uses these labels to slot inbound messages into the right human's queue."
+        label="inbound categorization notes"
+        helper="What should the router treat as hot vs. information-only vs. skip? Free-form prose — {partner} reads it on every fire."
       >
-        <ul className="grid gap-2 text-[13px] text-ink-soft">
-          <li>— Hot buyer (in-market, defined timeline)</li>
-          <li>— Information-only (price questions, brochure asks)</li>
-          <li>— Vendor / partnership (skip queue)</li>
-          <li>— Spam / consumer (silent file)</li>
-        </ul>
+        <textarea
+          name="categorizationNotes"
+          defaultValue={notes}
+          rows={4}
+          maxLength={2000}
+          placeholder="e.g. Treat any message referencing 'pre-approved' as a hot buyer. Skip newsletter footers even if they mention an address."
+          className="w-full border border-rule bg-paper p-3 text-[14px] leading-relaxed text-ink placeholder:text-mute focus:border-ink focus:outline-none"
+        />
       </FieldGroup>
 
       <FieldGroup
         label="calendar window for showings + meetings"
         helper="The Showing Scheduler proposes slots inside this window. You still confirm each one."
       >
-        <ToggleRow
-          options={["9–5 weekdays", "8–7 + Sat AM", "Custom"]}
-          selected="9–5 weekdays"
+        <RadioPills
+          name="calendarWindow"
+          options={CALENDAR_WINDOWS.map((value) => ({
+            value,
+            label: CALENDAR_LABELS[value] ?? value,
+          }))}
+          selected={selectedCalendar}
         />
       </FieldGroup>
 
       <p className="border-t border-rule pt-5 text-[12px] leading-relaxed text-mute">
-        These commit on the next release. The fleet uses the highlighted
-        defaults until then — no surprise behavior changes.
+        Saved when you finish onboarding. Edits in /approvals teach the
+        fleet too — no resave needed.
       </p>
+    </div>
+  );
+}
+
+const CALENDAR_LABELS: Record<string, string> = {
+  "9-5 weekdays": "9–5 weekdays",
+  "8-7 + Sat AM": "8–7 + Sat AM",
+  custom: "Custom",
+};
+
+function RadioPills({
+  name,
+  options,
+  selected,
+}: {
+  name: string;
+  options: Array<{ value: string; label: string }>;
+  selected: string;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((opt) => {
+        const isOn = opt.value === selected;
+        return (
+          <label
+            key={opt.value}
+            className={
+              isOn
+                ? "cursor-pointer border border-clay bg-clay px-3 py-1 font-mono text-[11px] tracking-eyebrow uppercase text-paper"
+                : "cursor-pointer border border-rule bg-paper px-3 py-1 font-mono text-[11px] tracking-eyebrow uppercase text-mute hover:border-ink hover:text-ink"
+            }
+          >
+            <input
+              type="radio"
+              name={name}
+              value={opt.value}
+              defaultChecked={isOn}
+              className="sr-only"
+            />
+            {opt.label}
+          </label>
+        );
+      })}
     </div>
   );
 }
@@ -534,34 +616,6 @@ function FieldGroup({
       <p className="font-display text-base leading-tight text-ink">{label}</p>
       <p className="mt-1 text-[13px] leading-relaxed text-mute">{helper}</p>
       <div className="mt-3">{children}</div>
-    </div>
-  );
-}
-
-function ToggleRow({
-  options,
-  selected,
-}: {
-  options: string[];
-  selected: string;
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((opt) => {
-        const isOn = opt === selected;
-        return (
-          <span
-            key={opt}
-            className={
-              isOn
-                ? "border border-clay bg-clay px-3 py-1 font-mono text-[11px] tracking-eyebrow uppercase text-paper"
-                : "border border-rule bg-paper px-3 py-1 font-mono text-[11px] tracking-eyebrow uppercase text-mute"
-            }
-          >
-            {opt}
-          </span>
-        );
-      })}
     </div>
   );
 }

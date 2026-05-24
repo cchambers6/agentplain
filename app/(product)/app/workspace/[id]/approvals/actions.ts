@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
+import {
+  captureDraftEditSignal,
+  captureDraftRejectSignal,
+} from "@/lib/preferences";
 
 const VALID_DECISIONS = ["APPROVED", "REJECTED"] as const;
 type Decision = (typeof VALID_DECISIONS)[number];
@@ -60,6 +64,24 @@ export async function decideApprovalAction(form: FormData): Promise<void> {
     });
   });
 
+  // Capture the rejection as a preference signal so the next draft prompt
+  // reflects what the broker-owner pushed back on. Best-effort: a capture
+  // failure must not poison the decision — re-throw only if the decision
+  // itself failed (which it didn't, since we're past the transaction).
+  if (decision === "REJECTED" && reason && reason.trim().length > 0) {
+    try {
+      await captureDraftRejectSignal(ctx, {
+        workspaceId,
+        approvalItemId: itemId,
+        reason,
+      });
+    } catch (err) {
+      console.warn(
+        `captureDraftRejectSignal failed (ignored): ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
   revalidatePath(`/app/workspace/${workspaceId}/approvals`);
   redirect(`/app/workspace/${workspaceId}/approvals`);
 }
@@ -79,6 +101,7 @@ export async function editApprovalDraftAction(form: FormData): Promise<void> {
   const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
   const ctx = { userId: member.userId, workspaceId, isOperator: false };
 
+  let originalBody = "";
   await withRls(ctx, async (tx) => {
     const item = await tx.workApprovalQueueItem.findFirst({
       where: { id: itemId, workspaceId },
@@ -92,6 +115,9 @@ export async function editApprovalDraftAction(form: FormData): Promise<void> {
       item.payload && typeof item.payload === "object" && !Array.isArray(item.payload)
         ? (item.payload as Record<string, unknown>)
         : {};
+    if (typeof existing.body === "string") {
+      originalBody = existing.body;
+    }
     const next = { ...existing, body, editedAt: new Date().toISOString() };
 
     await tx.workApprovalQueueItem.update({
@@ -110,6 +136,22 @@ export async function editApprovalDraftAction(form: FormData): Promise<void> {
       },
     });
   });
+
+  // Capture the edit as a preference signal so the NEXT draft reflects
+  // what the broker-owner changed. Best-effort: a capture failure must
+  // not poison the edit — the row is already updated.
+  try {
+    await captureDraftEditSignal(ctx, {
+      workspaceId,
+      approvalItemId: itemId,
+      originalBody,
+      finalBody: body,
+    });
+  } catch (err) {
+    console.warn(
+      `captureDraftEditSignal failed (ignored): ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
 
   revalidatePath(`/app/workspace/${workspaceId}/approvals`);
 }

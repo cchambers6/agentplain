@@ -27,7 +27,7 @@
  */
 
 import { prisma } from '@/lib/db/prisma';
-import { withSystemContext } from '@/lib/db';
+import { withSystemContext, SYSTEM_OPERATOR_CONTEXT } from '@/lib/db';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
 import { GmailMessageAdapter } from '@/lib/skills/gmail-fetcher';
@@ -38,6 +38,8 @@ import {
   summarizeOutcome,
 } from '@/lib/skills/persist-artifacts';
 import type { DraftPersister, MessageFetcher } from '@/lib/skills/types';
+import { getWorkspacePreference } from '@/lib/preferences';
+import { retrieveCustomerContext } from '@/lib/customer-files';
 
 export const PROCESS_WEBHOOK_EVENT_FUNCTION_ID = 'agentplain-process-webhook-event';
 /** Every 5 minutes (UTC). Drains backlog without hammering the LLM. */
@@ -108,11 +110,28 @@ export async function processUnprocessedWebhookEvents(
     }
     try {
       const adapter = buildAdapterForProvider(credential.provider, workspace.id);
+
+      // Read durable state per fire (no in-memory cache between events —
+      // feedback_cold_start_safe_agents.md).
+      const workspacePreferences = await getWorkspacePreference(
+        SYSTEM_OPERATOR_CONTEXT,
+        workspace.id,
+      );
+
+      // Customer-context retrieval runs after ReadSkill resolves —
+      // pass a resolver so the runner uses the real message body as the
+      // query, not the Pub/Sub envelope. Best-effort: a retrieval error
+      // never fails the loop (the runner swallows).
+      const customerContextResolver = async (query: string) =>
+        retrieveCustomerContext({ workspaceId: workspace.id, query });
+
       const { record, outcome } = await runSkillChain({
         workspace,
         event,
         fetcher: adapter,
         persister: adapter,
+        workspacePreferences,
+        customerContextResolver,
       });
 
       const artifacts = await persistSkillRunArtifacts({

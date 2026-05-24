@@ -24,7 +24,16 @@ const nextConfig = {
 // safe for dev / preview / Production-before-Conner-pastes-the-token.
 export default withSentryConfig(nextConfig, {
   silent: !process.env.CI,
-  org: process.env.SENTRY_ORG,
+  // Read both names so a rename on either side (Vercel env var or this file)
+  // can't silently disable source-map upload + release tagging again. The
+  // 2026-05-24 prod build skipped the upload because the existing Vercel var
+  // is `SENTRY_ORG_SLUG` while this file only read `SENTRY_ORG` — runtime
+  // ingestion still worked (DSN is read separately) but prod stack traces
+  // were minified and releases weren't tagged. `SENTRY_ORG_SLUG` wins when
+  // both are set so the existing Vercel var keeps working without an env
+  // edit, and the canonical Sentry SDK name (`SENTRY_ORG`) stays a valid
+  // fallback for any future environment that uses it.
+  org: process.env.SENTRY_ORG_SLUG ?? process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
   authToken: process.env.SENTRY_AUTH_TOKEN,
   hideSourceMaps: true,

@@ -15,6 +15,11 @@ import ClaimsTriadGrid from "@/components/vertical/ClaimsTriadGrid";
 import PricingTierBanner from "@/components/vertical/PricingTierBanner";
 import IntegrationsList from "@/components/vertical/IntegrationsList";
 import VerticalCta from "@/components/vertical/VerticalCta";
+import JsonLd from "@/components/seo/JsonLd";
+import {
+  verticalBreadcrumbJsonLd,
+  verticalServiceJsonLd,
+} from "@/lib/seo/structured-data";
 
 // Static generation for all 10 verticals plus on-ramp surfaces (e.g.
 // `/general`) — no runtime DB lookups, no ISR cache churn. Adding an
@@ -50,6 +55,17 @@ export default function VerticalPage({
 
   return (
     <>
+      {/* Structured data — BreadcrumbList for SERP breadcrumb display, plus a
+          per-vertical Service payload sourced from the vertical's own content
+          file (hero value-prop → schema description). No invented claims. */}
+      <JsonLd
+        id={`ld-vertical-breadcrumb-${content.slug}`}
+        data={verticalBreadcrumbJsonLd(content)}
+      />
+      <JsonLd
+        id={`ld-vertical-service-${content.slug}`}
+        data={verticalServiceJsonLd(content)}
+      />
       <VerticalHero content={content} />
       {content.valueLoopExample ? (
         <ValueLoopExample

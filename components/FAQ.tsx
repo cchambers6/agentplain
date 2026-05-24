@@ -1,4 +1,4 @@
-type FAQItem = {
+export type FAQItem = {
   q: string;
   a: string;
 };
@@ -17,8 +17,12 @@ type FAQItem = {
 //   - Customer is the SERVED party, never the AI operator —
 //     no "configure your agents," "set up your fleet," "self-serve,"
 //     "DIY agents." The service partner installs, runs, and customizes.
+//
+// Items are exported so `lib/seo/structured-data.ts` can derive the
+// FAQPage JSON-LD payload from the same source of truth — no copy-paste,
+// no drift between the rendered page and the structured data.
 
-const items: FAQItem[] = [
+export const FAQ_ITEMS: FAQItem[] = [
   {
     q: "What is agentplain?",
     a: "A service partnership for local businesses. Your service team installs a fleet of capable AI partners inside your shop, configures it for your vertical, runs weekly reviews, and customizes the agents as your ops shift. The fleet reads from your existing tools — email, calendar, CRM, transaction systems, accounting — categorizes what matters, drafts what you'd otherwise type, schedules what needs scheduling, and coordinates across threads. The fleet drafts; you decide. We run the operation; you run the business. Built for ten verticals: real estate, mortgage, insurance, property management, title & escrow, recruiting, home services contractors, CPA / tax firms, law firms, and RIA / wealth practices.",
@@ -83,7 +87,26 @@ const items: FAQItem[] = [
     q: "Is my data safe?",
     a: "Your data stays in your stack. The fleet pulls what it needs to do a task, returns a result, doesn't retain client lists or transaction records as training data. Liability for licensed activities — anything that requires a state license — stays with you and your firm. We don't act as a brokerage, lender, insurance carrier, law firm, RIA, or any other licensed party. Your service partner runs the AI ops; you run the licensed business.",
   },
+  {
+    q: "Is my data resold or used to train someone else's model?",
+    a: "No. We don't resell your data. We don't train foundation models on your inbox, your client list, your transaction records, or your drafts. The fleet pulls what it needs to do a task, returns a draft to your review queue, and the underlying provider call runs under enterprise terms that exclude training on your content. Your client list is not a corpus for someone else's product.",
+  },
+  {
+    q: "Who owns the drafts and the work product?",
+    a: "You do. Every draft the fleet produces belongs to your firm — your IP, your record, your liability. We don't claim a license to the work, we don't republish it, we don't analyze it across customers. The fleet drafts on your behalf the way a contractor drafts on your behalf: the output is yours from the moment it lands in your queue.",
+  },
+  {
+    q: "What happens if I cancel?",
+    a: "Cancel from billing settings anytime — month-to-month from day one. Your seats stop billing at the end of the current month. The fleet stops drafting at that boundary; nothing keeps writing into your tools after you've ended the relationship. You can export your workspace data (handoff log, approval history, draft archive) before cancellation. We don't retain operational copies of your data once your workspace closes, and we don't keep your client list for a future relaunch.",
+  },
+  {
+    q: "What about HIPAA or other regulated-data postures?",
+    a: "Honest answer: agentplain is not currently sold as a HIPAA-eligible service, and the locked ten verticals don't include healthcare (medical is parked per our roadmap). For verticals we DO serve, the regulatory posture is consistent: human review on every customer-facing output, liability for licensed activities stays with you, the per-vertical compliance corpus is counsel-reviewed (TCPA, RESPA, fair-housing for realty; analog corpuses for the other nine). If you have a regulated-data scope outside the ratified ten, route to /custom — we'll scope it as a written engagement or decline honestly, not pretend it's a productized fit.",
+  },
 ];
+
+// Back-compat alias for any historical imports.
+const items = FAQ_ITEMS;
 
 export default function FAQ() {
   return (

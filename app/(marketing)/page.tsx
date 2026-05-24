@@ -1,9 +1,32 @@
 import Link from "next/link";
 import Section from "@/components/Section";
-import FAQ from "@/components/FAQ";
+import FAQ, { FAQ_ITEMS } from "@/components/FAQ";
 import RoiCalculator from "@/components/RoiCalculator";
+import JsonLd from "@/components/seo/JsonLd";
+import {
+  Step,
+  UniqueCard,
+  ContrastRow,
+  KnowledgeStat,
+  ProofCard,
+  Card,
+  TierCard,
+} from "@/components/marketing/HomeCards";
+import {
+  ladderBands,
+  partnerBands,
+  uniques,
+  chatbotContrast,
+  proof,
+} from "@/lib/marketing/home-content";
+import {
+  organizationJsonLd,
+  serviceJsonLd,
+  faqPageJsonLd,
+} from "@/lib/seo/structured-data";
 import { getAllVerticals, getVerticalContent } from "@/lib/verticals";
 import { tokens } from "@/lib/brand/tokens";
+import { SEED_COUNTS } from "@/lib/knowledge/seed-data";
 
 // Marketing home.
 //
@@ -18,118 +41,9 @@ import { tokens } from "@/lib/brand/tokens";
 //   - no "coming soon" without date/qualification
 //
 // Sources for every concrete claim are footnoted with their memory file.
-
-// Service-partnership tiers (ratified 2026-05-15 — three productized tiers
-// under the service-partnership lock; supersedes the 2026-05-12 single-tier
-// surfacing while preserving the per-seat ladder as Regular's price shape).
-// Regular: standard service partnership, per-seat ladder, self-served day-to-day
-// with our team running install + config + reviews on a cadence.
-// Partner: named service partner, weekly review cadence, deeper customization,
-//          uplift on the per-seat number to fund the dedicated overlay.
-// Max:     ad-hoc service partnership for firms with non-standard scope —
-//          quoted, not productized; sales-led CTA.
-// /custom remains a separate surface for bespoke ENGAGEMENTS (white-label,
-// integrations off the roadmap, 100+ seats) — that surface is not a tier.
-const ladderBands = [
-  { band: "Solo (1 seat)", price: "$199" },
-  { band: "2–9 seats", price: "$179" },
-  { band: "10–24 seats", price: "$149" },
-  { band: "25–49 seats", price: "$119" },
-  { band: "50–99 seats", price: "$99" },
-];
-
-// Partner per-seat numbers map to the schema-backed `PLUS` enum in
-// `prisma/schema.prisma` (kept since 2026-05-09) — the productized uplift
-// covers the named-partner overlay (onboarding, weekly review, customization).
-// Customer copy renders this as "Partner" via `tierDisplayName()` — the
-// schema name itself is internal-only.
-// Source: HISTORICAL block of `project_stripe_both_surfaces.md` —
-// $299 solo → $199 at scale.
-const partnerBands = [
-  { band: "Solo (1 seat)", price: "$299" },
-  { band: "2–9 seats", price: "$269" },
-  { band: "10–24 seats", price: "$239" },
-  { band: "25–49 seats", price: "$219" },
-  { band: "50–99 seats", price: "$199" },
-];
-
-// Q4 — what makes agentplain unique. Five points pulled verbatim from the
-// mission rule (Vertical-aware / Control / Integrates / Built BY agents /
-// Compliance-first).
-const uniques = [
-  {
-    label: "Vertical-aware",
-    body: "A real-estate agentplain knows MLS workflows, fair-housing copy, broker-of-record rules. A CPA agentplain knows tax-prep deadlines and e-file conventions. Each vertical ships with its own JTBD table and compliance corpus — generic AI tools don't.",
-  },
-  {
-    label: "You stay in control",
-    body: "The fleet drafts and proposes; it never auto-sends, never moves money, never makes commitments. Every customer-facing output queues for your review. Your existing CRM and inbox handle every send.",
-  },
-  {
-    label: "Integrates, not replaces",
-    body: "Sits on top of the tools you already pay for — your CRM, your inbox, your transaction system, your accounting. No migration. The fleet replaces the manual work that lives between them.",
-  },
-  {
-    label: "Built BY agents",
-    body: "The same fleet model we sell builds our own product. The pattern works because we run it on ourselves — a brokerage in production today running ~35 cron-fired agents on daily ops is the working precursor we productized.",
-  },
-  {
-    label: "Compliance-first",
-    body: "Per-vertical compliance corpus, counsel-reviewed (TCPA, RESPA, fair-housing for realty; analog corpuses for the other nine). Not bolted on after the marketing site went up.",
-  },
-];
-
-// "Why pay vs. free?" — names the real alternative plainly and answers the
-// objection head-on (B5). LEFT = a free chatbot; RIGHT = agentplain run for
-// you. Marketing voice (confident), no banned words. The "us" side carries a
-// moss checkmark as a verified-good signal only — never decorative.
-const chatbotContrast = [
-  {
-    free: "Waits for you to prompt it.",
-    us: "Works overnight, and hands you drafts before you open the laptop.",
-  },
-  {
-    free: "Starts blank every session.",
-    us: "Pre-trained on your vertical, with a counsel-reviewed compliance corpus.",
-  },
-  {
-    free: "Gives you text to copy-paste.",
-    us: "Puts the draft in your own Gmail or CRM for one-click approve, edit, or reject.",
-  },
-  {
-    free: "You write the prompts and wire the tools.",
-    us: "Your service partner installs, connects, and tunes it for you.",
-  },
-  {
-    free: "No memory of your business.",
-    us: "Rooted in your real systems and the way your shop works.",
-  },
-];
-
-// Q6 — proof points. Each item must cite a memory rule or a concrete artifact.
-// "Why should anyone believe us?"
-const proof = [
-  {
-    label: "Eat our own cooking",
-    body: "agentplain is built BY a fleet of agents, not a human engineering team. The brokerage running in production today is the working precursor of this model — the pattern is real, not theoretical.",
-    cite: "project_agentplain_built_by_agents.md",
-  },
-  {
-    label: "Counsel-reviewed corpus",
-    body: "Outside counsel is reviewing the broker-of-record term sheet, GA TCPA + RESPA compliance corpus. When counsel returns we'll name them publicly; until then the corpus is gated, not vapor.",
-    cite: "project_counsel_engaged.md",
-  },
-  {
-    label: "ROI math, not vibes",
-    body: "Value math anchored at $2,900–$10,600/mo per practitioner against $99–$199/mo per-seat subscription — typical ROI multiple 15x to 110x, every claim traceable to a memory rule.",
-    cite: "project_pricing_value_anchor.md",
-  },
-  {
-    label: "Open feedback loop",
-    body: "Every agent action is visible in the workspace. Nothing happens behind the curtain — handoffs, drafts, compliance flags, all auditable inside the product.",
-    cite: "project_no_outbound_architecture.md",
-  },
-];
+// Card primitives live in `components/marketing/HomeCards.tsx`; the data
+// constants live in `lib/marketing/home-content.ts` — extracted from this
+// file in the SEO/marketing pack PR so the page renderer stays scannable.
 
 export default function HomePage() {
   // All ten verticals named on page 1 per the mission rule. Real estate is
@@ -139,6 +53,14 @@ export default function HomePage() {
 
   return (
     <>
+      {/* Structured data — Organization + Service for the publisher, and a
+          FAQPage payload built from the same FAQ_ITEMS the page renders.
+          Per `lib/seo/structured-data.ts`: no invented claims, no review
+          counts, no schema we can't substantiate from existing content. */}
+      <JsonLd id="ld-organization" data={organizationJsonLd()} />
+      <JsonLd id="ld-service" data={serviceJsonLd()} />
+      <JsonLd id="ld-faqpage" data={faqPageJsonLd(FAQ_ITEMS)} />
+
       {/* HERO — wordmark + tagline + locked mission line + all 10 verticals */}
       <section className="border-b border-rule bg-paper">
         <div className="container-wide pb-24 pt-20 md:pb-28 md:pt-24">
@@ -306,31 +228,40 @@ export default function HomePage() {
       </Section>
 
       {/* Q4 follow-on — the "why pay vs. free" objection, answered head-on.
-          Names the real alternative plainly ("a free chatbot", "ChatGPT").
-          Two columns (product-vs-alternative axis — NOT a 3-column pricing
-          grid). Reuses the gap-px / bg-rule hairline pattern so the rule
-          shows through as the divider between columns and rows. */}
+          Names Claude for Small Business + ChatGPT explicitly per the
+          service-partnership lock (`project_service_partnership_positioning`,
+          ratified 2026-05-15 in response to Anthropic's Claude for SMB
+          launch). Two columns (product-vs-alternative axis — NOT a 3-column
+          pricing grid). Reuses the gap-px / bg-rule hairline pattern so the
+          rule shows through as the divider between columns and rows. */}
       <Section
-        eyebrow="Why pay for this"
+        eyebrow="Claude gives you the tool. We run it for you."
         title={
           <>
-            A free chatbot, or a service partner who{" "}
+            Claude for Small Business, or a service partner who{" "}
             <span className="text-clay">runs it for you?</span>
           </>
         }
-        intro="ChatGPT and Claude for Small Business are real, useful tools — and they're cheap or free. Here's the honest difference. One is a blank box you have to drive. The other is a fleet your service partner installs, connects to your systems, and runs for you."
+        intro="Anthropic's Claude for Small Business and OpenAI's ChatGPT are real, useful tools — and they're cheap or free. They hand you a horizontal model and a tool catalog and expect you to figure out workflows, write prompts, and stitch integrations on your own. That's a different product than what we sell. agentplain is the opposite: we install the fleet, connect your systems, run weekly reviews, and customize as your ops shift. You stay focused on serving your customers."
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
-          {/* LEFT column head — a free chatbot */}
+          {/* LEFT column head — Claude for Small Business (named per the
+              2026-05-15 positioning lock) */}
           <div className="bg-paper p-7 md:p-8">
             <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-              a free chatbot
+              Claude for Small Business (or any free chatbot)
+            </p>
+            <p className="mt-2 font-display text-base leading-snug text-ink-soft">
+              You get the tool.
             </p>
           </div>
           {/* RIGHT column head — agentplain, run for you */}
           <div className="bg-paper p-7 md:p-8">
             <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
               agentplain, run for you
+            </p>
+            <p className="mt-2 font-display text-base leading-snug text-ink">
+              We run it for you.
             </p>
           </div>
 
@@ -395,6 +326,56 @@ export default function HomePage() {
           </div>
         </Section>
       ) : null}
+
+      {/* Knowledge substrate proof — VERIFIABLE counts pulled from the seed
+          assembly in `lib/knowledge/seed-data.ts`. Numbers are computed at
+          build time from the actual rows the substrate loads at install:
+            - SKILL = the 5 value-loop skill docs + architecture chunks
+            - VERTICAL = per-vertical hero/JTBD/ROI/claims/integrations/loop
+                         chunks + per-role JTBD synthesis across the 10
+                         locked verticals (+ /general on-ramp)
+            - COMPLIANCE = original 5 real-estate fixtures + per-vertical
+                           sentinel rules that have been VERIFIED (unverified
+                           placeholders are skipped per seed-data.ts)
+            - CROSS_CUSTOMER = ratified positioning/pricing/brand/mission
+                               doctrine docs
+          Per `feedback_no_guesses_no_estimates.md`: every number here cites
+          the artifact (seed-data.ts SEED_COUNTS) — none invented. */}
+      <Section
+        tone="deep"
+        eyebrow="What the fleet knows on day one"
+        title="A working knowledge base, not a blank prompt box."
+        intro="The fleet doesn't start cold. Before a customer signs up, the knowledge substrate already ships pre-loaded with vertical-specific jobs-to-be-done, the value-loop skill docs the runner consumes, a counsel-reviewed compliance corpus, and the ratified product doctrine that grounds every draft. Counts below are computed at build time from the actual rows the substrate loads — not aspirational, not invented."
+      >
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-4">
+          <KnowledgeStat
+            count={SEED_COUNTS.VERTICAL}
+            label="Vertical knowledge chunks"
+            body="Per-vertical hero, JTBD per role, ROI math, claims, integrations, and day-in-the-life example. Indexed across the ten locked verticals plus the /general on-ramp."
+          />
+          <KnowledgeStat
+            count={SEED_COUNTS.COMPLIANCE}
+            label="Compliance rules"
+            body="Counsel-reviewed fair-housing, ECOA, broker-of-record, and per-vertical regulatory rules. Unverified placeholders are intentionally excluded — flagged for counsel, never seeded."
+          />
+          <KnowledgeStat
+            count={SEED_COUNTS.SKILL}
+            label="Skill + architecture docs"
+            body="The five value-loop skills (read / categorize / coordinate / schedule / draft) plus the architecture chunks that describe how the runner composes them."
+          />
+          <KnowledgeStat
+            count={SEED_COUNTS.CROSS_CUSTOMER}
+            label="Ratified doctrine docs"
+            body="Locked positioning, pricing, brand semantics, mission, design language, and architectural decisions — so every draft reflects today's truth, not the model's training prior."
+          />
+        </div>
+        <p className="mt-8 max-w-prose text-[13px] leading-relaxed text-mute">
+          Source:{" "}
+          <code className="text-[12px]">lib/knowledge/seed-data.ts</code> ·{" "}
+          counts computed at build time from{" "}
+          <code className="text-[12px]">SEED_COUNTS</code>.
+        </p>
+      </Section>
 
       {/* Q6 — Why should anyone believe us? */}
       <Section
@@ -580,216 +561,3 @@ export default function HomePage() {
   );
 }
 
-function Step({
-  number,
-  title,
-  body,
-}: {
-  number: string;
-  title: string;
-  body: string;
-}) {
-  return (
-    <div className="bg-paper p-8 md:p-10">
-      <p className="font-mono text-[11px] tracking-eyebrow text-clay">
-        {number}
-      </p>
-      <h3 className="mt-4 font-display text-xl leading-tight text-ink md:text-2xl">
-        {title}
-      </h3>
-      <p className="mt-3 text-[15px] leading-relaxed text-ink-soft">{body}</p>
-    </div>
-  );
-}
-
-function UniqueCard({
-  number,
-  label,
-  body,
-}: {
-  number: string;
-  label: string;
-  body: string;
-}) {
-  return (
-    <div className="flex flex-col bg-paper p-7 md:p-8">
-      <div className="flex items-baseline gap-3">
-        <p className="font-mono text-[11px] tracking-eyebrow text-clay">
-          {number}
-        </p>
-        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
-          {label}
-        </p>
-      </div>
-      <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">{body}</p>
-    </div>
-  );
-}
-
-// One contrast in the "why pay vs. free" block. Renders the LEFT (free
-// chatbot) cell then the RIGHT (us) cell as two sibling grid cells so the
-// gap-px / bg-rule hairline aligns the columns. The moss checkmark on the
-// "us" side is a verified-good status signal only — never decorative.
-function ContrastRow({ free, us }: { free: string; us: string }) {
-  return (
-    <>
-      <div className="bg-paper p-7 md:p-8">
-        <p className="text-[15px] leading-relaxed text-ink-soft">{free}</p>
-      </div>
-      <div className="flex items-start gap-3 bg-paper p-7 md:p-8">
-        <span aria-hidden className="mt-1 font-mono text-sm text-moss">
-          ✓
-        </span>
-        <p className="text-[15px] leading-relaxed text-ink">{us}</p>
-      </div>
-    </>
-  );
-}
-
-function ProofCard({
-  label,
-  body,
-  cite,
-}: {
-  label: string;
-  body: string;
-  cite: string;
-}) {
-  return (
-    <div className="flex flex-col bg-paper p-7 md:p-8">
-      <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
-        {label}
-      </p>
-      <p className="mt-4 max-w-prose text-[15px] leading-relaxed text-ink-soft">
-        {body}
-      </p>
-      <p className="mt-5 border-t border-rule pt-4 font-mono text-[11px] leading-relaxed text-mute">
-        Source: <code className="text-[11px]">{cite}</code>
-      </p>
-    </div>
-  );
-}
-
-function Card({
-  number,
-  title,
-  body,
-}: {
-  number: string;
-  title: string;
-  body: string;
-}) {
-  return (
-    <div className="bg-paper p-8 md:p-10">
-      <p className="font-mono text-[11px] tracking-eyebrow text-clay">
-        {number}
-      </p>
-      <h3 className="mt-4 font-display text-2xl leading-tight text-ink md:text-3xl">
-        {title}
-      </h3>
-      <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">{body}</p>
-    </div>
-  );
-}
-
-// Three-tier service-partnership card. Inlined here (not the existing
-// `components/PricingTier.tsx`) because the homepage teaser needs the
-// per-seat ladder rendered inside each tier — a shape the existing
-// PricingTier component (single price, single cadence) doesn't model.
-function TierCard({
-  name,
-  tagline,
-  description,
-  bands,
-  quotedNote,
-  ctaLabel,
-  ctaHref,
-  ctaStyle,
-  footnote,
-  featured = false,
-}: {
-  name: string;
-  tagline: string;
-  description: string;
-  bands?: { band: string; price: string }[];
-  quotedNote?: string;
-  ctaLabel: string;
-  ctaHref: string;
-  ctaStyle: "primary" | "secondary";
-  footnote: string;
-  featured?: boolean;
-}) {
-  const isMailto = ctaHref.startsWith("mailto:");
-  const CtaTag = (isMailto ? "a" : Link) as React.ElementType;
-  const ctaClass =
-    ctaStyle === "primary"
-      ? "btn-primary w-full justify-center"
-      : "btn-secondary w-full justify-center";
-
-  return (
-    <div
-      className={`flex flex-col bg-paper p-7 md:p-8 ${
-        featured ? "ring-1 ring-clay" : ""
-      }`}
-    >
-      <div className="flex items-baseline justify-between">
-        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
-          {name}
-        </p>
-        {featured ? (
-          <p className="font-mono text-[10px] tracking-eyebrow uppercase text-clay">
-            Named partner
-          </p>
-        ) : null}
-      </div>
-      <h3 className="mt-3 font-display text-2xl leading-snug text-ink md:text-3xl">
-        {tagline}
-      </h3>
-      <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
-        {description}
-      </p>
-
-      {bands ? (
-        <div className="mt-6 grid gap-px overflow-hidden border border-rule bg-rule">
-          {bands.map((row) => (
-            <div
-              key={row.band}
-              className="flex items-baseline justify-between bg-paper px-3 py-2"
-            >
-              <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-                {row.band}
-              </span>
-              <span className="font-display text-lg text-ink">
-                {row.price}
-                <span className="ml-1 font-mono text-[10px] tracking-eyebrow uppercase text-mute">
-                  /seat/mo
-                </span>
-              </span>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      {quotedNote ? (
-        <div className="mt-6 border border-rule bg-paper-deep px-4 py-6 text-center">
-          <p className="font-display text-2xl leading-snug text-ink">
-            {quotedNote}
-          </p>
-          <p className="mt-2 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-            sales-led
-          </p>
-        </div>
-      ) : null}
-
-      <div className="mt-auto pt-6">
-        <CtaTag href={ctaHref} className={ctaClass}>
-          {ctaLabel}
-          <span aria-hidden>→</span>
-        </CtaTag>
-        <p className="mt-3 font-mono text-[11px] leading-relaxed text-mute">
-          {footnote}
-        </p>
-      </div>
-    </div>
-  );
-}

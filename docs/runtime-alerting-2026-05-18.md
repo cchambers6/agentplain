@@ -38,9 +38,28 @@ broken flow and telling us.
 - **Error boundaries** report via the adapter:
   - `app/(product)/error.tsx` — product surface.
   - `app/(product)/app/workspace/[id]/error.tsx` — workspace surface.
-  - `app/global-error.tsx` — NEW. Catches root-layout failures (above the
+  - `app/(marketing)/error.tsx` + `app/(operator)/error.tsx` — segment
+    boundaries (each tags its own `boundary=…` value).
+  - `app/global-error.tsx` — Catches root-layout failures (above the
     other boundaries). Renders its own `<html>`/`<body>` per Next.js
     convention.
+- **Inngest cron / skill-runner capture** — `lib/inngest/with-error-reporting.ts`:
+  - `withInngestErrorReporting(...)` wraps every Inngest function body so a
+    thrown error reports through the adapter with `boundary=inngest` +
+    `function_id` tags, flushes (serverless workers exit fast and Sentry
+    buffers events), then rethrows so Inngest still records the failure
+    and applies its retry policy. Composed INSIDE `runWithDisableGate` —
+    a paused function never reports.
+  - `reportInngestItemFailure(...)` is the per-item helper. Cron sweeps
+    catch per-row errors so one bad row doesn't stall the batch; this
+    helper preserves keep-going behavior and still surfaces the error
+    with structured tags (`workspace_id`, `webhook_event_id`, etc.).
+  - Wired into `process-webhook-event` (per-event throws inside the skill
+    chain), `integration-renewal-sweep` (token refresh + watch renewal
+    failures, per-credential), and `trial-expiration-warnings`
+    (per-candidate email send failures). These were the load-bearing
+    silent paths — same shape as the flatsbo `task_budget` 400 incident
+    where a cron threw and the only signal was Conner noticing.
 
 ## What Conner needs to do
 
@@ -48,14 +67,22 @@ These steps are manual because the secrets and project-side configuration
 live outside the repo. Per `feedback_no_prod_secrets_in_dev`, the DSN goes
 in Production-tier Vercel only initially.
 
-### 1. Create the Sentry project
+### 1. Grab the DSN from the existing Sentry project
 
-1. Sign up at <https://sentry.io> (free tier is fine — 5K events/month
-   covers current traffic with a comfortable margin).
-2. Create a new project: platform = **Next.js**, name =
-   `agentplain` (or `agentplain-app`).
-3. Copy the DSN it generates — looks like
-   `https://<hash>@<region>.ingest.sentry.io/<project-id>`.
+The project already exists — `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`,
+`SENTRY_PROJECT` are already set on Vercel Production (env audit
+2026-05-23) and the `withSentryConfig` wrapper has been uploading
+source maps on every build since they landed. The only missing piece
+is the DSN that the runtime SDK ingests to.
+
+1. Open <https://sentry.io>, sign in, switch to the org matching the
+   `SENTRY_ORG` slug.
+2. Navigate to **Projects → agentplain** (slug matches `SENTRY_PROJECT`).
+3. Open **Settings → Client Keys (DSN)**. Copy the **Default** key —
+   looks like `https://<hash>@<region>.ingest.sentry.io/<project-id>`.
+   (Settings cog → in the left rail → "Client Keys (DSN)" under "SDK
+   Setup". The same DSN is reused for server + client; it is the *Public
+   DSN* shown at the top of the key card.)
 
 ### 2. Paste the DSN into Vercel
 
@@ -72,18 +99,10 @@ having it in the browser bundle is safe. We still keep it gated on
 Production so dev/preview don't ship a client init pointing at a project
 that doesn't exist.
 
-**Optional, for source maps later** (skip for v1):
-
-| Variable             | Value                                  |
-| -------------------- | -------------------------------------- |
-| `SENTRY_ORG`         | your Sentry org slug                   |
-| `SENTRY_PROJECT`     | project slug from step 1 (e.g. agentplain) |
-| `SENTRY_AUTH_TOKEN`  | a Sentry auth token with `project:releases` scope |
-
-Source-map upload makes prod stack traces map back to original TS line
-numbers. Worth wiring once we get a real error volume — until then the
-minified traces plus the `error.digest` reference are enough to find the
-fault.
+**Source maps are already wired.** `SENTRY_ORG`, `SENTRY_PROJECT`, and
+`SENTRY_AUTH_TOKEN` are already on Vercel Production, so the next build
+after the DSN paste will upload sourcemaps + tag the release with
+`VERCEL_GIT_COMMIT_SHA` automatically. No additional env vars needed.
 
 After saving env vars, **redeploy** so they take effect (Vercel doesn't
 re-bake them on a hot reload).
@@ -157,12 +176,23 @@ satisfy the interface — adding a third later is mechanical.
 - `lib/env.ts` — `observabilityProvider()`, `sentryDsn()`, `sentryClientDsn()`,
   `sentryEnvironment()`, `sentryRelease()`.
 - `lib/observability/{types,index,noop-provider,sentry-provider,test-provider}.ts`
-  — new adapter.
-- `instrumentation.ts` — new (Next.js register hook).
-- `sentry.{server,edge,client}.config.ts` — new (SDK boot files).
-- `app/global-error.tsx` — new (root-layout error boundary).
-- `app/(product)/error.tsx` — calls `reportError`.
-- `app/(product)/app/workspace/[id]/error.tsx` — calls `reportError`.
-- `tests/observability-providers.test.ts` — new (adapter unit tests).
+  — adapter.
+- `instrumentation.ts` — Next.js register hook + `onRequestError`.
+- `sentry.{server,edge,client}.config.ts` — SDK boot files.
+- `app/global-error.tsx` — root-layout error boundary.
+- `app/(marketing)/error.tsx`, `app/(operator)/error.tsx`,
+  `app/(product)/error.tsx`, `app/(product)/app/workspace/[id]/error.tsx`
+  — segment boundaries calling `reportError`.
+- `lib/inngest/with-error-reporting.ts` — `withInngestErrorReporting` +
+  `reportInngestItemFailure` (cron / skill-runner capture seam).
+- `lib/inngest/functions/process-webhook-event.ts` — per-event capture +
+  cron-level wrapper.
+- `lib/inngest/functions/integration-renewal-sweep.ts` — per-credential
+  capture + cron-level wrapper.
+- `lib/inngest/functions/trial-expiration-warnings.ts` — per-candidate
+  capture + cron-level wrapper.
+- `tests/observability-providers.test.ts` — adapter unit tests.
+- `lib/inngest/__tests__/with-error-reporting.test.ts` — wrapper unit
+  tests + the production-shape gate+wrapper composition test.
 - `.env.example` — `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` documented.
 - `docs/incident-log.md` — closed the monitoring-gap follow-up.

@@ -36,6 +36,10 @@ import {
 import { isEncryptionConfigured } from '@/lib/security/encryption';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
+import {
+  reportInngestItemFailure,
+  withInngestErrorReporting,
+} from '../with-error-reporting';
 
 export const INTEGRATION_RENEWAL_SWEEP_FUNCTION_ID = 'agentplain-integration-renewal-sweep';
 /** Every 2 hours on the hour (UTC). 12 fires per 24h gives ample retry headroom. */
@@ -118,6 +122,19 @@ export async function runIntegrationRenewalSweep(
     if (credential.expiresAt.getTime() - now.getTime() < TOKEN_REFRESH_LEEWAY_MS) {
       const refreshed = await refreshCredentialTokens(credential, now);
       if (!refreshed.ok) {
+        reportInngestItemFailure(
+          new Error(`token refresh failed: ${refreshed.error}`),
+          {
+            functionId: INTEGRATION_RENEWAL_SWEEP_FUNCTION_ID,
+            extraTags: {
+              subscription_id: sub.id,
+              workspace_id: sub.workspaceId,
+              credential_id: credential.id,
+              provider: credential.provider,
+              phase: 'token-refresh',
+            },
+          },
+        );
         result.failures.push({
           subscriptionId: sub.id,
           reason: `token refresh failed: ${refreshed.error}`,
@@ -131,6 +148,19 @@ export async function runIntegrationRenewalSweep(
     // Renew the watch.
     const renewal = await renewSubscription(credential, sub, now);
     if (!renewal.ok) {
+      reportInngestItemFailure(
+        new Error(`subscription renewal failed: ${renewal.error}`),
+        {
+          functionId: INTEGRATION_RENEWAL_SWEEP_FUNCTION_ID,
+          extraTags: {
+            subscription_id: sub.id,
+            workspace_id: sub.workspaceId,
+            credential_id: credential.id,
+            provider: credential.provider,
+            phase: 'subscription-renewal',
+          },
+        },
+      );
       result.failures.push({
         subscriptionId: sub.id,
         reason: `subscription renewal failed: ${renewal.error}`,
@@ -277,6 +307,9 @@ export const integrationRenewalSweepFn = inngest.createFunction(
   },
   async () =>
     runWithDisableGate(INTEGRATION_RENEWAL_SWEEP_FUNCTION_ID, () =>
-      runIntegrationRenewalSweep(),
+      withInngestErrorReporting(
+        { functionId: INTEGRATION_RENEWAL_SWEEP_FUNCTION_ID },
+        () => runIntegrationRenewalSweep(),
+      ),
     ),
 );

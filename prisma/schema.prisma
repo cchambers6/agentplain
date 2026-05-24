@@ -291,6 +291,8 @@ model Workspace {
   knowledgeDocuments     KnowledgeDocument[]
   embeddings             Embedding[]
   supportRequests        SupportRequest[]
+  preference             WorkspacePreference?
+  preferenceSignals      PreferenceSignal[]
 
   @@index([slug])
   @@index([vertical])
@@ -830,6 +832,90 @@ model WebAuthnCredential {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// Source that produced a preference signal. ONBOARDING_FORM = the
+// set_preferences step in the wizard. DRAFT_EDIT = broker-owner edited a
+// reply draft in /approvals. DRAFT_REJECT = broker-owner rejected a
+// reply draft with (or without) a reason. The append-only signal log lets
+// the prompt-injection layer reconstruct the active preferences from
+// first principles (no in-memory cache; cold-start safe per
+// feedback_cold_start_safe_agents.md).
+enum PreferenceSignalSource {
+  ONBOARDING_FORM
+  DRAFT_EDIT
+  DRAFT_REJECT
+}
+
+// Per-workspace preference state — one row per workspace. The "tell us
+// once and it adjusts" claim from marketing/[vertical]/page.tsx + the
+// onboarding set_preferences step lands here. Read every fire of the
+// skill chain (per feedback_cold_start_safe_agents.md); written from
+// (1) the onboarding wizard, (2) the approvals queue when a human
+// edits/rejects a draft. NEVER cross-workspace.
+//
+// Fields kept deliberately simple — three input axes plus a learned-
+// notes string the capture pass appends to. A future structured-notes
+// model is fine; today the string composes into the draft prompt
+// verbatim under a WORKSPACE-LEARNED PREFERENCES header.
+model WorkspacePreference {
+  id                  String    @id @default(uuid()) @db.Uuid
+  workspaceId         String    @unique @db.Uuid
+  /// Drafting tone selector. One of the three onboarding options
+  /// (plain / warm-professional / formal). NULL = no preference set
+  /// yet; the draft skill falls back to the vertical default.
+  draftingTone        String?
+  /// Free-text categorization dos/don'ts captured at onboarding —
+  /// short prose the broker-owner typed (or the default we offered).
+  /// Inlined verbatim into the categorize prompt under a
+  /// WORKSPACE-CATEGORIZATION-NOTES section.
+  categorizationNotes String?
+  /// Calendar window preference label (e.g. "9-5 weekdays",
+  /// "8-7 + Sat AM", "custom"). The schedule skill receives this and
+  /// constrains slot proposals accordingly.
+  calendarWindow      String?
+  /// Learned-from-corrections bullets — newest first, capped at the
+  /// most recent 20 entries by the capture path. Each entry is a one-
+  /// line observation derived from a DRAFT_EDIT or DRAFT_REJECT
+  /// signal. Inlined verbatim into the draft prompt.
+  learnedDraftNotes   String[]  @default([])
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+// Append-only preference signal log. One row per captured signal so the
+// audit trail is preserved even after the aggregated WorkspacePreference
+// row is overwritten. Per feedback_cold_start_safe_agents.md: the future
+// reconstructor reads this table to rebuild preferences from scratch.
+model PreferenceSignal {
+  id              String                  @id @default(uuid()) @db.Uuid
+  workspaceId     String                  @db.Uuid
+  source          PreferenceSignalSource
+  /// Short label of the captured axis (e.g. "tone", "length", "do",
+  /// "dont", "categorization", "calendar"). Free-form so future signal
+  /// kinds add without a migration.
+  kind            String
+  /// The captured prose itself — for DRAFT_EDIT this is a one-line
+  /// observation derived from the edit diff. For DRAFT_REJECT it's the
+  /// decisionReason verbatim. For ONBOARDING_FORM it's the value the
+  /// broker-owner selected.
+  text            String
+  /// Polymorphic pointer to the source artifact (e.g. refTable=
+  /// "WorkApprovalQueueItem", refId=<item id>). NULL for onboarding.
+  refTable        String?
+  refId           String?
+  /// Snapshot of the edit for DRAFT_EDIT signals — original vs final
+  /// body so a future learner can re-derive the observation. NULL for
+  /// other sources.
+  payload         Json?
+  capturedAt      DateTime                @default(now())
+  workspace       Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, capturedAt])
+  @@index([workspaceId, source])
 }
 
 // Customer support request (scaffold — feat/support-routing, 2026-05-20).

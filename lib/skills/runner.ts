@@ -35,6 +35,12 @@ import type { Vertical, WebhookEvent, Workspace } from '@prisma/client';
 import { loadCorpusFor, scanCorpus } from '../agents/sentinel';
 import { getLlmProvider } from '../llm';
 import type { LlmProvider } from '../llm/types';
+import { renderPreferencesBlock } from '../preferences/render';
+import type { WorkspacePreferenceView } from '../preferences/types';
+import {
+  renderCustomerContextBlock,
+  type CustomerContextSnippet,
+} from '../customer-files/render';
 import { CategorizeSkill } from './categorize';
 import { CoordinateSkill } from './coordinate';
 import { DraftSkill } from './draft';
@@ -43,6 +49,7 @@ import {
   buildAdminApprovalPayload,
   classifyOfficeAdmin,
 } from './office-admin';
+import { composePromptBundle } from './prompts/compose';
 import { getPromptBundleByEnum } from './prompts/index';
 import { ReadSkill } from './read';
 import { ScheduleSkill } from './schedule';
@@ -64,6 +71,27 @@ export interface RunChainArgs {
   persister: DraftPersister;
   llm?: LlmProvider;
   schedulingPreferences?: SchedulingPreferences;
+  /** Workspace's learned preferences. The runner inlines them in the
+   *  composed prompt bundle so categorize/schedule/draft see them on
+   *  every fire. Per feedback_cold_start_safe_agents.md the caller reads
+   *  this fresh from durable state — no in-memory cache. */
+  workspacePreferences?: WorkspacePreferenceView | null;
+  /** Top-k CUSTOMER-kind knowledge snippets relevant to the inbound
+   *  message. The runner inlines them in the draft + coordinate prompts.
+   *  Empty = no customer files have been ingested yet, or the retrieval
+   *  pass returned nothing relevant.
+   *
+   *  Prefer `customerContextResolver` when the caller has not yet read
+   *  the inbound body — the resolver runs after ReadSkill so the query
+   *  is the actual message text, not the Pub/Sub envelope. */
+  customerContext?: CustomerContextSnippet[];
+  /** Async resolver invoked AFTER ReadSkill returns the parsed message.
+   *  Receives subject + body as the query and returns the top-k snippets
+   *  to inline. When BOTH this and `customerContext` are set, the
+   *  resolver wins (it ran on real content). */
+  customerContextResolver?: (
+    query: string,
+  ) => Promise<CustomerContextSnippet[]>;
   now?: Date;
   /** When true, write a JSONL log row to `agent-state/skill-runs/`.
    *  Default: true. */
@@ -81,7 +109,29 @@ const DEFAULT_LOG_DIR = path.join(process.cwd(), 'agent-state', 'skill-runs');
 
 export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult> {
   const llm = args.llm ?? getLlmProvider();
-  const prompts = getPromptBundleByEnum(args.workspace.vertical as Vertical);
+  const basePrompts = getPromptBundleByEnum(args.workspace.vertical as Vertical);
+  // Compose per-fire: prefs inject into the prompt bundle so the prod
+  // LLM and the test heuristic both see what the workspace has taught
+  // us. Customer context joins after ReadSkill resolves a message — the
+  // query string is the real subject+body, not the Pub/Sub envelope.
+  // Per feedback_cold_start_safe_agents.md the caller passed prefs
+  // fresh — no shared-process cache here.
+  const preferencesBlockForDraft = renderPreferencesBlock(
+    args.workspacePreferences ?? null,
+    { includeLearnedNotes: true },
+  );
+  const preferencesBlockForOther = renderPreferencesBlock(
+    args.workspacePreferences ?? null,
+    { includeLearnedNotes: false },
+  );
+  let customerContextBlock = renderCustomerContextBlock(
+    args.customerContext ?? [],
+  );
+  let prompts = composePromptBundle(basePrompts, {
+    preferencesBlockForDraft,
+    preferencesBlockForOther,
+    customerContextBlock,
+  });
   const startedAt = args.now ?? new Date();
   const steps: SkillStepRecord[] = [];
   const outcome: SkillRunOutcome = {
@@ -115,6 +165,29 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
   }
   const newestMessage = pickNewest(readRes.value.messages);
   outcome.threadId = newestMessage.threadId;
+
+  // Refresh customer context now that we have the real message body.
+  // Resolver wins over the pre-read seed because it queries against
+  // actual content. Best-effort — a resolver failure must NEVER drop
+  // the loop, so we swallow and fall back to whatever pre-read seed
+  // the caller passed.
+  if (args.customerContextResolver) {
+    try {
+      const refreshed = await args.customerContextResolver(
+        `${newestMessage.subject}\n\n${newestMessage.bodyText}`,
+      );
+      customerContextBlock = renderCustomerContextBlock(refreshed);
+      prompts = composePromptBundle(basePrompts, {
+        preferencesBlockForDraft,
+        preferencesBlockForOther,
+        customerContextBlock,
+      });
+    } catch (err) {
+      console.warn(
+        `runSkillChain: customerContextResolver failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
 
   // ── 1.5 Office-admin classify ──────────────────────────────────────
   // Runs BEFORE vertical categorize so admin email (verification codes,

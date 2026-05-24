@@ -32,6 +32,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { Vertical, WebhookEvent, Workspace } from '@prisma/client';
+import { loadCorpusFor, scanCorpus } from '../agents/sentinel';
 import { getLlmProvider } from '../llm';
 import type { LlmProvider } from '../llm/types';
 import { CategorizeSkill } from './categorize';
@@ -91,6 +92,7 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
     markedProcessed: false,
     officeAdmin: null,
     officeAdminPayload: null,
+    complianceFlags: null,
   };
 
   // ── 1. Read ─────────────────────────────────────────────────────────
@@ -261,6 +263,42 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
     errorCode: draftRes.ok ? undefined : draftRes.error.code,
   });
   if (draftRes.ok) outcome.draft = draftRes.value;
+
+  // ── 5.5 Compliance sentinel (literal-match scan over draft) ────────
+  // Runs only when a corpus is registered for the vertical AND that
+  // corpus carries at least one literal-match rule AND a draft was
+  // produced — sentinel scans the draft body + subject deterministically
+  // (no LLM). Per `project_no_outbound_architecture.md`: sentinel ADVISES;
+  // it does not block. Flags ride alongside the draft into /approvals.
+  //
+  // Verticals whose corpus is currently counsel-reference only (mortgage,
+  // cpa, law, ria, insurance, title-escrow, recruiting, home-services,
+  // property-management — as of 2026-05-22) do NOT emit a compliance-
+  // check step: nothing meaningful ran, so the sentinel card stays
+  // honestly rooting.
+  if (outcome.draft) {
+    const corpus = loadCorpusFor(prompts.verticalSlug);
+    if (corpus) {
+      const hasLiteralMatchRule = corpus.rules.some(
+        (r) => r.purpose === 'literal-match' && !r.unverified && (r.triggers?.length ?? 0) > 0,
+      );
+      if (hasLiteralMatchRule) {
+        const tScan = Date.now();
+        const scan = scanCorpus({
+          subject: outcome.draft.subject,
+          body: outcome.draft.body,
+          corpus,
+        });
+        outcome.complianceFlags = scan.flags;
+        steps.push({
+          step: 'compliance-check',
+          ok: true,
+          summary: `flags=${scan.flags.length} rulesScanned=${scan.rulesScanned.length} phrases=${scan.phrasesChecked}`,
+          durationMs: Date.now() - tScan,
+        });
+      }
+    }
+  }
 
   // ── 6. Mark processed ───────────────────────────────────────────────
   outcome.markedProcessed = true;

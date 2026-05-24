@@ -2,11 +2,12 @@ import type { CorpusMetadata } from "../../types";
 
 export const metadata: CorpusMetadata = {
   verticalSlug: "real-estate",
-  lastReviewedAt: "2026-05-12",
+  lastReviewedAt: "2026-05-22",
   counselReviewer: null,
   status: "DRAFT",
   openQuestions: [
-    "The canonical Fair Housing HUD-literal trigger list and pattern-matcher already exists in the flatsbo codebase at `lib/agents/sentinel/corpus/fair-housing-hud-literal.ts`. The agentplain version here is a single rule entry that captures the substantive 24 CFR § 100 advertising prohibition; the trigger list itself should be ported (with its `findHudLiteralMatches` helper) as a separate PR — that helper is matching-logic, not corpus content, and shouldn't ship alongside the corpus draft PR.",
-    "Counsel red-line of the HUD trigger list (the 40+ literal phrases) should be combined with this corpus before sentinel goes live.",
+    "The HUD-literal trigger list (`fair-housing-hud-literal.ts`) now ships ~46 phrases ported from flatsbo. Counsel should red-line the full list before flipping `status: COUNSEL_REVIEWED`.",
+    "Borderline phrases intentionally excluded from the literal-match list (e.g. 'walking distance to church', 'quiet street', 'family-friendly') need a counsel decision on whether to route through a future LLM-classifier path or stay out entirely.",
+    "The substantive § 804(c) rule is `purpose: counsel-reference` — counsel should confirm the statutory excerpt is the version the firm wants on customer-facing flags.",
   ],
 };

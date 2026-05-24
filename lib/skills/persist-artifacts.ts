@@ -25,6 +25,7 @@
  */
 
 import type { Prisma } from '@prisma/client';
+import type { ComplianceFlag } from '../agents/sentinel';
 import { withRls, type RlsContext } from '../db';
 import { getVerticalContent } from '../verticals';
 import type { AgentLoopWork } from '../verticals/types';
@@ -142,17 +143,32 @@ async function writeArtifacts(
     owningAgentSlug,
   });
   let approvalId: string | null = null;
+  let approvalsWritten = 0;
   if (approval) {
     const created = await tx.workApprovalQueueItem.create({
       data: approval,
       select: { id: true },
     });
     approvalId = created.id;
+    approvalsWritten = 1;
+  }
+
+  // Compliance sentinel: when the scanner found literal matches, write a
+  // second approval row attributed to the vertical's compliance-sentinel
+  // slug so the /agents card for sentinel resolves to real review work
+  // and the operator sees the flag alongside the draft in /approvals.
+  const complianceApproval = buildComplianceApproval({ workspaceId, record });
+  if (complianceApproval) {
+    await tx.workApprovalQueueItem.create({
+      data: complianceApproval,
+      select: { id: true },
+    });
+    approvalsWritten += 1;
   }
 
   return {
     handoffsWritten: handoffs.length,
-    approvalsWritten: approval ? 1 : 0,
+    approvalsWritten,
     approvalId,
   };
 }
@@ -186,10 +202,11 @@ function buildHandoffsFromSteps(
   // deterministically in the UI (the overview orders by occurredAt desc).
   const base = new Date(record.startedAt).getTime();
   record.steps.forEach((step, idx) => {
+    const toAgent = stepAgentSlug(step, record.verticalSlug);
     rows.push({
       workspaceId,
       fromAgent: prev,
-      toAgent: stepAgentSlug(step),
+      toAgent,
       handoffType: step.ok ? step.step : `${step.step}.error`,
       payload: {
         step: step.step,
@@ -205,7 +222,7 @@ function buildHandoffsFromSteps(
       relatedSubjectId: record.webhookEventId,
       occurredAt: new Date(base + idx),
     });
-    prev = stepAgentSlug(step);
+    prev = toAgent;
   });
   return rows;
 }
@@ -299,12 +316,20 @@ function extractStepSummary(
 }
 
 /**
- * Map a step name to the agent slug we show in the UI. The five skills
+ * Map a step name to the agent slug we show in the UI. The chain skills
  * are one fleet under the hood; surfacing them as separate "agents"
  * gives the customer a feel for what the loop is doing without us
- * having to invent five agent personas.
+ * having to invent personas.
+ *
+ * `compliance-check` is the exception: it resolves to the workspace's
+ * vertical-specific Compliance Sentinel slug (`<vertical>-compliance-
+ * sentinel`) so the /agents page's groupBy(fromAgent) attributes the
+ * step's hand-off to the live Sentinel card. Verticals without a
+ * dedicated Sentinel slug in their roster (today: insurance, mortgage,
+ * recruiting, home-services, property-management) fall back to a generic
+ * `compliance-sentinel` label so the row is still honest about what ran.
  */
-function stepAgentSlug(step: SkillStepRecord): string {
+function stepAgentSlug(step: SkillStepRecord, verticalSlug: string): string {
   switch (step.step) {
     case 'read':
       return 'reader';
@@ -318,11 +343,76 @@ function stepAgentSlug(step: SkillStepRecord): string {
       return 'scheduler';
     case 'draft':
       return 'drafter';
+    case 'compliance-check':
+      return sentinelSlugForVertical(verticalSlug);
     case 'mark-processed':
       return 'completer';
     default:
       return SKILL_CHAIN_AGENT_SLUG;
   }
+}
+
+/**
+ * Map a vertical slug to its Compliance Sentinel roster slug. The five
+ * verticals that ship a Sentinel card today (real-estate, cpa, law, ria,
+ * title-escrow) use a vertical-prefixed slug. Others fall back to a
+ * generic label so the handoff log row is still truthful about what ran.
+ */
+function sentinelSlugForVertical(verticalSlug: string): string {
+  const overrides: Record<string, string> = {
+    'real-estate': 'realty-compliance-sentinel',
+    'title-escrow': 'title-compliance-sentinel',
+  };
+  if (overrides[verticalSlug]) return overrides[verticalSlug];
+  // The remaining sentinel-carrying verticals use the `<slug>-compliance-
+  // sentinel` convention. Verticals without a roster card get the generic
+  // label below — the handoff still records the step ran honestly.
+  const hasRosterSentinel = (getVerticalContent(verticalSlug)?.agentRoster ?? []).some(
+    (a) => a.slug === `${verticalSlug}-compliance-sentinel`,
+  );
+  if (hasRosterSentinel) return `${verticalSlug}-compliance-sentinel`;
+  return 'compliance-sentinel';
+}
+
+/**
+ * Build a COMPLIANCE_FLAG approval row when the sentinel scanner found
+ * literal matches against the draft. One row per run, batched flags in
+ * the payload so the /approvals page can render them grouped under the
+ * sentinel card. Returns null when sentinel did not run or found no
+ * matches.
+ */
+function buildComplianceApproval(args: {
+  workspaceId: string;
+  record: SkillRunRecord;
+}): Prisma.WorkApprovalQueueItemUncheckedCreateInput | null {
+  const { workspaceId, record } = args;
+  const flags = record.outcome.complianceFlags;
+  if (!flags || flags.length === 0) return null;
+  const primary = flags[0];
+  return {
+    workspaceId,
+    agentSlug: sentinelSlugForVertical(record.verticalSlug),
+    kind: 'COMPLIANCE_FLAG',
+    refTable: 'WebhookEvent',
+    refId: record.webhookEventId,
+    status: 'PENDING',
+    payload: {
+      rule: primary.ruleId,
+      summary: `Sentinel matched ${flags.length} literal-trigger phrase${flags.length === 1 ? '' : 's'} against the draft. Each match is grounded in a published citation; rewrite or approve with rationale.`,
+      source: primary.source === 'subject' ? 'draft subject line' : 'draft body',
+      flags: flags.map((f: ComplianceFlag) => ({
+        ruleId: f.ruleId,
+        ruleTitle: f.ruleTitle,
+        category: f.category,
+        matchedPhrase: f.matchedPhrase,
+        matchedText: f.matchedText,
+        source: f.source,
+        excerpt: f.excerpt,
+        citation: { ...f.citation },
+      })),
+      verticalSlug: record.verticalSlug,
+    } as unknown as Prisma.InputJsonValue,
+  };
 }
 
 /**
@@ -344,6 +434,9 @@ export function summarizeOutcome(outcome: SkillRunOutcome): string {
   if (outcome.draft) {
     parts.push(`draft=${outcome.draft.persisted ? 'persisted' : 'queued'}`);
     parts.push(`conf=${outcome.draft.confidence.toFixed(2)}`);
+  }
+  if (outcome.complianceFlags && outcome.complianceFlags.length > 0) {
+    parts.push(`compliance-flags=${outcome.complianceFlags.length}`);
   }
   return parts.join(' ');
 }

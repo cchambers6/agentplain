@@ -69,16 +69,26 @@ export default async function AgentsPage({ params }: PageProps) {
           const handoffCount = counts.get(agent.slug) ?? 0;
           // Truthful status, never a perpetual spinner:
           //  - rooting capability → say what it's waiting on (no fake imminence).
-          //  - live + work logged  → the real count.
-          //  - live + nothing yet  → honest "first handoff lands soon" (it will,
-          //    once matching email flows). Verticals with no `runtime` binding
-          //    keep the legacy count-only line.
+          //  - live + boundSkill (skill-direct) + nothing yet → "ready —
+          //    capability tested" (the skill exists, runs deterministically,
+          //    and is in the operator-facing catalog).
+          //  - live + work logged → the real count.
+          //  - live + nothing yet → honest "first handoff lands soon".
+          //  - Verticals with no `runtime` binding keep the legacy
+          //    count-only line.
           const isRooting = agent.runtime === "rooting";
+          const isLiveSkillBound =
+            agent.runtime === "live" &&
+            typeof agent.boundSkill === "string" &&
+            agent.boundSkill.length > 0 &&
+            handoffCount === 0;
           const status = isRooting
             ? (agent.rootingNote ?? "rooting now — runtime still being built.")
-            : handoffCount === 0
-              ? "rooting in — first handoff lands soon"
-              : `${handoffCount} handoff${handoffCount === 1 ? "" : "s"} logged`;
+            : isLiveSkillBound
+              ? "ready — capability tested, first run lands when triggered"
+              : handoffCount === 0
+                ? "rooting in — first handoff lands soon"
+                : `${handoffCount} handoff${handoffCount === 1 ? "" : "s"} logged`;
           return (
             <Link
               key={agent.slug}

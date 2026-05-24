@@ -46,9 +46,12 @@ export const law: VerticalContent = {
       slug: "law-intake-onboarding",
       name: "Intake & Onboarding",
       job: "Runs the conflict check and drafts the engagement letter scoped to the matter.",
-      runtime: "rooting",
-      rootingNote:
-        "rooting now — comes online once your matter-management system (Clio / MyCase / Smokeball) is connected for the conflict check.",
+      runtime: "live",
+      // Live via the deterministic intake-conflict-screen skill — works on
+      // a JSON-stub ledger today; binds to Clio / MyCase / PracticePanther
+      // MCPs once they ship. Never asserts a legal conclusion; the partner
+      // signs the {{operator: legal conclusion}} merge field before send.
+      boundSkill: "law-intake-conflict-screen",
     },
     {
       slug: "law-drafting",

@@ -39,9 +39,14 @@ export const titleEscrow: VerticalContent = {
       slug: "title-doc-chase",
       name: "Document Chase",
       job: "Runs the doc-collection cadence per channel and escalates only when stuck.",
-      runtime: "rooting",
-      rootingNote:
-        "rooting now — comes online once your file-status feed (SoftPro / Qualia / RamQuest) is connected.",
+      runtime: "live",
+      // Live via the title-escrow-closing-doc-chase skill — works on a
+      // JSON-stub closing file today; binds to SoftPro / Qualia / RamQuest
+      // MCPs once they ship. Title status + wire-instructions confirmation
+      // always defer to {{operator: ...}} merge fields the escrow officer
+      // confirms before the chase email leaves the closing coordinator's
+      // outbox.
+      boundSkill: "title-escrow-closing-doc-chase",
     },
     {
       slug: "title-search",

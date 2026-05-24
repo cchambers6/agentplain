@@ -65,4 +65,12 @@ export function listCorpusVerticals(): string[] {
   return Object.keys(CORPUS_REGISTRY);
 }
 
-export type { CorpusBundle, ComplianceRule, CorpusMetadata } from "./types";
+export type { CorpusBundle, ComplianceRule, CorpusMetadata, RuleMatchPurpose } from "./types";
+export { scanCorpus } from "./scanner";
+export type { ComplianceFlag, ScanInput, ScanResult } from "./scanner";
+export { buildCounselHandoffPacket } from "./counsel-packet";
+export type {
+  CounselHandoffPacket,
+  PacketCounselReference,
+  PacketLiteralTrigger,
+} from "./counsel-packet";

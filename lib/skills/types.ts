@@ -293,6 +293,7 @@ export interface SkillStepRecord {
     | 'coordinate'
     | 'schedule'
     | 'draft'
+    | 'compliance-check'
     | 'mark-processed';
   ok: boolean;
   /** Compact summary — full payload stays in the typed return for tests. */
@@ -319,4 +320,11 @@ export interface SkillRunOutcome {
    *  runner builds this so `persist-artifacts.ts` can write the approval
    *  row without needing the original `ParsedMessage` back. */
   officeAdminPayload: import('./office-admin/types').OfficeAdminApprovalPayload | null;
+  /** Compliance-sentinel literal-match flags produced against the draft.
+   *  Empty array when sentinel scanned but found no matches. NULL when
+   *  sentinel did not run for this vertical (no corpus, or run never
+   *  produced a draft to scan). When non-empty, persist-artifacts writes
+   *  an additional COMPLIANCE_FLAG approval row attributed to the
+   *  vertical's compliance-sentinel slug. */
+  complianceFlags: import('../agents/sentinel').ComplianceFlag[] | null;
 }

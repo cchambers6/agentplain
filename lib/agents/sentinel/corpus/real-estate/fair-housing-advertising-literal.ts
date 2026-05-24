@@ -31,6 +31,8 @@ The prohibitions of this section shall apply to:
 (2) Expressing to agents, brokers, employees, prospective sellers or renters or any other persons a preference for or limitation on any purchaser or renter because of race, color, religion, sex, handicap, familial status, or national origin of such persons.
 (3) Selecting media or locations for advertising the sale or rental of dwellings which deny particular segments of the housing market information about housing opportunities because of race, color, religion, sex, handicap, familial status, or national origin.
 (4) Refusing to publish advertising for the sale or rental of dwellings or requiring different charges or terms for such advertising because of race, color, religion, sex, handicap, familial status, or national origin.`,
+  purpose: "counsel-reference",
+  category: "fair-housing",
   drafterNotes:
-    "Sentinel pattern-matching against the HUD-literal trigger list (40+ literal phrases like 'no children', 'Christian home', etc.) lives in flatsbo at `lib/agents/sentinel/corpus/fair-housing-hud-literal.ts` along with the `findHudLiteralMatches` helper. That trigger list should be ported to agentplain in a follow-up PR; this rule is the statutory anchor it matches against.",
+    "Substantive statutory anchor — the long-form excerpt of 42 USC § 3604(c) + 24 CFR § 100.75(c). The deterministic trigger phrases that sentinel matches against live in the sibling `fair-housing-hud-literal.ts` rule. This rule itself is counsel-reference only because the statutory text requires generative judgment to evaluate (it's the law itself, not a phrase list).",
 };

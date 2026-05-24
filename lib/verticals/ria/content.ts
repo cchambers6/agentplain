@@ -85,9 +85,12 @@ export const ria: VerticalContent = {
       slug: "ria-performance-reporter",
       name: "Performance Reporter",
       job: "Drafts the quarterly per-client performance narrative with cited attribution.",
-      runtime: "rooting",
-      rootingNote:
-        "rooting now — comes online once your performance system (Tamarac / Black Diamond / Orion) is connected for return + benchmark data.",
+      runtime: "live",
+      // Live via the ria-client-update-draft skill — works on a JSON-stub
+      // portfolio snapshot today; binds to Orion / Black Diamond / Tamarac
+      // MCPs once they ship. NEVER renders dollar amounts; every figure is
+      // an {{advisor: ...}} merge field the advisor confirms.
+      boundSkill: "ria-client-update-draft",
     },
     {
       slug: "ria-aum-billing",

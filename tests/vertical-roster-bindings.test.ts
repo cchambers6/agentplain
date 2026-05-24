@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 import { getAllVerticals } from "@/lib/verticals";
+import { SKILL_CATALOG } from "@/lib/skills/registry";
 import type { AgentLoopWork, AgentRuntimeStatus } from "@/lib/verticals/types";
 
 // Proof-of-resolved-counts test for the AgentRosterEntry runtime contract.
@@ -29,6 +30,10 @@ import type { AgentLoopWork, AgentRuntimeStatus } from "@/lib/verticals/types";
 interface VerticalBinding {
   buyerInquirySlug?: string;
   schedulingSlug?: string;
+  /** Roster slug for the Compliance Sentinel card, when this vertical's
+   *  corpus ships literal-match triggers and the inbox loop runs the
+   *  scanner against drafts. */
+  complianceSlug?: string;
   expectedLive: number;
   expectedRooting: number;
 }
@@ -37,8 +42,12 @@ const EXPECTED_LIVE_OWNS: Record<string, VerticalBinding> = {
   "real-estate": {
     buyerInquirySlug: "realty-buyer-inquiry-router",
     schedulingSlug: "realty-showing-scheduler",
-    expectedLive: 2,
-    expectedRooting: 5,
+    // Sentinel goes live this PR — the HUD literal-trigger list scans
+    // every draft body + subject and writes a COMPLIANCE_FLAG approval
+    // attributed to this slug when matches fire.
+    complianceSlug: "realty-compliance-sentinel",
+    expectedLive: 3,
+    expectedRooting: 4,
   },
   mortgage: {
     buyerInquirySlug: "mortgage-borrower-triage",
@@ -51,11 +60,11 @@ const EXPECTED_LIVE_OWNS: Record<string, VerticalBinding> = {
     expectedRooting: 6,
   },
   law: {
-    // No roster agent maps to a live loop bucket today — every capability
-    // depends on a matter-management surface. Inbox-loop drafts attribute
-    // to the SKILL_CHAIN_AGENT_SLUG fallback; honest, not hollow.
-    expectedLive: 0,
-    expectedRooting: 7,
+    // law-intake-onboarding goes live this PR via the deterministic
+    // intake-conflict-screen skill (boundSkill — works on a JSON-stub
+    // ledger today, binds to Clio / MyCase MCPs when they ship).
+    expectedLive: 1,
+    expectedRooting: 6,
   },
   insurance: {
     buyerInquirySlug: "insurance-inbound-triage",
@@ -74,10 +83,12 @@ const EXPECTED_LIVE_OWNS: Record<string, VerticalBinding> = {
     expectedRooting: 6,
   },
   ria: {
-    // Roster is meeting-cycle focused — no clean inbox classifier. All
-    // capabilities root on a portfolio / CRM / planning system connection.
-    expectedLive: 0,
-    expectedRooting: 7,
+    // ria-performance-reporter goes live this PR via the ria-client-update-
+    // draft skill (boundSkill — JSON-stub portfolio snapshot today, binds
+    // to Orion / Black Diamond / Tamarac MCPs when they ship). Never
+    // renders dollar amounts; every figure is an advisor merge field.
+    expectedLive: 1,
+    expectedRooting: 6,
   },
   "home-services": {
     buyerInquirySlug: "home-services-lead-router",
@@ -85,11 +96,12 @@ const EXPECTED_LIVE_OWNS: Record<string, VerticalBinding> = {
     expectedRooting: 6,
   },
   "title-escrow": {
-    // File Intake parses source documents, not inbound email — not a fit
-    // for the buyer-inquiry bucket. All seven root on production-system /
-    // title-plant / underwriter-portal connections.
-    expectedLive: 0,
-    expectedRooting: 7,
+    // title-doc-chase goes live this PR via the title-escrow-closing-doc-
+    // chase skill (boundSkill — JSON-stub closing file today, binds to
+    // SoftPro / Qualia / RamQuest MCPs when they ship). Title status +
+    // wire-instructions confirmation always defer to operator merge fields.
+    expectedLive: 1,
+    expectedRooting: 6,
   },
 };
 
@@ -114,14 +126,28 @@ describe("vertical roster bindings", () => {
     }
   });
 
-  it("live agents declare a non-empty owns list", () => {
+  it("live agents declare either owns[] (inbox-loop) or boundSkill (skill-direct)", () => {
+    // A card is LIVE through one of two pathways:
+    //   - owns[]: the inbox loop attributes a work bucket to this slug, OR
+    //   - boundSkill: a catalog-registered, test-gated skill backs it.
+    // Both axes raise the bar for what counts as "live" — see the
+    // vertical-depth brief (2026-05-22) "no hollow shells" rule.
+    const catalogSlugs = new Set(SKILL_CATALOG.map((s) => s.slug));
     for (const vertical of getAllVerticals()) {
       for (const agent of vertical.agentRoster ?? []) {
         if (agent.runtime !== "live") continue;
+        const ownsClaimed = (agent.owns?.length ?? 0) > 0;
+        const skillBound = typeof agent.boundSkill === "string" && agent.boundSkill.length > 0;
         assert.ok(
-          agent.owns && agent.owns.length > 0,
-          `${vertical.slug}/${agent.slug} is live but missing owns[]`,
+          ownsClaimed || skillBound,
+          `${vertical.slug}/${agent.slug} is live but declares neither owns[] nor boundSkill`,
         );
+        if (skillBound) {
+          assert.ok(
+            catalogSlugs.has(agent.boundSkill!),
+            `${vertical.slug}/${agent.slug} boundSkill "${agent.boundSkill}" is not in SKILL_CATALOG`,
+          );
+        }
       }
     }
   });
@@ -236,6 +262,31 @@ describe("vertical roster bindings", () => {
       assert.ok(owner, `${vertical.slug}: ${expected.schedulingSlug} missing from roster`);
       assert.equal(owner!.runtime, "live" as AgentRuntimeStatus);
       assert.ok(owner!.owns?.includes("scheduling"));
+    }
+  });
+
+  it("each vertical's compliance binding (if any) maps to the expected sentinel slug", () => {
+    for (const vertical of getAllVerticals()) {
+      const expected = EXPECTED_LIVE_OWNS[vertical.slug];
+      if (!expected.complianceSlug) {
+        // Sentinel hasn't been promoted to live for this vertical yet — its
+        // roster card (when present) must remain rooting with a truthful note.
+        const liveSentinel = (vertical.agentRoster ?? []).find(
+          (a) => a.runtime === "live" && (a.owns?.includes("compliance-check") ?? false),
+        );
+        assert.equal(
+          liveSentinel,
+          undefined,
+          `${vertical.slug} should NOT bind compliance-check but ${liveSentinel?.slug ?? ""} does`,
+        );
+        continue;
+      }
+      const owner = (vertical.agentRoster ?? []).find(
+        (a) => a.slug === expected.complianceSlug,
+      );
+      assert.ok(owner, `${vertical.slug}: ${expected.complianceSlug} missing from roster`);
+      assert.equal(owner!.runtime, "live" as AgentRuntimeStatus);
+      assert.ok(owner!.owns?.includes("compliance-check"));
     }
   });
 });

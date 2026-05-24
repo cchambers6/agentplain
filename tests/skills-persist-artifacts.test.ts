@@ -267,6 +267,7 @@ describe('summarizeOutcome — audit-log helper', () => {
       markedProcessed: true,
       officeAdmin: null,
       officeAdminPayload: null,
+      complianceFlags: null,
     });
     assert.match(text, /category=draft-needed/);
     assert.match(text, /draft=persisted/);
@@ -282,6 +283,7 @@ describe('summarizeOutcome — audit-log helper', () => {
       markedProcessed: true,
       officeAdmin: null,
       officeAdminPayload: null,
+      complianceFlags: null,
     });
     assert.match(text, /category=noise/);
     assert.doesNotMatch(text, /draft=/);

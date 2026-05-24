@@ -23,7 +23,7 @@ import assert from "node:assert/strict";
 import { getVerticalContent } from "@/lib/verticals";
 import type { AgentLoopWork, AgentRosterEntry } from "@/lib/verticals/types";
 
-const ALL_WORK: AgentLoopWork[] = ["buyer-inquiry", "scheduling"];
+const ALL_WORK: AgentLoopWork[] = ["buyer-inquiry", "scheduling", "compliance-check"];
 
 function realtyRoster(): AgentRosterEntry[] {
   const roster = getVerticalContent("real-estate")?.agentRoster;
@@ -78,15 +78,19 @@ describe("realty fleet binding — every card resolves (0/7 → 7/7)", () => {
     }
   });
 
-  it("documents the live/rooting split this PR ships (2 live, 5 rooting)", () => {
+  it("documents the live/rooting split this PR ships (3 live, 4 rooting)", () => {
     const roster = realtyRoster();
     const live = roster.filter((a) => a.runtime === "live").map((a) => a.slug);
     const rooting = roster.filter((a) => a.runtime === "rooting").map((a) => a.slug);
     assert.deepEqual(
       live.sort(),
-      ["realty-buyer-inquiry-router", "realty-showing-scheduler"],
+      [
+        "realty-buyer-inquiry-router",
+        "realty-compliance-sentinel",
+        "realty-showing-scheduler",
+      ],
       "live set changed — update the binding doc + this assertion together",
     );
-    assert.equal(rooting.length, 5, "expected 5 rooting capabilities");
+    assert.equal(rooting.length, 4, "expected 4 rooting capabilities");
   });
 });

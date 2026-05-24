@@ -51,9 +51,8 @@ export const realEstate: VerticalContent = {
       slug: "realty-compliance-sentinel",
       name: "Compliance Sentinel",
       job: "Pre-checks every customer-facing draft before the broker signs.",
-      runtime: "rooting",
-      rootingNote:
-        "rooting now — the compliance corpus is loaded; draft scoring activates after counsel review.",
+      runtime: "live",
+      owns: ["compliance-check"],
     },
     {
       slug: "realty-crm-hygiene",

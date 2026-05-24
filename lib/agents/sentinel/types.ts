@@ -67,6 +67,24 @@ export interface RuleCitation {
 }
 
 /**
+ * How sentinel uses a rule against customer-facing drafts.
+ *
+ * - `literal-match` — the rule ships a `triggers[]` list of literal
+ *   phrases. Sentinel scans drafts deterministically (word-boundary,
+ *   case-insensitive) and emits a flag on every match. Audit-defensible:
+ *   the matched phrase IS the rule.
+ * - `counsel-reference` — the rule is corpus content but requires
+ *   generative judgment to evaluate (e.g. "the lawyer must act with
+ *   reasonable diligence"). Sentinel does NOT auto-match these; they
+ *   surface in the counsel-handoff packet and stay out of the live loop
+ *   until a counsel-reviewed matching path is wired separately.
+ *
+ * Per the project memo: LITERAL MATCH ONLY ships live. Anything requiring
+ * generative judgment is `counsel-reference` and never auto-flags.
+ */
+export type RuleMatchPurpose = "literal-match" | "counsel-reference";
+
+/**
  * One regulatory rule. Each ships as its own `*-literal.ts` file so a
  * sentinel update touches one rule, not the entire vertical bundle.
  */
@@ -95,6 +113,29 @@ export interface ComplianceRule {
    * badge instead of using them for matching.
    */
   literalText: string;
+  /**
+   * Which sentinel path this rule runs through. `literal-match` rules
+   * MUST populate `triggers`; `counsel-reference` rules MUST leave it
+   * empty. Defaults to `counsel-reference` when omitted so a malformed
+   * rule never accidentally lights up the live scanner.
+   */
+  purpose?: RuleMatchPurpose;
+  /**
+   * Literal phrases the sentinel scanner matches against (whole-phrase,
+   * case-insensitive, word-boundary-aware). Required when
+   * `purpose === "literal-match"`. Leave empty / omitted when the rule
+   * requires generative judgment — those flow through the counsel-
+   * handoff packet instead. Each phrase MUST be lowercase.
+   */
+  triggers?: string[];
+  /**
+   * Optional protected-class / category tag attached to flags produced
+   * by this rule. For housing rules these mirror HUD's enumerated
+   * protected classes (race, color, religion, sex, national-origin,
+   * disability, familial-status). For other domains it's the rule
+   * category (e.g. "anti-rebating", "unauthorized-practice").
+   */
+  category?: string;
   /**
    * Set to `true` when the drafter could not independently verify the
    * exact published wording. Counsel red-lines these first.

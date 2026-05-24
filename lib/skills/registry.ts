@@ -214,6 +214,118 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
       'lib/skills/prompts/cpa.ts (formal tone, never state a tax position)',
     ],
   },
+  {
+    slug: 'law-intake-conflict-screen',
+    name: 'Intake conflict screen — law',
+    vertical: 'law',
+    description:
+      'Runs a deterministic conflict screen on a prospective-client intake: ' +
+      'compares prospect + opposing parties against the firm ledger, classifies ' +
+      'direct / adverse / former-adverse hits, and drafts a formal internal ' +
+      'notice to the responsible attorney with merge fields for the legal ' +
+      'conclusion (never asserted by the skill).',
+    kind: 'triage',
+    mcpDependencies: [
+      {
+        provider: 'clio',
+        status: 'stubbed-json',
+        note:
+          'Clio / MyCase / PracticePanther MCPs not yet built. Skill accepts ' +
+          'LedgerEntry[] JSON today; the MCPs will populate the same shape.',
+      },
+      {
+        provider: 'gmail',
+        status: 'built',
+        note:
+          'Internal-notice drafts persist via the existing DraftPersister; ' +
+          'Outlook (M365) ships through the same port.',
+      },
+    ],
+    groundedIn: [
+      'project_no_outbound_architecture.md',
+      'feedback_no_silent_vendor_lock.md',
+      'lib/verticals/law/content.ts',
+      'lib/skills/prompts/law.ts (formal tone, never state a legal conclusion)',
+      'ABA MRPC 1.7 / 1.18 (conflict screening framework)',
+    ],
+  },
+  {
+    slug: 'ria-client-update-draft',
+    name: 'Quarterly client update — RIA',
+    vertical: 'ria',
+    description:
+      'Drafts a quarterly household client-update email using a portfolio ' +
+      'snapshot + advisor notes. NEVER renders dollar amounts, NEVER states an ' +
+      'investment recommendation — every quantitative or forward-looking claim ' +
+      'is an {{advisor: ...}} merge field. Form ADV + qualified-custodian ' +
+      'pointers ride on every draft.',
+    kind: 'draft',
+    mcpDependencies: [
+      {
+        provider: 'orion',
+        status: 'stubbed-json',
+        note:
+          'Orion / Black Diamond / Tamarac MCPs not yet built. Skill accepts ' +
+          'PortfolioSnapshot + AdvisorNote[] JSON today.',
+      },
+      {
+        provider: 'redtail',
+        status: 'stubbed-json',
+        note:
+          'Redtail / Wealthbox CRM MCPs not yet built. AdvisorNote[] is the ' +
+          'shape both will populate.',
+      },
+      {
+        provider: 'gmail',
+        status: 'built',
+        note:
+          'Drafts persist via the existing DraftPersister port; Outlook (M365) ' +
+          'rides through the same port.',
+      },
+    ],
+    groundedIn: [
+      'project_no_outbound_architecture.md',
+      'feedback_no_silent_vendor_lock.md',
+      'lib/verticals/ria/content.ts',
+      'lib/skills/prompts/ria.ts (formal tone, never state investment advice)',
+      'Advisers Act § 206 + Rule 206(4)-1 (advertising rule)',
+      'Advisers Act Rule 204A-1 (code of ethics)',
+    ],
+  },
+  {
+    slug: 'title-escrow-closing-doc-chase',
+    name: 'Closing-doc chase — title / escrow',
+    vertical: 'title-escrow',
+    description:
+      'Walks a closing file checklist, buckets each item by responsible party ' +
+      '(lender / buyer / seller / attorney), and drafts a batched chase email ' +
+      'per party. Optional items never trigger chases; late items lower draft ' +
+      'confidence so the closing coordinator re-reads tone before sending. ' +
+      'Title status + wire-instructions confirmation always defer to operator ' +
+      'merge fields.',
+    kind: 'coordinate',
+    mcpDependencies: [
+      {
+        provider: 'softpro',
+        status: 'stubbed-json',
+        note:
+          'SoftPro / Qualia / RamQuest MCPs not yet built. Skill accepts ' +
+          'ClosingFile + ChecklistItem[] + ReceivedDoc[] JSON today.',
+      },
+      {
+        provider: 'gmail',
+        status: 'built',
+        note:
+          'Per-party chase drafts persist via the existing DraftPersister port.',
+      },
+    ],
+    groundedIn: [
+      'project_no_outbound_architecture.md',
+      'feedback_no_silent_vendor_lock.md',
+      'lib/verticals/title-escrow/content.ts',
+      'lib/skills/prompts/title-escrow.ts (formal tone, never assert title status)',
+    ],
+  },
 ];
 
 export function getSkillCatalogEntry(slug: string): SkillCatalogEntry | null {

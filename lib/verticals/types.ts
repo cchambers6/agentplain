@@ -182,7 +182,7 @@ export interface ValueLoopExample {
  * named capability the customer sees on `/agents`. Keep in sync with
  * `workFromOutcome` in `lib/skills/persist-artifacts.ts`.
  */
-export type AgentLoopWork = "buyer-inquiry" | "scheduling";
+export type AgentLoopWork = "buyer-inquiry" | "scheduling" | "compliance-check";
 
 /** Whether a roster capability runs in the live V1 loop or is still rooting. */
 export type AgentRuntimeStatus = "live" | "rooting";
@@ -193,6 +193,23 @@ export interface AgentRosterEntry {
   job: string;
   runtime?: AgentRuntimeStatus;
   owns?: AgentLoopWork[];
+  /**
+   * Catalog slug from `lib/skills/registry.ts` this card is wired to.
+   * A second pathway for declaring a card LIVE: instead of (or alongside)
+   * owning an inbox-loop work bucket, a card can be live because it has
+   * a runnable, catalog-registered, test-gated skill behind it. The agents
+   * page surfaces these as "ready — capability tested" until handoff
+   * activity accrues.
+   *
+   * Required validation (enforced in `tests/vertical-roster-bindings.test.ts`):
+   *   - `runtime: 'live'` requires at least one of `owns[]` or `boundSkill`.
+   *   - When `boundSkill` is set it MUST point to a `SKILL_CATALOG` entry.
+   *
+   * Per the vertical-depth brief (2026-05-22): NO HOLLOW SHELLS. A bound
+   * skill must ship with real logic + a stubbed-fetcher fallback + a
+   * passing test or the card stays `rooting`.
+   */
+  boundSkill?: string;
   rootingNote?: string;
 }
 

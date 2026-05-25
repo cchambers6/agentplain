@@ -111,14 +111,15 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
       },
       {
         provider: 'work-approval-queue',
-        status: 'stubbed-json',
+        status: 'built',
         note:
-          'Production binding for ApprovalSink (writes WorkApprovalQueueItem ' +
-          'rows for the operator\'s /approvals page) lands in a follow-up PR ' +
-          'that introduces the matching WorkApprovalKind enum values. Tests ' +
-          'bind RecordingApprovalSink so the no-outbound contract is asserted ' +
-          'today: every proposal is recorded with status=PENDING, NONE auto- ' +
-          'execute.',
+          'Production binding wired: PrismaApprovalSink persists each ' +
+          'proposal as a WorkApprovalQueueItem (status=PENDING) under the ' +
+          'CHIEF_OF_STAFF_MEETING / CHIEF_OF_STAFF_REPLY_DRAFT / ' +
+          'CHIEF_OF_STAFF_TODO enum kinds. Production callers use ' +
+          'runChiefOfStaffForWorkspace which binds the Prisma sink by ' +
+          'default; tests still bind RecordingApprovalSink to assert the ' +
+          'no-outbound contract.',
       },
     ],
     groundedIn: [

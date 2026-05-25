@@ -636,12 +636,34 @@ model WebhookEvent {
   processed      Boolean             @default(false)
   processedAt    DateTime?
   /// Last error string from a processing attempt. NULL while processed is
-  /// false-and-untried. Populated when a PR-C consumer fails.
+  /// false-and-untried. Populated when the drain consumer fails.
   error          String?
+  /// Provider-derived dedupe key (Pub/Sub messageId for Gmail, Graph
+  /// notification subscriptionId+changeType+resource for M365). Unique
+  /// per subscription so an at-least-once delivery layer cleanly upserts
+  /// instead of inflating the table with duplicate rows. NULL is allowed
+  /// for historical rows written before this column existed.
+  dedupeKey      String?
+  /// Number of processing attempts the drain consumer has made. Bumped
+  /// inside the consumer on every fire (succeeded OR failed). Used by
+  /// the backoff logic to compute `nextAttemptAt` and by ops to spot
+  /// rows that have hit the deadletter threshold.
+  attemptCount   Int                 @default(0)
+  /// When NULL the row is eligible immediately. When set, the drain
+  /// consumer skips rows whose nextAttemptAt is in the future — exponential
+  /// backoff after a transient failure. Reset to NULL on success.
+  nextAttemptAt  DateTime?
+  /// Set to true when attemptCount crosses the deadletter threshold. The
+  /// drain consumer skips deadlettered rows entirely; operator surface
+  /// has to intervene before retry. Distinct from `processed` so we can
+  /// distinguish "done well" from "tried too many times, giving up".
+  deadlettered   Boolean             @default(false)
   subscription   WebhookSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
+  @@unique([subscriptionId, dedupeKey])
   @@index([subscriptionId, receivedAt])
   @@index([processed, receivedAt])
+  @@index([processed, deadlettered, nextAttemptAt])
 }
 
 // Knowledge substrate document (project_knowledge_substrate.md). The

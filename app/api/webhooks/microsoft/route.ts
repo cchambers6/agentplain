@@ -38,6 +38,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { getProvider } from '@/lib/integrations';
+import { upsertWebhookEvent } from '@/lib/integrations/webhook-idempotency';
 import { M365Provider } from '@/lib/integrations/microsoft/m365-provider';
 
 export const runtime = 'nodejs';
@@ -170,17 +171,19 @@ export async function POST(req: NextRequest): Promise<NextResponse | Response> {
     return NextResponse.json({ ok: true, ignored: 'unknown_subscription' });
   }
 
-  // 4. Insert WebhookEvent row.
-  const event = await prisma.webhookEvent.create({
-    data: {
-      subscriptionId: subscription.id,
-      rawPayload: raw as object,
-      processed: false,
-    },
+  // 4. Insert WebhookEvent row — idempotently. Graph notifications carry
+  //    `subscriptionId` + `changeType` + `resource`; combined into a
+  //    stable dedupe key. Graph's retry policy can re-deliver the same
+  //    notification on transient 5xx, so the upsert path is necessary.
+  const dedupeKey = extractM365DedupeKey(raw);
+  const upsert = await upsertWebhookEvent({
+    subscriptionId: subscription.id,
+    rawPayload: raw as object,
+    dedupeKey,
   });
 
   const verifyEvent = await prisma.webhookEvent.findUnique({
-    where: { id: event.id },
+    where: { id: upsert.id },
     select: { id: true },
   });
   if (!verifyEvent) {
@@ -195,10 +198,41 @@ export async function POST(req: NextRequest): Promise<NextResponse | Response> {
   return NextResponse.json(
     {
       ok: true,
-      eventId: event.id,
+      eventId: upsert.id,
       subscriptionId: subscription.id,
       cursor: cursor ?? null,
+      duplicate: !upsert.inserted,
     },
     { status: 202 },
   );
+}
+
+/**
+ * Build a stable dedupe key from a Microsoft Graph notification. Graph
+ * does NOT supply a single messageId — the closest stable identifier is
+ * the tuple (subscriptionId, resource, changeType). For Outlook message
+ * notifications `resource` already includes the message id path
+ * (`Users/{id}/Messages/{id}`), so the combined string is the strongest
+ * non-cryptographic dedupe we have without storing a payload hash.
+ *
+ * Returns null when the envelope shape is unexpected — the upsert helper
+ * degrades to an unprotected insert so we don't lose events while
+ * debugging a malformed delivery.
+ */
+function extractM365DedupeKey(raw: unknown): string | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const env = raw as {
+    value?: Array<{
+      subscriptionId?: unknown;
+      changeType?: unknown;
+      resource?: unknown;
+    }>;
+  };
+  const first = env.value?.[0];
+  if (!first) return null;
+  const subId = typeof first.subscriptionId === 'string' ? first.subscriptionId : '';
+  const change = typeof first.changeType === 'string' ? first.changeType : '';
+  const resource = typeof first.resource === 'string' ? first.resource : '';
+  if (!subId && !change && !resource) return null;
+  return `${subId}|${change}|${resource}`;
 }

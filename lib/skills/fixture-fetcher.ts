@@ -123,5 +123,13 @@ export function buildWebhookEventFromFixture(fixture: WebhookEventFixture): Webh
     processed: false,
     processedAt: null,
     error: null,
+    // Idempotency + retry columns (added in WebhookEvent migration
+    // 20260524000000). Fixture-backed events bypass the real drain
+    // consumer, so these defaults are inert — they exist only so the
+    // Prisma row shape matches.
+    dedupeKey: null,
+    attemptCount: 0,
+    nextAttemptAt: null,
+    deadlettered: false,
   } as WebhookEvent;
 }

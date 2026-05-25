@@ -50,9 +50,13 @@ const EXPECTED_LIVE_OWNS: Record<string, VerticalBinding> = {
     expectedRooting: 4,
   },
   mortgage: {
+    // mortgage-document-chase goes live this PR via the mortgage-document-
+    // chase skill (boundSkill — JSON-stub LOS today, binds to Encompass /
+    // LendingPad / Calyx MCPs once they ship). One batched borrower email
+    // per file; rate/APR/DTI always defer to operator merge fields.
     buyerInquirySlug: "mortgage-borrower-triage",
-    expectedLive: 1,
-    expectedRooting: 6,
+    expectedLive: 2,
+    expectedRooting: 5,
   },
   cpa: {
     buyerInquirySlug: "cpa-client-inbound",
@@ -67,20 +71,33 @@ const EXPECTED_LIVE_OWNS: Record<string, VerticalBinding> = {
     expectedRooting: 6,
   },
   insurance: {
+    // insurance-coi-generator goes live this PR via the insurance-coi-request
+    // skill (boundSkill — JSON-stub AMS today, binds to EZLynx / Applied Epic
+    // / AMS360 / HawkSoft MCPs once they ship). Never quotes premium or
+    // binding date — every quantitative claim defers to operator merge fields.
     buyerInquirySlug: "insurance-inbound-triage",
-    expectedLive: 1,
-    expectedRooting: 6,
-  },
-  recruiting: {
-    buyerInquirySlug: "recruiting-outreach",
-    schedulingSlug: "recruiting-scheduler",
     expectedLive: 2,
     expectedRooting: 5,
   },
+  recruiting: {
+    // recruiting-candidate-status-update added live this PR via the
+    // candidate-status-update skill (boundSkill — JSON-stub ATS today, binds
+    // to Greenhouse / Lever / Workable / Bullhorn MCPs once they ship). Comp
+    // / offer detail always defers to merge fields; rejection + offer drafts
+    // always queue for recruiter review.
+    buyerInquirySlug: "recruiting-outreach",
+    schedulingSlug: "recruiting-scheduler",
+    expectedLive: 3,
+    expectedRooting: 5,
+  },
   "property-management": {
+    // pm-collections goes live this PR via the rent-collection-chase skill
+    // (boundSkill — JSON-stub rent roll today, binds to AppFolio / Buildium /
+    // Propertyware / Yardi Breeze MCPs once they ship). Dollar amounts always
+    // defer to operator merge fields; escalation drafts queue for PM review.
     buyerInquirySlug: "pm-tenant-inbound",
-    expectedLive: 1,
-    expectedRooting: 6,
+    expectedLive: 2,
+    expectedRooting: 5,
   },
   ria: {
     // ria-performance-reporter goes live this PR via the ria-client-update-
@@ -91,8 +108,13 @@ const EXPECTED_LIVE_OWNS: Record<string, VerticalBinding> = {
     expectedRooting: 6,
   },
   "home-services": {
+    // home-services-estimate-followup added live this PR via the estimate-
+    // followup skill (boundSkill — JSON-stub FSM today, binds to AccuLynx /
+    // JobNimbus / ServiceTitan / Housecall Pro / Jobber MCPs once they ship).
+    // Each open estimate gets exactly one draft scoped to its cadence stage;
+    // price + schedule always defer to operator merge fields.
     buyerInquirySlug: "home-services-lead-router",
-    expectedLive: 1,
+    expectedLive: 2,
     expectedRooting: 6,
   },
   "title-escrow": {

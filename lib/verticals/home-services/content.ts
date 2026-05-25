@@ -51,6 +51,19 @@ export const homeServices: VerticalContent = {
         "rooting now — comes online once your measurement tool (EagleView / AccuLynx / Hover) is connected.",
     },
     {
+      slug: "home-services-estimate-followup",
+      name: "Estimate Followup",
+      job: "Walks open estimates, drafts the right-stage homeowner nudge, and hands cold deals back to the rep for a phone call.",
+      runtime: "live",
+      // Live via the home-services-estimate-followup skill — works on a JSON-
+      // stub FSM today; binds to AccuLynx / JobNimbus / ServiceTitan / Housecall
+      // Pro / Jobber MCPs once they ship. Each open estimate gets exactly one
+      // draft scoped to its cadence stage; price / schedule always defer to
+      // {{operator: quote/time estimate}}; cold estimates roll up into a single
+      // rep handoff with a phone-call ask.
+      boundSkill: "home-services-estimate-followup",
+    },
+    {
       slug: "home-services-supplement",
       name: "Supplement",
       job: "Reads the adjuster scope and drafts the line-item rebuttal for owner sign-off.",

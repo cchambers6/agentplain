@@ -35,9 +35,12 @@ export const insurance: VerticalContent = {
       slug: "insurance-coi-generator",
       name: "COI Generator",
       job: "Reads the COI request, pulls the policy, and drafts the certificate for one-click issue.",
-      runtime: "rooting",
-      rootingNote:
-        "rooting now — comes online once your AMS (EZLynx / Applied Epic / AMS360 / HawkSoft) is connected for policy lookup.",
+      runtime: "live",
+      // Live via the deterministic insurance-coi-request skill — works on a
+      // JSON-stub AMS today; binds to EZLynx / Applied Epic / AMS360 / HawkSoft
+      // MCPs once they ship. Never quotes a premium or binding date — every
+      // quantitative claim defers to an {{operator: ...}} merge field.
+      boundSkill: "insurance-coi-request",
     },
     {
       slug: "insurance-renewal-coordinator",

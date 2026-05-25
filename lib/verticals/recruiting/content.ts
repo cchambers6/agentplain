@@ -50,6 +50,19 @@ export const recruiting: VerticalContent = {
         "rooting now — comes online once a sequence tool (Gem / Outreach / SalesLoft) or your ATS cadence is connected.",
     },
     {
+      slug: "recruiting-candidate-status-update",
+      name: "Candidate Status",
+      job: "Reads the role's active pipeline and drafts the per-candidate update on every transition for the recruiter to send.",
+      runtime: "live",
+      // Live via the recruiting-candidate-status-update skill — works on a
+      // JSON-stub ATS today; binds to Greenhouse / Lever / Workable / Bullhorn
+      // MCPs once they ship. Comp + offer detail always defer to {{operator:
+      // comp/offer details}}; hiring-manager feedback never leaks into the
+      // draft verbatim; offer-extended and rejection drafts always queue for
+      // recruiter review before any persistence.
+      boundSkill: "recruiting-candidate-status-update",
+    },
+    {
       slug: "recruiting-intake-brief",
       name: "Intake Brief",
       job: "Drafts the role brief from the hiring-manager call and surfaces open questions.",

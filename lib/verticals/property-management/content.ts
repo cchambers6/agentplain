@@ -49,9 +49,14 @@ export const propertyManagement: VerticalContent = {
       slug: "pm-collections",
       name: "Collections",
       job: "Runs the late-rent cadence with tenant payment history attached.",
-      runtime: "rooting",
-      rootingNote:
-        "rooting now — comes online once your property-mgmt platform's ledger is connected for the rent roll and payment history.",
+      runtime: "live",
+      // Live via the property-management-rent-collection-chase skill — works
+      // on a JSON-stub rent roll today; binds to AppFolio / Buildium /
+      // Propertyware / Yardi Breeze MCPs once they ship. Buckets units by
+      // grace / soft-chase / formal-notice / escalation; dollar amounts always
+      // defer to {{operator: amount due}}; escalation drafts queue for PM
+      // review with the owner-approval flag carried through.
+      boundSkill: "property-management-rent-collection-chase",
     },
     {
       slug: "pm-owner-reporter",

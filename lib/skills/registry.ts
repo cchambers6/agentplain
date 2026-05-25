@@ -293,6 +293,183 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
     ],
   },
   {
+    slug: 'insurance-coi-request',
+    name: 'Certificate-of-insurance request — insurance',
+    vertical: 'insurance',
+    description:
+      'Reads an inbound certificate-of-insurance request, looks up the named ' +
+      'insured\'s policies on the AMS, decides per-line whether coverage is ' +
+      'in-force / expired / not-on-file, builds the structured issuance payload ' +
+      'for the CSR to open in the AMS or carrier portal, and drafts a formal ' +
+      'acknowledgement back to the requester. Never quotes premium or binding ' +
+      'date — every quantitative claim defers to an {{operator: ...}} merge field.',
+    kind: 'coordinate',
+    mcpDependencies: [
+      {
+        provider: 'ezlynx',
+        status: 'stubbed-json',
+        note:
+          'EZLynx / Applied Epic / AMS360 / HawkSoft MCPs not yet built. Skill ' +
+          'accepts a PolicyOnFile[] JSON payload today; the MCPs will populate ' +
+          'the same shape once they ship.',
+      },
+      {
+        provider: 'gmail',
+        status: 'built',
+        note:
+          'Requester acknowledgement drafts persist via the existing ' +
+          'DraftPersister port; Outlook (M365) rides through the same port.',
+      },
+    ],
+    groundedIn: [
+      'project_no_outbound_architecture.md',
+      'feedback_no_silent_vendor_lock.md',
+      'lib/verticals/insurance/content.ts',
+      'lib/skills/prompts/insurance.ts (formal tone, never quote premium / binding date)',
+    ],
+  },
+  {
+    slug: 'mortgage-document-chase',
+    name: 'Document chase — mortgage',
+    vertical: 'mortgage',
+    description:
+      'Reads outstanding loan-file documents from the LOS, buckets each item ' +
+      'against the broker\'s per-category cadence (fresh / pending / late / ' +
+      'stuck), and drafts a SINGLE batched borrower email — never one-per-doc ' +
+      'spam. Stuck items surface a phone-call nudge to the LO. Every draft ' +
+      'carries the wire-fraud disclaimer and defers rate / APR / DTI questions ' +
+      'to an {{operator: rate/APR}} merge field.',
+    kind: 'coordinate',
+    mcpDependencies: [
+      {
+        provider: 'encompass',
+        status: 'stubbed-json',
+        note:
+          'Encompass / LendingPad / Calyx MCPs not yet built. Skill accepts ' +
+          'LoanFile + OutstandingDoc[] JSON today; the MCPs will populate the ' +
+          'same shape once they ship.',
+      },
+      {
+        provider: 'gmail',
+        status: 'built',
+        note:
+          'Borrower chase drafts persist via the existing DraftPersister port.',
+      },
+    ],
+    groundedIn: [
+      'project_no_outbound_architecture.md',
+      'feedback_no_silent_vendor_lock.md',
+      'lib/verticals/mortgage/content.ts',
+      'lib/skills/prompts/mortgage.ts (precise tone, never quote rate/APR/DTI)',
+    ],
+  },
+  {
+    slug: 'home-services-estimate-followup',
+    name: 'Estimate followup — home services',
+    vertical: 'home-services',
+    description:
+      'Walks every open trades estimate, classifies each by where it sits in ' +
+      'the post-send cadence (fresh / soft-nudge / check-in / last-call / cold), ' +
+      'and drafts the per-stage homeowner-facing nudge. Cold estimates roll up ' +
+      'into a single rep handoff with a phone-call ask — never another email. ' +
+      'Price + schedule always defer to {{operator: quote/time estimate}}.',
+    kind: 'draft',
+    mcpDependencies: [
+      {
+        provider: 'acculynx',
+        status: 'stubbed-json',
+        note:
+          'AccuLynx / JobNimbus / ServiceTitan / Housecall Pro / Jobber MCPs not ' +
+          'yet built. Skill accepts EstimateRecord[] JSON today; the MCPs will ' +
+          'populate the same shape.',
+      },
+      {
+        provider: 'gmail',
+        status: 'built',
+        note:
+          'Followup drafts persist via the existing DraftPersister port.',
+      },
+    ],
+    groundedIn: [
+      'project_no_outbound_architecture.md',
+      'feedback_no_silent_vendor_lock.md',
+      'lib/verticals/home-services/content.ts',
+      'lib/skills/prompts/home-services.ts (plain-spoken tone, never quote price)',
+    ],
+  },
+  {
+    slug: 'recruiting-candidate-status-update',
+    name: 'Candidate status update — recruiting',
+    vertical: 'recruiting',
+    description:
+      'Reads a role\'s active pipeline, classifies each candidate by transition ' +
+      'since the last touch (advanced / held / rejected / withdrawn / offer-' +
+      'extended), and drafts the warm-but-quick update. Offer-extended and ' +
+      'rejection drafts always queue for recruiter review before any persistence. ' +
+      'Hiring-manager feedback never leaks into the draft verbatim. Compensation ' +
+      'and offer detail always defer to {{operator: comp/offer details}}.',
+    kind: 'draft',
+    mcpDependencies: [
+      {
+        provider: 'greenhouse',
+        status: 'stubbed-json',
+        note:
+          'Greenhouse / Lever / Workable / Bullhorn MCPs not yet built. Skill ' +
+          'accepts RoleContext + CandidateRecord[] JSON today; the MCPs will ' +
+          'populate the same shape.',
+      },
+      {
+        provider: 'gmail',
+        status: 'built',
+        note:
+          'Routine status drafts persist via the existing DraftPersister port. ' +
+          'High-stakes transitions stay in the recruiter review queue.',
+      },
+    ],
+    groundedIn: [
+      'project_no_outbound_architecture.md',
+      'feedback_no_silent_vendor_lock.md',
+      'lib/verticals/recruiting/content.ts',
+      'lib/skills/prompts/recruiting.ts (warm tone, never quote comp/offer)',
+    ],
+  },
+  {
+    slug: 'property-management-rent-collection-chase',
+    name: 'Rent collection chase — property management',
+    vertical: 'property-management',
+    description:
+      'Reads the rent roll, buckets each delinquent unit against the operator\'s ' +
+      'cadence (grace / soft-chase / formal-notice / escalation), and drafts the ' +
+      'per-tenant chase email. Payment plans soften tone; escalation units route ' +
+      'to a PM review queue carrying the owner-approval flag. Maintenance ETAs ' +
+      'always defer to {{operator: maintenance ETA}}; dollar amounts always defer ' +
+      'to {{operator: amount due}}.',
+    kind: 'coordinate',
+    mcpDependencies: [
+      {
+        provider: 'appfolio',
+        status: 'stubbed-json',
+        note:
+          'AppFolio / Buildium / Propertyware / Yardi Breeze MCPs not yet built. ' +
+          'Skill accepts UnitDelinquency[] JSON today; the MCPs will populate ' +
+          'the same shape.',
+      },
+      {
+        provider: 'gmail',
+        status: 'built',
+        note:
+          'Tenant chase drafts persist via the existing DraftPersister port; ' +
+          'escalation drafts stay in the PM review queue.',
+      },
+    ],
+    groundedIn: [
+      'project_no_outbound_architecture.md',
+      'feedback_no_silent_vendor_lock.md',
+      'lib/verticals/property-management/content.ts',
+      'lib/skills/prompts/property-management.ts (friendly tone, never quote dollar amounts)',
+    ],
+  },
+  {
     slug: 'title-escrow-closing-doc-chase',
     name: 'Closing-doc chase — title / escrow',
     vertical: 'title-escrow',

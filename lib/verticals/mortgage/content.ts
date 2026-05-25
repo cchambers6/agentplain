@@ -39,9 +39,13 @@ export const mortgage: VerticalContent = {
       slug: "mortgage-document-chase",
       name: "Document Chase",
       job: "Runs the per-file doc-collection cadence and escalates only when stuck.",
-      runtime: "rooting",
-      rootingNote:
-        "rooting now — comes online once your LOS (Encompass / LendingPad / Calyx) is connected.",
+      runtime: "live",
+      // Live via the mortgage-document-chase skill — works on a JSON-stub LOS
+      // today; binds to Encompass / LendingPad / Calyx MCPs once they ship.
+      // Drafts ONE batched borrower email per file (never one-per-doc spam);
+      // stuck items surface a phone-call nudge to the LO. Rate / APR / DTI
+      // language always defers to {{operator: rate/APR}}.
+      boundSkill: "mortgage-document-chase",
     },
     {
       slug: "mortgage-status-updater",

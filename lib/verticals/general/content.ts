@@ -12,6 +12,15 @@ import type { VerticalContent } from "../types";
 // basic documentation) using common-denominator tools (Gmail, Outlook,
 // Google Calendar, QuickBooks).
 //
+// Cross-role roster (2026-05-25): the agentRoster below ships FOUR
+// horizontal capabilities — Chief of Staff, Inbox Triage, Follow-Up
+// Chaser, Process-Doc Drafter — each bound to a catalog-registered,
+// test-gated skill. Every card serves "whatever your work is" (a solo
+// contractor, a board member, an office manager, an owner-operator
+// outside the named ten) without becoming an industry vertical itself.
+// Copy reads CROSS-ROLE on purpose. If a visitor needs vertical-specific
+// depth, the page routes them to `/custom` as it always has.
+//
 // Per `feedback_no_quick_fixes.md` the right framing is honest, not
 // pretend-vertical: the hero says "lighter scaffolding" directly so a
 // visitor in a niche vertical knows what they're getting and what they're
@@ -31,14 +40,20 @@ export const general: VerticalContent = {
   status: "on-ramp",
   missionSubject: "local businesses",
 
-  // Lighter roster than the ten ratified verticals — /general is the
-  // on-ramp surface and doesn't ship a vertical-specific compliance corpus.
-  // The Chief of Staff is horizontal: it walks (calendar + inbox + to-do)
-  // and proposes meetings, reply drafts, and to-dos for the owner's
-  // approval. Bound to the chief-of-staff-scheduler skill — runs end-to-
-  // end on demo data through the skill's own test today; production
-  // calendar wiring lands once the Google Calendar / M365 calendar
-  // adapters do.
+  // Cross-role roster — every card is HORIZONTAL (serves any role: a
+  // contractor, a board member, a solo operator, an office manager, an
+  // owner-operator outside the ten ratified verticals). Per
+  // `feedback_no_new_verticals_finish_locked.md` /general is a SURFACE,
+  // not an eleventh vertical: nothing here is industry-specific. Each
+  // card is bound to a catalog-registered, test-gated skill that runs
+  // end-to-end on JSON demo seeds today; production wiring lights up
+  // once the underlying mailbox / calendar / activity-log adapters land.
+  //
+  // Reads "whatever your work is" not "industry-N" — per
+  // `feedback_everything_tells_a_story.md`, every visitor to /general
+  // is a local business owner whose work doesn't fit one of the ten
+  // named verticals. The cards talk about THEIR work, never about a
+  // specific industry.
   agentRoster: [
     {
       slug: "general-chief-of-staff",
@@ -46,6 +61,27 @@ export const general: VerticalContent = {
       job: "Proposes meetings, reply drafts, and to-dos against your calendar + inbox + board.",
       runtime: "live",
       boundSkill: "chief-of-staff-scheduler",
+    },
+    {
+      slug: "general-inbox-triage",
+      name: "Inbox Triage",
+      job: "Sorts whatever lands in your inbox by priority — urgent, customer-active, vendor-pending, needs-your-decision, noise — and drafts a gentle acknowledgement on the two middle classes so the people you serve hear back today.",
+      runtime: "live",
+      boundSkill: "inbox-triage-general",
+    },
+    {
+      slug: "general-follow-up-chaser",
+      name: "Follow-Up Chaser",
+      job: "Spots the threads you sent days ago without a reply and drafts the gentle nudge — oldest first, capped per run so your queue stays sane.",
+      runtime: "live",
+      boundSkill: "follow-up-chaser-general",
+    },
+    {
+      slug: "general-process-doc-drafter",
+      name: "Process-Doc Drafter",
+      job: "Watches how you actually handle recurring work and, once a pattern repeats three or more times, drafts the SOP so the process moves out of your head and into a doc you can hand off.",
+      runtime: "live",
+      boundSkill: "process-doc-drafter-general",
     },
   ],
 
@@ -146,10 +182,11 @@ export const general: VerticalContent = {
 
   claims: {
     replace: [
-      "Inbox triage on the channels every local business runs (email, shared mailbox, contact form)",
+      "Inbox triage on the channels every local business runs (email, shared mailbox, contact form) — priority-sorted into urgent / customer-active / vendor-pending / needs-your-decision / noise",
       "The morning scramble to figure out what came in overnight",
       "The scheduling email volley — drafted with calendar context, sent from your account",
-      "The 'I'll get to that tomorrow' follow-up backlog — drafted on a cadence you set",
+      "The 'I'll get to that tomorrow' follow-up backlog — stale threads surfaced oldest first with a drafted nudge",
+      "The 'I keep meaning to write that down' process — recurring patterns clustered and drafted as an SOP you can edit and hand off",
     ],
     integrate: [
       "Gmail (read-only OAuth, drafts to your account)",
@@ -160,7 +197,7 @@ export const general: VerticalContent = {
     ],
     augment: [
       "Owner review on every customer-facing draft — the fleet drafts, you sign and send",
-      "Documentation drafting — observed from how you actually work, edited by you",
+      "SOP drafting — observed from how you actually handle recurring work, edited by you, copied into your own docs",
       "Vendor / contractor follow-up — drafted in your voice; you approve before send",
       "Books-light reconciliation — drafted with the QuickBooks line cited; you decide",
     ],

@@ -172,6 +172,160 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
     defaultEnabled: true,
   },
   {
+    slug: 'inbox-triage-general',
+    name: 'Inbox triage — cross-role priority + acks',
+    vertical: 'all',
+    description:
+      'Cross-role inbox classifier for the /general on-ramp surface. Walks ' +
+      'the inbox window the fetcher returns and tags every message with one ' +
+      'of five priority buckets — urgent, customer-active, vendor-pending, ' +
+      'needs-decision, noise — then drafts a gentle acknowledgement (for ' +
+      'customer-active and vendor-pending only) with an {{operator: ...}} ' +
+      'merge field for any substantive answer. Urgent and needs-decision ' +
+      'NEVER get an auto-drafted ack — the operator must read those ' +
+      'directly. Different from office-admin (admin/IT mail only) and from ' +
+      'chief-of-staff (scheduling/to-do). Per project_no_outbound_' +
+      'architecture.md every proposal is PENDING; nothing gets sent.',
+    kind: 'triage',
+    mcpDependencies: [
+      {
+        provider: 'gmail',
+        status: 'built',
+        note:
+          'Inbound email arrives through the existing Gmail MessageFetcher. The ' +
+          'skill maps ParsedMessage to its internal TriageMessage shape at the ' +
+          'fetcher boundary; production binds the live adapter, tests bind ' +
+          'JsonTriageFetcher.',
+      },
+      {
+        provider: 'outlook',
+        status: 'built',
+        note:
+          'Outlook (M365) MessageFetcher rides the same provider-neutral port; ' +
+          'no skill change needed when an operator connects M365 instead.',
+      },
+      {
+        provider: 'work-approval-queue',
+        status: 'stubbed-json',
+        note:
+          'Production binding for TriageApprovalSink (writes WorkApprovalQueueItem ' +
+          'rows) lands with the chief-of-staff sink — same WorkApprovalKind enum ' +
+          'pathway. Tests bind RecordingTriageApprovalSink to assert no-outbound ' +
+          'end-to-end against demo seeds today.',
+      },
+    ],
+    groundedIn: [
+      'project_no_outbound_architecture.md',
+      'feedback_no_silent_vendor_lock.md',
+      'feedback_runner_portability.md',
+      'feedback_cold_start_safe_agents.md',
+      'feedback_integration_acceptance_is_functional.md',
+    ],
+  },
+  {
+    slug: 'follow-up-chaser-general',
+    name: 'Follow-up chaser — cross-role stale-thread nudges',
+    vertical: 'all',
+    description:
+      'Cross-role follow-up chaser for the /general on-ramp surface. Walks ' +
+      'the operator\'s recent outbound threads, identifies those where the ' +
+      'counterparty has not replied past a stale-window (default 4 days), ' +
+      'and drafts a gentle first-stage or second-stage nudge for each — ' +
+      'oldest stalls first, capped at maxNudgesPerRun. Every draft carries ' +
+      'an {{operator: ...}} merge field for fresh context, and threads ' +
+      'with an existing operator-drafted nudge are skipped so the draft ' +
+      'folder does not pile up. Per project_no_outbound_architecture.md ' +
+      'every nudge is PENDING; nothing gets sent.',
+    kind: 'draft',
+    mcpDependencies: [
+      {
+        provider: 'gmail',
+        status: 'built',
+        note:
+          'Operator outbound flows through the existing Gmail MessageFetcher. ' +
+          'Production binds an adapter that materializes OutboundThread[] from ' +
+          'the workspace\'s sent folder + thread cache; tests bind JsonFollowUp' +
+          'Fetcher with a pre-loaded snapshot.',
+      },
+      {
+        provider: 'outlook',
+        status: 'built',
+        note:
+          'Outlook (M365) rides the same OutboundThread[] shape — no skill ' +
+          'change when M365 is the connected mailbox.',
+      },
+      {
+        provider: 'work-approval-queue',
+        status: 'stubbed-json',
+        note:
+          'Production binding for FollowUpApprovalSink (writes WorkApproval' +
+          'QueueItem rows) lands with the chief-of-staff sink. Tests bind ' +
+          'RecordingFollowUpApprovalSink to assert no-outbound today.',
+      },
+    ],
+    groundedIn: [
+      'project_no_outbound_architecture.md',
+      'feedback_no_silent_vendor_lock.md',
+      'feedback_runner_portability.md',
+      'feedback_cold_start_safe_agents.md',
+      'feedback_integration_acceptance_is_functional.md',
+    ],
+  },
+  {
+    slug: 'process-doc-drafter-general',
+    name: 'Process-doc drafter — observe, draft SOP, never publish',
+    vertical: 'all',
+    description:
+      'Cross-role process-doc drafter for the /general on-ramp surface. ' +
+      'Clusters the operator\'s recent approved actions by (kind, trigger' +
+      'Hint) and drafts a Standard Operating Procedure for every pattern ' +
+      'that repeats ≥ minOccurrences times (default 3). Every SOP body ' +
+      'carries at least one {{operator: ...}} merge field — the skill ' +
+      'can show what happened, but the operator decides what the canonical ' +
+      'process IS. Patterns matched by normalized title against existing ' +
+      'SOPs are skipped. Per project_no_outbound_architecture.md the skill ' +
+      'NEVER publishes to Notion / Confluence / Google Docs / any external ' +
+      'doc system — the draft lives in the approval queue until the ' +
+      'operator copies it into their own documentation.',
+    kind: 'draft',
+    mcpDependencies: [
+      {
+        provider: 'workspace-activity-log',
+        status: 'stubbed-json',
+        note:
+          'Reads PastAction[] from the workspace activity log (the same store ' +
+          'that backs /approvals history). Tests bind JsonProcessDocFetcher ' +
+          'with a pre-loaded snapshot; production binds an adapter that materializes ' +
+          'PastAction[] from approved WorkApprovalQueueItem rows + sent messages.',
+      },
+      {
+        provider: 'notion',
+        status: 'stubbed-json',
+        note:
+          'Existing-SOP dedupe reads ExistingProcessDoc[] (id + title only). When ' +
+          'the operator has Notion connected, the production adapter populates ' +
+          'this from the workspace\'s SOP database; absent a connection, the list ' +
+          'is empty and dedupe still works correctly (it just won\'t catch SOPs ' +
+          'the operator already has elsewhere). No SDK import — provider-neutral.',
+      },
+      {
+        provider: 'work-approval-queue',
+        status: 'stubbed-json',
+        note:
+          'Production binding for ProcessDocApprovalSink writes WorkApproval' +
+          'QueueItem rows alongside the chief-of-staff sink. Tests bind ' +
+          'RecordingProcessDocApprovalSink to assert no-publish today.',
+      },
+    ],
+    groundedIn: [
+      'project_no_outbound_architecture.md',
+      'feedback_no_silent_vendor_lock.md',
+      'feedback_runner_portability.md',
+      'feedback_cold_start_safe_agents.md',
+      'feedback_integration_acceptance_is_functional.md',
+    ],
+  },
+  {
     slug: 'invoice-chasing-realestate',
     name: 'Commission invoice chasing — real estate',
     vertical: 'real-estate',

@@ -332,3 +332,107 @@ describe("vertical-routes — /general on-ramp surface", () => {
     }
   });
 });
+
+// /general cross-role roster — separate describe block so the buildout
+// is pinned independently. Per `feedback_no_new_verticals_finish_locked.md`
+// the roster expansion (2026-05-25) is a SURFACE buildout, not a new
+// vertical: every card must bind to a `vertical: 'all'` catalog skill so
+// the roster stays HORIZONTAL by construction.
+describe("vertical-routes — /general cross-role roster (buildout 2026-05-25)", () => {
+  it("declares a four-card horizontal roster (CoS + Inbox Triage + Follow-Up + Process-Doc)", async () => {
+    const { SKILL_CATALOG } = await import("@/lib/skills/registry");
+    const content = getVerticalContent("general");
+    assert.ok(content);
+    const roster = content.agentRoster ?? [];
+    assert.equal(
+      roster.length,
+      4,
+      "/general must surface exactly 4 horizontal capabilities post-2026-05-25 buildout",
+    );
+    const slugs = roster.map((a) => a.slug).sort();
+    assert.deepEqual(slugs, [
+      "general-chief-of-staff",
+      "general-follow-up-chaser",
+      "general-inbox-triage",
+      "general-process-doc-drafter",
+    ]);
+    // Every card must be live + boundSkill, and every bound skill must be
+    // catalog-registered with vertical 'all' (the horizontal marker).
+    const catalogBySlug = new Map(SKILL_CATALOG.map((s) => [s.slug, s]));
+    for (const card of roster) {
+      assert.equal(
+        card.runtime,
+        "live",
+        `${card.slug}: /general roster must be live — every card is bound to a runnable, test-gated skill`,
+      );
+      assert.ok(
+        card.boundSkill,
+        `${card.slug}: /general roster cards must declare a boundSkill (the live pathway)`,
+      );
+      const skill = catalogBySlug.get(card.boundSkill!);
+      assert.ok(
+        skill,
+        `${card.slug}: boundSkill "${card.boundSkill}" not in SKILL_CATALOG`,
+      );
+      assert.equal(
+        skill!.vertical,
+        "all",
+        `${card.slug}: bound skill "${card.boundSkill}" must be vertical: 'all' to keep /general HORIZONTAL — found vertical "${skill!.vertical}"`,
+      );
+    }
+  });
+
+  it("the three new buildout skills are catalog-registered and horizontal", async () => {
+    const { SKILL_CATALOG } = await import("@/lib/skills/registry");
+    const newSlugs = [
+      "inbox-triage-general",
+      "follow-up-chaser-general",
+      "process-doc-drafter-general",
+    ];
+    const catalogBySlug = new Map(SKILL_CATALOG.map((s) => [s.slug, s]));
+    for (const slug of newSlugs) {
+      const entry = catalogBySlug.get(slug);
+      assert.ok(entry, `expected catalog entry for ${slug}`);
+      assert.equal(
+        entry!.vertical,
+        "all",
+        `${slug} must be vertical: 'all' — cross-role, not vertical-locked`,
+      );
+    }
+  });
+
+  it("the roster copy reads cross-role, never as a new industry vertical", () => {
+    const content = getVerticalContent("general");
+    assert.ok(content);
+    const haystack = (content.agentRoster ?? [])
+      .map((a) => `${a.name} ${a.job}`)
+      .join(" ")
+      .toLowerCase();
+    // No copy may name one of the ten ratified verticals — the buildout
+    // is industry-agnostic by construction. (We DO mention "vertical" /
+    // industry concepts elsewhere on the page; what's banned here is a
+    // roster card naming a specific industry.)
+    const verticalSlurs = [
+      "real estate",
+      "real-estate",
+      "mortgage",
+      "insurance",
+      "property management",
+      "title-escrow",
+      "title escrow",
+      "recruiting",
+      "home services",
+      "home-services",
+      " cpa ",
+      " law ",
+      " ria ",
+    ];
+    for (const slur of verticalSlurs) {
+      assert.equal(
+        haystack.includes(slur),
+        false,
+        `/general roster card mentions "${slur.trim()}" — cards must read CROSS-ROLE, never as an industry vertical (per feedback_no_new_verticals_finish_locked.md)`,
+      );
+    }
+  });
+});

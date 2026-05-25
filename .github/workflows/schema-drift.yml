@@ -32,7 +32,16 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        # pgvector-bundled Postgres image. The vanilla `postgres:16` image
+        # does NOT ship the pgvector extension, and one of our migrations
+        # (`20260512000000_add_knowledge_substrate`) runs
+        # `CREATE EXTENSION vector` — so `prisma migrate diff
+        # --from-migrations` against vanilla Postgres fails at that
+        # migration's apply and looks like drift even when there is none.
+        # Using the official pgvector image keeps the shadow DB feature-
+        # parity with Neon production (which has pgvector enabled).
+        # https://hub.docker.com/r/pgvector/pgvector — read 2026-05-25.
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: shadow
           POSTGRES_PASSWORD: shadow

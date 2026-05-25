@@ -78,6 +78,18 @@ export const realEstate: VerticalContent = {
       rootingNote:
         "rooting now — comes online alongside the Production Reporter's data.",
     },
+    {
+      // Chief of Staff — horizontal capability bound to the
+      // chief-of-staff-scheduler skill. Walks (calendar + inbox + to-do)
+      // and PROPOSES meetings, reply drafts, and to-dos for broker
+      // approval. Never books, never sends, never writes a third-party
+      // task row — every proposal lands in /approvals as PENDING.
+      slug: "realty-chief-of-staff",
+      name: "Chief of Staff",
+      job: "Proposes meetings, reply drafts, and to-dos against the broker's calendar + inbox + board.",
+      runtime: "live",
+      boundSkill: "chief-of-staff-scheduler",
+    },
   ],
 
   hero: {

@@ -100,6 +100,14 @@ export const ria: VerticalContent = {
       rootingNote:
         "rooting now — comes online once your custodian feed is connected for quarter-end balances.",
     },
+    {
+      // Horizontal chief-of-staff capability — proposals only, no execution.
+      slug: "ria-chief-of-staff",
+      name: "Chief of Staff",
+      job: "Proposes meetings, reply drafts, and to-dos against the advisor's calendar + inbox + board.",
+      runtime: "live",
+      boundSkill: "chief-of-staff-scheduler",
+    },
   ],
 
   hero: {

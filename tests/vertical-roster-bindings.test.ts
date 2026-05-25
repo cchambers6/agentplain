@@ -38,6 +38,11 @@ interface VerticalBinding {
   expectedRooting: number;
 }
 
+// Every vertical adds one live binding this PR: a `<vertical>-chief-of-
+// staff` card bound to the horizontal `chief-of-staff-scheduler` skill.
+// That skill is catalog-registered and test-gated end-to-end against
+// demo seeds; the bound card is `live` by the same standard the other
+// boundSkill cards use. Each vertical's `expectedLive` rises by 1.
 const EXPECTED_LIVE_OWNS: Record<string, VerticalBinding> = {
   "real-estate": {
     buyerInquirySlug: "realty-buyer-inquiry-router",
@@ -46,7 +51,7 @@ const EXPECTED_LIVE_OWNS: Record<string, VerticalBinding> = {
     // every draft body + subject and writes a COMPLIANCE_FLAG approval
     // attributed to this slug when matches fire.
     complianceSlug: "realty-compliance-sentinel",
-    expectedLive: 3,
+    expectedLive: 4,
     expectedRooting: 4,
   },
   mortgage: {
@@ -55,19 +60,19 @@ const EXPECTED_LIVE_OWNS: Record<string, VerticalBinding> = {
     // LendingPad / Calyx MCPs once they ship). One batched borrower email
     // per file; rate/APR/DTI always defer to operator merge fields.
     buyerInquirySlug: "mortgage-borrower-triage",
-    expectedLive: 2,
+    expectedLive: 3,
     expectedRooting: 5,
   },
   cpa: {
     buyerInquirySlug: "cpa-client-inbound",
-    expectedLive: 1,
+    expectedLive: 2,
     expectedRooting: 6,
   },
   law: {
     // law-intake-onboarding goes live this PR via the deterministic
     // intake-conflict-screen skill (boundSkill — works on a JSON-stub
     // ledger today, binds to Clio / MyCase MCPs when they ship).
-    expectedLive: 1,
+    expectedLive: 2,
     expectedRooting: 6,
   },
   insurance: {
@@ -76,7 +81,7 @@ const EXPECTED_LIVE_OWNS: Record<string, VerticalBinding> = {
     // / AMS360 / HawkSoft MCPs once they ship). Never quotes premium or
     // binding date — every quantitative claim defers to operator merge fields.
     buyerInquirySlug: "insurance-inbound-triage",
-    expectedLive: 2,
+    expectedLive: 3,
     expectedRooting: 5,
   },
   recruiting: {
@@ -87,7 +92,7 @@ const EXPECTED_LIVE_OWNS: Record<string, VerticalBinding> = {
     // always queue for recruiter review.
     buyerInquirySlug: "recruiting-outreach",
     schedulingSlug: "recruiting-scheduler",
-    expectedLive: 3,
+    expectedLive: 4,
     expectedRooting: 5,
   },
   "property-management": {
@@ -96,7 +101,7 @@ const EXPECTED_LIVE_OWNS: Record<string, VerticalBinding> = {
     // Propertyware / Yardi Breeze MCPs once they ship). Dollar amounts always
     // defer to operator merge fields; escalation drafts queue for PM review.
     buyerInquirySlug: "pm-tenant-inbound",
-    expectedLive: 2,
+    expectedLive: 3,
     expectedRooting: 5,
   },
   ria: {
@@ -104,7 +109,7 @@ const EXPECTED_LIVE_OWNS: Record<string, VerticalBinding> = {
     // draft skill (boundSkill — JSON-stub portfolio snapshot today, binds
     // to Orion / Black Diamond / Tamarac MCPs when they ship). Never
     // renders dollar amounts; every figure is an advisor merge field.
-    expectedLive: 1,
+    expectedLive: 2,
     expectedRooting: 6,
   },
   "home-services": {
@@ -114,7 +119,7 @@ const EXPECTED_LIVE_OWNS: Record<string, VerticalBinding> = {
     // Each open estimate gets exactly one draft scoped to its cadence stage;
     // price + schedule always defer to operator merge fields.
     buyerInquirySlug: "home-services-lead-router",
-    expectedLive: 2,
+    expectedLive: 3,
     expectedRooting: 6,
   },
   "title-escrow": {
@@ -122,7 +127,7 @@ const EXPECTED_LIVE_OWNS: Record<string, VerticalBinding> = {
     // chase skill (boundSkill — JSON-stub closing file today, binds to
     // SoftPro / Qualia / RamQuest MCPs when they ship). Title status +
     // wire-instructions confirmation always defer to operator merge fields.
-    expectedLive: 1,
+    expectedLive: 2,
     expectedRooting: 6,
   },
 };

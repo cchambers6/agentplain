@@ -31,6 +31,24 @@ export const general: VerticalContent = {
   status: "on-ramp",
   missionSubject: "local businesses",
 
+  // Lighter roster than the ten ratified verticals — /general is the
+  // on-ramp surface and doesn't ship a vertical-specific compliance corpus.
+  // The Chief of Staff is horizontal: it walks (calendar + inbox + to-do)
+  // and proposes meetings, reply drafts, and to-dos for the owner's
+  // approval. Bound to the chief-of-staff-scheduler skill — runs end-to-
+  // end on demo data through the skill's own test today; production
+  // calendar wiring lands once the Google Calendar / M365 calendar
+  // adapters do.
+  agentRoster: [
+    {
+      slug: "general-chief-of-staff",
+      name: "Chief of Staff",
+      job: "Proposes meetings, reply drafts, and to-dos against your calendar + inbox + board.",
+      runtime: "live",
+      boundSkill: "chief-of-staff-scheduler",
+    },
+  ],
+
   hero: {
     eyebrow: "Don't see your industry?",
     headline: "Same service partnership. Lighter scaffolding.",

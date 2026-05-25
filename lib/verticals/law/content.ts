@@ -101,6 +101,14 @@ export const law: VerticalContent = {
       rootingNote:
         "rooting now — comes online once your billing module (Clio Manage / TimeSolv) is connected.",
     },
+    {
+      // Horizontal chief-of-staff capability — proposals only, no execution.
+      slug: "law-chief-of-staff",
+      name: "Chief of Staff",
+      job: "Proposes meetings, reply drafts, and to-dos against the attorney's calendar + inbox + board.",
+      runtime: "live",
+      boundSkill: "chief-of-staff-scheduler",
+    },
   ],
 
   hero: {

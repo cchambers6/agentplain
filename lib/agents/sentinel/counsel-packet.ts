@@ -39,6 +39,20 @@ export interface PacketLiteralTrigger {
 }
 
 /**
+ * One CANDIDATE literal-match phrase — drafted from a regulator's text but
+ * not yet counsel-verified. Sentinel WILL NOT fire on these (the scanner
+ * skips `unverified: true` rules); they live in the packet so counsel can
+ * red-line phrase-by-phrase before the rule flips to verified literal-match.
+ *
+ * Counsel decides per phrase: approve as literal-match, reword, demote to
+ * counsel-reference, or strike. The drafterNotes field on the underlying
+ * rule captures why the phrase was nominated.
+ */
+export interface PacketCandidateLiteralTrigger extends PacketLiteralTrigger {
+  drafterNotes: string | null;
+}
+
+/**
  * One counsel-reference rule — the substantive law sentinel will NOT
  * auto-flag. Counsel decides whether to (a) approve as reference
  * material only, (b) commission an LLM-classifier path, or (c) extract
@@ -61,13 +75,24 @@ export interface CounselHandoffPacket {
   status: CorpusBundle["metadata"]["status"];
   lastReviewedAt: string;
   counselReviewer: string | null;
+  /**
+   * Phrases sentinel WILL fire on today (rules already counsel-verified).
+   * Empty for verticals whose corpus is still DRAFT.
+   */
   literalTriggers: PacketLiteralTrigger[];
+  /**
+   * Phrases drafted from regulator text but NOT counsel-verified — sentinel
+   * does not fire on these. This is the bucket counsel red-lines first to
+   * move a vertical's sentinel from advisory to live.
+   */
+  candidateLiteralTriggers: PacketCandidateLiteralTrigger[];
   counselReferences: PacketCounselReference[];
   openQuestions: string[];
 }
 
 export function buildCounselHandoffPacket(corpus: CorpusBundle): CounselHandoffPacket {
   const literalTriggers: PacketLiteralTrigger[] = [];
+  const candidateLiteralTriggers: PacketCandidateLiteralTrigger[] = [];
   const counselReferences: PacketCounselReference[] = [];
 
   for (const rule of corpus.rules) {
@@ -83,9 +108,22 @@ export function buildCounselHandoffPacket(corpus: CorpusBundle): CounselHandoffP
       }
       continue;
     }
-    // Everything else — counsel-reference, unverified, or rules without a
-    // declared purpose — lands in the counsel-reference bucket so the
-    // attorney sees the full literal text.
+    if (isCandidateLiteralRule(rule)) {
+      for (const phrase of rule.triggers ?? []) {
+        candidateLiteralTriggers.push({
+          ruleId: rule.ruleId,
+          ruleTitle: rule.title,
+          phrase,
+          category: rule.category ?? null,
+          citation: { ...rule.citation },
+          drafterNotes: rule.drafterNotes ?? null,
+        });
+      }
+      continue;
+    }
+    // Everything else — counsel-reference rules and unverified rules
+    // without literal-match purpose — lands in the counsel-reference
+    // bucket so the attorney sees the full literal text.
     counselReferences.push({
       ruleId: rule.ruleId,
       ruleTitle: rule.title,
@@ -101,6 +139,7 @@ export function buildCounselHandoffPacket(corpus: CorpusBundle): CounselHandoffP
     lastReviewedAt: corpus.metadata.lastReviewedAt,
     counselReviewer: corpus.metadata.counselReviewer,
     literalTriggers,
+    candidateLiteralTriggers,
     counselReferences,
     openQuestions: corpus.metadata.openQuestions ?? [],
   };
@@ -109,5 +148,11 @@ export function buildCounselHandoffPacket(corpus: CorpusBundle): CounselHandoffP
 function isLiteralMatchRule(rule: ComplianceRule): boolean {
   if (rule.purpose !== "literal-match") return false;
   if (rule.unverified) return false;
+  return Array.isArray(rule.triggers) && rule.triggers.length > 0;
+}
+
+function isCandidateLiteralRule(rule: ComplianceRule): boolean {
+  if (rule.purpose !== "literal-match") return false;
+  if (!rule.unverified) return false;
   return Array.isArray(rule.triggers) && rule.triggers.length > 0;
 }

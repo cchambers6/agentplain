@@ -6,6 +6,7 @@ import { rule as circular230Diligence } from "./circular-230-diligence-literal";
 import { rule as aicpaConfidentiality } from "./aicpa-confidentiality-literal";
 import { rule as aicpaDueCare } from "./aicpa-due-care-literal";
 import { rule as gaBoardAccountancy } from "./ga-board-accountancy-literal";
+import { rule as circular230SolicitationCandidates } from "./circular-230-solicitation-candidates-literal";
 
 export const cpaCorpus: CorpusBundle = {
   verticalSlug: "cpa",
@@ -17,5 +18,6 @@ export const cpaCorpus: CorpusBundle = {
     aicpaConfidentiality,
     aicpaDueCare,
     gaBoardAccountancy,
+    circular230SolicitationCandidates,
   ],
 };

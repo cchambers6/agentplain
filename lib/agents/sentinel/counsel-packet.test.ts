@@ -96,14 +96,15 @@ describe("counsel-handoff packet builder", () => {
   });
 
   it("every wave-4 in-scope vertical ships a candidate literal-trigger list for counsel review", () => {
-    // Wave 4 (2026-05-25): each of the eight verticals below must surface
+    // Wave 4 (2026-05-25): each of the nine verticals below must surface
     // at least one candidate literal trigger so counsel has something
     // concrete to red-line. Sentinel does not fire on these (the scanner
     // skips unverified rules) — they exist for the counsel-handoff packet.
     //
-    // `home-services` is intentionally NOT in this list — the wave-4
-    // domain map (FTC Cooling-Off, Magnuson-Moss, GA mechanics-lien) is
-    // out of scope this round and will land in a follow-on PR.
+    // `home-services` joined this list in the follow-on wave-4 PR
+    // (2026-05-25) — the FTC § 5 + 16 CFR § 251.1 ("free") + Magnuson-Moss
+    // § 2303 candidate triggers cover the advertising side of the
+    // home-services corpus that the initial wave-4 PR deferred.
     const wave4InScope = [
       "cpa",
       "law",
@@ -113,6 +114,7 @@ describe("counsel-handoff packet builder", () => {
       "recruiting",
       "property-management",
       "title-escrow",
+      "home-services",
     ];
     for (const slug of wave4InScope) {
       const corpus = loadCorpusFor(slug);

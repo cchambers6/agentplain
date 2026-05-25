@@ -71,6 +71,7 @@ export type { ComplianceFlag, ScanInput, ScanResult } from "./scanner";
 export { buildCounselHandoffPacket } from "./counsel-packet";
 export type {
   CounselHandoffPacket,
+  PacketCandidateLiteralTrigger,
   PacketCounselReference,
   PacketLiteralTrigger,
 } from "./counsel-packet";

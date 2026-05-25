@@ -5,6 +5,7 @@ import { rule as tridClosingDisclosure } from "./trid-closing-disclosure-literal
 import { rule as tilaDisclosure } from "./tila-disclosure-literal";
 import { rule as safeActMlo } from "./nmls-safe-act-literal";
 import { rule as gaResidentialMortgageAct } from "./ga-residential-mortgage-act-literal";
+import { rule as regZAdvertisingCandidates } from "./reg-z-advertising-candidates-literal";
 
 export const mortgageCorpus: CorpusBundle = {
   verticalSlug: "mortgage",
@@ -15,5 +16,6 @@ export const mortgageCorpus: CorpusBundle = {
     tilaDisclosure,
     safeActMlo,
     gaResidentialMortgageAct,
+    regZAdvertisingCandidates,
   ],
 };

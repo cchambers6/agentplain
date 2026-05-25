@@ -4,9 +4,16 @@ import { rule as fairHousingCrossref } from "./fair-housing-reference";
 import { rule as gaLandlordTenant } from "./ga-landlord-tenant-literal";
 import { rule as gaSecurityDeposit } from "./ga-security-deposit-literal";
 import { rule as gaEviction } from "./ga-eviction-literal";
+import { rule as rentalAdvertisingCandidates } from "./rental-advertising-candidates-literal";
 
 export const propertyManagementCorpus: CorpusBundle = {
   verticalSlug: "property-management",
   metadata,
-  rules: [fairHousingCrossref, gaLandlordTenant, gaSecurityDeposit, gaEviction],
+  rules: [
+    fairHousingCrossref,
+    gaLandlordTenant,
+    gaSecurityDeposit,
+    gaEviction,
+    rentalAdvertisingCandidates,
+  ],
 };

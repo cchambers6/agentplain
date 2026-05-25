@@ -6,9 +6,18 @@ import { rule as marketingRule } from "./advertising-rule-206-4-1-literal";
 import { rule as formAdv } from "./form-adv-literal";
 import { rule as custodyRule } from "./custody-rule-206-4-2-literal";
 import { rule as stateRegistration } from "./state-ria-registration-literal";
+import { rule as marketingCandidates } from "./marketing-rule-candidates-literal";
 
 export const riaCorpus: CorpusBundle = {
   verticalSlug: "ria",
   metadata,
-  rules: [section206, rule204A1, marketingRule, formAdv, custodyRule, stateRegistration],
+  rules: [
+    section206,
+    rule204A1,
+    marketingRule,
+    formAdv,
+    custodyRule,
+    stateRegistration,
+    marketingCandidates,
+  ],
 };

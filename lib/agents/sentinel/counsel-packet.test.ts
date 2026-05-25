@@ -53,10 +53,11 @@ describe("counsel-handoff packet builder", () => {
     }
   });
 
-  it("unverified rules are routed into counsel-references, not literal triggers", () => {
+  it("unverified literal-match rules with triggers land in candidateLiteralTriggers, not the live-firing bucket", () => {
     // Synthetic corpus with an unverified literal-match rule — even though
     // it has triggers, the unverified flag should keep it out of the
-    // deterministic-match bucket and surface it for counsel review.
+    // deterministic-match bucket. It DOES belong in candidate triggers so
+    // counsel sees a phrase-by-phrase red-line target.
     const packet = buildCounselHandoffPacket({
       verticalSlug: "test",
       metadata: {
@@ -82,11 +83,72 @@ describe("counsel-handoff packet builder", () => {
           purpose: "literal-match",
           unverified: true,
           triggers: ["pending phrase"],
+          drafterNotes: "drafted from X",
         },
       ],
     });
     assert.equal(packet.literalTriggers.length, 0);
-    assert.equal(packet.counselReferences.length, 1);
-    assert.equal(packet.counselReferences[0].ruleId, "test-unverified");
+    assert.equal(packet.candidateLiteralTriggers.length, 1);
+    assert.equal(packet.counselReferences.length, 0);
+    assert.equal(packet.candidateLiteralTriggers[0].ruleId, "test-unverified");
+    assert.equal(packet.candidateLiteralTriggers[0].phrase, "pending phrase");
+    assert.equal(packet.candidateLiteralTriggers[0].drafterNotes, "drafted from X");
+  });
+
+  it("every wave-4 in-scope vertical ships a candidate literal-trigger list for counsel review", () => {
+    // Wave 4 (2026-05-25): each of the eight verticals below must surface
+    // at least one candidate literal trigger so counsel has something
+    // concrete to red-line. Sentinel does not fire on these (the scanner
+    // skips unverified rules) — they exist for the counsel-handoff packet.
+    //
+    // `home-services` is intentionally NOT in this list — the wave-4
+    // domain map (FTC Cooling-Off, Magnuson-Moss, GA mechanics-lien) is
+    // out of scope this round and will land in a follow-on PR.
+    const wave4InScope = [
+      "cpa",
+      "law",
+      "ria",
+      "insurance",
+      "mortgage",
+      "recruiting",
+      "property-management",
+      "title-escrow",
+    ];
+    for (const slug of wave4InScope) {
+      const corpus = loadCorpusFor(slug);
+      assert.ok(corpus, `${slug}: corpus must be registered`);
+      const packet = buildCounselHandoffPacket(corpus);
+      assert.ok(
+        packet.candidateLiteralTriggers.length > 0,
+        `${slug}: candidate trigger list is empty — counsel-handoff packet needs concrete phrases to red-line`,
+      );
+      for (const t of packet.candidateLiteralTriggers) {
+        assert.ok(t.citation.source, `${slug} candidate ${t.phrase}: missing citation.source`);
+        assert.ok(
+          t.citation.url.startsWith("http"),
+          `${slug} candidate ${t.phrase}: bad citation URL`,
+        );
+        assert.match(t.citation.accessedAt, /^\d{4}-\d{2}-\d{2}$/);
+      }
+    }
+  });
+
+  it("candidate triggers do NOT cause sentinel to flip the verticals live (status stays DRAFT)", () => {
+    // Honesty guard: shipping candidate phrases must NOT silently flip a
+    // corpus to COUNSEL_REVIEWED or attach a counselReviewer name.
+    for (const slug of listCorpusVerticals()) {
+      const corpus = loadCorpusFor(slug)!;
+      const packet = buildCounselHandoffPacket(corpus);
+      assert.equal(
+        packet.status,
+        "DRAFT",
+        `${slug}: status must remain DRAFT until counsel signs off`,
+      );
+      assert.equal(
+        packet.counselReviewer,
+        null,
+        `${slug}: counselReviewer must be null until counsel signs off`,
+      );
+    }
   });
 });

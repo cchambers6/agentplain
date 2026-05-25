@@ -17,6 +17,7 @@ import { inngest } from "@/lib/inngest/client";
 import { trialExpirationWarningsFn } from "@/lib/inngest/functions/trial-expiration-warnings";
 import { integrationRenewalSweepFn } from "@/lib/inngest/functions/integration-renewal-sweep";
 import { processWebhookEventFn } from "@/lib/inngest/functions/process-webhook-event";
+import { customerFilesIngestionSweepFn } from "@/lib/inngest/functions/customer-files-ingestion-sweep";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,5 +28,6 @@ export const { GET, POST, PUT } = serve({
     trialExpirationWarningsFn,
     integrationRenewalSweepFn,
     processWebhookEventFn,
+    customerFilesIngestionSweepFn,
   ],
 });

@@ -58,6 +58,14 @@ export interface IngestWorkspaceFilesResult {
   filesIngested: number;
   chunksWritten: number;
   reports: IngestFileReport[];
+  /**
+   * True iff the source returned NOT_CONFIGURED at listFiles — the
+   * adapter is not wired for this workspace (e.g. Drive OAuth absent).
+   * Distinguishes "skip cleanly" from "ok, folder is empty" so callers
+   * (the ingestion cron) can count unconfigured workspaces separately
+   * from ingested-but-empty ones. Absent on the success path.
+   */
+  notConfigured?: boolean;
 }
 
 export async function ingestWorkspaceFiles(
@@ -82,6 +90,7 @@ export async function ingestWorkspaceFiles(
         filesIngested: 0,
         chunksWritten: 0,
         reports: [],
+        notConfigured: true,
       };
     }
     throw new Error(

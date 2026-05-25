@@ -12,6 +12,7 @@ interface WorkspaceLayoutProps {
 
 const NAV: Array<{ href: string; label: string }> = [
   { href: "", label: "Overview" },
+  { href: "/fleet", label: "Fleet" },
   { href: "/activity", label: "Activity" },
   { href: "/approvals", label: "Approvals" },
   { href: "/agents", label: "Agents" },

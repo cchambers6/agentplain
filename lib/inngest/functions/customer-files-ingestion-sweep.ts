@@ -53,6 +53,7 @@ import {
   reportInngestItemFailure,
   withInngestErrorReporting,
 } from '../with-error-reporting';
+import { getLogger, withCronMonitor } from '@/lib/observability';
 
 export const CUSTOMER_FILES_INGESTION_SWEEP_FUNCTION_ID =
   'agentplain-customer-files-ingestion-sweep';
@@ -213,9 +214,36 @@ export const customerFilesIngestionSweepFn = inngest.createFunction(
   },
   async () =>
     runWithDisableGate(CUSTOMER_FILES_INGESTION_SWEEP_FUNCTION_ID, () =>
-      withInngestErrorReporting(
-        { functionId: CUSTOMER_FILES_INGESTION_SWEEP_FUNCTION_ID },
-        () => runCustomerFilesIngestionSweep(),
+      withCronMonitor(
+        {
+          slug: CUSTOMER_FILES_INGESTION_SWEEP_FUNCTION_ID,
+          schedule: CUSTOMER_FILES_INGESTION_SWEEP_CRON,
+          // 6-hour cadence — give the monitor a 30min margin so a slightly
+          // delayed Vercel cron fire doesn't false-alarm.
+          checkinMargin: 30,
+          maxRuntime: 30,
+        },
+        () =>
+          withInngestErrorReporting(
+            { functionId: CUSTOMER_FILES_INGESTION_SWEEP_FUNCTION_ID },
+            async () => {
+              const logger = getLogger().child({
+                boundary: 'inngest',
+                function_id: CUSTOMER_FILES_INGESTION_SWEEP_FUNCTION_ID,
+              });
+              logger.info('files ingestion sweep started');
+              const out = await runCustomerFilesIngestionSweep();
+              logger.info('files ingestion sweep finished', {
+                workspaces: out.workspacesConsidered,
+                ingested: out.workspacesIngested,
+                skipped_unconfigured: out.workspacesSkippedUnconfigured,
+                files: out.filesIngested,
+                chunks: out.chunksWritten,
+                failed: out.failures.length,
+              });
+              return out;
+            },
+          ),
       ),
     ),
 );

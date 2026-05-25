@@ -196,3 +196,55 @@ satisfy the interface — adding a third later is mechanical.
   tests + the production-shape gate+wrapper composition test.
 - `.env.example` — `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` documented.
 - `docs/incident-log.md` — closed the monitoring-gap follow-up.
+
+## Wave 2 — health endpoint, structured logging, cron monitors
+
+Added 2026-05-24 (feat/observability-health-and-logging-2026-05-24):
+
+### `/api/health` — external uptime target
+
+`app/api/health/route.ts` — JSON liveness probe with `db` + `inngest`
+dependency checks. Returns 200 `{status: "ok"}` when both deps reach,
+503 `{status: "degraded", checks: …}` otherwise. No auth, no cookies,
+`Cache-Control: no-store`. Point an external uptime monitor
+(Better Stack / UptimeRobot / Pingdom — pick one when you sign up) at
+`https://agentplain.com/api/health` on a 1–5 min cadence. The 503 with a
+reason body lets both the monitor and the operator triage in one read.
+
+### Structured logging — `lib/observability/logger.ts`
+
+JSON-emitting logger behind the same provider seam. One line per record:
+`{level,msg,time,service,env,ctx:{…}}`. Use `getLogger().child({…})` to
+bind context for a request/cron and call `.info/.warn/.error` from there.
+`error(msg, err)` flattens `error_name/error_message/error_stack` into
+the record so a log-search query finds the failure without parsing JSON.
+
+Wired into:
+- `app/api/stripe/webhook/route.ts` (signature failures + dispatch
+  failures + dedupe hits)
+- `lib/inngest/functions/process-webhook-event.ts`
+- `lib/inngest/functions/integration-renewal-sweep.ts`
+- `lib/inngest/functions/customer-files-ingestion-sweep.ts`
+- `lib/inngest/functions/trial-expiration-warnings.ts`
+
+`tests/observability-logger.test.ts` covers the structured shape,
+error-flattening, child-context merge, and JSON-parseability.
+
+### Cron monitors — `lib/observability/cron-monitor.ts`
+
+`withCronMonitor({slug, schedule})` sends Sentry check-ins (`in_progress`
+→ `ok` / `error`) around each Inngest cron body. The Sentry SDK has
+first-class monitor support (`captureCheckIn` / `withMonitor`), so the
+"who watches the watchdog" answer is: Sentry alerts on missed check-ins
+against the schedule we declare here. Provider seam is the same shape as
+the error reporter — swapping to Healthchecks.io / Better Stack
+Heartbeats is one file (`cron-monitor.ts`), not every cron body.
+
+Composition order (matters): `runWithDisableGate → withCronMonitor →
+withInngestErrorReporting`. A paused function never pings the monitor
+(otherwise the pause would mask itself). Throws are reported THEN the
+monitor flips to "error", so Sentry's Issues feed and the monitor flip
+together.
+
+`tests/observability-cron-monitor.test.ts` covers start/ok/error
+pairing, throw rethrow, and the noop fallback.

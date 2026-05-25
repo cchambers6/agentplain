@@ -61,6 +61,76 @@ export interface SkillCatalogEntry {
 
 export const SKILL_CATALOG: SkillCatalogEntry[] = [
   {
+    slug: 'chief-of-staff-scheduler',
+    name: 'Chief of staff — meetings, replies, to-dos',
+    vertical: 'all',
+    description:
+      'Per-workspace chief-of-staff agent. Walks the (calendar + inbox + to-do) ' +
+      'snapshot and PROPOSES three classes of work — meetings to book against ' +
+      'open business-hour slots that do not overlap existing busy events, reply ' +
+      'drafts for stale inbound with substantive content deferred to operator ' +
+      'merge fields, and to-do items for explicit ask cues (deduped against ' +
+      'existing open to-dos). Every proposal is PENDING and lands in the ' +
+      'approval queue via the ApprovalSink port. The skill itself executes ' +
+      'NOTHING — never books a calendar event, never sends an email, never ' +
+      'writes a Twilio/SMS/SendGrid call, never creates a row in Asana / Linear / ' +
+      'Notion. Per project_no_outbound_architecture.md the customer\'s own ' +
+      'system performs any action the operator approves.',
+    kind: 'coordinate',
+    mcpDependencies: [
+      {
+        provider: 'google-calendar',
+        status: 'stubbed-json',
+        note:
+          'Google Calendar MCP not yet wired. Skill accepts a CalendarEvent[] ' +
+          'JSON payload today (the JsonChiefOfStaffFetcher seeded shape); the ' +
+          'production adapter populates the same shape from calendar.events.list ' +
+          'once it lands.',
+      },
+      {
+        provider: 'm365-calendar',
+        status: 'stubbed-json',
+        note:
+          'Microsoft Graph calendar adapter rides the same provider-neutral ' +
+          'CalendarEvent[] shape — no skill change needed when M365 ships.',
+      },
+      {
+        provider: 'gmail',
+        status: 'built',
+        note:
+          'Inbox messages flow through the existing Gmail MessageFetcher; the ' +
+          'skill maps ParsedMessage to its internal InboxMessage shape at the ' +
+          'fetcher boundary so the chief-of-staff stays provider-neutral.',
+      },
+      {
+        provider: 'outlook',
+        status: 'built',
+        note:
+          'Outlook (M365) MessageFetcher rides the same port — no skill change ' +
+          'needed.',
+      },
+      {
+        provider: 'work-approval-queue',
+        status: 'stubbed-json',
+        note:
+          'Production binding for ApprovalSink (writes WorkApprovalQueueItem ' +
+          'rows for the operator\'s /approvals page) lands in a follow-up PR ' +
+          'that introduces the matching WorkApprovalKind enum values. Tests ' +
+          'bind RecordingApprovalSink so the no-outbound contract is asserted ' +
+          'today: every proposal is recorded with status=PENDING, NONE auto- ' +
+          'execute.',
+      },
+    ],
+    groundedIn: [
+      'project_no_outbound_architecture.md',
+      'feedback_no_silent_vendor_lock.md',
+      'feedback_runner_portability.md (two-implementation rule on every port)',
+      'feedback_cold_start_safe_agents.md (no in-memory state across runs)',
+      'feedback_integration_acceptance_is_functional.md (read + categorize + ' +
+        'coordinate + schedule + draft, end-to-end against demo seed)',
+    ],
+  },
+  {
     slug: 'office-admin',
     name: 'Office admin — inbox triage',
     vertical: 'all',

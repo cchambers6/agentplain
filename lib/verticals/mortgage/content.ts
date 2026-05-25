@@ -87,6 +87,14 @@ export const mortgage: VerticalContent = {
       rootingNote:
         "rooting now — comes online once your LOS pipeline export is connected.",
     },
+    {
+      // Horizontal chief-of-staff capability — proposals only, no execution.
+      slug: "mortgage-chief-of-staff",
+      name: "Chief of Staff",
+      job: "Proposes meetings, reply drafts, and to-dos against the LO's calendar + inbox + board.",
+      runtime: "live",
+      boundSkill: "chief-of-staff-scheduler",
+    },
   ],
 
   hero: {

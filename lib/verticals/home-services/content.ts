@@ -103,6 +103,14 @@ export const homeServices: VerticalContent = {
       rootingNote:
         "rooting now — comes online once your FSM completed-job feed is connected.",
     },
+    {
+      // Horizontal chief-of-staff capability — proposals only, no execution.
+      slug: "home-services-chief-of-staff",
+      name: "Chief of Staff",
+      job: "Proposes meetings, reply drafts, and to-dos against the owner's calendar + inbox + board.",
+      runtime: "live",
+      boundSkill: "chief-of-staff-scheduler",
+    },
   ],
 
   hero: {

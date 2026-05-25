@@ -82,6 +82,14 @@ export const propertyManagement: VerticalContent = {
       rootingNote:
         "rooting now — comes online once your trust-account ledger is connected.",
     },
+    {
+      // Horizontal chief-of-staff capability — proposals only, no execution.
+      slug: "pm-chief-of-staff",
+      name: "Chief of Staff",
+      job: "Proposes meetings, reply drafts, and to-dos against the PM's calendar + inbox + board.",
+      runtime: "live",
+      boundSkill: "chief-of-staff-scheduler",
+    },
   ],
 
   hero: {

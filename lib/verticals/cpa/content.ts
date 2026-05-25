@@ -89,6 +89,14 @@ export const cpa: VerticalContent = {
       runtime: "live",
       owns: ["buyer-inquiry"],
     },
+    {
+      // Horizontal chief-of-staff capability — proposals only, no execution.
+      slug: "cpa-chief-of-staff",
+      name: "Chief of Staff",
+      job: "Proposes meetings, reply drafts, and to-dos against the partner's calendar + inbox + board.",
+      runtime: "live",
+      boundSkill: "chief-of-staff-scheduler",
+    },
   ],
 
   hero: {

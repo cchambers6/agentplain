@@ -93,6 +93,17 @@ export const recruiting: VerticalContent = {
       rootingNote:
         "rooting now — comes online once your ATS is connected with read + write scope.",
     },
+    {
+      // Horizontal chief-of-staff capability — proposals only, no execution.
+      // Complements recruiting-scheduler (which owns multi-party interview
+      // search) by also surfacing reply drafts + to-dos against the
+      // recruiter's general calendar + inbox.
+      slug: "recruiting-chief-of-staff",
+      name: "Chief of Staff",
+      job: "Proposes meetings, reply drafts, and to-dos against the recruiter's calendar + inbox + board.",
+      runtime: "live",
+      boundSkill: "chief-of-staff-scheduler",
+    },
   ],
 
   hero: {

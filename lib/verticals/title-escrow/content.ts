@@ -88,6 +88,14 @@ export const titleEscrow: VerticalContent = {
       rootingNote:
         "rooting now — CFPB-aware checklist corpus is loaded; draft scoring activates after counsel review.",
     },
+    {
+      // Horizontal chief-of-staff capability — proposals only, no execution.
+      slug: "title-chief-of-staff",
+      name: "Chief of Staff",
+      job: "Proposes meetings, reply drafts, and to-dos against the closer's calendar + inbox + board.",
+      runtime: "live",
+      boundSkill: "chief-of-staff-scheduler",
+    },
   ],
 
   hero: {

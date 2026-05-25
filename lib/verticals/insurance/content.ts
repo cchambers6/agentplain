@@ -82,6 +82,14 @@ export const insurance: VerticalContent = {
       rootingNote:
         "rooting now — comes online once your AMS account book and carrier bulletin feeds are connected.",
     },
+    {
+      // Horizontal chief-of-staff capability — proposals only, no execution.
+      slug: "insurance-chief-of-staff",
+      name: "Chief of Staff",
+      job: "Proposes meetings, reply drafts, and to-dos against the producer's calendar + inbox + board.",
+      runtime: "live",
+      boundSkill: "chief-of-staff-scheduler",
+    },
   ],
 
   hero: {

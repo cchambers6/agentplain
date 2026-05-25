@@ -11,6 +11,7 @@ import { requireUser } from "@/lib/auth/server";
 // strip (operators only) in app/(product)/app/workspace/[id]/layout.tsx.
 const OPERATOR_NAV: Array<{ href: string; label: string }> = [
   { href: "/operator/leadership-board", label: "Leadership" },
+  { href: "/operator/fleet", label: "Fleet" },
   { href: "/operator/workspaces", label: "Workspaces" },
   { href: "/operator/inquiries", label: "Inquiries" },
   { href: "/operator/support", label: "Support" },

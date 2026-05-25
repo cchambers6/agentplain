@@ -50,3 +50,23 @@ export type {
 export { NoopErrorReporter } from "./noop-provider";
 export { SentryErrorReporter } from "./sentry-provider";
 export { TestErrorReporter } from "./test-provider";
+
+// Structured logging — JSON-emitting, vendor-portable. Domain code imports
+// `getLogger()` and never console.* directly on the cron + webhook paths.
+export {
+  getLogger,
+  __setLoggerWriterForTests,
+  type Logger,
+  type LogContext,
+  type LogLevel,
+} from "./logger";
+
+// Cron monitor — Sentry check-ins behind the same provider seam so the
+// watchdog has an external pulse.
+export {
+  withCronMonitor,
+  getCronMonitorRunner,
+  __setCronMonitorRunnerForTests,
+  type CronMonitorOptions,
+  type CronMonitorRunner,
+} from "./cron-monitor";

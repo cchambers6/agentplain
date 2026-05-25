@@ -40,6 +40,7 @@ import {
   reportInngestItemFailure,
   withInngestErrorReporting,
 } from '../with-error-reporting';
+import { getLogger, withCronMonitor } from '@/lib/observability';
 
 export const INTEGRATION_RENEWAL_SWEEP_FUNCTION_ID = 'agentplain-integration-renewal-sweep';
 /** Every 2 hours on the hour (UTC). 12 fires per 24h gives ample retry headroom. */
@@ -307,9 +308,30 @@ export const integrationRenewalSweepFn = inngest.createFunction(
   },
   async () =>
     runWithDisableGate(INTEGRATION_RENEWAL_SWEEP_FUNCTION_ID, () =>
-      withInngestErrorReporting(
-        { functionId: INTEGRATION_RENEWAL_SWEEP_FUNCTION_ID },
-        () => runIntegrationRenewalSweep(),
+      withCronMonitor(
+        {
+          slug: INTEGRATION_RENEWAL_SWEEP_FUNCTION_ID,
+          schedule: INTEGRATION_RENEWAL_SWEEP_CRON,
+        },
+        () =>
+          withInngestErrorReporting(
+            { functionId: INTEGRATION_RENEWAL_SWEEP_FUNCTION_ID },
+            async () => {
+              const logger = getLogger().child({
+                boundary: 'inngest',
+                function_id: INTEGRATION_RENEWAL_SWEEP_FUNCTION_ID,
+              });
+              logger.info('renewal sweep started');
+              const out = await runIntegrationRenewalSweep();
+              logger.info('renewal sweep finished', {
+                considered: out.considered,
+                refreshed: out.refreshed,
+                renewed: out.renewed,
+                failed: out.failures.length,
+              });
+              return out;
+            },
+          ),
       ),
     ),
 );

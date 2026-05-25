@@ -34,6 +34,7 @@ import {
   reportInngestItemFailure,
   withInngestErrorReporting,
 } from '../with-error-reporting';
+import { getLogger, withCronMonitor } from '@/lib/observability';
 import { GmailMessageAdapter } from '@/lib/skills/gmail-fetcher';
 import { OutlookMessageAdapter } from '@/lib/skills/outlook-fetcher';
 import { runSkillChain } from '@/lib/skills/runner';
@@ -235,9 +236,29 @@ export const processWebhookEventFn = inngest.createFunction(
   },
   async () =>
     runWithDisableGate(PROCESS_WEBHOOK_EVENT_FUNCTION_ID, () =>
-      withInngestErrorReporting(
-        { functionId: PROCESS_WEBHOOK_EVENT_FUNCTION_ID },
-        () => processUnprocessedWebhookEvents(),
+      withCronMonitor(
+        {
+          slug: PROCESS_WEBHOOK_EVENT_FUNCTION_ID,
+          schedule: PROCESS_WEBHOOK_EVENT_CRON,
+        },
+        () =>
+          withInngestErrorReporting(
+            { functionId: PROCESS_WEBHOOK_EVENT_FUNCTION_ID },
+            async () => {
+              const logger = getLogger().child({
+                boundary: 'inngest',
+                function_id: PROCESS_WEBHOOK_EVENT_FUNCTION_ID,
+              });
+              logger.info('sweep started');
+              const out = await processUnprocessedWebhookEvents();
+              logger.info('sweep finished', {
+                considered: out.considered,
+                succeeded: out.succeeded,
+                failed: out.failures.length,
+              });
+              return out;
+            },
+          ),
       ),
     ),
 );

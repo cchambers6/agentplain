@@ -29,6 +29,7 @@ import {
   reportInngestItemFailure,
   withInngestErrorReporting,
 } from "../with-error-reporting";
+import { getLogger, withCronMonitor } from "@/lib/observability";
 
 export const TRIAL_WARNINGS_FUNCTION_ID = "agentplain-trial-warnings";
 export const TRIAL_WARNINGS_CRON = "0 10 * * *";
@@ -177,33 +178,51 @@ export const trialExpirationWarningsFn = inngest.createFunction(
   },
   async () =>
     runWithDisableGate(TRIAL_WARNINGS_FUNCTION_ID, () =>
-      withInngestErrorReporting(
-        { functionId: TRIAL_WARNINGS_FUNCTION_ID },
-        async () => {
-          const candidates = await findTrialWarningCandidates();
-          const origin = process.env.APP_PUBLIC_ORIGIN ?? "http://localhost:3000";
-          let sent = 0;
-          for (const c of candidates) {
-            try {
-              await emitTrialWarning(c, origin);
-              sent++;
-            } catch (err) {
-              reportInngestItemFailure(err, {
-                functionId: TRIAL_WARNINGS_FUNCTION_ID,
-                extraTags: {
-                  workspace_id: c.workspaceId,
-                  subscription_id: c.subscriptionId,
-                  threshold_days: String(c.threshold),
-                },
+      withCronMonitor(
+        { slug: TRIAL_WARNINGS_FUNCTION_ID, schedule: TRIAL_WARNINGS_CRON },
+        () =>
+          withInngestErrorReporting(
+            { functionId: TRIAL_WARNINGS_FUNCTION_ID },
+            async () => {
+              const logger = getLogger().child({
+                boundary: "inngest",
+                function_id: TRIAL_WARNINGS_FUNCTION_ID,
               });
-              console.error(
-                `trial warning failed for ${c.brokerOwnerEmail}`,
-                err,
-              );
-            }
-          }
-          return { candidates: candidates.length, sent };
-        },
+              const candidates = await findTrialWarningCandidates();
+              const origin =
+                process.env.APP_PUBLIC_ORIGIN ?? "http://localhost:3000";
+              logger.info("trial warnings sweep started", {
+                candidates: candidates.length,
+              });
+              let sent = 0;
+              for (const c of candidates) {
+                try {
+                  await emitTrialWarning(c, origin);
+                  sent++;
+                } catch (err) {
+                  reportInngestItemFailure(err, {
+                    functionId: TRIAL_WARNINGS_FUNCTION_ID,
+                    extraTags: {
+                      workspace_id: c.workspaceId,
+                      subscription_id: c.subscriptionId,
+                      threshold_days: String(c.threshold),
+                    },
+                  });
+                  logger.error("trial warning send failed", err, {
+                    broker_owner_email: c.brokerOwnerEmail,
+                    workspace_id: c.workspaceId,
+                    subscription_id: c.subscriptionId,
+                    threshold_days: c.threshold,
+                  });
+                }
+              }
+              logger.info("trial warnings sweep finished", {
+                candidates: candidates.length,
+                sent,
+              });
+              return { candidates: candidates.length, sent };
+            },
+          ),
       ),
     ),
 );

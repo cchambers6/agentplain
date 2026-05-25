@@ -16,12 +16,14 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getBillingProvider } from "@/lib/billing";
 import { dispatchEvent } from "@/lib/billing/webhook-dispatch";
 import { withSystemContext } from "@/lib/db";
+import { getLogger, reportError } from "@/lib/observability";
 
 export const runtime = "nodejs"; // Stripe SDK requires Node runtime
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const billing = getBillingProvider();
+  const logger = getLogger().child({ boundary: "webhook", provider: "stripe" });
   const rawPayload = await req.text();
   const signature = req.headers.get("stripe-signature");
 
@@ -32,12 +34,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       signatureHeader: signature,
     });
   } catch (err) {
-    console.warn("stripe webhook verification failed", err);
+    // Signature mismatch is the most common 400 reason. It's also a forged-
+    // probe signal, so log at warn (not error) and don't capture to Sentry
+    // — a flapping integration could flood the issue tracker otherwise.
+    logger.warn("stripe webhook verification failed", {
+      error_message: err instanceof Error ? err.message : String(err),
+      has_signature: signature !== null,
+    });
     return NextResponse.json(
       { error: "Invalid signature" },
       { status: 400 },
     );
   }
+
+  const eventLogger = logger.child({
+    stripe_event_id: event.eventId,
+    stripe_event_type: event.eventType,
+  });
 
   // Idempotency short-circuit. The actual record-and-dispatch happens
   // inside the transaction below; this check just avoids re-running
@@ -49,16 +62,29 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }),
   );
   if (seen) {
+    eventLogger.info("stripe webhook duplicate — short-circuit");
     return NextResponse.json({ received: true, duplicate: true });
   }
 
   try {
     await withSystemContext((tx) => dispatchEvent(event, tx));
   } catch (err) {
-    console.error("stripe webhook dispatch failed", err);
+    eventLogger.error("stripe webhook dispatch failed", err);
+    // Report through the adapter so it lands in Sentry with the same tag
+    // shape as the cron-side reports (boundary=webhook, provider=stripe).
+    reportError(err, {
+      level: "error",
+      tags: {
+        boundary: "webhook",
+        provider: "stripe",
+        stripe_event_type: event.eventType,
+      },
+      extra: { stripeEventId: event.eventId },
+    });
     // Return 500 so Stripe retries.
     return NextResponse.json({ error: "Dispatch failed" }, { status: 500 });
   }
 
+  eventLogger.info("stripe webhook dispatched");
   return NextResponse.json({ received: true });
 }

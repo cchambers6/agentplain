@@ -1,0 +1,100 @@
+# `schema-drift-baseline.sql` — what it is, why it exists
+
+`prisma/schema-drift-baseline.sql` is the **expected, intentional**
+output of:
+
+```sh
+prisma migrate diff \
+  --from-migrations prisma/migrations \
+  --to-schema-datamodel prisma/schema.prisma \
+  --shadow-database-url $SHADOW_DATABASE_URL \
+  --script
+```
+
+`scripts/check-schema-drift.ts` runs that exact command in CI, normalizes
+whitespace + line endings, and compares against this file. The check is
+**green** when the current diff equals the baseline (no NEW drift) and
+**red** when the current diff diverges from the baseline (genuinely new
+schema changes that aren't migrated).
+
+The baseline is NOT an empty file — it captures pre-existing,
+load-bearing drift that we cannot fix in a single migration without
+either (a) regressing a load-bearing pgvector index or (b) churning
+every table for cosmetic Prisma-version differences. Categorized:
+
+## What's in the baseline
+
+### 1. `DROP INDEX "Embedding_vector_cosine_idx"` — DO NOT APPLY
+
+This is the load-bearing pgvector ANN index used by
+`lib/knowledge/pgvector-store.ts` for every customer-facing
+"non-generic answer" path (knowledge substrate retrieval, customer-file
+search). The index uses `vector_cosine_ops`, which is a pgvector
+operator class. **Prisma's schema language has no representation for
+pgvector index types**, so the schema can't declare it; the migration
+created it manually. The diff says "schema doesn't declare it → drop
+it"; reality is "schema CAN'T declare it; keep it."
+
+Any future reconciliation migration MUST preserve this index by hand-
+editing the generated migration to omit the DROP INDEX line.
+
+### 2. `ALTER COLUMN "id" DROP DEFAULT` on 20 tables
+
+Migrations declared a Postgres-level `gen_random_uuid()` DEFAULT on every
+UUID id column. The current schema declares `@default(uuid())` which
+Prisma generates *client-side* (no Postgres-level DEFAULT). Tables
+affected: `AuditLog`, `BillingEvent`, `CapabilityProposal`,
+`ComplianceFlag`, `Embedding`, `HandoffLogEntry`,
+`IntegrationCredential`, `KnowledgeDocument`, `MagicLinkToken`,
+`Membership`, `OnboardingState`, `PreferenceSignal`, `Subscription`,
+`WebhookEvent`, `WebhookSubscription`, `WorkApprovalQueueItem`,
+`WorkThresholdConfig`, `Workspace`, `WorkspaceInvoice`,
+`WorkspacePreference`.
+
+This is **cosmetic** — every insert goes through the Prisma client which
+supplies the UUID, so the database never relies on the missing default.
+Removing the defaults would touch every table; not worth a churn
+migration for zero runtime difference.
+
+### 3. All 22 FKs dropped + re-added (identical semantics)
+
+Each `ALTER TABLE … DROP CONSTRAINT … _fkey` is paired with an
+`ALTER TABLE … ADD CONSTRAINT … _fkey FOREIGN KEY … REFERENCES …`. Same
+columns, same `ON DELETE` / `ON UPDATE` semantics — Prisma's
+`migrate diff` re-formats them due to a version difference in how FK
+constraints serialize. Effectively a no-op rewrite.
+
+### 4. One index rename
+
+`HandoffLogEntry_subject_idx` → the auto-generated multi-column name
+`HandoffLogEntry_workspaceId_relatedSubjectTable_relatedSubj_idx`. The
+schema declares the multi-column index; Prisma auto-names it from the
+columns; the original migration used a shorter manual name. Cosmetic.
+
+## The deeper reconciliation — tracked follow-up
+
+A proper reconciliation migration that:
+
+  - **Preserves** `Embedding_vector_cosine_idx` (hand-edit out the
+    DROP INDEX line — pgvector index must survive)
+  - Accepts the DROP DEFAULT churn on every id column
+  - Accepts the FK reformatting
+  - Accepts the index rename
+
+…should be sequenced AFTER PR #68's `WebhookEvent` idempotency+retry
+migration merges, so the new `dedupeKey` / `attemptCount` /
+`nextAttemptAt` / `deadlettered` columns don't collide. Once that
+reconciliation lands, this baseline file shrinks to (or near) zero and
+the gate becomes a stricter empty-diff check.
+
+## When to update this baseline
+
+If you intentionally introduce a new piece of drift (e.g. an index type
+Prisma can't represent), append the expected SQL to this file with a
+comment explaining why it's intentional. Bulk-regeneration via
+`npm run check:schema-drift -- --update-baseline` is supported and is
+the right path after the reconciliation migration above.
+
+If the CI gate goes red and the new lines look like real, accidental
+schema drift (a column you added without `prisma migrate dev`), DO NOT
+update the baseline — generate a real migration instead.

@@ -8,9 +8,22 @@
 #
 # Implementation lives in scripts/check-schema-drift.ts (runnable
 # locally via `npm run check:schema-drift` once you set
-# SHADOW_DATABASE_URL to any throwaway Postgres). The shadow DB is the
-# Postgres service container declared below — Prisma clones it for the
-# ephemeral `prisma migrate diff --from-migrations` apply.
+# SHADOW_DATABASE_URL to any throwaway Postgres with pgvector). The
+# shadow DB is the pgvector/pgvector:pg16 service container declared
+# below — Prisma clones it for the ephemeral
+# `prisma migrate diff --from-migrations` apply.
+#
+# Baseline comparison: the gate compares the current `prisma migrate
+# diff` output against a checked-in baseline at
+# `prisma/schema-drift-baseline.sql`. The baseline captures pre-existing,
+# load-bearing drift that we cannot fix without regressing the pgvector
+# ANN index (Prisma's schema language can't represent it) or churning
+# every table for cosmetic Prisma-version differences. See
+# `prisma/schema-drift-baseline.README.md` for the full catalogue and
+# the planned reconciliation-migration follow-up (sequenced AFTER
+# PR #68's WebhookEvent migration merges). The gate fails when the
+# current diff DIVERGES from the baseline — i.e. ANY new schema change
+# that isn't migrated still trips the check.
 
 name: schema-drift
 

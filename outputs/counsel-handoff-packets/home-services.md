@@ -10,7 +10,7 @@
 - The **Counsel references** section is regulatory text that sentinel does not literal-match against — it requires generative judgment. We're surfacing it so you see the substantive law backing the trigger list.
 - Sentinel will not flip live for this vertical until you sign off on the corpus.
 
-_Last reviewed: 2026-05-12_
+_Last reviewed: 2026-05-25_
 
 ## Open questions for counsel
 
@@ -18,14 +18,51 @@ _Last reviewed: 2026-05-12_
 - FTC Cooling-Off Rule thresholds ($25 at-residence / $130 elsewhere) reflect the 2015 amendment — counsel: confirm no further amendment has issued.
 - Magnuson-Moss disclosure requirements (15 USC § 2302) summarized; full FTC implementing rules at 16 CFR Part 700–703 not pulled in this draft pass.
 - Mechanic's lien rules vary substantially across states; GA citation is initial scope.
+- CANDIDATE TRIGGERS (2026-05-25 wave): `ftc-deceptive-advertising-candidates-literal.ts` ships 22 candidate advertising phrases drafted from FTC Act § 5 (15 USC § 45), 16 CFR § 251.1 (Use of the Word 'Free'), and Magnuson-Moss § 2303 (warranty designation) — e.g. 'guaranteed lowest price', 'free estimate', 'lifetime warranty', 'factory authorized', 'epa approved'. Sentinel does NOT fire on these — counsel to red-line phrase-by-phrase before flipping `unverified: false`.
+- CANDIDATE TRIGGERS — counsel decision: state contractor-board advertising rules (e.g. requirement to include the license number in print + online advertising under O.C.G.A. § 43-41 implementing regulations) were intentionally NOT literal-matched in this draft because license-number formats are workspace-scoped and would false-positive without context. Counsel: should a follow-on workspace-scoped rule be added, and if so, what's the canonical Georgia rule cite for license-number-in-advertising? Same question applies to any other state the brokerage / trades shop operates in.
+- CANDIDATE TRIGGERS — counsel decision: 'free estimate' / 'free inspection' is industry-standard language for trade shops. 16 CFR § 251.1 only treats it as deceptive when the offer is conditioned on a purchase the consumer is not adequately told about. Counsel: should sentinel literal-match the bare phrase (and rely on the customer to ignore the flag when the estimate is genuinely free), or should the rule be tightened with proximity-required disclaimer language (e.g. only flag 'free estimate' when adjacent to 'with purchase')? The proximity path requires scanner work beyond literal-match.
+- CANDIDATE TRIGGERS — counsel decision: 'lifetime warranty' / 'lifetime guarantee' phrases require a Magnuson-Moss 'full (statement of duration) warranty' or 'limited warranty' designation under 15 USC § 2303. Counsel: confirm sentinel should flag these as literal triggers (counting on the customer to add the designation), or whether the rule should be scoped to flag only when the designation is absent within N characters — again, beyond pure literal-match.
 
 ## Live literal triggers (0)
 
 _None. Sentinel is not firing on any literal phrase in this vertical's corpus today._
 
-## Candidate literal triggers — for counsel red-line (0)
+## Candidate literal triggers — for counsel red-line (22)
 
-_No candidate phrases drafted for this vertical. If you believe one is appropriate, please flag in counsel review._
+### FTC § 5 + 16 CFR § 251.1 + Magnuson-Moss § 2303 — candidate home-services advertising triggers (DRAFT)
+
+- **Rule id:** `home-services-deceptive-advertising-candidates`
+- **Citation:** FTC Act § 5(a)(1) (15 USC § 45(a)(1)); 16 CFR § 251.1 (Guide Concerning Use of the Word 'Free' and Similar Representations); 15 USC § 2303(a) (Magnuson-Moss designation of written warranties)
+- **URL:** https://www.ecfr.gov/current/title-16/chapter-I/subchapter-B/part-251
+- **Accessed:** 2026-05-25
+
+**Drafter notes:** Drafted 2026-05-25. Phrases fall into four buckets: (1) absolute price claims ('guaranteed lowest price', 'we beat any competitor') — FTC § 5 treats unqualified superlatives as presumptively deceptive without substantiation; (2) 'free' offers ('free estimate', 'free inspection') — 16 CFR § 251.1 requires conspicuous disclosure of any conditions, and many state AGs treat unconditioned 'free' claims as per-se deceptive when the offer is contingent on purchase; (3) warranty puffery ('lifetime warranty', 'no questions asked refund') — Magnuson-Moss § 2303 requires 'full' or 'limited' designation, so unqualified 'lifetime warranty' advertising is the most common federal warranty-advertising trap; (4) endorsement / authority claims ('factory authorized', 'epa approved', 'government endorsed') — FTC § 5 + 16 CFR Part 255 (Endorsement Guides) treat these as deceptive unless substantiated. Borderline omissions: 'family-owned' / 'locally owned' (factually verifiable, not per-se deceptive); 'A+ BBB rating' (true claims OK but format conventions matter — recommend counsel-reference); 'voted #1' (depends entirely on the underlying poll — counsel-reference); 'no money down' / 'zero down financing' (TILA Reg Z advertising rules govern these — out of scope for home-services corpus, would land in a separate consumer-credit rule). State contractor-board advertising rules (e.g. GA Rule chapter 553 requiring license number in advertising) intentionally not literal-matched here — license number formats vary per state and require workspace context the scanner does not have at corpus-load time; counsel: open question on whether a workspace-scoped rule belongs in a follow-on PR.
+
+| # | Candidate phrase | Category |
+| --- | --- | --- |
+| 1 | `guaranteed lowest price` | advertising |
+| 2 | `lowest price guaranteed` | advertising |
+| 3 | `lowest price in town` | advertising |
+| 4 | `we will beat any price` | advertising |
+| 5 | `we beat any competitor` | advertising |
+| 6 | `100% satisfaction guaranteed` | advertising |
+| 7 | `satisfaction guaranteed or your money back` | advertising |
+| 8 | `lifetime warranty` | advertising |
+| 9 | `lifetime guarantee` | advertising |
+| 10 | `no questions asked refund` | advertising |
+| 11 | `free estimate` | advertising |
+| 12 | `free inspection` | advertising |
+| 13 | `free quote` | advertising |
+| 14 | `factory authorized` | advertising |
+| 15 | `factory certified` | advertising |
+| 16 | `manufacturer endorsed` | advertising |
+| 17 | `manufacturer authorized` | advertising |
+| 18 | `licensed and bonded in all 50 states` | advertising |
+| 19 | `epa approved` | advertising |
+| 20 | `epa endorsed` | advertising |
+| 21 | `government approved` | advertising |
+| 22 | `government endorsed` | advertising |
+
 ## Counsel references (4)
 
 ### Georgia residential / general contractor licensure

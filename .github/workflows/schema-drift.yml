@@ -1,0 +1,62 @@
+# Schema-drift check.
+#
+# Fails the PR when `prisma/schema.prisma` declares fields/types that no
+# migration in `prisma/migrations/**` actually applies. Catches the common
+# "edited the schema, forgot to `prisma migrate dev`" mistake before it
+# reaches a production `prisma migrate deploy` and silently leaves the
+# DB out of sync with the model the app expects.
+#
+# Implementation lives in scripts/check-schema-drift.ts (runnable
+# locally via `npm run check:schema-drift` once you set
+# SHADOW_DATABASE_URL to any throwaway Postgres). The shadow DB is the
+# Postgres service container declared below — Prisma clones it for the
+# ephemeral `prisma migrate diff --from-migrations` apply.
+
+name: schema-drift
+
+on:
+  pull_request:
+    paths:
+      - "prisma/schema.prisma"
+      - "prisma/migrations/**"
+      - "scripts/check-schema-drift.ts"
+      - ".github/workflows/schema-drift.yml"
+  push:
+    branches: [main]
+    paths:
+      - "prisma/schema.prisma"
+      - "prisma/migrations/**"
+
+jobs:
+  check-schema-drift:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: shadow
+          POSTGRES_PASSWORD: shadow
+          POSTGRES_DB: shadow
+        ports:
+          - 5432:5432
+        # Wait for Postgres to be ready before the check fires.
+        options: >-
+          --health-cmd "pg_isready -U shadow"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - name: Install dependencies
+        # `--ignore-scripts` skips the postinstall `prisma generate` since
+        # we don't need the generated client to run `prisma migrate diff`.
+        # That keeps the job fast and avoids needing a DATABASE_URL here.
+        run: npm ci --ignore-scripts
+      - name: Check schema vs migrations
+        env:
+          SHADOW_DATABASE_URL: postgres://shadow:shadow@localhost:5432/shadow
+        run: npm run check:schema-drift

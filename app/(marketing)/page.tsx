@@ -177,35 +177,114 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* Q3 — What is the app + Q5 How easy is it to use? */}
+      {/* Q3 — What the crew actually does.
+          v4 (`outputs/agentplain-how-it-works-v4.md`, 2026-05-24) reframes
+          how-it-works around the RUNTIME loop the runner actually executes
+          on every fire — read → categorize → coordinate → schedule → draft.
+          The earlier install-flow framing was the onboarding journey, not
+          the working loop; it lives in the FAQ now. The supporting panels
+          surface three claims v4 promotes as truthful today:
+            - the preference-learning loop (onboarding tunes + every edit
+              becomes the next prompt's teacher) — captured in
+              `lib/preferences/` and consumed by the runner's prompt
+              composer, not a stub.
+            - file ingestion runs against on-disk fixtures today; live
+              Drive lands the same way once OAuth connects (per the
+              `DriveFileSource` adapter — `lib/customer-files/drive-source.ts`).
+            - the no-outbound discipline (every draft is a PENDING
+              ApprovalRow; customer systems execute) — see
+              `project_no_outbound_architecture.md`. */}
       <Section
         id="how"
         tone="deep"
         eyebrow="How it works"
-        title="Four steps. Your service partner runs three of them."
-        intro="Sign up and you get a service partner, not a tool to figure out. We do the install, we run the fleet, we customize it as your workflow changes. Your job: pick your vertical, give us OAuth, and decide on the drafts. Our job: everything else."
+        title="Read. Categorize. Coordinate. Schedule. Draft."
+        intro="Five steps, every fire. The crew runs the same loop on every inbound thing — an email, a Pub/Sub push, a webhook from your CRM. It runs in the background, all day, on its own. You touch it when you choose to."
       >
-        <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-5">
           <Step
             number="01"
-            title="Pick your vertical."
-            body="Each of the ten verticals ships with its own JTBD table, integration list, and compliance corpus. No prompt engineering, no per-customer custom build — your service partner uses the vertical pack as the starting point."
+            title="Read."
+            body="Pull the message, parse the thread, find the newest reply. The crew never starts from a blank prompt — it starts from what just landed."
           />
           <Step
             number="02"
-            title="Give us OAuth."
-            body="Read-only OAuth into the CRM, inbox, calendar, and accounting tools you already use. 60 seconds on your side — your service partner takes it from there."
+            title="Categorize."
+            body="Decide what kind of thing it is — a real lead, a scheduling ask, a vendor pitch, noise, an admin note, something you'd want a draft of. The categorization is workspace-tuned, not a generic chatbot guess."
           />
           <Step
             number="03"
-            title="We install + customize the fleet."
-            body="Your service partner installs the fleet in your workspace, tunes the corpus to your firm's voice, sets the work thresholds, and watches the first week of drafts. You don't run a setup wizard; we run the install."
+            title="Coordinate."
+            body="Walk back the thread, summarize what's already been said, pick up the referenced documents. The draft is grounded in the workspace's actual files, not the model's training prior."
           />
           <Step
             number="04"
-            title="The fleet drafts; you decide."
-            body="Every customer-facing output queues for your review. Approve, edit, or reject. Your existing systems send. Your service partner stays on as ongoing config — corpus refreshes, model updates, integration drift — for as long as the seat is live."
+            title="Schedule."
+            body="When something needs a time, propose slots inside your stated hours — never outside them, never without checking what's already on your calendar."
           />
+          <Step
+            number="05"
+            title="Draft."
+            body="Write the reply in your voice, grounded in your files and the edits you've made before. Hand it to the approval queue. Nothing leaves without your name on it."
+          />
+        </div>
+
+        <p className="mt-8 max-w-prose text-[13px] leading-relaxed text-mute">
+          The chain runs every five minutes against your inbox backlog and
+          reacts in real time to push events as they arrive. There is no
+          idle hour where the crew has stopped working.
+        </p>
+
+        {/* Three honest follow-on panels — what's true TODAY, with the
+            file-source line kept honest about fixtures vs. live Drive. */}
+        <div className="mt-12 grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-3">
+          <div className="bg-paper p-7 md:p-8">
+            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+              Tell us once, and it adjusts
+            </p>
+            <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
+              Onboarding captures your tone, your default hours, and the
+              categorization quirks of your business — and those choices
+              ride into every prompt every fire. Every edit you make to a
+              draft becomes a learned note: <em>&ldquo;Owner shortened the
+              draft by 22%, removed &lsquo;pleased to assist.&rsquo;&rdquo;</em>
+              The very next fire sees what you taught — no model retraining,
+              no waiting. Every signal is workspace-scoped and append-only.
+            </p>
+          </div>
+          <div className="bg-paper p-7 md:p-8">
+            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+              It sounds like you because it works from your files
+            </p>
+            <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
+              Connect a file source — a Drive folder of past offers,
+              playbooks, objection-handling notes — and the crew ingests it
+              into a workspace-scoped knowledge store. Every draft prompt
+              pulls the most-relevant snippets and writes against them.
+            </p>
+            <p className="mt-3 text-[13px] leading-relaxed text-mute">
+              Today the file source runs against on-disk fixtures for the
+              inbox-loop demo path, and Google Drive lands the same way the
+              moment the OAuth scopes are connected on your{" "}
+              <code className="text-[12px]">/integrations</code> page. The
+              pipeline doesn&apos;t change — just the source flips from
+              fixture to live.
+            </p>
+          </div>
+          <div className="bg-paper p-7 md:p-8">
+            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+              Nothing leaves without your name on it
+            </p>
+            <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
+              Every draft — a buyer reply, an admin acknowledgement, a
+              scheduling proposal — lands in your approvals queue as a
+              <code className="mx-1 text-[12px]">PENDING</code> row.
+              Nothing in the architecture sends anything outbound. The crew
+              advises and drafts; <em>you</em> execute, from inside your
+              own email, calendar, and CRM, where your name and your
+              domain are already on the message.
+            </p>
+          </div>
         </div>
       </Section>
 

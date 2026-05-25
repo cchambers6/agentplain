@@ -64,7 +64,7 @@ export const uniques = [
   },
   {
     label: "Compliance-first",
-    body: "Per-vertical compliance corpus, counsel-reviewed (TCPA, RESPA, fair-housing for realty; analog corpuses for the other nine). Not bolted on after the marketing site went up.",
+    body: "Deep in real estate today: the sentinel runs a literal-phrase scan against HUD-prohibited fair-housing copy, with TCPA + RESPA rules counsel-reviewed. The corpora for the other nine verticals are drafted with the regulatory citations in place — explicitly counsel-reference until counsel signs off. We don't assert a regulatory violation the runner can't literally pattern-match.",
   },
 ];
 
@@ -84,7 +84,7 @@ export const chatbotContrast = [
   },
   {
     free: "Gives you text to copy-paste.",
-    us: "Puts the draft in your own Gmail or CRM for one-click approve, edit, or reject.",
+    us: "Lands every draft in your approvals queue — approve, edit, or reject in one click. Nothing leaves until your name is on it.",
   },
   {
     free: "You write the prompts and wire the tools.",

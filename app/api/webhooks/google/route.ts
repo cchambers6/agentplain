@@ -28,6 +28,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { getProvider } from '@/lib/integrations';
+import { upsertWebhookEvent } from '@/lib/integrations/webhook-idempotency';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -107,18 +108,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
   const subscription = credential.webhookSubscriptions[0];
 
-  // 4. Insert WebhookEvent row.
-  const event = await prisma.webhookEvent.create({
-    data: {
-      subscriptionId: subscription.id,
-      rawPayload: raw as object,
-      processed: false,
-    },
+  // 4. Insert WebhookEvent row — idempotently. The Pub/Sub envelope's
+  //    `message.messageId` is the provider-stable id; pairing it with the
+  //    subscription id gives us the (subscriptionId, dedupeKey) unique
+  //    constraint that catches duplicate deliveries. Pub/Sub's at-least-
+  //    once contract means the same message can arrive multiple times.
+  const dedupeKey = extractPubsubMessageId(raw);
+  const upsert = await upsertWebhookEvent({
+    subscriptionId: subscription.id,
+    rawPayload: raw as object,
+    dedupeKey,
   });
 
-  // Verify-after-create: re-read to assert persistence.
+  // Verify-after-create: re-read to assert persistence. The upsert helper
+  // already does an INSERT-or-FIND, but the explicit verify mirrors the
+  // pattern every other write path follows in this repo.
   const verifyEvent = await prisma.webhookEvent.findUnique({
-    where: { id: event.id },
+    where: { id: upsert.id },
     select: { id: true },
   });
   if (!verifyEvent) {
@@ -128,13 +134,27 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // 5. ACK Pub/Sub. PR-C will add downstream consumer wakeup (Inngest event
-  //    emit) here; for now the renewal cron + ad-hoc validators read the
-  //    table directly.
+  // 5. ACK Pub/Sub. The drain consumer (cron every 5 min) picks up the
+  //    row on its next fire. Duplicates ACK identically so Pub/Sub stops
+  //    retrying.
   return NextResponse.json({
     ok: true,
-    eventId: event.id,
+    eventId: upsert.id,
     subscriptionId: subscription.id,
     cursor,
+    duplicate: !upsert.inserted,
   });
+}
+
+/**
+ * Pull the Pub/Sub envelope's `message.messageId` for use as the
+ * idempotency key. Returns null when the envelope shape is unexpected —
+ * the upsert helper degrades to an unprotected insert in that case so
+ * we don't lose events while debugging a malformed delivery.
+ */
+function extractPubsubMessageId(raw: unknown): string | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const env = raw as { message?: { messageId?: unknown } };
+  const id = env.message?.messageId;
+  return typeof id === 'string' && id.length > 0 ? id : null;
 }

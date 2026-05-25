@@ -45,6 +45,10 @@ import {
 import type { DraftPersister, MessageFetcher } from '@/lib/skills/types';
 import { getWorkspacePreference } from '@/lib/preferences';
 import { retrieveCustomerContext } from '@/lib/customer-files';
+import {
+  decideRetry,
+  readyForProcessingFilter,
+} from '@/lib/integrations/webhook-idempotency';
 
 export const PROCESS_WEBHOOK_EVENT_FUNCTION_ID = 'agentplain-process-webhook-event';
 /** Every 5 minutes (UTC). Drains backlog without hammering the LLM. */
@@ -69,12 +73,16 @@ export interface ProcessWebhookEventResult {
 export async function processUnprocessedWebhookEvents(
   limit: number = 25,
 ): Promise<ProcessWebhookEventResult> {
+  // `readyForProcessingFilter` excludes rows that are in their backoff
+  // window or have been deadlettered. The provider filter is layered on
+  // top — this processor only consumes Gmail/Outlook push events; other
+  // providers (DocuSign Connect, etc.) land WebhookEvent rows for
+  // audit/replay but are drained by their own consumers, not this one.
   const events = await prisma.webhookEvent.findMany({
-    // This processor runs the EMAIL skill chain (read → categorize → draft),
-    // so it only consumes Gmail/Outlook push events. Other providers
-    // (DocuSign Connect, etc.) land WebhookEvent rows for audit/replay but
-    // are drained by their own consumers, not this one.
-    where: { processed: false, subscription: { provider: { in: ['GOOGLE', 'M365'] } } },
+    where: {
+      ...readyForProcessingFilter(),
+      subscription: { provider: { in: ['GOOGLE', 'M365'] } },
+    },
     orderBy: { receivedAt: 'asc' },
     take: limit,
     include: {
@@ -144,12 +152,15 @@ export async function processUnprocessedWebhookEvents(
         record,
       });
 
+      // Success: clear backoff, bump attempt count for the audit trail.
       await prisma.webhookEvent.update({
         where: { id: event.id },
         data: {
           processed: true,
           processedAt: new Date(),
           error: null,
+          attemptCount: { increment: 1 },
+          nextAttemptAt: null,
         },
       });
       await withSystemContext((tx) =>
@@ -185,9 +196,19 @@ export async function processUnprocessedWebhookEvents(
         },
       });
       result.failures.push({ webhookEventId: event.id, reason: message });
+      // Failure: bump attempt count, compute next backoff, deadletter if
+      // we've exceeded the schedule. `attemptCount` here is the value
+      // BEFORE this attempt — we pass attemptCount+1 to decideRetry so
+      // the schedule reads in "1-indexed attempts" terms.
+      const decision = decideRetry({ attemptCount: event.attemptCount + 1 });
       await prisma.webhookEvent.update({
         where: { id: event.id },
-        data: { error: message },
+        data: {
+          error: message,
+          attemptCount: { increment: 1 },
+          nextAttemptAt: decision.nextAttemptAt,
+          deadlettered: decision.deadletter,
+        },
       });
     }
   }

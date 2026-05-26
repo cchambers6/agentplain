@@ -38,7 +38,7 @@
  */
 
 import type { IntegrationCredential } from '@prisma/client';
-import { prisma } from '@/lib/db/prisma';
+import { withSystemContext } from '@/lib/db/rls';
 import { decryptCredential, encryptTokenSet } from '@/lib/integrations';
 import { isEncryptionConfigured } from '@/lib/security/encryption';
 import type { DecryptedCredential, TokenSet } from '@/lib/integrations/types';
@@ -122,14 +122,19 @@ export const MICROSOFT_OAUTH_DEFAULT_SCOPES = [
 export async function resolveM365Credential(
   args: ResolveM365CredentialArgs,
 ): Promise<McpResult<DecryptedCredential>> {
-  const row = await prisma.integrationCredential.findFirst({
-    where: {
-      workspaceId: args.workspaceId,
-      provider: 'M365',
-      status: 'ACTIVE',
-    },
-    orderBy: { updatedAt: 'desc' },
-  });
+  // IntegrationCredential is workspace-scoped RLS — system context for the
+  // M365 credential read (per-workspace MCP servers act as the operator on
+  // behalf of the workspace).
+  const row = await withSystemContext((tx) =>
+    tx.integrationCredential.findFirst({
+      where: {
+        workspaceId: args.workspaceId,
+        provider: 'M365',
+        status: 'ACTIVE',
+      },
+      orderBy: { updatedAt: 'desc' },
+    }),
+  );
 
   if (!row) {
     return mcpError(
@@ -193,31 +198,37 @@ async function refreshAndPersist(
   });
   if (!refreshed.ok) {
     if (refreshed.error.code === 'GRANT_REVOKED') {
-      await prisma.integrationCredential.update({
-        where: { id: row.id },
-        data: { status: 'REVOKED' },
-      });
+      await withSystemContext((tx) =>
+        tx.integrationCredential.update({
+          where: { id: row.id },
+          data: { status: 'REVOKED' },
+        }),
+      );
       return refreshed;
     }
-    await prisma.integrationCredential.update({
-      where: { id: row.id },
-      data: { status: 'ERROR' },
-    });
+    await withSystemContext((tx) =>
+      tx.integrationCredential.update({
+        where: { id: row.id },
+        data: { status: 'ERROR' },
+      }),
+    );
     return refreshed;
   }
 
   const enc = encryptTokenSet(refreshed.value);
-  const updated = await prisma.integrationCredential.update({
-    where: { id: row.id },
-    data: {
-      accessTokenEncrypted: enc.accessTokenEncrypted,
-      refreshTokenEncrypted: enc.refreshTokenEncrypted,
-      scopes: enc.scopes,
-      expiresAt: enc.expiresAt,
-      lastRefreshedAt: new Date(),
-      status: 'ACTIVE',
-    },
-  });
+  const updated = await withSystemContext((tx) =>
+    tx.integrationCredential.update({
+      where: { id: row.id },
+      data: {
+        accessTokenEncrypted: enc.accessTokenEncrypted,
+        refreshTokenEncrypted: enc.refreshTokenEncrypted,
+        scopes: enc.scopes,
+        expiresAt: enc.expiresAt,
+        lastRefreshedAt: new Date(),
+        status: 'ACTIVE',
+      },
+    }),
+  );
   return { ok: true, value: decryptCredential(updated) };
 }
 

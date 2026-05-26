@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db/prisma";
+import { withSystemContext } from "@/lib/db/rls";
 import { requireUser } from "@/lib/auth/server";
 import { env } from "@/lib/env";
 
@@ -24,35 +24,44 @@ export default async function OperatorIntegrationsPage(props: PageProps) {
 
   const params = await props.searchParams;
 
-  const credentials = await prisma.integrationCredential.findMany({
-    include: {
-      workspace: { select: { name: true, slug: true } },
-      webhookSubscriptions: {
-        orderBy: { createdAt: "desc" },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  const recentEvents = await prisma.webhookEvent.findMany({
-    take: 10,
-    orderBy: { receivedAt: "desc" },
-    include: {
-      subscription: {
-        select: {
-          provider: true,
-          resource: true,
-          workspaceId: true,
+  // IntegrationCredential + WebhookSubscription + WebhookEvent are
+  // workspace-scoped RLS. The operator dashboard reads across workspaces,
+  // so each read goes through withSystemContext.
+  const credentials = await withSystemContext((tx) =>
+    tx.integrationCredential.findMany({
+      include: {
+        workspace: { select: { name: true, slug: true } },
+        webhookSubscriptions: {
+          orderBy: { createdAt: "desc" },
         },
       },
-    },
-  });
+      orderBy: { createdAt: "desc" },
+    }),
+  );
+
+  const recentEvents = await withSystemContext((tx) =>
+    tx.webhookEvent.findMany({
+      take: 10,
+      orderBy: { receivedAt: "desc" },
+      include: {
+        subscription: {
+          select: {
+            provider: true,
+            resource: true,
+            workspaceId: true,
+          },
+        },
+      },
+    }),
+  );
 
   // Workspaces with no credential yet — connect targets.
-  const allWorkspaces = await prisma.workspace.findMany({
-    select: { id: true, name: true, slug: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const allWorkspaces = await withSystemContext((tx) =>
+    tx.workspace.findMany({
+      select: { id: true, name: true, slug: true },
+      orderBy: { createdAt: "desc" },
+    }),
+  );
   const connectedIds = new Set(credentials.map((c) => c.workspaceId));
   const connectableWorkspaces = allWorkspaces.filter((w) => !connectedIds.has(w.id));
 

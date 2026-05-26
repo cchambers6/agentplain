@@ -25,11 +25,20 @@
  * row or hand back the existing one.
  */
 
-import { prisma } from '@/lib/db/prisma';
+import { withSystemContext } from '@/lib/db/rls';
 import type { Prisma } from '@prisma/client';
 
 export interface UpsertWebhookEventInput {
   subscriptionId: string;
+  /**
+   * Denormalized workspaceId for the parent subscription. The
+   * `webhook_event_workspace_isolation` RLS policy
+   * (20260526000000_add_integration_rls) evaluates against this column,
+   * so it must be set on every insert. Callers already hold the parent
+   * WebhookSubscription row by the time they call upsertWebhookEvent;
+   * threading it down is one parameter, not a join.
+   */
+  workspaceId: string;
   rawPayload: Prisma.InputJsonValue;
   /**
    * Provider-derived dedupe key (Pub/Sub messageId for Gmail; Graph
@@ -67,57 +76,72 @@ export interface UpsertWebhookEventResult {
 export async function upsertWebhookEvent(
   input: UpsertWebhookEventInput,
 ): Promise<UpsertWebhookEventResult> {
+  // The WebhookEvent table is RLS-protected (workspace isolation, with an
+  // operator bypass) per 20260526000000_add_integration_rls. The receivers
+  // run unauthenticated; withSystemContext seeds the operator GUC so the
+  // policy resolves to TRUE for both the INSERT and the lookup-by-dedupe
+  // fallback.
   if (input.dedupeKey === null) {
-    const created = await prisma.webhookEvent.create({
-      data: {
-        subscriptionId: input.subscriptionId,
-        rawPayload: input.rawPayload,
-        processed: false,
-      },
-      select: { id: true },
-    });
-    return { id: created.id, inserted: true };
-  }
-
-  // Race-safe path: try a unique-keyed insert; on UNIQUE violation, the
-  // dupe arrived a moment ago and we resolve to that row id.
-  try {
-    const created = await prisma.webhookEvent.create({
-      data: {
-        subscriptionId: input.subscriptionId,
-        rawPayload: input.rawPayload,
-        dedupeKey: input.dedupeKey,
-        processed: false,
-      },
-      select: { id: true },
-    });
-    return { id: created.id, inserted: true };
-  } catch (err) {
-    // P2002 = unique constraint violation. The dupe arrived first; find
-    // the existing row and return its id. Any other error rethrows so
-    // the route handler can return 500 and the provider can retry.
-    if (isPrismaUniqueViolation(err)) {
-      const existing = await prisma.webhookEvent.findUnique({
-        where: {
-          subscriptionId_dedupeKey: {
-            subscriptionId: input.subscriptionId,
-            dedupeKey: input.dedupeKey,
-          },
+    return withSystemContext(async (tx) => {
+      const created = await tx.webhookEvent.create({
+        data: {
+          subscriptionId: input.subscriptionId,
+          workspaceId: input.workspaceId,
+          rawPayload: input.rawPayload,
+          processed: false,
         },
         select: { id: true },
       });
-      if (!existing) {
-        // Extremely unlikely — the unique violation said the row exists,
-        // but findUnique just returned null. Treat as a transient and
-        // surface so the provider retries.
-        throw new Error(
-          `webhook idempotency upsert: unique violation but no row found for (${input.subscriptionId}, ${input.dedupeKey})`,
-        );
-      }
-      return { id: existing.id, inserted: false };
-    }
-    throw err;
+      return { id: created.id, inserted: true };
+    });
   }
+
+  // Race-safe path: try a unique-keyed insert; on UNIQUE violation, the
+  // dupe arrived a moment ago and we resolve to that row id. Both legs
+  // share one operator transaction. Re-bind dedupeKey to a non-null local
+  // so the type narrows inside the async callback (without this TS loses
+  // the input.dedupeKey !== null narrowing across the closure boundary).
+  const dedupeKey: string = input.dedupeKey;
+  return withSystemContext(async (tx) => {
+    try {
+      const created = await tx.webhookEvent.create({
+        data: {
+          subscriptionId: input.subscriptionId,
+          workspaceId: input.workspaceId,
+          rawPayload: input.rawPayload,
+          dedupeKey,
+          processed: false,
+        },
+        select: { id: true },
+      });
+      return { id: created.id, inserted: true };
+    } catch (err) {
+      // P2002 = unique constraint violation. The dupe arrived first; find
+      // the existing row and return its id. Any other error rethrows so
+      // the route handler can return 500 and the provider can retry.
+      if (isPrismaUniqueViolation(err)) {
+        const existing = await tx.webhookEvent.findUnique({
+          where: {
+            subscriptionId_dedupeKey: {
+              subscriptionId: input.subscriptionId,
+              dedupeKey,
+            },
+          },
+          select: { id: true },
+        });
+        if (!existing) {
+          // Extremely unlikely — the unique violation said the row exists,
+          // but findUnique just returned null. Treat as a transient and
+          // surface so the provider retries.
+          throw new Error(
+            `webhook idempotency upsert: unique violation but no row found for (${input.subscriptionId}, ${dedupeKey})`,
+          );
+        }
+        return { id: existing.id, inserted: false };
+      }
+      throw err;
+    }
+  });
 }
 
 function isPrismaUniqueViolation(err: unknown): boolean {

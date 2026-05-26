@@ -118,6 +118,11 @@ export function buildWebhookEventFromFixture(fixture: WebhookEventFixture): Webh
   return {
     id: fixture.webhookEvent.id,
     subscriptionId: fixture.webhookEvent.subscriptionId,
+    // Denormalized workspaceId on WebhookEvent (added in
+    // 20260526000000_add_integration_rls). Fixture-backed events never hit
+    // the real RLS policy, so a synthetic placeholder satisfies the row
+    // shape without needing a fixture-managed workspace.
+    workspaceId: `wkspace-${fixture.id}`,
     rawPayload: fixture.webhookEvent.rawPayload,
     receivedAt: new Date(fixture.webhookEvent.receivedAt),
     processed: false,

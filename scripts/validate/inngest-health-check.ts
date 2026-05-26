@@ -45,7 +45,7 @@
  * `/e/<event-key>` endpoint. No Gmail send, no Resend, no Twilio.
  */
 
-import { prisma } from "../../lib/db/prisma";
+import { withSystemContext } from "../../lib/db/rls";
 import {
   PROCESS_WEBHOOK_EVENT_CRON,
   PROCESS_WEBHOOK_EVENT_FUNCTION_ID,
@@ -212,12 +212,14 @@ async function modeSyntheticWebhook(args: CliArgs): Promise<number> {
     );
     return 2;
   }
-  const workspace = await prisma.workspace.findFirst({
-    where: {
-      OR: [{ slug: args.workspace }, { id: args.workspace }],
-    },
-    select: { id: true, slug: true, name: true },
-  });
+  const workspace = await withSystemContext((tx) =>
+    tx.workspace.findFirst({
+      where: {
+        OR: [{ slug: args.workspace }, { id: args.workspace }],
+      },
+      select: { id: true, slug: true, name: true },
+    }),
+  );
   if (!workspace) {
     console.error(
       JSON.stringify({
@@ -228,10 +230,12 @@ async function modeSyntheticWebhook(args: CliArgs): Promise<number> {
     );
     return 2;
   }
-  const subscription = await prisma.webhookSubscription.findUnique({
-    where: { id: args.subscription },
-    select: { id: true, workspaceId: true, provider: true, status: true },
-  });
+  const subscription = await withSystemContext((tx) =>
+    tx.webhookSubscription.findUnique({
+      where: { id: args.subscription },
+      select: { id: true, workspaceId: true, provider: true, status: true },
+    }),
+  );
   if (!subscription || subscription.workspaceId !== workspace.id) {
     console.error(
       JSON.stringify({
@@ -247,19 +251,24 @@ async function modeSyntheticWebhook(args: CliArgs): Promise<number> {
   // Gmail Pub/Sub receiver writes (lib/integrations/gmail-mcp/server.ts
   // is the canonical reference). The synthetic flag in payload lets a
   // future operator distinguish from real events when scanning history.
-  const event = await prisma.webhookEvent.create({
-    data: {
-      subscriptionId: subscription.id,
-      processed: false,
-      receivedAt: new Date(),
-      rawPayload: {
-        synthetic: true,
-        source: "scripts/validate/inngest-health-check.ts",
-        emittedAt: new Date().toISOString(),
+  // workspaceId denormalized on WebhookEvent for RLS
+  // (20260526000000_add_integration_rls); pull from the subscription.
+  const event = await withSystemContext((tx) =>
+    tx.webhookEvent.create({
+      data: {
+        subscriptionId: subscription.id,
+        workspaceId: subscription.workspaceId,
+        processed: false,
+        receivedAt: new Date(),
+        rawPayload: {
+          synthetic: true,
+          source: "scripts/validate/inngest-health-check.ts",
+          emittedAt: new Date().toISOString(),
+        },
       },
-    },
-    select: { id: true },
-  });
+      select: { id: true },
+    }),
+  );
   console.error(
     JSON.stringify({
       level: "info",
@@ -295,10 +304,12 @@ async function modeSyntheticWebhook(args: CliArgs): Promise<number> {
   const timeoutMs = args.timeoutSeconds * 1000;
   let pollInterval = 5_000;
   for (;;) {
-    const row = await prisma.webhookEvent.findUnique({
-      where: { id: event.id },
-      select: { processed: true, processedAt: true, error: true },
-    });
+    const row = await withSystemContext((tx) =>
+      tx.webhookEvent.findUnique({
+        where: { id: event.id },
+        select: { processed: true, processedAt: true, error: true },
+      }),
+    );
     if (row?.processed) {
       console.log(
         JSON.stringify({

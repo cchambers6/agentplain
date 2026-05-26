@@ -18,7 +18,6 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { unsealData } from 'iron-session';
-import { prisma } from '@/lib/db/prisma';
 import { withSystemContext } from '@/lib/db/rls';
 import { encryptTokenSet } from '@/lib/integrations';
 import { SlackOAuth } from '@/lib/integrations/slack/oauth';
@@ -122,54 +121,62 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const enc = encryptTokenSet(tokens);
   const providerMetadata = { teamId: team.teamId, teamName: team.teamName, slackUserId: team.slackUserId };
 
-  const credential = await prisma.integrationCredential.upsert({
-    where: {
-      workspaceId_provider_accountId: {
+  // IntegrationCredential is workspace-scoped RLS — runs through
+  // withSystemContext on the connect path.
+  const credential = await withSystemContext((tx) =>
+    tx.integrationCredential.upsert({
+      where: {
+        workspaceId_provider_accountId: {
+          workspaceId: cookie.workspaceId,
+          provider: 'SLACK',
+          accountId: tokens.accountId,
+        },
+      },
+      create: {
         workspaceId: cookie.workspaceId,
         provider: 'SLACK',
         accountId: tokens.accountId,
+        accountEmail: tokens.accountEmail,
+        accessTokenEncrypted: enc.accessTokenEncrypted,
+        refreshTokenEncrypted: enc.refreshTokenEncrypted,
+        scopes: enc.scopes,
+        expiresAt: enc.expiresAt,
+        providerMetadata,
+        lastRefreshedAt: new Date(),
+        status: 'ACTIVE',
       },
-    },
-    create: {
-      workspaceId: cookie.workspaceId,
-      provider: 'SLACK',
-      accountId: tokens.accountId,
-      accountEmail: tokens.accountEmail,
-      accessTokenEncrypted: enc.accessTokenEncrypted,
-      refreshTokenEncrypted: enc.refreshTokenEncrypted,
-      scopes: enc.scopes,
-      expiresAt: enc.expiresAt,
-      providerMetadata,
-      lastRefreshedAt: new Date(),
-      status: 'ACTIVE',
-    },
-    update: {
-      accountEmail: tokens.accountEmail,
-      accessTokenEncrypted: enc.accessTokenEncrypted,
-      refreshTokenEncrypted: enc.refreshTokenEncrypted,
-      scopes: enc.scopes,
-      expiresAt: enc.expiresAt,
-      providerMetadata,
-      lastRefreshedAt: new Date(),
-      status: 'ACTIVE',
-    },
-  });
+      update: {
+        accountEmail: tokens.accountEmail,
+        accessTokenEncrypted: enc.accessTokenEncrypted,
+        refreshTokenEncrypted: enc.refreshTokenEncrypted,
+        scopes: enc.scopes,
+        expiresAt: enc.expiresAt,
+        providerMetadata,
+        lastRefreshedAt: new Date(),
+        status: 'ACTIVE',
+      },
+    }),
+  );
 
-  const verify = await prisma.integrationCredential.findUnique({ where: { id: credential.id } });
+  const verify = await withSystemContext((tx) =>
+    tx.integrationCredential.findUnique({ where: { id: credential.id } }),
+  );
   if (!verify) {
     return workspaceRedirect(origin, cookie, { error: 'credential_persist_verify_failed' });
   }
 
-  await prisma.auditLog.create({
-    data: {
-      actorUserId: session.userId,
-      workspaceId: cookie.workspaceId,
-      action: 'integration.connected',
-      targetTable: 'IntegrationCredential',
-      targetId: credential.id,
-      payload: { provider: 'SLACK', integrationId: INTEGRATION_ID, accountEmail: tokens.accountEmail, scopes: tokens.scopes },
-    },
-  });
+  await withSystemContext((tx) =>
+    tx.auditLog.create({
+      data: {
+        actorUserId: session.userId,
+        workspaceId: cookie.workspaceId,
+        action: 'integration.connected',
+        targetTable: 'IntegrationCredential',
+        targetId: credential.id,
+        payload: { provider: 'SLACK', integrationId: INTEGRATION_ID, accountEmail: tokens.accountEmail, scopes: tokens.scopes },
+      },
+    }),
+  );
 
   const res = workspaceRedirect(origin, cookie, { connected: INTEGRATION_ID });
   res.cookies.set(OAUTH_STATE_COOKIE, '', { path: '/', maxAge: 0 });

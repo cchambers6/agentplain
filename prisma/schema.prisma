@@ -297,6 +297,7 @@ model Workspace {
   subscription           Subscription?
   integrationCredentials IntegrationCredential[]
   webhookSubscriptions   WebhookSubscription[]
+  webhookEvents          WebhookEvent[]
   knowledgeDocuments     KnowledgeDocument[]
   embeddings             Embedding[]
   supportRequests        SupportRequest[]
@@ -637,6 +638,13 @@ model WebhookSubscription {
 model WebhookEvent {
   id             String              @id @default(uuid()) @db.Uuid
   subscriptionId String              @db.Uuid
+  /// Denormalized from WebhookSubscription so the RLS policy
+  /// (20260526000000_add_integration_rls) can run as a plain
+  /// column-equality check against app.workspace_id — same shape as every
+  /// other workspace-scoped table. The drain consumer always reads
+  /// WebhookSubscription anyway; the denormalization avoids a SECURITY
+  /// DEFINER view or a per-row subquery in the policy USING clause.
+  workspaceId    String              @db.Uuid
   /// The decoded Pub/Sub message payload as JSON. For Gmail this is the
   /// {emailAddress, historyId} envelope from Pub/Sub. Raw payload retained
   /// for replay + audit; never trimmed.
@@ -668,11 +676,13 @@ model WebhookEvent {
   /// distinguish "done well" from "tried too many times, giving up".
   deadlettered   Boolean             @default(false)
   subscription   WebhookSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  workspace      Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([subscriptionId, dedupeKey])
   @@index([subscriptionId, receivedAt])
   @@index([processed, receivedAt])
   @@index([processed, deadlettered, nextAttemptAt])
+  @@index([workspaceId])
 }
 
 // Knowledge substrate document (project_knowledge_substrate.md). The
@@ -725,29 +735,29 @@ model KnowledgeDocument {
 // Per Prisma docs (https://www.prisma.io/docs/orm/prisma-schema/data-model/unsupported-database-features),
 // this is the canonical pattern for working with pgvector through Prisma.
 model Embedding {
-  id           String             @id @default(uuid()) @db.Uuid
+  id          String                      @id @default(uuid()) @db.Uuid
   /// FK to KnowledgeDocument when this embedding came from a doc. Null
   /// when the embedding is for an ad-hoc record (e.g. a HandoffLogEntry
   /// once that's wired in a later pass).
-  documentId   String?            @db.Uuid
+  documentId  String?                     @db.Uuid
   /// Free-form source-table label so non-document records (handoff logs,
   /// briefing snippets, etc.) can be embedded under the same table.
   /// V1: always "knowledge_document".
-  sourceType   String
+  sourceType  String
   /// Stable id of the source record. For knowledge_document this is the
   /// KnowledgeDocument.id; for future record types this is whatever the
   /// upstream table calls its primary key.
-  sourceId     String
-  workspaceId  String?            @db.Uuid
-  contextKind  ContextKind
-  metadata     Json               @default("{}")
+  sourceId    String
+  workspaceId String?                     @db.Uuid
+  contextKind ContextKind
+  metadata    Json                        @default("{}")
   /// 1536-dim float vector. Prisma cannot read this column through the
   /// generated client; lib/knowledge/pgvector-store.ts does all I/O.
-  vector       Unsupported("vector(1536)")
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
-  document     KnowledgeDocument? @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  workspace    Workspace?         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  vector      Unsupported("vector(1536)")
+  createdAt   DateTime                    @default(now())
+  updatedAt   DateTime                    @updatedAt
+  document    KnowledgeDocument?          @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  workspace   Workspace?                  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([sourceType, sourceId])
   @@index([contextKind, workspaceId])
@@ -768,7 +778,7 @@ model Embedding {
 // RLS: operator-only read/write (policy in the migration). The submit
 // path uses `withSystemContext` to insert under the operator GUC.
 model Inquiry {
-  id                    String         @id @default(uuid()) @db.Uuid
+  id                    String        @id @default(uuid()) @db.Uuid
   // Free-text intake fields. Stored verbatim — triage reads them as-is.
   name                  String
   business              String
@@ -778,12 +788,12 @@ model Inquiry {
   seats                 String
   needs                 String
   email                 String
-  inquiryType           InquiryType    @default(CUSTOM_SKILL_BUILD)
+  inquiryType           InquiryType   @default(CUSTOM_SKILL_BUILD)
   /// Optional intensity prose — required at the form layer when inquiryType
   /// is MAX_SERVICE_ENGAGEMENT, optional otherwise. Captures multi-state,
   /// white-label, compliance-gate context that drives the quote.
   serviceIntensityNotes String?
-  status                InquiryStatus  @default(NEW)
+  status                InquiryStatus @default(NEW)
   /// Resend / test-provider message id from the notification email. Null
   /// when the mail send failed; the row is still persisted so the inquiry
   /// is never silently lost.
@@ -791,14 +801,14 @@ model Inquiry {
   /// Operator-typed prose captured during triage (`triageInquiryAction`).
   triageNotes           String?
   triagedAt             DateTime?
-  triagedByUserId       String?        @db.Uuid
+  triagedByUserId       String?       @db.Uuid
   /// Populated when the inquiry converts into a real workspace (Max
   /// engagement signed, Custom SOW signed). Soft reference — Inquiry rows
   /// outlive the workspace if a customer churns.
-  convertedWorkspaceId  String?        @db.Uuid
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
-  triagedBy             User?          @relation("InquiryTriagedBy", fields: [triagedByUserId], references: [id], onDelete: SetNull)
+  convertedWorkspaceId  String?       @db.Uuid
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  triagedBy             User?         @relation("InquiryTriagedBy", fields: [triagedByUserId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
   @@index([inquiryType, status])
@@ -838,29 +848,29 @@ model MagicLinkToken {
 // signature counter at all). Stored as BigInt because the spec permits a
 // full uint32 which overflows Postgres INT.
 model WebAuthnCredential {
-  id           String   @id @default(uuid()) @db.Uuid
-  userId       String   @db.Uuid
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
   /// Base64URL credential id as returned by the authenticator. Unique across
   /// the whole table — the authenticate flow looks a credential up by this
   /// value alone (discoverable credentials carry no email).
-  credentialId String   @unique
+  credentialId String    @unique
   /// Base64URL-encoded COSE public key (from verifyRegistrationResponse).
   publicKey    String
   /// Signature counter; replay-protection watermark. BigInt per spec uint32.
-  counter      BigInt   @default(0)
+  counter      BigInt    @default(0)
   /// Authenticator transports hint (e.g. ["internal","hybrid"]). Stored so
   /// re-auth can pass allowCredentials transports for a faster prompt.
-  transports   String[] @default([])
+  transports   String[]  @default([])
   /// Customer-facing label ("MacBook Touch ID", "YubiKey"). Best-effort; the
   /// user can rename later. Defaults to a generic label at registration.
   label        String?
   /// Device-type + backup hints from registration — surfaced in the settings
   /// list so the user can tell a synced passkey from a single-device one.
   deviceType   String?
-  backedUp     Boolean  @default(false)
-  createdAt    DateTime @default(now())
+  backedUp     Boolean   @default(false)
+  createdAt    DateTime  @default(now())
   lastUsedAt   DateTime?
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -922,28 +932,28 @@ model WorkspacePreference {
 // row is overwritten. Per feedback_cold_start_safe_agents.md: the future
 // reconstructor reads this table to rebuild preferences from scratch.
 model PreferenceSignal {
-  id              String                  @id @default(uuid()) @db.Uuid
-  workspaceId     String                  @db.Uuid
-  source          PreferenceSignalSource
+  id          String                 @id @default(uuid()) @db.Uuid
+  workspaceId String                 @db.Uuid
+  source      PreferenceSignalSource
   /// Short label of the captured axis (e.g. "tone", "length", "do",
   /// "dont", "categorization", "calendar"). Free-form so future signal
   /// kinds add without a migration.
-  kind            String
+  kind        String
   /// The captured prose itself — for DRAFT_EDIT this is a one-line
   /// observation derived from the edit diff. For DRAFT_REJECT it's the
   /// decisionReason verbatim. For ONBOARDING_FORM it's the value the
   /// broker-owner selected.
-  text            String
+  text        String
   /// Polymorphic pointer to the source artifact (e.g. refTable=
   /// "WorkApprovalQueueItem", refId=<item id>). NULL for onboarding.
-  refTable        String?
-  refId           String?
+  refTable    String?
+  refId       String?
   /// Snapshot of the edit for DRAFT_EDIT signals — original vs final
   /// body so a future learner can re-derive the observation. NULL for
   /// other sources.
-  payload         Json?
-  capturedAt      DateTime                @default(now())
-  workspace       Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  payload     Json?
+  capturedAt  DateTime               @default(now())
+  workspace   Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, capturedAt])
   @@index([workspaceId, source])

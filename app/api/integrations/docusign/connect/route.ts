@@ -17,7 +17,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { prisma } from '@/lib/db/prisma';
+import { withSystemContext } from '@/lib/db/rls';
 import { env } from '@/lib/env';
 
 export const runtime = 'nodejs';
@@ -47,13 +47,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (hmacKey) {
     verified = verifyHmac(rawBody, req.headers.get(SIGNATURE_HEADER), hmacKey);
     if (!verified) {
-      await prisma.auditLog.create({
-        data: {
-          action: 'webhook.docusign.signature_invalid',
-          targetTable: 'WebhookEvent',
-          payload: { reason: 'HMAC mismatch or missing X-DocuSign-Signature-1 header' },
-        },
-      });
+      await withSystemContext((tx) =>
+        tx.auditLog.create({
+          data: {
+            action: 'webhook.docusign.signature_invalid',
+            targetTable: 'WebhookEvent',
+            payload: { reason: 'HMAC mismatch or missing X-DocuSign-Signature-1 header' },
+          },
+        }),
+      );
       // 401 is non-retryable; a forged probe is now observable in the audit log.
       return NextResponse.json({ error: 'invalid_signature' }, { status: 401 });
     }
@@ -71,31 +73,44 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'missing_account_id' }, { status: 400 });
   }
 
-  const subscription = await prisma.webhookSubscription.findFirst({
-    where: { provider: 'DOCUSIGN', subscriptionId: accountId, status: { in: ['ACTIVE', 'EXPIRING'] } },
-    select: { id: true },
-  });
+  // WebhookSubscription is workspace-scoped RLS; the Connect receiver runs
+  // unauthenticated, so withSystemContext seeds the operator GUC.
+  const subscription = await withSystemContext((tx) =>
+    tx.webhookSubscription.findFirst({
+      where: { provider: 'DOCUSIGN', subscriptionId: accountId, status: { in: ['ACTIVE', 'EXPIRING'] } },
+      select: { id: true, workspaceId: true },
+    }),
+  );
   if (!subscription) {
-    await prisma.auditLog.create({
-      data: {
-        action: 'webhook.docusign.unknown_subscription',
-        targetTable: 'WebhookEvent',
-        payload: { accountId, event: payload.event ?? null },
-      },
-    });
+    await withSystemContext((tx) =>
+      tx.auditLog.create({
+        data: {
+          action: 'webhook.docusign.unknown_subscription',
+          targetTable: 'WebhookEvent',
+          payload: { accountId, event: payload.event ?? null },
+        },
+      }),
+    );
     // ACK so DocuSign stops retrying; nothing maps to a connected workspace.
     return NextResponse.json({ ok: true, ignored: 'unknown_subscription' });
   }
 
-  const event = await prisma.webhookEvent.create({
-    data: {
-      subscriptionId: subscription.id,
-      rawPayload: { ...(JSON.parse(rawBody) as object), _meta: { verified } },
-      processed: false,
-    },
-  });
+  // WebhookEvent now carries a NOT NULL workspaceId (denormalized for RLS);
+  // pull it off the subscription we just resolved.
+  const event = await withSystemContext((tx) =>
+    tx.webhookEvent.create({
+      data: {
+        subscriptionId: subscription.id,
+        workspaceId: subscription.workspaceId,
+        rawPayload: { ...(JSON.parse(rawBody) as object), _meta: { verified } },
+        processed: false,
+      },
+    }),
+  );
 
-  const verifyEvent = await prisma.webhookEvent.findUnique({ where: { id: event.id }, select: { id: true } });
+  const verifyEvent = await withSystemContext((tx) =>
+    tx.webhookEvent.findUnique({ where: { id: event.id }, select: { id: true } }),
+  );
   if (!verifyEvent) {
     return NextResponse.json({ error: 'event_persist_verify_failed' }, { status: 500 });
   }

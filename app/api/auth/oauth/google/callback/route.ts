@@ -28,7 +28,6 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { unsealData } from 'iron-session';
-import { prisma } from '@/lib/db/prisma';
 import { GoogleOAuth } from '@/lib/integrations/google/oauth';
 import { decryptCredential, encryptTokenSet, getProvider } from '@/lib/integrations';
 import { requireUser } from '@/lib/auth/server';
@@ -178,43 +177,51 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return redirectWithError(origin, cookie, 'token_exchange_failed', `${tokens.error.code}: ${tokens.error.message}`);
   }
 
-  // Persist credential (encrypted at rest).
+  // Persist credential (encrypted at rest). IntegrationCredential is now
+  // workspace-scoped RLS (20260526000000_add_integration_rls), so every
+  // read/write runs through withSystemContext — the OAuth callback is the
+  // first time we know which workspace the credential belongs to and we
+  // act on behalf of the system to provision it.
   const enc = encryptTokenSet(tokens.value);
-  const credential = await prisma.integrationCredential.upsert({
-    where: {
-      workspaceId_provider_accountId: {
+  const credential = await withSystemContext((tx) =>
+    tx.integrationCredential.upsert({
+      where: {
+        workspaceId_provider_accountId: {
+          workspaceId: cookie.workspaceId,
+          provider: 'GOOGLE',
+          accountId: tokens.value.accountId,
+        },
+      },
+      create: {
         workspaceId: cookie.workspaceId,
         provider: 'GOOGLE',
         accountId: tokens.value.accountId,
+        accountEmail: tokens.value.accountEmail,
+        accessTokenEncrypted: enc.accessTokenEncrypted,
+        refreshTokenEncrypted: enc.refreshTokenEncrypted,
+        scopes: enc.scopes,
+        expiresAt: enc.expiresAt,
+        lastRefreshedAt: new Date(),
+        status: 'ACTIVE',
       },
-    },
-    create: {
-      workspaceId: cookie.workspaceId,
-      provider: 'GOOGLE',
-      accountId: tokens.value.accountId,
-      accountEmail: tokens.value.accountEmail,
-      accessTokenEncrypted: enc.accessTokenEncrypted,
-      refreshTokenEncrypted: enc.refreshTokenEncrypted,
-      scopes: enc.scopes,
-      expiresAt: enc.expiresAt,
-      lastRefreshedAt: new Date(),
-      status: 'ACTIVE',
-    },
-    update: {
-      accountEmail: tokens.value.accountEmail,
-      accessTokenEncrypted: enc.accessTokenEncrypted,
-      refreshTokenEncrypted: enc.refreshTokenEncrypted,
-      scopes: enc.scopes,
-      expiresAt: enc.expiresAt,
-      lastRefreshedAt: new Date(),
-      status: 'ACTIVE',
-    },
-  });
+      update: {
+        accountEmail: tokens.value.accountEmail,
+        accessTokenEncrypted: enc.accessTokenEncrypted,
+        refreshTokenEncrypted: enc.refreshTokenEncrypted,
+        scopes: enc.scopes,
+        expiresAt: enc.expiresAt,
+        lastRefreshedAt: new Date(),
+        status: 'ACTIVE',
+      },
+    }),
+  );
 
   // Verify-after-create: re-read the credential to assert it persisted.
-  const verifyCred = await prisma.integrationCredential.findUnique({
-    where: { id: credential.id },
-  });
+  const verifyCred = await withSystemContext((tx) =>
+    tx.integrationCredential.findUnique({
+      where: { id: credential.id },
+    }),
+  );
   if (!verifyCred) {
     return redirectWithError(origin, cookie, 'credential_persist_verify_failed');
   }
@@ -231,59 +238,63 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     if (!sub.ok) {
       // Credential is good but subscription failed. Don't bail — let the
       // renewal cron retry. Surface the error on the operator UI.
-      await prisma.auditLog.create({
-        data: {
-          actorUserId: session.userId,
-          workspaceId: cookie.workspaceId,
-          action: 'integration.subscription.create_failed',
-          targetTable: 'IntegrationCredential',
-          targetId: credential.id,
-          payload: {
-            provider: 'GOOGLE',
-            error: {
-              code: sub.error.code,
-              message: sub.error.message,
-              status: sub.error.status ?? null,
+      await withSystemContext((tx) =>
+        tx.auditLog.create({
+          data: {
+            actorUserId: session.userId,
+            workspaceId: cookie.workspaceId,
+            action: 'integration.subscription.create_failed',
+            targetTable: 'IntegrationCredential',
+            targetId: credential.id,
+            payload: {
+              provider: 'GOOGLE',
+              error: {
+                code: sub.error.code,
+                message: sub.error.message,
+                status: sub.error.status ?? null,
+              },
             },
           },
-        },
-      });
+        }),
+      );
       return redirectWithError(origin, cookie, 'subscription_failed', `${sub.error.code}: ${sub.error.message}`);
     }
 
-    await prisma.webhookSubscription.upsert({
-      where: {
-        // No unique key on subscriptionId alone — use the workspace+credential
-        // pair plus a find-then-upsert via id. For first-time creates we
-        // fall through to create; for renewals the cron handles it.
-        id: (await prisma.webhookSubscription.findFirst({
-          where: {
-            workspaceId: cookie.workspaceId,
-            integrationCredentialId: credential.id,
-            provider: 'GOOGLE',
-          },
-          select: { id: true },
-        }))?.id ?? '00000000-0000-0000-0000-000000000000',
-      },
-      create: {
-        workspaceId: cookie.workspaceId,
-        integrationCredentialId: credential.id,
-        provider: 'GOOGLE',
-        subscriptionId: sub.value.providerSubscriptionId,
-        resource: sub.value.resource,
-        expiresAt: sub.value.expiresAt,
-        notificationUrl,
-        lastRenewedAt: new Date(),
-        status: 'ACTIVE',
-      },
-      update: {
-        subscriptionId: sub.value.providerSubscriptionId,
-        resource: sub.value.resource,
-        expiresAt: sub.value.expiresAt,
-        notificationUrl,
-        lastRenewedAt: new Date(),
-        status: 'ACTIVE',
-      },
+    await withSystemContext(async (tx) => {
+      // No unique key on subscriptionId alone — find the existing row
+      // (if any) and then upsert by primary key. Both reads run inside
+      // the same system-context transaction so the RLS policy resolves
+      // against a single GUC set.
+      const existing = await tx.webhookSubscription.findFirst({
+        where: {
+          workspaceId: cookie.workspaceId,
+          integrationCredentialId: credential.id,
+          provider: 'GOOGLE',
+        },
+        select: { id: true },
+      });
+      await tx.webhookSubscription.upsert({
+        where: { id: existing?.id ?? '00000000-0000-0000-0000-000000000000' },
+        create: {
+          workspaceId: cookie.workspaceId,
+          integrationCredentialId: credential.id,
+          provider: 'GOOGLE',
+          subscriptionId: sub.value.providerSubscriptionId,
+          resource: sub.value.resource,
+          expiresAt: sub.value.expiresAt,
+          notificationUrl,
+          lastRenewedAt: new Date(),
+          status: 'ACTIVE',
+        },
+        update: {
+          subscriptionId: sub.value.providerSubscriptionId,
+          resource: sub.value.resource,
+          expiresAt: sub.value.expiresAt,
+          notificationUrl,
+          lastRenewedAt: new Date(),
+          status: 'ACTIVE',
+        },
+      });
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -291,20 +302,22 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 
   // Audit row (DB-side; markdown audit log is renewal-cron-driven).
-  await prisma.auditLog.create({
-    data: {
-      actorUserId: session.userId,
-      workspaceId: cookie.workspaceId,
-      action: 'integration.connected',
-      targetTable: 'IntegrationCredential',
-      targetId: credential.id,
-      payload: {
-        provider: 'GOOGLE',
-        accountEmail: tokens.value.accountEmail,
-        scopes: tokens.value.scopes,
+  await withSystemContext((tx) =>
+    tx.auditLog.create({
+      data: {
+        actorUserId: session.userId,
+        workspaceId: cookie.workspaceId,
+        action: 'integration.connected',
+        targetTable: 'IntegrationCredential',
+        targetId: credential.id,
+        payload: {
+          provider: 'GOOGLE',
+          accountEmail: tokens.value.accountEmail,
+          scopes: tokens.value.scopes,
+        },
       },
-    },
-  });
+    }),
+  );
 
   const res = redirectSuccess(origin, cookie, credential.id);
   res.cookies.set(OAUTH_STATE_COOKIE, '', { path: '/', maxAge: 0 });

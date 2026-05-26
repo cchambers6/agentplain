@@ -36,7 +36,7 @@
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
+import { withSystemContext } from '@/lib/db/rls';
 import { getProvider } from '@/lib/integrations';
 import { upsertWebhookEvent } from '@/lib/integrations/webhook-idempotency';
 import { M365Provider } from '@/lib/integrations/microsoft/m365-provider';
@@ -81,17 +81,21 @@ export async function POST(req: NextRequest): Promise<NextResponse | Response> {
     // 401 — Graph treats 4xx as a non-retryable error and will not back
     // off; the operator should look at the audit row to diagnose. We
     // still write an audit row so a forged-notification probe is
-    // observable.
-    await prisma.auditLog.create({
-      data: {
-        action: 'webhook.microsoft.signature_invalid',
-        targetTable: 'WebhookEvent',
-        payload: {
-          code: verify.error.code,
-          message: verify.error.message,
+    // observable. withSystemContext seeds the GUC so the
+    // `audit_operator_write` WITH CHECK clause passes without an
+    // actorUserId (the request is unauthenticated by definition).
+    await withSystemContext((tx) =>
+      tx.auditLog.create({
+        data: {
+          action: 'webhook.microsoft.signature_invalid',
+          targetTable: 'WebhookEvent',
+          payload: {
+            code: verify.error.code,
+            message: verify.error.message,
+          },
         },
-      },
-    });
+      }),
+    );
     return NextResponse.json(
       { error: verify.error.code, message: verify.error.message },
       { status: 401 },
@@ -124,50 +128,57 @@ export async function POST(req: NextRequest): Promise<NextResponse | Response> {
   const graphSubscriptionId =
     envelope?.value?.[0]?.subscriptionId ?? null;
 
-  const subscription = graphSubscriptionId
-    ? await prisma.webhookSubscription.findFirst({
-        where: {
-          provider: 'M365',
-          subscriptionId: graphSubscriptionId,
-          status: { in: ['ACTIVE', 'EXPIRING'] },
-        },
-        include: { credential: true },
-      })
-    : accountEmail
-    ? await prisma.webhookSubscription.findFirst({
-        where: {
-          provider: 'M365',
-          status: { in: ['ACTIVE', 'EXPIRING'] },
-          credential: {
-            // Microsoft surfaces `oid` (accountId) in some notification
-            // shapes via the resource path; UPN (accountEmail) elsewhere.
-            // Match either to be tolerant of both.
-            OR: [
-              { accountId: accountEmail },
-              { accountEmail },
-            ],
+  // WebhookSubscription is workspace-scoped RLS — this read runs under the
+  // unauthenticated Graph push receiver, so withSystemContext seeds the
+  // operator GUC for the lookup.
+  const subscription = await withSystemContext((tx) =>
+    graphSubscriptionId
+      ? tx.webhookSubscription.findFirst({
+          where: {
+            provider: 'M365',
+            subscriptionId: graphSubscriptionId,
+            status: { in: ['ACTIVE', 'EXPIRING'] },
           },
-        },
-        include: { credential: true },
-      })
-    : null;
+          include: { credential: true },
+        })
+      : accountEmail
+      ? tx.webhookSubscription.findFirst({
+          where: {
+            provider: 'M365',
+            status: { in: ['ACTIVE', 'EXPIRING'] },
+            credential: {
+              // Microsoft surfaces `oid` (accountId) in some notification
+              // shapes via the resource path; UPN (accountEmail) elsewhere.
+              // Match either to be tolerant of both.
+              OR: [
+                { accountId: accountEmail },
+                { accountEmail },
+              ],
+            },
+          },
+          include: { credential: true },
+        })
+      : Promise.resolve(null),
+  );
 
   if (!subscription) {
     // Unknown subscription. Most often: a subscription we created earlier
     // is still alive at Microsoft after we deleted the row locally. ACK
     // with 200 so Graph stops retrying and we can clean it up server-side
     // on the next renewal sweep.
-    await prisma.auditLog.create({
-      data: {
-        action: 'webhook.microsoft.unknown_subscription',
-        targetTable: 'WebhookEvent',
-        payload: {
-          graphSubscriptionId,
-          accountEmail: accountEmail ?? null,
-          cursor: cursor ?? null,
+    await withSystemContext((tx) =>
+      tx.auditLog.create({
+        data: {
+          action: 'webhook.microsoft.unknown_subscription',
+          targetTable: 'WebhookEvent',
+          payload: {
+            graphSubscriptionId,
+            accountEmail: accountEmail ?? null,
+            cursor: cursor ?? null,
+          },
         },
-      },
-    });
+      }),
+    );
     return NextResponse.json({ ok: true, ignored: 'unknown_subscription' });
   }
 
@@ -178,14 +189,17 @@ export async function POST(req: NextRequest): Promise<NextResponse | Response> {
   const dedupeKey = extractM365DedupeKey(raw);
   const upsert = await upsertWebhookEvent({
     subscriptionId: subscription.id,
+    workspaceId: subscription.workspaceId,
     rawPayload: raw as object,
     dedupeKey,
   });
 
-  const verifyEvent = await prisma.webhookEvent.findUnique({
-    where: { id: upsert.id },
-    select: { id: true },
-  });
+  const verifyEvent = await withSystemContext((tx) =>
+    tx.webhookEvent.findUnique({
+      where: { id: upsert.id },
+      select: { id: true },
+    }),
+  );
   if (!verifyEvent) {
     return NextResponse.json(
       { error: 'event_persist_verify_failed' },

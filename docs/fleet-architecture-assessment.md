@@ -766,3 +766,235 @@ Minor disagreements between this assessment and
 
 None of these change the architecture story. Worth fixing in the next
 docs-touch PR.
+
+---
+
+## Fleet review (2026-05-26)
+
+Three lenses — architecture/tech-lead, portability/principles, reliability
+— independently re-read the codebase against the §1-§3 verdicts. Each
+finding cites code; the original assessment is corrected in place above
+where this review found factual errors, and consolidated outcomes are
+captured here.
+
+### Architecture / tech-lead lens
+
+**Original P0s — all four confirmed.**
+
+- **P0-1 (RLS gap on `IntegrationCredential` / `WebhookSubscription` /
+  `WebhookEvent`).** Independently verified.
+  `grep "CREATE POLICY\|ENABLE ROW LEVEL SECURITY"
+  prisma/migrations/**/migration.sql` returns 0 hits for the three
+  table names. `tests/wave5-multitenant-isolation.test.ts:241-250`
+  `WORKSPACE_SCOPED_MODELS` list omits `integrationCredential`,
+  `webhookSubscription`, `webhookEvent`. Confirmed DEVIATION.
+- **P0-2 (`DriveFileSource` returns `NOT_CONFIGURED` in BOTH branches).**
+  Confirmed. `lib/customer-files/drive-source.ts:44-71` — the `unwired`
+  branch returns `NOT_CONFIGURED`, and the wired branch (lines 52-55,
+  68-71) also returns `NOT_CONFIGURED` with the explicit message
+  "Drive list/fetch path is wired but not implemented in this PR."
+- **P0-3 (Session git-auth needs a manual installation-token mint).**
+  Accepted as an operational fact of this session — the artifact is
+  the bash prelude required to push this very PR. The proposed
+  `gitconfig` credential helper is the right fix.
+- **P0-4 (Inngest disable-flag propagation ≥ 5 min).** Mechanism
+  confirmed. `lib/inngest/run-with-disable-gate.ts:34-39` calls
+  `isFunctionDisabled(functionId, env)` (`disable-flag.ts:66-72`) which
+  reads `process.env` at function entry. `lib/ops/inngest/control.ts:152-162`
+  writes the flag via Vercel's `POST /v9/projects/<id>/env?upsert=true`
+  — that only takes effect on the next cold start of a running
+  function instance.
+
+**NEW finding — N1. Three bare `prisma.auditLog.create` call sites in
+the inbound webhook routes will fail RLS in production.**
+
+`AuditLog` policy is `audit_operator_write WITH CHECK (
+  current_setting('app.is_operator', true) = 'true' OR "actorUserId" IS
+NOT NULL )` (`prisma/migrations/20260508000000_phase1_init/migration.sql:298-300`).
+Bare `prisma.<...>.create` calls run in implicit transactions with no
+GUC set — `app.is_operator` resolves to NULL, `NULL = 'true'` is NULL
+(falsy). The OR arm `"actorUserId" IS NOT NULL` is the only way the
+check passes. Three webhook-receive call sites set neither:
+
+- `app/api/webhooks/google/route.ts:97` (unknown_sender path)
+- `app/api/webhooks/microsoft/route.ts:85` (signature_invalid path)
+- `app/api/webhooks/microsoft/route.ts:160` (unknown_subscription path)
+
+And one cron path:
+
+- `lib/inngest/functions/integration-renewal-sweep.ts:200` (GRANT_REVOKED
+  branch) — passes `workspaceId` but no `actorUserId` and no `withRls`.
+
+All other `prisma.auditLog.create` sites (8 OAuth callbacks, one cron
+audit) either pass `actorUserId: session.userId` or wrap in
+`withSystemContext` and so satisfy the check.
+
+The role on Neon does not have `BYPASSRLS` (no `ALTER ROLE … BYPASSRLS`
+in any migration). On production these paths therefore throw a
+`23514`-equivalent / RLS-violation error. They are all rare branches
+(unknown sender, invalid signature, revoked grant) which is likely why
+the gap hasn't surfaced — but a hostile prober hitting `/api/webhooks/
+microsoft` with garbage signatures would 500 instead of returning the
+intended 401 and would silently lose the audit trail of the probe.
+
+**Fix.** Wrap each in `withSystemContext` (one line each) — the
+operator context sets `app.is_operator='true'` and the WITH CHECK
+clause passes. Promote to **P0-5** in the revised ordering.
+
+**NEW finding — N2. The Inquiry-table RLS policy is operator-only,
+which forces every customer-facing inquiry intake to run through
+`withSystemContext`.**
+
+`Inquiry` is the load-bearing intake table for `/custom`. The migration
+header at `prisma/migrations/20260515000000_add_inquiry_intake/migration.sql:54-62`
+is explicit that the public POST satisfies the WITH CHECK only when
+the handler calls `withSystemContext`. This is correct today but is a
+**single missed `withRls`** away from blocking customer intake. A
+contract test that pins `Inquiry.create()` inside `withSystemContext`
+would close the gap. P2 (low immediate risk, but the failure mode is
+"new customer inquiries silently 500").
+
+**NEW finding — N3. The Teams MCP server (`lib/integrations/teams-mcp/`)
+has NO approval gate on the `sendChatMessage` and `postToChannel`
+tools.**
+
+The Slack MCP (`lib/integrations/slack-mcp/server.ts:111-125`,
+`127-147`) enforces an `approvalToken` arg — `if (!input.approvalToken
+|| input.approvalToken.trim().length === 0) return mcpError('
+APPROVAL_REQUIRED', ...)`. The Teams MCP does not. `teams-mcp/server.ts:202-264`
+(`sendChatMessage`) and `:265-` (`postToChannel`) check only `chatId`/
+`body`/`teamId`/`channelId` and immediately POST to Graph.
+
+**No skill calls these tools today** so the practical exposure is
+zero. But the architecture invariant "every send tool gates on an
+approval token" is only true for Slack, not Teams. P1 — close before
+the Teams MCP is exposed to any skill that could call it.
+
+**NEW finding — N4. `webhook-idempotency.ts` reads `prisma.webhookEvent`
+directly without RLS, by design (since the table has no RLS).**
+
+Once P0-1 lands and `WebhookEvent` gets RLS, every call site in
+`lib/integrations/webhook-idempotency.ts:67-121` plus the bare
+`prisma.webhookEvent.findMany/update` calls in
+`lib/inngest/functions/process-webhook-event.ts:81-98, 156-165, 204-212`
+will need to be wrapped in `withSystemContext`. Catalogued so the RLS
+migration is not a surprise to the receiver code. Not a defect today;
+a checklist item against the P0-1 fix.
+
+**Other backlog items reviewed.** P1-1 (knowledge re-seed cron), P1-2
+(vertical depth), P1-3 (test coverage), P1-4 (config gates), P1-5
+(`OpsControlPlane` thin spot) all confirmed as written. P2-1 through
+P2-4 confirmed.
+
+### Portability / principles lens
+
+The principles audit in §2 holds. One correction and one nuance:
+
+- **No-outbound (§2, "Triple-belt-and-braces, all verified").** The
+  three belts are accurate **for Gmail and Outlook** — the
+  load-bearing email loop. They are NOT accurate for Slack or Teams.
+  `lib/integrations/marketplace.ts:114` requests `ChannelMessage.Send`
+  for Teams; `:238-239` requests `chat:write` and `im:write` for
+  Slack. Those are send-class scopes. The third belt (OAuth scopes
+  exclude send) is **email-only**. The Slack MCP enforces
+  no-auto-send via an `approvalToken` runtime check; the Teams MCP
+  does not enforce it at all today (see N3). The architecture is
+  still "no skill currently calls these tools" — but the
+  scope-level guarantee is overstated.
+
+  This affects the SVG-02 panel (c) — see visuals review.
+
+- **`OpsControlPlane` two-implementation thin spot (§2, P1-5).** Real
+  but acceptable today: the "second implementation" is the test
+  recorder (`TestOpsControlPlane`) plus the in-tree
+  `GithubActionsVarsAdapter`. The third (a non-Vercel runner control)
+  has no realistic candidate today — Vercel is the deploy target —
+  so the two-impl rule is held in spirit (one prod impl per
+  surface) with a real test impl. Not a deviation. Document the
+  constraint at the interface header so the gap isn't a surprise.
+
+### Reliability lens
+
+- **Inngest dead-letter / retry — covered.** `webhook-idempotency.ts:
+  decideRetry` schedule (1m → 5m → 30m → 2h → 6h → deadletter) is
+  exercised by `process-webhook-event.ts:199-213`. Strong.
+- **GHA dead-letter — gap (P2-1).** Confirmed. The fix path is the
+  one suggested in the original assessment: a
+  `workflow_run`-triggered retry workflow OR a final
+  `if: failure()` step that opens a `cron-failure` issue.
+- **Disable-flag propagation — gap (P0-4).** As above, confirmed.
+- **Observability.** `withCronMonitor` is consistent across all four
+  Inngest functions (verified —
+  `grep "withCronMonitor" lib/inngest/functions/` returns matches
+  in each). The Sentry-DSN-off noop path is tested; the
+  Sentry-DSN-on production branch is not (P1-3 covers).
+- **Single Anthropic provider — single point of failure (P2-3).**
+  Confirmed. Defer per original sequencing.
+- **Bare-prisma audit-log writes (N1).** A failed RLS write produces
+  a 500 on the inbound webhook receiver. Pub/Sub retries the 500
+  indefinitely for that delivery — the route would back the receiver
+  off rather than the intended "ACK 200 ignored" pattern. Reliability
+  hazard layered on top of the correctness hazard.
+
+### Revised P0 ordering
+
+The original four P0s plus the audit-log RLS bug. Sequenced by fix
+cost × blast radius:
+
+1. **P0-5** (NEW) — wrap the four bare `prisma.auditLog.create`
+   call sites in `withSystemContext`. Four-line fix; closes a real
+   500-on-edge-paths bug today. One PR.
+2. **P0-1** — add RLS policies + denormalize `WebhookEvent.workspaceId`
+   + extend `WORKSPACE_SCOPED_MODELS`. Lands before any non-Conner
+   pilot. Same PR as N4 (audit + update the call sites that go bare
+   today).
+3. **P0-2** — implement `lib/integrations/google/drive.ts` `listFiles`
+   + `getFileText` + flip `DriveFileSource.unwired` to false. Until
+   then, the customer-facing "works from your files" copy is empty.
+4. **P0-4** — DB-backed disable flag (`OpsFlag` table) with env-var
+   cold-start parity. Cuts pause latency from 5 min to ≤ 60 s.
+5. **P0-3** — `gitconfig` credential helper for session git-auth.
+   Quality-of-life for every fleet build; not a production blocker
+   for customers but a real cost on the build cadence.
+
+### What changed from the original assessment
+
+- **Promoted to P0:** the bare-`prisma.auditLog.create` finding (N1)
+  is more urgent than P0-3 by blast radius — it's a live edge-path
+  500 in production.
+- **Slack/Teams scope claim corrected:** the no-outbound triple belt
+  is Gmail/Outlook-only. The Slack scope set includes `chat:write`/
+  `im:write`; Teams includes `ChannelMessage.Send`. Slack enforces
+  approval-token-at-call; Teams does not.
+- **Teams MCP no-approval-gate flagged (N3):** new P1.
+- **`Inquiry` RLS implicit dependency (N2):** new P2 (contract test
+  to pin).
+- **Audit-log call-site checklist (N4):** added to the P0-1 fix
+  scope — once `WebhookEvent` gets RLS, the bare
+  `webhook-idempotency.ts` reads/writes need wrapping.
+
+### What was confirmed
+
+- The five-skill loop shape (§3) — sound, no changes.
+- The no-outbound architecture FOR THE EMAIL LOOP — sound; the
+  triple-belt construction is real for Gmail/Outlook.
+- MCP-first integration pattern — sound. Adapter portability holds
+  across all integrations audited.
+- Cold-start safety — every cron body re-reads durable state per
+  fire. No memoization across fires found in any of the four
+  Inngest functions.
+- Verify-after-create discipline — present and load-bearing in the
+  renewal sweep, the webhook receivers, and the GHA commit-back
+  path.
+- Two-substrate cron split (Inngest + GHA) — the right call for
+  the work shapes.
+
+### Open doc corrections appended to the appendix
+
+Add to §Appendix: the wrapper-order claim in `docs/fleet-architecture.md:295`
+(line "Three concentric wrappers, in order from outside in: 1.
+`runWithDisableGate`, 2. `withCronMonitor`, 3. `withInngestErrorReporting`")
+is correct against the code. The SVG-04 ("Cron substrates") diagram
+shows the OPPOSITE order — `withInngestErrorReporting` outermost,
+`runWithDisableGate` innermost — and is wrong. See
+`docs/visuals-tech-accuracy-review.md`.

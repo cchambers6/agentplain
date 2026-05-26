@@ -29,7 +29,7 @@
  */
 
 import type { IntegrationCredential } from '@prisma/client';
-import { prisma } from '@/lib/db/prisma';
+import { withSystemContext } from '@/lib/db/rls';
 import { decryptCredential, encryptTokenSet, getProvider } from '@/lib/integrations';
 import { isEncryptionConfigured } from '@/lib/security/encryption';
 import type { DecryptedCredential } from '@/lib/integrations/types';
@@ -59,14 +59,19 @@ export interface ResolveCredentialArgs {
 export async function resolveCredential(
   args: ResolveCredentialArgs,
 ): Promise<GmailMcpResult<DecryptedCredential>> {
-  const row = await prisma.integrationCredential.findFirst({
-    where: {
-      workspaceId: args.workspaceId,
-      provider: 'GOOGLE',
-      status: 'ACTIVE',
-    },
-    orderBy: { updatedAt: 'desc' },
-  });
+  // IntegrationCredential is workspace-scoped RLS — the MCP auth resolver
+  // runs as the operator on behalf of the workspace, so the read goes
+  // through withSystemContext.
+  const row = await withSystemContext((tx) =>
+    tx.integrationCredential.findFirst({
+      where: {
+        workspaceId: args.workspaceId,
+        provider: 'GOOGLE',
+        status: 'ACTIVE',
+      },
+      orderBy: { updatedAt: 'desc' },
+    }),
+  );
 
   if (!row) {
     return gmailError(
@@ -128,20 +133,24 @@ async function refreshAndPersist(
   });
   if (!refreshed.ok) {
     if (refreshed.error.code === 'GRANT_REVOKED') {
-      await prisma.integrationCredential.update({
-        where: { id: row.id },
-        data: { status: 'REVOKED' },
-      });
+      await withSystemContext((tx) =>
+        tx.integrationCredential.update({
+          where: { id: row.id },
+          data: { status: 'REVOKED' },
+        }),
+      );
       return gmailError(
         'GRANT_REVOKED',
         `Gmail returned invalid_grant on refresh for ${decrypted.accountEmail} — credential marked REVOKED.`,
         { status: refreshed.error.status, reference: refreshed.error.reference },
       );
     }
-    await prisma.integrationCredential.update({
-      where: { id: row.id },
-      data: { status: 'ERROR' },
-    });
+    await withSystemContext((tx) =>
+      tx.integrationCredential.update({
+        where: { id: row.id },
+        data: { status: 'ERROR' },
+      }),
+    );
     return gmailError(
       mapIntegrationErrorCode(refreshed.error.code),
       `Refresh failed: ${refreshed.error.message}`,
@@ -150,17 +159,19 @@ async function refreshAndPersist(
   }
 
   const enc = encryptTokenSet(refreshed.value);
-  const updated = await prisma.integrationCredential.update({
-    where: { id: row.id },
-    data: {
-      accessTokenEncrypted: enc.accessTokenEncrypted,
-      refreshTokenEncrypted: enc.refreshTokenEncrypted,
-      scopes: enc.scopes,
-      expiresAt: enc.expiresAt,
-      lastRefreshedAt: new Date(),
-      status: 'ACTIVE',
-    },
-  });
+  const updated = await withSystemContext((tx) =>
+    tx.integrationCredential.update({
+      where: { id: row.id },
+      data: {
+        accessTokenEncrypted: enc.accessTokenEncrypted,
+        refreshTokenEncrypted: enc.refreshTokenEncrypted,
+        scopes: enc.scopes,
+        expiresAt: enc.expiresAt,
+        lastRefreshedAt: new Date(),
+        status: 'ACTIVE',
+      },
+    }),
+  );
   return { ok: true, value: decryptCredential(updated) };
 }
 

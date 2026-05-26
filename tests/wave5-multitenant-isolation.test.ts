@@ -232,7 +232,11 @@ describe('wave5 multi-tenant — source-level invariants', () => {
   // `withSystemContext`. The application-layer guarantee is only as good
   // as the discipline of every call site.
   const ROOT = path.resolve(__dirname, '..');
-  const SCAN_DIRS = ['lib', 'app'];
+  // `scripts/` runs against the same RLS-enforced DB as `lib/` + `app/`,
+  // so bare `prisma.<scoped-model>.` calls there will throw at runtime
+  // for the same reason. Tracked under the same grep so future scripts
+  // pick up the discipline by default (see fleet review 2026-05-26).
+  const SCAN_DIRS = ['lib', 'app', 'scripts'];
   const ALLOWED_PRISMA_DIRECT = new Set([
     path.join('lib', 'db', 'prisma.ts'),
     path.join('lib', 'db', 'rls.ts'),
@@ -247,6 +251,15 @@ describe('wave5 multi-tenant — source-level invariants', () => {
     'workspaceInvoice',
     'billingEvent',
     'onboardingState',
+    // P0-1 / N4: the integration plumbing tables hold workspace-scoped rows
+    // (IntegrationCredential carries encrypted OAuth refresh tokens). Every
+    // read/write must go through withRls / withSystemContext so the SQL-layer
+    // RLS policy added in 20260526000000_add_integration_rls actually has a
+    // GUC to evaluate against. A bare prisma.<model>. site would fail at
+    // runtime under the new policies.
+    'integrationCredential',
+    'webhookSubscription',
+    'webhookEvent',
   ];
 
   async function* walk(dir: string): AsyncGenerator<string> {
@@ -315,6 +328,79 @@ describe('wave5 multi-tenant — source-level invariants', () => {
     assert.ok(
       withRlsCallCount > 0,
       'expected at least one withRls call site in lib/ + app/',
+    );
+  });
+
+  it('no source file calls `prisma.auditLog.create` outside a transaction (P0-5)', async () => {
+    // The AuditLog RLS policy `audit_operator_write` requires either
+    // `app.is_operator='true'` (set by withSystemContext / withRls with
+    // SYSTEM_OPERATOR_CONTEXT) OR a non-null actorUserId. A bare
+    // `prisma.auditLog.create(...)` call runs in an implicit transaction
+    // with no GUC set; if the payload also omits actorUserId (e.g. the
+    // webhook error branches) the write is rejected by Postgres and the
+    // route 500s — observed live on /api/webhooks/google + /microsoft
+    // unknown_sender / signature_invalid paths per the 2026-05-26 fleet
+    // architecture review (N1 → P0-5).
+    //
+    // The safe shape is always `tx.auditLog.create(...)` inside withRls or
+    // withSystemContext: the transaction guarantees the GUC is set before
+    // the INSERT runs, so the policy passes regardless of whether
+    // actorUserId is present.
+    const offenders: Array<{ file: string; line: number; text: string }> = [];
+    for (const dir of SCAN_DIRS) {
+      const full = path.join(ROOT, dir);
+      for await (const file of walk(full)) {
+        const rel = path.relative(ROOT, file);
+        if (ALLOWED_PRISMA_DIRECT.has(rel)) continue;
+        const text = await fs.readFile(file, 'utf8');
+        const lines = text.split(/\r?\n/);
+        for (let i = 0; i < lines.length; i += 1) {
+          const line = lines[i];
+          if (/\bprisma\.auditLog\.create\b/.test(line)) {
+            offenders.push({ file: rel, line: i + 1, text: line.trim() });
+          }
+        }
+      }
+    }
+    assert.deepEqual(
+      offenders,
+      [],
+      `bare prisma.auditLog.create sites found — every audit-log insert must run inside withRls / withSystemContext so the audit_operator_write policy resolves to TRUE:\n${offenders
+        .map((o) => `  ${o.file}:${o.line} ${o.text}`)
+        .join('\n')}`,
+    );
+  });
+
+  it('Inquiry intake never writes via bare `prisma.inquiry.` (N2 contract)', async () => {
+    // `Inquiry` carries an operator-only RLS policy (see
+    // prisma/migrations/20260515000000_add_inquiry_intake/migration.sql:57-62).
+    // The public /custom POST handler in lib/custom-inquiry/index.ts MUST
+    // call into withSystemContext so the WITH CHECK clause
+    // (`app.is_operator='true'`) is satisfied — otherwise customer intake
+    // 500s on insert. This is the regression test the 2026-05-26 review
+    // recommended (N2) to pin the implicit dependency.
+    const offenders: Array<{ file: string; line: number; text: string }> = [];
+    for (const dir of SCAN_DIRS) {
+      const full = path.join(ROOT, dir);
+      for await (const file of walk(full)) {
+        const rel = path.relative(ROOT, file);
+        if (ALLOWED_PRISMA_DIRECT.has(rel)) continue;
+        const text = await fs.readFile(file, 'utf8');
+        const lines = text.split(/\r?\n/);
+        for (let i = 0; i < lines.length; i += 1) {
+          const line = lines[i];
+          if (/\bprisma\.inquiry\./.test(line)) {
+            offenders.push({ file: rel, line: i + 1, text: line.trim() });
+          }
+        }
+      }
+    }
+    assert.deepEqual(
+      offenders,
+      [],
+      `bare prisma.inquiry. sites found — Inquiry is operator-only RLS, every read/write must run inside withRls / withSystemContext:\n${offenders
+        .map((o) => `  ${o.file}:${o.line} ${o.text}`)
+        .join('\n')}`,
     );
   });
 });

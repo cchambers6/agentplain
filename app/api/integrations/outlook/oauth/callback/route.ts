@@ -26,7 +26,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { unsealData } from "iron-session";
-import { prisma } from "@/lib/db/prisma";
+import { withSystemContext } from "@/lib/db/rls";
 import { encryptTokenSet } from "@/lib/integrations";
 import { requireUser } from "@/lib/auth/server";
 import { env } from "@/lib/env";
@@ -274,62 +274,70 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     accountEmail,
   });
 
-  const credential = await prisma.integrationCredential.upsert({
-    where: {
-      workspaceId_provider_accountId: {
+  // IntegrationCredential is workspace-scoped RLS — withSystemContext seeds
+  // the operator GUC for the connect path.
+  const credential = await withSystemContext((tx) =>
+    tx.integrationCredential.upsert({
+      where: {
+        workspaceId_provider_accountId: {
+          workspaceId,
+          provider: "M365",
+          accountId: profile.id,
+        },
+      },
+      create: {
         workspaceId,
         provider: "M365",
         accountId: profile.id,
+        accountEmail,
+        accessTokenEncrypted: enc.accessTokenEncrypted,
+        refreshTokenEncrypted: enc.refreshTokenEncrypted,
+        scopes: enc.scopes,
+        expiresAt: enc.expiresAt,
+        lastRefreshedAt: new Date(),
+        status: "ACTIVE",
       },
-    },
-    create: {
-      workspaceId,
-      provider: "M365",
-      accountId: profile.id,
-      accountEmail,
-      accessTokenEncrypted: enc.accessTokenEncrypted,
-      refreshTokenEncrypted: enc.refreshTokenEncrypted,
-      scopes: enc.scopes,
-      expiresAt: enc.expiresAt,
-      lastRefreshedAt: new Date(),
-      status: "ACTIVE",
-    },
-    update: {
-      accountEmail,
-      accessTokenEncrypted: enc.accessTokenEncrypted,
-      refreshTokenEncrypted: enc.refreshTokenEncrypted,
-      scopes: enc.scopes,
-      expiresAt: enc.expiresAt,
-      lastRefreshedAt: new Date(),
-      status: "ACTIVE",
-    },
-  });
+      update: {
+        accountEmail,
+        accessTokenEncrypted: enc.accessTokenEncrypted,
+        refreshTokenEncrypted: enc.refreshTokenEncrypted,
+        scopes: enc.scopes,
+        expiresAt: enc.expiresAt,
+        lastRefreshedAt: new Date(),
+        status: "ACTIVE",
+      },
+    }),
+  );
 
   // Verify-after-create.
-  const verify = await prisma.integrationCredential.findUnique({
-    where: { id: credential.id },
-  });
+  const verify = await withSystemContext((tx) =>
+    tx.integrationCredential.findUnique({
+      where: { id: credential.id },
+    }),
+  );
   if (!verify) {
     return workspaceRedirect(origin, cookie, {
       error: "credential_persist_verify_failed",
     });
   }
 
-  await prisma.auditLog.create({
-    data: {
-      actorUserId: session.userId,
-      workspaceId,
-      action: "integration.connected",
-      targetTable: "IntegrationCredential",
-      targetId: credential.id,
-      payload: {
-        provider: "M365",
-        integrationId: INTEGRATION_ID,
-        accountEmail,
-        scopes,
+  await withSystemContext((tx) =>
+    tx.auditLog.create({
+      data: {
+        actorUserId: session.userId,
+        workspaceId,
+        action: "integration.connected",
+        targetTable: "IntegrationCredential",
+        targetId: credential.id,
+        payload: {
+          provider: "M365",
+          integrationId: INTEGRATION_ID,
+          accountEmail,
+          scopes,
+        },
       },
-    },
-  });
+    }),
+  );
 
   const res = workspaceRedirect(origin, cookie, {
     connected: INTEGRATION_ID,

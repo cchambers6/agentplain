@@ -13,9 +13,9 @@
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
 import { decryptCredential, getProvider } from '@/lib/integrations';
 import { requireUser } from '@/lib/auth/server';
+import { withSystemContext } from '@/lib/db/rls';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,10 +37,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'invalid_credential_id' }, { status: 400 });
   }
 
-  const credential = await prisma.integrationCredential.findUnique({
-    where: { id: credentialId },
-    include: { webhookSubscriptions: true },
-  });
+  const credential = await withSystemContext((tx) =>
+    tx.integrationCredential.findUnique({
+      where: { id: credentialId },
+      include: { webhookSubscriptions: true },
+    }),
+  );
   if (!credential) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 });
   }
@@ -68,17 +70,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     !revoke.ok ? `${revoke.error.code}: ${revoke.error.message}` : null;
 
   // Update DB regardless — if revoke failed we still mark UNSUBSCRIBED on
-  // our side so the cron stops trying.
-  await prisma.$transaction([
-    prisma.webhookSubscription.updateMany({
+  // our side so the cron stops trying. withSystemContext seeds the GUC
+  // (app.is_operator='true') before any of the three writes so the
+  // policies on IntegrationCredential / WebhookSubscription / AuditLog all
+  // resolve to TRUE.
+  await withSystemContext(async (tx) => {
+    await tx.webhookSubscription.updateMany({
       where: { integrationCredentialId: credentialId },
       data: { status: 'UNSUBSCRIBED' },
-    }),
-    prisma.integrationCredential.update({
+    });
+    await tx.integrationCredential.update({
       where: { id: credentialId },
       data: { status: 'REVOKED' },
-    }),
-    prisma.auditLog.create({
+    });
+    await tx.auditLog.create({
       data: {
         actorUserId: session.userId,
         workspaceId: credential.workspaceId,
@@ -92,8 +97,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           revokeError,
         },
       },
-    }),
-  ]);
+    });
+  });
 
   return NextResponse.json({
     ok: true,

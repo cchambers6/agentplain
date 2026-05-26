@@ -17,7 +17,7 @@
  */
 
 import type { IntegrationProvider as DbProvider } from '@prisma/client';
-import { prisma } from '@/lib/db/prisma';
+import { withSystemContext } from '@/lib/db/rls';
 import { decryptCredential, encryptTokenSet } from '@/lib/integrations';
 import { isEncryptionConfigured } from '@/lib/security/encryption';
 import type { DecryptedCredential, IntegrationResult, TokenSet } from '@/lib/integrations/types';
@@ -41,10 +41,15 @@ export interface ResolveArgs {
 export async function resolveWorkspaceCredential(
   args: ResolveArgs,
 ): Promise<McpResult<DecryptedCredential>> {
-  const row = await prisma.integrationCredential.findFirst({
-    where: { workspaceId: args.workspaceId, provider: args.provider, status: 'ACTIVE' },
-    orderBy: { updatedAt: 'desc' },
-  });
+  // IntegrationCredential is workspace-scoped RLS — MCP auth runs as the
+  // operator on behalf of the workspace, so withSystemContext seeds the
+  // operator GUC for the read.
+  const row = await withSystemContext((tx) =>
+    tx.integrationCredential.findFirst({
+      where: { workspaceId: args.workspaceId, provider: args.provider, status: 'ACTIVE' },
+      orderBy: { updatedAt: 'desc' },
+    }),
+  );
   if (!row) {
     return mcpError(
       'CREDENTIAL_NOT_FOUND',
@@ -87,20 +92,26 @@ async function refreshAndPersist(
   credentialId: string,
   refresh: RefreshFn,
 ): Promise<McpResult<DecryptedCredential>> {
-  const row = await prisma.integrationCredential.findUnique({ where: { id: credentialId } });
+  const row = await withSystemContext((tx) =>
+    tx.integrationCredential.findUnique({ where: { id: credentialId } }),
+  );
   if (!row) return mcpError('CREDENTIAL_NOT_FOUND', `Credential ${credentialId} vanished mid-refresh`);
   const decrypted = decryptCredential(row);
 
   const refreshed = await refresh(decrypted);
   if (!refreshed.ok) {
     if (refreshed.error.code === 'GRANT_REVOKED') {
-      await prisma.integrationCredential.update({ where: { id: row.id }, data: { status: 'REVOKED' } });
+      await withSystemContext((tx) =>
+        tx.integrationCredential.update({ where: { id: row.id }, data: { status: 'REVOKED' } }),
+      );
       return mcpError('GRANT_REVOKED', `Refresh returned invalid_grant — credential marked REVOKED. ${refreshed.error.message}`, {
         status: refreshed.error.status,
         reference: refreshed.error.reference,
       });
     }
-    await prisma.integrationCredential.update({ where: { id: row.id }, data: { status: 'ERROR' } });
+    await withSystemContext((tx) =>
+      tx.integrationCredential.update({ where: { id: row.id }, data: { status: 'ERROR' } }),
+    );
     return mcpError('UPSTREAM_ERROR', `Refresh failed: ${refreshed.error.message}`, {
       status: refreshed.error.status,
       reference: refreshed.error.reference,
@@ -108,19 +119,21 @@ async function refreshAndPersist(
   }
 
   const enc = encryptTokenSet(refreshed.value);
-  const updated = await prisma.integrationCredential.update({
-    where: { id: row.id },
-    data: {
-      accessTokenEncrypted: enc.accessTokenEncrypted,
-      refreshTokenEncrypted: enc.refreshTokenEncrypted,
-      scopes: enc.scopes,
-      expiresAt: enc.expiresAt,
-      lastRefreshedAt: new Date(),
-      status: 'ACTIVE',
-      // providerMetadata deliberately untouched — refresh never rewrites
-      // per-account routing data.
-    },
-  });
+  const updated = await withSystemContext((tx) =>
+    tx.integrationCredential.update({
+      where: { id: row.id },
+      data: {
+        accessTokenEncrypted: enc.accessTokenEncrypted,
+        refreshTokenEncrypted: enc.refreshTokenEncrypted,
+        scopes: enc.scopes,
+        expiresAt: enc.expiresAt,
+        lastRefreshedAt: new Date(),
+        status: 'ACTIVE',
+        // providerMetadata deliberately untouched — refresh never rewrites
+        // per-account routing data.
+      },
+    }),
+  );
   return { ok: true, value: decryptCredential(updated) };
 }
 

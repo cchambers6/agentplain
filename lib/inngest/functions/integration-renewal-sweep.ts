@@ -27,7 +27,7 @@
  */
 
 import type { IntegrationCredential, WebhookSubscription } from '@prisma/client';
-import { prisma } from '@/lib/db/prisma';
+import { withSystemContext } from '@/lib/db/rls';
 import {
   decryptCredential,
   encryptTokenSet,
@@ -63,13 +63,19 @@ export async function runIntegrationRenewalSweep(
 ): Promise<RenewalSweepResult> {
   const expiringBefore = new Date(now.getTime() + SUBSCRIPTION_RENEWAL_WINDOW_MS);
 
-  const candidates = await prisma.webhookSubscription.findMany({
-    where: {
-      status: { in: ['ACTIVE', 'EXPIRING'] },
-      expiresAt: { lt: expiringBefore },
-    },
-    include: { credential: true },
-  });
+  // WebhookSubscription + IntegrationCredential are workspace-scoped RLS
+  // (20260526000000_add_integration_rls). The renewal sweep is a system
+  // cron, so withSystemContext seeds app.is_operator='true' for the read
+  // and every downstream write below.
+  const candidates = await withSystemContext((tx) =>
+    tx.webhookSubscription.findMany({
+      where: {
+        status: { in: ['ACTIVE', 'EXPIRING'] },
+        expiresAt: { lt: expiringBefore },
+      },
+      include: { credential: true },
+    }),
+  );
 
   const result: RenewalSweepResult = {
     considered: candidates.length,
@@ -102,19 +108,23 @@ export async function runIntegrationRenewalSweep(
         reason: `credential ${sub.credential.id} status=${sub.credential.status} — skipping`,
       });
       // Mark the subscription so the operator surface shows the disconnect cause.
-      await prisma.webhookSubscription.update({
-        where: { id: sub.id },
-        data: { status: 'RENEWAL_FAILED' },
-      });
+      await withSystemContext((tx) =>
+        tx.webhookSubscription.update({
+          where: { id: sub.id },
+          data: { status: 'RENEWAL_FAILED' },
+        }),
+      );
       continue;
     }
 
     // Mark EXPIRING so the operator UI surfaces "due now" rows.
     if (sub.status !== 'EXPIRING') {
-      await prisma.webhookSubscription.update({
-        where: { id: sub.id },
-        data: { status: 'EXPIRING' },
-      });
+      await withSystemContext((tx) =>
+        tx.webhookSubscription.update({
+          where: { id: sub.id },
+          data: { status: 'EXPIRING' },
+        }),
+      );
     }
 
     let credential = sub.credential;
@@ -193,44 +203,52 @@ async function refreshCredentialTokens(
   });
   if (!refreshed.ok) {
     if (refreshed.error.code === 'GRANT_REVOKED') {
-      await prisma.integrationCredential.update({
-        where: { id: credential.id },
-        data: { status: 'REVOKED' },
-      });
-      await prisma.auditLog.create({
-        data: {
-          workspaceId: credential.workspaceId,
-          action: 'integration.refresh.grant_revoked',
-          targetTable: 'IntegrationCredential',
-          targetId: credential.id,
-          payload: { error: refreshed.error.message },
-        },
+      await withSystemContext(async (tx) => {
+        await tx.integrationCredential.update({
+          where: { id: credential.id },
+          data: { status: 'REVOKED' },
+        });
+        await tx.auditLog.create({
+          data: {
+            workspaceId: credential.workspaceId,
+            action: 'integration.refresh.grant_revoked',
+            targetTable: 'IntegrationCredential',
+            targetId: credential.id,
+            payload: { error: refreshed.error.message },
+          },
+        });
       });
       return { ok: false, error: 'GRANT_REVOKED (marked REVOKED)' };
     }
-    await prisma.integrationCredential.update({
-      where: { id: credential.id },
-      data: { status: 'EXPIRED' },
-    });
+    await withSystemContext((tx) =>
+      tx.integrationCredential.update({
+        where: { id: credential.id },
+        data: { status: 'EXPIRED' },
+      }),
+    );
     return { ok: false, error: `${refreshed.error.code}: ${refreshed.error.message}` };
   }
   const enc = encryptTokenSet(refreshed.value);
-  const updated = await prisma.integrationCredential.update({
-    where: { id: credential.id },
-    data: {
-      accessTokenEncrypted: enc.accessTokenEncrypted,
-      refreshTokenEncrypted: enc.refreshTokenEncrypted,
-      scopes: enc.scopes,
-      expiresAt: enc.expiresAt,
-      lastRefreshedAt: now,
-      status: 'ACTIVE',
-    },
-  });
+  const updated = await withSystemContext((tx) =>
+    tx.integrationCredential.update({
+      where: { id: credential.id },
+      data: {
+        accessTokenEncrypted: enc.accessTokenEncrypted,
+        refreshTokenEncrypted: enc.refreshTokenEncrypted,
+        scopes: enc.scopes,
+        expiresAt: enc.expiresAt,
+        lastRefreshedAt: now,
+        status: 'ACTIVE',
+      },
+    }),
+  );
   // Verify-after-create: confirm the row reflects the new expiry.
-  const verify = await prisma.integrationCredential.findUniqueOrThrow({
-    where: { id: credential.id },
-    select: { expiresAt: true, status: true },
-  });
+  const verify = await withSystemContext((tx) =>
+    tx.integrationCredential.findUniqueOrThrow({
+      where: { id: credential.id },
+      select: { expiresAt: true, status: true },
+    }),
+  );
   if (verify.status !== 'ACTIVE' || verify.expiresAt.getTime() < now.getTime()) {
     return { ok: false, error: 'verify-after-refresh failed: row not ACTIVE or expiry not in future' };
   }
@@ -250,53 +268,61 @@ async function renewSubscription(
     notificationUrl: sub.notificationUrl,
   });
   if (!renewed.ok) {
-    await prisma.webhookSubscription.update({
-      where: { id: sub.id },
-      data: { status: 'RENEWAL_FAILED' },
+    await withSystemContext(async (tx) => {
+      await tx.webhookSubscription.update({
+        where: { id: sub.id },
+        data: { status: 'RENEWAL_FAILED' },
+      });
+      await tx.auditLog.create({
+        data: {
+          workspaceId: sub.workspaceId,
+          action: 'integration.renewal.failed',
+          targetTable: 'WebhookSubscription',
+          targetId: sub.id,
+          payload: {
+            provider: sub.provider,
+            error: { code: renewed.error.code, message: renewed.error.message },
+          },
+        },
+      });
     });
-    await prisma.auditLog.create({
+    return { ok: false, error: `${renewed.error.code}: ${renewed.error.message}` };
+  }
+  await withSystemContext((tx) =>
+    tx.webhookSubscription.update({
+      where: { id: sub.id },
+      data: {
+        subscriptionId: renewed.value.providerSubscriptionId,
+        expiresAt: renewed.value.expiresAt,
+        lastRenewedAt: now,
+        status: 'ACTIVE',
+      },
+    }),
+  );
+  // Verify-after-create.
+  const verify = await withSystemContext((tx) =>
+    tx.webhookSubscription.findUniqueOrThrow({
+      where: { id: sub.id },
+      select: { status: true, expiresAt: true },
+    }),
+  );
+  if (verify.status !== 'ACTIVE' || verify.expiresAt.getTime() <= now.getTime()) {
+    return { ok: false, error: 'verify-after-renewal failed: row not ACTIVE or expiry not in future' };
+  }
+  await withSystemContext((tx) =>
+    tx.auditLog.create({
       data: {
         workspaceId: sub.workspaceId,
-        action: 'integration.renewal.failed',
+        action: 'integration.renewal.success',
         targetTable: 'WebhookSubscription',
         targetId: sub.id,
         payload: {
           provider: sub.provider,
-          error: { code: renewed.error.code, message: renewed.error.message },
+          expiresAt: renewed.value.expiresAt.toISOString(),
         },
       },
-    });
-    return { ok: false, error: `${renewed.error.code}: ${renewed.error.message}` };
-  }
-  await prisma.webhookSubscription.update({
-    where: { id: sub.id },
-    data: {
-      subscriptionId: renewed.value.providerSubscriptionId,
-      expiresAt: renewed.value.expiresAt,
-      lastRenewedAt: now,
-      status: 'ACTIVE',
-    },
-  });
-  // Verify-after-create.
-  const verify = await prisma.webhookSubscription.findUniqueOrThrow({
-    where: { id: sub.id },
-    select: { status: true, expiresAt: true },
-  });
-  if (verify.status !== 'ACTIVE' || verify.expiresAt.getTime() <= now.getTime()) {
-    return { ok: false, error: 'verify-after-renewal failed: row not ACTIVE or expiry not in future' };
-  }
-  await prisma.auditLog.create({
-    data: {
-      workspaceId: sub.workspaceId,
-      action: 'integration.renewal.success',
-      targetTable: 'WebhookSubscription',
-      targetId: sub.id,
-      payload: {
-        provider: sub.provider,
-        expiresAt: renewed.value.expiresAt.toISOString(),
-      },
-    },
-  });
+    }),
+  );
   return { ok: true };
 }
 

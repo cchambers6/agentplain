@@ -26,7 +26,6 @@
  * read or draft. The Gmail adapter has no send method exposed.
  */
 
-import { prisma } from '@/lib/db/prisma';
 import { withSystemContext, SYSTEM_OPERATOR_CONTEXT } from '@/lib/db';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
@@ -78,24 +77,30 @@ export async function processUnprocessedWebhookEvents(
   // top — this processor only consumes Gmail/Outlook push events; other
   // providers (DocuSign Connect, etc.) land WebhookEvent rows for
   // audit/replay but are drained by their own consumers, not this one.
-  const events = await prisma.webhookEvent.findMany({
-    where: {
-      ...readyForProcessingFilter(),
-      subscription: { provider: { in: ['GOOGLE', 'M365'] } },
-    },
-    orderBy: { receivedAt: 'asc' },
-    take: limit,
-    include: {
-      subscription: {
-        include: {
-          credential: true,
-          workspace: {
-            select: { id: true, slug: true, name: true, vertical: true },
+  //
+  // WebhookEvent, WebhookSubscription, IntegrationCredential are
+  // workspace-scoped RLS tables — the drain runs as a system cron, so
+  // withSystemContext seeds app.is_operator='true' for the read.
+  const events = await withSystemContext((tx) =>
+    tx.webhookEvent.findMany({
+      where: {
+        ...readyForProcessingFilter(),
+        subscription: { provider: { in: ['GOOGLE', 'M365'] } },
+      },
+      orderBy: { receivedAt: 'asc' },
+      take: limit,
+      include: {
+        subscription: {
+          include: {
+            credential: true,
+            workspace: {
+              select: { id: true, slug: true, name: true, vertical: true },
+            },
           },
         },
       },
-    },
-  });
+    }),
+  );
   const result: ProcessWebhookEventResult = {
     considered: events.length,
     succeeded: 0,
@@ -153,18 +158,20 @@ export async function processUnprocessedWebhookEvents(
       });
 
       // Success: clear backoff, bump attempt count for the audit trail.
-      await prisma.webhookEvent.update({
-        where: { id: event.id },
-        data: {
-          processed: true,
-          processedAt: new Date(),
-          error: null,
-          attemptCount: { increment: 1 },
-          nextAttemptAt: null,
-        },
-      });
-      await withSystemContext((tx) =>
-        tx.auditLog.create({
+      // Combine the WebhookEvent update + AuditLog insert into one
+      // system-context transaction so both pass RLS on a single GUC set.
+      await withSystemContext(async (tx) => {
+        await tx.webhookEvent.update({
+          where: { id: event.id },
+          data: {
+            processed: true,
+            processedAt: new Date(),
+            error: null,
+            attemptCount: { increment: 1 },
+            nextAttemptAt: null,
+          },
+        });
+        await tx.auditLog.create({
           data: {
             workspaceId: workspace.id,
             action: 'skills.loop.completed',
@@ -178,8 +185,8 @@ export async function processUnprocessedWebhookEvents(
               steps: record.steps.map((s) => ({ step: s.step, ok: s.ok })),
             },
           },
-        }),
-      );
+        });
+      });
       result.succeeded += 1;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -201,15 +208,17 @@ export async function processUnprocessedWebhookEvents(
       // BEFORE this attempt — we pass attemptCount+1 to decideRetry so
       // the schedule reads in "1-indexed attempts" terms.
       const decision = decideRetry({ attemptCount: event.attemptCount + 1 });
-      await prisma.webhookEvent.update({
-        where: { id: event.id },
-        data: {
-          error: message,
-          attemptCount: { increment: 1 },
-          nextAttemptAt: decision.nextAttemptAt,
-          deadlettered: decision.deadletter,
-        },
-      });
+      await withSystemContext((tx) =>
+        tx.webhookEvent.update({
+          where: { id: event.id },
+          data: {
+            error: message,
+            attemptCount: { increment: 1 },
+            nextAttemptAt: decision.nextAttemptAt,
+            deadlettered: decision.deadletter,
+          },
+        }),
+      );
     }
   }
   return result;

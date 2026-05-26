@@ -26,7 +26,7 @@
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
+import { withSystemContext } from '@/lib/db/rls';
 import { getProvider } from '@/lib/integrations';
 import { upsertWebhookEvent } from '@/lib/integrations/webhook-idempotency';
 
@@ -76,34 +76,45 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   //    With multiple workspaces sharing an inbox (unsupported in Phase 1),
   //    we'd disambiguate via the credential.accountId — but Phase 1 is
   //    1:1 broker-owner per workspace.
-  const credential = await prisma.integrationCredential.findFirst({
-    where: {
-      provider: 'GOOGLE',
-      accountEmail,
-      status: 'ACTIVE',
-    },
-    include: {
-      webhookSubscriptions: {
-        where: { status: { in: ['ACTIVE', 'EXPIRING'] } },
-        orderBy: { createdAt: 'desc' },
-        take: 1,
+  //
+  //    IntegrationCredential + WebhookSubscription are workspace-scoped RLS
+  //    tables (20260526000000_add_integration_rls). The Pub/Sub receiver
+  //    runs in a system context, so withSystemContext seeds
+  //    app.is_operator='true' for the read.
+  const credential = await withSystemContext((tx) =>
+    tx.integrationCredential.findFirst({
+      where: {
+        provider: 'GOOGLE',
+        accountEmail,
+        status: 'ACTIVE',
       },
-    },
-  });
+      include: {
+        webhookSubscriptions: {
+          where: { status: { in: ['ACTIVE', 'EXPIRING'] } },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+    }),
+  );
   if (!credential || credential.webhookSubscriptions.length === 0) {
     // Unknown sender. Likely a stale subscription that wasn't cleaned up
     // on the Google side. Return 200 to stop Pub/Sub retries — we have
-    // nowhere to land the event. Audit it.
-    await prisma.auditLog.create({
-      data: {
-        action: 'webhook.google.unknown_sender',
-        targetTable: 'WebhookEvent',
-        payload: {
-          accountEmail,
-          cursor,
+    // nowhere to land the event. Audit it under system context so the
+    // `audit_operator_write` policy resolves to TRUE without an
+    // actorUserId.
+    await withSystemContext((tx) =>
+      tx.auditLog.create({
+        data: {
+          action: 'webhook.google.unknown_sender',
+          targetTable: 'WebhookEvent',
+          payload: {
+            accountEmail,
+            cursor,
+          },
         },
-      },
-    });
+      }),
+    );
     return NextResponse.json({ ok: true, ignored: 'unknown_sender' });
   }
   const subscription = credential.webhookSubscriptions[0];
@@ -116,6 +127,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const dedupeKey = extractPubsubMessageId(raw);
   const upsert = await upsertWebhookEvent({
     subscriptionId: subscription.id,
+    workspaceId: subscription.workspaceId,
     rawPayload: raw as object,
     dedupeKey,
   });
@@ -123,10 +135,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // Verify-after-create: re-read to assert persistence. The upsert helper
   // already does an INSERT-or-FIND, but the explicit verify mirrors the
   // pattern every other write path follows in this repo.
-  const verifyEvent = await prisma.webhookEvent.findUnique({
-    where: { id: upsert.id },
-    select: { id: true },
-  });
+  const verifyEvent = await withSystemContext((tx) =>
+    tx.webhookEvent.findUnique({
+      where: { id: upsert.id },
+      select: { id: true },
+    }),
+  );
   if (!verifyEvent) {
     return NextResponse.json(
       { error: 'event_persist_verify_failed' },

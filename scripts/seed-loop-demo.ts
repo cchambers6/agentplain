@@ -229,10 +229,13 @@ async function seedAndRunFixture(args: {
   const { fixture, workspaceId, subscriptionId } = args;
 
   // 1. Insert the real WebhookEvent row (its UUID is the loop's ref id).
+  //    workspaceId is denormalized on WebhookEvent for RLS
+  //    (20260526000000_add_integration_rls) — pass the seed workspace id.
   const eventRow = await withSystemContext((tx) =>
     tx.webhookEvent.create({
       data: {
         subscriptionId,
+        workspaceId,
         rawPayload: fixture.webhookEvent.rawPayload,
         receivedAt: new Date(fixture.webhookEvent.receivedAt),
         processed: false,

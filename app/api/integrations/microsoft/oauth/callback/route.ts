@@ -36,7 +36,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { unsealData } from "iron-session";
-import { prisma } from "@/lib/db/prisma";
+import { withSystemContext } from "@/lib/db/rls";
 import { encryptTokenSet } from "@/lib/integrations";
 import { getMarketplaceEntry } from "@/lib/integrations/marketplace";
 import { requireUser } from "@/lib/auth/server";
@@ -265,16 +265,20 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   // Merge with any scopes already on the existing M365 row so subsequent
   // grants don't drop earlier consent. Each M365 integration adds its
   // scope set incrementally; the row's `scopes` is the running union.
-  const existing = await prisma.integrationCredential.findUnique({
-    where: {
-      workspaceId_provider_accountId: {
-        workspaceId,
-        provider: "M365",
-        accountId: profile.id,
+  // IntegrationCredential is workspace-scoped RLS — system context for
+  // the read so the policy resolves against app.is_operator='true'.
+  const existing = await withSystemContext((tx) =>
+    tx.integrationCredential.findUnique({
+      where: {
+        workspaceId_provider_accountId: {
+          workspaceId,
+          provider: "M365",
+          accountId: profile.id,
+        },
       },
-    },
-    select: { scopes: true },
-  });
+      select: { scopes: true },
+    }),
+  );
   const mergedScopes = Array.from(
     new Set([...(existing?.scopes ?? []), ...grantedScopes, ...entry.scopes]),
   );
@@ -288,62 +292,68 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     accountEmail,
   });
 
-  const credential = await prisma.integrationCredential.upsert({
-    where: {
-      workspaceId_provider_accountId: {
+  const credential = await withSystemContext((tx) =>
+    tx.integrationCredential.upsert({
+      where: {
+        workspaceId_provider_accountId: {
+          workspaceId,
+          provider: "M365",
+          accountId: profile.id,
+        },
+      },
+      create: {
         workspaceId,
         provider: "M365",
         accountId: profile.id,
+        accountEmail,
+        accessTokenEncrypted: enc.accessTokenEncrypted,
+        refreshTokenEncrypted: enc.refreshTokenEncrypted,
+        scopes: enc.scopes,
+        expiresAt: enc.expiresAt,
+        lastRefreshedAt: new Date(),
+        status: "ACTIVE",
       },
-    },
-    create: {
-      workspaceId,
-      provider: "M365",
-      accountId: profile.id,
-      accountEmail,
-      accessTokenEncrypted: enc.accessTokenEncrypted,
-      refreshTokenEncrypted: enc.refreshTokenEncrypted,
-      scopes: enc.scopes,
-      expiresAt: enc.expiresAt,
-      lastRefreshedAt: new Date(),
-      status: "ACTIVE",
-    },
-    update: {
-      accountEmail,
-      accessTokenEncrypted: enc.accessTokenEncrypted,
-      refreshTokenEncrypted: enc.refreshTokenEncrypted,
-      scopes: enc.scopes,
-      expiresAt: enc.expiresAt,
-      lastRefreshedAt: new Date(),
-      status: "ACTIVE",
-    },
-  });
+      update: {
+        accountEmail,
+        accessTokenEncrypted: enc.accessTokenEncrypted,
+        refreshTokenEncrypted: enc.refreshTokenEncrypted,
+        scopes: enc.scopes,
+        expiresAt: enc.expiresAt,
+        lastRefreshedAt: new Date(),
+        status: "ACTIVE",
+      },
+    }),
+  );
 
-  const verify = await prisma.integrationCredential.findUnique({
-    where: { id: credential.id },
-  });
+  const verify = await withSystemContext((tx) =>
+    tx.integrationCredential.findUnique({
+      where: { id: credential.id },
+    }),
+  );
   if (!verify) {
     return workspaceRedirect(origin, cookie, {
       error: "credential_persist_verify_failed",
     });
   }
 
-  await prisma.auditLog.create({
-    data: {
-      actorUserId: session.userId,
-      workspaceId,
-      action: "integration.connected",
-      targetTable: "IntegrationCredential",
-      targetId: credential.id,
-      payload: {
-        provider: "M365",
-        integrationId: cookie.integrationId,
-        accountEmail,
-        grantedScopes,
-        mergedScopes,
+  await withSystemContext((tx) =>
+    tx.auditLog.create({
+      data: {
+        actorUserId: session.userId,
+        workspaceId,
+        action: "integration.connected",
+        targetTable: "IntegrationCredential",
+        targetId: credential.id,
+        payload: {
+          provider: "M365",
+          integrationId: cookie.integrationId,
+          accountEmail,
+          grantedScopes,
+          mergedScopes,
+        },
       },
-    },
-  });
+    }),
+  );
 
   const res = workspaceRedirect(origin, cookie, {
     connected: cookie.integrationId,

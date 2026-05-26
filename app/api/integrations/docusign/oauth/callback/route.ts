@@ -20,7 +20,6 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { unsealData } from 'iron-session';
-import { prisma } from '@/lib/db/prisma';
 import { withSystemContext } from '@/lib/db/rls';
 import { encryptTokenSet } from '@/lib/integrations';
 import { DocuSignOAuth } from '@/lib/integrations/docusign/oauth';
@@ -125,40 +124,47 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const enc = encryptTokenSet(tokens);
   const providerMetadata = { apiBaseUri: account.apiBaseUri, accountName: account.accountName };
 
-  const credential = await prisma.integrationCredential.upsert({
-    where: {
-      workspaceId_provider_accountId: {
+  // IntegrationCredential + WebhookSubscription are workspace-scoped RLS
+  // (20260526000000_add_integration_rls); the connect path runs through
+  // withSystemContext to seed app.is_operator='true' on each write.
+  const credential = await withSystemContext((tx) =>
+    tx.integrationCredential.upsert({
+      where: {
+        workspaceId_provider_accountId: {
+          workspaceId: cookie.workspaceId,
+          provider: 'DOCUSIGN',
+          accountId: tokens.accountId,
+        },
+      },
+      create: {
         workspaceId: cookie.workspaceId,
         provider: 'DOCUSIGN',
         accountId: tokens.accountId,
+        accountEmail: tokens.accountEmail,
+        accessTokenEncrypted: enc.accessTokenEncrypted,
+        refreshTokenEncrypted: enc.refreshTokenEncrypted,
+        scopes: enc.scopes,
+        expiresAt: enc.expiresAt,
+        providerMetadata,
+        lastRefreshedAt: new Date(),
+        status: 'ACTIVE',
       },
-    },
-    create: {
-      workspaceId: cookie.workspaceId,
-      provider: 'DOCUSIGN',
-      accountId: tokens.accountId,
-      accountEmail: tokens.accountEmail,
-      accessTokenEncrypted: enc.accessTokenEncrypted,
-      refreshTokenEncrypted: enc.refreshTokenEncrypted,
-      scopes: enc.scopes,
-      expiresAt: enc.expiresAt,
-      providerMetadata,
-      lastRefreshedAt: new Date(),
-      status: 'ACTIVE',
-    },
-    update: {
-      accountEmail: tokens.accountEmail,
-      accessTokenEncrypted: enc.accessTokenEncrypted,
-      refreshTokenEncrypted: enc.refreshTokenEncrypted,
-      scopes: enc.scopes,
-      expiresAt: enc.expiresAt,
-      providerMetadata,
-      lastRefreshedAt: new Date(),
-      status: 'ACTIVE',
-    },
-  });
+      update: {
+        accountEmail: tokens.accountEmail,
+        accessTokenEncrypted: enc.accessTokenEncrypted,
+        refreshTokenEncrypted: enc.refreshTokenEncrypted,
+        scopes: enc.scopes,
+        expiresAt: enc.expiresAt,
+        providerMetadata,
+        lastRefreshedAt: new Date(),
+        status: 'ACTIVE',
+      },
+    }),
+  );
 
-  const verify = await prisma.integrationCredential.findUnique({ where: { id: credential.id } });
+  const verify = await withSystemContext((tx) =>
+    tx.integrationCredential.findUnique({ where: { id: credential.id } }),
+  );
   if (!verify) {
     return workspaceRedirect(origin, cookie, { error: 'credential_persist_verify_failed' });
   }
@@ -167,42 +173,46 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   // have a subscription row to attach to. notificationUrl is informational
   // here (Connect is configured in the DocuSign admin), but we record it.
   const notificationUrl = new URL('/api/integrations/docusign/connect', origin).toString();
-  const existing = await prisma.webhookSubscription.findFirst({
-    where: { workspaceId: cookie.workspaceId, integrationCredentialId: credential.id, provider: 'DOCUSIGN' },
-    select: { id: true },
-  });
-  await prisma.webhookSubscription.upsert({
-    where: { id: existing?.id ?? '00000000-0000-0000-0000-000000000000' },
-    create: {
-      workspaceId: cookie.workspaceId,
-      integrationCredentialId: credential.id,
-      provider: 'DOCUSIGN',
-      subscriptionId: tokens.accountId,
-      resource: `docusign-connect:${tokens.accountId}`,
-      expiresAt: CONNECT_FAR_FUTURE,
-      notificationUrl,
-      lastRenewedAt: new Date(),
-      status: 'ACTIVE',
-    },
-    update: {
-      subscriptionId: tokens.accountId,
-      resource: `docusign-connect:${tokens.accountId}`,
-      expiresAt: CONNECT_FAR_FUTURE,
-      notificationUrl,
-      status: 'ACTIVE',
-    },
+  await withSystemContext(async (tx) => {
+    const existing = await tx.webhookSubscription.findFirst({
+      where: { workspaceId: cookie.workspaceId, integrationCredentialId: credential.id, provider: 'DOCUSIGN' },
+      select: { id: true },
+    });
+    await tx.webhookSubscription.upsert({
+      where: { id: existing?.id ?? '00000000-0000-0000-0000-000000000000' },
+      create: {
+        workspaceId: cookie.workspaceId,
+        integrationCredentialId: credential.id,
+        provider: 'DOCUSIGN',
+        subscriptionId: tokens.accountId,
+        resource: `docusign-connect:${tokens.accountId}`,
+        expiresAt: CONNECT_FAR_FUTURE,
+        notificationUrl,
+        lastRenewedAt: new Date(),
+        status: 'ACTIVE',
+      },
+      update: {
+        subscriptionId: tokens.accountId,
+        resource: `docusign-connect:${tokens.accountId}`,
+        expiresAt: CONNECT_FAR_FUTURE,
+        notificationUrl,
+        status: 'ACTIVE',
+      },
+    });
   });
 
-  await prisma.auditLog.create({
-    data: {
-      actorUserId: session.userId,
-      workspaceId: cookie.workspaceId,
-      action: 'integration.connected',
-      targetTable: 'IntegrationCredential',
-      targetId: credential.id,
-      payload: { provider: 'DOCUSIGN', integrationId: INTEGRATION_ID, accountEmail: tokens.accountEmail, scopes: tokens.scopes },
-    },
-  });
+  await withSystemContext((tx) =>
+    tx.auditLog.create({
+      data: {
+        actorUserId: session.userId,
+        workspaceId: cookie.workspaceId,
+        action: 'integration.connected',
+        targetTable: 'IntegrationCredential',
+        targetId: credential.id,
+        payload: { provider: 'DOCUSIGN', integrationId: INTEGRATION_ID, accountEmail: tokens.accountEmail, scopes: tokens.scopes },
+      },
+    }),
+  );
 
   const res = workspaceRedirect(origin, cookie, { connected: INTEGRATION_ID });
   res.cookies.set(OAUTH_STATE_COOKIE, '', { path: '/', maxAge: 0 });

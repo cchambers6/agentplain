@@ -3,10 +3,12 @@
  *
  * Every 6 hours: for each Workspace with at least one ACTIVE membership,
  * call `ingestWorkspaceFiles(workspaceId, source)`. The default source is
- * `DriveFileSource` — which today returns NOT_CONFIGURED until the
- * workspace's Google Drive OAuth scopes land, so this cron is a graceful
- * NO-OP per workspace pre-OAuth and lights up the moment the Drive
- * adapter flips wired. Pipeline doesn't change; only the source flips.
+ * `DriveFileSource`, which goes through the per-workspace Drive MCP
+ * (`lib/integrations/google-drive-mcp`). Workspaces with no GOOGLE
+ * `IntegrationCredential` row surface as `NOT_CONFIGURED` and the sweep
+ * counts them as `workspacesSkippedUnconfigured` (a clean zero, not a
+ * failure). The first sweep after a workspace connects Drive via OAuth
+ * ingests their files — no code change required.
  *
  * Why this exists: `lib/customer-files/ingest.ts` and the per-fire
  * retrieval path in `lib/inngest/functions/process-webhook-event.ts` are
@@ -21,7 +23,7 @@
  *
  * Per `feedback_runner_portability.md` + `feedback_no_silent_vendor_lock.md`:
  * the source is injected via a factory (`buildSource`). Default factory
- * returns the prod `DriveFileSource` (unwired); tests inject a
+ * returns the prod `DriveFileSource` (MCP-backed); tests inject a
  * `FixtureFileSource` per workspace. Switching providers (Dropbox,
  * OneDrive, …) is a new IFileSource adapter behind the same factory.
  *
@@ -194,12 +196,11 @@ async function listActiveWorkspaces(): Promise<Pick<Workspace, 'id' | 'slug'>[]>
 }
 
 function defaultBuildSource(_workspaceId: string): IFileSource {
-  // Prod default is the Drive adapter. Today it's unwired (returns
-  // NOT_CONFIGURED), so the sweep NO-OPs cleanly per workspace until
-  // OAuth lands. When the Drive helper under `lib/integrations/google/`
-  // is implemented, flip `unwired: false` here (or have the factory
-  // read the IntegrationCredential row) and ingestion lights up
-  // without touching the cron.
+  // Prod default is the Drive adapter (MCP-backed). It lists + fetches via
+  // `lib/integrations/google-drive-mcp` and gracefully returns
+  // `NOT_CONFIGURED` when the workspace has no active GOOGLE
+  // IntegrationCredential row. The sweep flips from no-op to live-ingesting
+  // the moment a workspace connects Drive — no code change here.
   return new DriveFileSource();
 }
 

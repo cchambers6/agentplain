@@ -8,7 +8,11 @@
 export { FixtureFileSource } from './fixture-source';
 export type { FixtureFileDescriptor, FixtureFileSourceConfig } from './fixture-source';
 
-export { DriveFileSource } from './drive-source';
+export {
+  DriveFileSource,
+  DEFAULT_DRIVE_QUERY,
+  DRIVE_SUPPORTED_MIME_TYPES,
+} from './drive-source';
 export type { DriveFileSourceConfig } from './drive-source';
 
 export { chunkText } from './chunk';

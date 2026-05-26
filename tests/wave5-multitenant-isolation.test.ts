@@ -403,4 +403,66 @@ describe('wave5 multi-tenant — source-level invariants', () => {
         .join('\n')}`,
     );
   });
+
+  it('every table with a CREATE POLICY has a matching FORCE ROW LEVEL SECURITY statement', async () => {
+    // Postgres SKIPS row-level security for the table-OWNER role. prisma
+    // migrate deploy creates tables under the migration role, so if the
+    // application connects as that same role (e.g. Neon's default
+    // `neondb_owner`) every CREATE POLICY in the schema is silently NOT
+    // enforced. The fix is `ALTER TABLE ... FORCE ROW LEVEL SECURITY`,
+    // applied in 20260526000001_force_rls.
+    //
+    // This invariant locks the rule going forward: a new policied table
+    // that ships without a matching FORCE will fail CI. Without this test,
+    // a future migration could land a CREATE POLICY on a new table and
+    // believe RLS is on while the table-owner bypass silently leaks it.
+    const MIGRATIONS_DIR = path.join(ROOT, 'prisma', 'migrations');
+    const allSql: string[] = [];
+    async function collectSql(dir: string): Promise<void> {
+      let entries: import('node:fs').Dirent[];
+      try {
+        entries = await fs.readdir(dir, { withFileTypes: true });
+      } catch {
+        return;
+      }
+      for (const e of entries) {
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) {
+          await collectSql(full);
+        } else if (e.isFile() && e.name === 'migration.sql') {
+          allSql.push(await fs.readFile(full, 'utf8'));
+        }
+      }
+    }
+    await collectSql(MIGRATIONS_DIR);
+
+    const policyTablePattern = /CREATE\s+POLICY\s+"[^"]+"\s+ON\s+"([A-Za-z0-9_]+)"/gi;
+    const forceTablePattern = /ALTER\s+TABLE\s+"([A-Za-z0-9_]+)"\s+FORCE\s+ROW\s+LEVEL\s+SECURITY/gi;
+
+    const policied = new Set<string>();
+    const forced = new Set<string>();
+
+    for (const sql of allSql) {
+      let m: RegExpExecArray | null;
+      const reP = new RegExp(policyTablePattern.source, 'gi');
+      while ((m = reP.exec(sql)) !== null) policied.add(m[1]);
+      const reF = new RegExp(forceTablePattern.source, 'gi');
+      while ((m = reF.exec(sql)) !== null) forced.add(m[1]);
+    }
+
+    const missing = [...policied].filter((t) => !forced.has(t)).sort();
+    assert.deepEqual(
+      missing,
+      [],
+      `tables with CREATE POLICY but no matching FORCE ROW LEVEL SECURITY — add ALTER TABLE "<T>" FORCE ROW LEVEL SECURITY in a follow-up migration (every policied table must FORCE; see prisma/migrations/20260526000001_force_rls/migration.sql):\n${missing
+        .map((t) => `  ${t}`)
+        .join('\n')}`,
+    );
+    // Sanity: the policied set isn't empty (the test would tautologically
+    // pass if the regex broke and matched nothing).
+    assert.ok(
+      policied.size > 0,
+      'expected to discover at least one CREATE POLICY across prisma/migrations — regex may be broken',
+    );
+  });
 });

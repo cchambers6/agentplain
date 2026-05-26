@@ -20,17 +20,17 @@
 // fabricated metrics. The page works against an empty DB by showing honest
 // empty states rather than zeros that imply motion.
 //
-// Cross-workspace queries deliberately use `prisma` (system context), not
-// `withRls`, because operators are the audience and RLS would scope reads to
-// their personal memberships. The layout already enforces that only operator
-// sessions reach this code path. Same approach `/operator/workspaces` uses.
+// Cross-workspace queries deliberately use `withSystemContext` (operator
+// GUC), not `withRls`, because operators are the audience and the standard
+// per-workspace RLS branch would scope reads to their personal memberships.
+// The layout already enforces that only operator sessions reach this code
+// path. Same approach `/operator/workspaces` uses.
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ApEyebrow, ApPaperCard, PlainoAvatar } from "@/components/ui/ap";
 import { requireUser } from "@/lib/auth/server";
 import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
-import { prisma } from "@/lib/db/prisma";
 import { withSystemContext } from "@/lib/db/rls";
 import { getVerticalContent } from "@/lib/verticals";
 import type { AgentRosterEntry, VerticalContent } from "@/lib/verticals/types";
@@ -83,14 +83,17 @@ export default async function OperatorFleetPage() {
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  // The Workspace model isn't in WORKSPACE_SCOPED_MODELS (operators legitimately
-  // need to enumerate every workspace), so the direct prisma read is fine and
-  // mirrors what `/operator/workspaces/page.tsx` does. Everything else routes
-  // through `withSystemContext` so a future RLS-policy bug can't open a hole.
-  const workspaces = await prisma.workspace.findMany({
-    select: { id: true, name: true, slug: true, vertical: true },
-    orderBy: { createdAt: "desc" },
-  });
+  // Workspace is RLS-policied (workspace_member_read gates SELECT on
+  // is_operator OR id=app.workspace_id) AND now FORCE'd via the force_rls
+  // migration, so even the migration-owner role obeys the policy. We must
+  // open the system context so the policy's is_operator='true' branch
+  // resolves to TRUE; otherwise findMany returns zero rows under FORCE.
+  const workspaces = await withSystemContext((tx) =>
+    tx.workspace.findMany({
+      select: { id: true, name: true, slug: true, vertical: true },
+      orderBy: { createdAt: "desc" },
+    }),
+  );
 
   const [
     handoffsGrouped,

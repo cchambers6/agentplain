@@ -18,7 +18,7 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db/prisma";
+import { withSystemContext } from "@/lib/db/rls";
 import { requireUser } from "@/lib/auth/server";
 import {
   TIER_ORDER,
@@ -54,27 +54,33 @@ export default async function OperatorWorkspacesPage(props: PageProps) {
   const flashWorkspaceId = pickFirst(params.workspaceId);
   const flashTo = pickFirst(params.to);
 
-  const workspaces = await prisma.workspace.findMany({
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      vertical: true,
-      verticalTier: true,
-      stripeSubscriptionId: true,
-      billingMode: true,
-      subscription: {
-        select: {
-          tier: true,
-          seats: true,
-          seatBand: true,
-          status: true,
-          stripeSubscriptionId: true,
+  // Workspace + Subscription are both RLS-policied + FORCE'd via force_rls.
+  // Operator surface needs to enumerate every workspace — wrap in
+  // withSystemContext so the policy's is_operator='true' branch resolves to
+  // TRUE; otherwise findMany returns zero rows under FORCE.
+  const workspaces = await withSystemContext((tx) =>
+    tx.workspace.findMany({
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        vertical: true,
+        verticalTier: true,
+        stripeSubscriptionId: true,
+        billingMode: true,
+        subscription: {
+          select: {
+            tier: true,
+            seats: true,
+            seatBand: true,
+            status: true,
+            stripeSubscriptionId: true,
+          },
         },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+    }),
+  );
 
   return (
     <div className="container-wide py-12">

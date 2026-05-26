@@ -989,3 +989,33 @@ model SupportRequest {
   @@index([workspaceId, createdAt])
   @@index([status, createdAt])
 }
+
+// Operator-only flag store. Source of truth for ops-managed kill-switches
+// (Inngest pause/resume in particular — P0-4). Migrated out of process.env
+// because env-backed flags only take effect on the next cold start, which
+// gave us a 5+ minute pause-propagation lag. The DB row is read by every
+// Inngest gate invocation; the env-var path remains as a cold-start cache /
+// fallback when the DB is unreachable. See
+// prisma/migrations/20260526120000_add_ops_flag/migration.sql for the RLS +
+// FORCE shape. Every access goes through lib/ops/prisma-flag-store.ts under
+// withSystemContext; bare prisma.opsFlag.* reads see zero rows.
+model OpsFlag {
+  /// Operator-visible flag name. For Inngest pause flags this matches the
+  /// env-var name (e.g. INNGEST_FN_DISABLE_AGENTPLAIN_TRIAL_WARNINGS) so the
+  /// DB path and env fallback are interchangeable with zero translation.
+  name      String   @id
+  /// Literal flag value. For pause flags, "true" = paused; anything else
+  /// (incl. "false", missing row) = active. Strict equality, matching
+  /// lib/inngest/disable-flag.ts.
+  value     String
+  updatedAt DateTime @updatedAt
+  /// Free-text actor string. Not a User FK — the writer can be a system
+  /// identity ("system"), a CLI invocation ("cli:throttle.ts"), or a
+  /// specific operator ("user:<uuid>").
+  updatedBy String?
+  /// Optional operator note about why the flag was flipped. Pure
+  /// documentation; the gate does not read it.
+  note      String?
+
+  @@index([updatedAt])
+}

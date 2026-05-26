@@ -102,6 +102,15 @@ enum WorkApprovalKind {
   ADMIN_TRIAL_ENDING
   ADMIN_BILLING_NOTICE
   ADMIN_SECURITY_ALERT
+  // Chief-of-staff scheduler proposal kinds. One enum value per
+  // ChiefOfStaffProposal.kind so the approvals UI renders the right
+  // affordance (slot picker vs reply draft vs to-do row). Each is
+  // ALWAYS draft-only — the customer's own system books/sends/writes;
+  // the skill itself never executes. See lib/skills/chief-of-staff-
+  // scheduler and project_no_outbound_architecture.md.
+  CHIEF_OF_STAFF_MEETING
+  CHIEF_OF_STAFF_REPLY_DRAFT
+  CHIEF_OF_STAFF_TODO
 }
 
 enum WorkApprovalStatus {

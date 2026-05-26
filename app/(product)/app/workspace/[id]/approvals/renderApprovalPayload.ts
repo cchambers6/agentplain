@@ -81,6 +81,9 @@ const KIND_LABEL: Record<WorkApprovalKind, string> = {
   ADMIN_TRIAL_ENDING: "trial ending",
   ADMIN_BILLING_NOTICE: "billing notice",
   ADMIN_SECURITY_ALERT: "security alert",
+  CHIEF_OF_STAFF_MEETING: "proposed meeting time",
+  CHIEF_OF_STAFF_REPLY_DRAFT: "draft reply",
+  CHIEF_OF_STAFF_TODO: "proposed to-do",
 };
 
 export function renderApprovalPayload(
@@ -109,6 +112,12 @@ export function renderApprovalPayload(
       return renderPricingRecommendation(p);
     case "COMPLIANCE_FLAG":
       return renderComplianceFlag(p);
+    case "CHIEF_OF_STAFF_MEETING":
+      return renderChiefOfStaffMeeting(p);
+    case "CHIEF_OF_STAFF_REPLY_DRAFT":
+      return renderChiefOfStaffReplyDraft(p);
+    case "CHIEF_OF_STAFF_TODO":
+      return renderChiefOfStaffTodo(p);
     default: {
       const _exhaustive: never = kind;
       // Runtime safety: if a new enum value reaches production before the
@@ -368,6 +377,148 @@ function renderComplianceFlag(p: Record<string, unknown>): RenderedApproval {
       ...(source ? [`Source: ${source}`] : []),
     ],
   };
+}
+
+/**
+ * Chief-of-staff meeting proposal — surfaces the proposed invite subject
+ * + body + candidate slots. The customer's own calendar performs any
+ * booking; the renderer is read-only on the proposal.
+ */
+function renderChiefOfStaffMeeting(p: Record<string, unknown>): RenderedApproval {
+  const subject = pickString(p, ["subject"]);
+  const inviteBody = pickString(p, ["inviteBody", "body"]) ?? "";
+  const confidence = pickNumber(p, ["confidence"]);
+  const reasoning = pickString(p, ["reasoning"]);
+  const attendeeLine = pickAttendeeLine(p);
+  const slots = pickChiefOfStaffSlots(p);
+
+  return {
+    kindLabel: KIND_LABEL.CHIEF_OF_STAFF_MEETING,
+    title: subject ?? "Proposed meeting time",
+    recipientLine: attendeeLine,
+    body: inviteBody
+      ? splitParagraphs(inviteBody)
+      : ["No invite body was drafted."],
+    metaLine: composeMeta({ confidence, tone: undefined }),
+    inboundSummary: reasoning,
+    proposedSlots: slots.length > 0 ? slots : undefined,
+    editableBody: inviteBody || undefined,
+  };
+}
+
+/**
+ * Chief-of-staff reply draft — same shape as BUYER_INQUIRY_REPLY_DRAFT
+ * but attributed to the chief-of-staff slug. Substantive content is
+ * deferred to operator merge fields by the skill itself.
+ */
+function renderChiefOfStaffReplyDraft(
+  p: Record<string, unknown>,
+): RenderedApproval {
+  const subject = pickString(p, ["subject"]);
+  const body = pickString(p, ["body"]) ?? "";
+  const tone = pickString(p, ["tone"]);
+  const confidence = pickNumber(p, ["confidence"]);
+  const reasoning = pickString(p, ["reasoning"]);
+  const recipient = pickRecipientFromToEmails(p);
+  const recipientLine =
+    recipient && subject
+      ? `To: ${recipient}    Re: ${subject}`
+      : recipient
+        ? `To: ${recipient}`
+        : subject
+          ? `Re: ${subject}`
+          : undefined;
+
+  return {
+    kindLabel: KIND_LABEL.CHIEF_OF_STAFF_REPLY_DRAFT,
+    recipientLine,
+    body: body ? splitParagraphs(body) : ["No draft body was attached."],
+    metaLine: composeMeta({ confidence, tone }),
+    inboundSummary: reasoning,
+    tone,
+    persisted: false,
+    editableBody: body || undefined,
+  };
+}
+
+/**
+ * Chief-of-staff to-do — single-line title + context. The customer's
+ * own task system writes the row when the operator approves.
+ */
+function renderChiefOfStaffTodo(p: Record<string, unknown>): RenderedApproval {
+  const title = pickString(p, ["title"]);
+  const context = pickString(p, ["contextText", "context"]);
+  const due = pickString(p, ["suggestedDueLocal", "due"]);
+  const confidence = pickNumber(p, ["confidence"]);
+  const reasoning = pickString(p, ["reasoning"]);
+  const lines: string[] = [];
+  if (context) lines.push(context);
+  if (due) lines.push(`Suggested due: ${due}`);
+  if (lines.length === 0) lines.push("Proposed to-do item.");
+
+  return {
+    kindLabel: KIND_LABEL.CHIEF_OF_STAFF_TODO,
+    title: title ?? "Proposed to-do",
+    body: lines,
+    metaLine: composeMeta({ confidence, tone: undefined }),
+    inboundSummary: reasoning,
+  };
+}
+
+function pickAttendeeLine(p: Record<string, unknown>): string | undefined {
+  const raw = p.attendees;
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  const emails: string[] = [];
+  for (const a of raw) {
+    if (a && typeof a === "object") {
+      const r = a as Record<string, unknown>;
+      const email = typeof r.email === "string" ? r.email : null;
+      if (email) emails.push(email);
+    }
+  }
+  if (emails.length === 0) return undefined;
+  return `To: ${emails.join(", ")}`;
+}
+
+function pickRecipientFromToEmails(
+  p: Record<string, unknown>,
+): string | undefined {
+  const raw = p.toEmails;
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return pickString(p, ["to", "recipient"]);
+  }
+  const emails = raw.filter((e): e is string => typeof e === "string");
+  if (emails.length === 0) return undefined;
+  return emails.join(", ");
+}
+
+function pickChiefOfStaffSlots(p: Record<string, unknown>): ProposedSlot[] {
+  const raw = p.candidateSlots;
+  if (!Array.isArray(raw)) return [];
+  const out: ProposedSlot[] = [];
+  for (const s of raw) {
+    if (s && typeof s === "object") {
+      const r = s as Record<string, unknown>;
+      const day =
+        typeof r.day === "string"
+          ? r.day
+          : typeof r.dayOfWeek === "string"
+            ? r.dayOfWeek
+            : null;
+      if (
+        day &&
+        typeof r.startLocal === "string" &&
+        typeof r.endLocal === "string"
+      ) {
+        out.push({
+          day,
+          startLocal: r.startLocal,
+          endLocal: r.endLocal,
+        });
+      }
+    }
+  }
+  return out;
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {

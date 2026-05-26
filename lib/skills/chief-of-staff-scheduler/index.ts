@@ -2,6 +2,15 @@ export { runSkill } from './skill';
 export { JsonChiefOfStaffFetcher } from './json-fetcher';
 export { RecordingApprovalSink } from './approval-sink';
 export type { RecordedProposal } from './approval-sink';
+export {
+  PrismaApprovalSink,
+  buildApprovalRow,
+  CHIEF_OF_STAFF_AGENT_SLUG,
+  CHIEF_OF_STAFF_REF_TABLE,
+} from './prisma-approval-sink';
+export type { PrismaApprovalSinkOptions } from './prisma-approval-sink';
+export { runChiefOfStaffForWorkspace } from './run-for-workspace';
+export type { RunChiefOfStaffForWorkspaceInput } from './run-for-workspace';
 export type {
   ApprovalSink,
   CalendarEvent,

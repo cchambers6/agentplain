@@ -45,6 +45,7 @@ const getChatMessagesArgsSchema = z.object({
 const sendChatMessageArgsSchema = z.object({
   chatId: z.string().min(1),
   body: z.string().min(1),
+  approvalToken: z.string().optional(),
 });
 
 const listChannelsArgsSchema = z.object({
@@ -56,6 +57,7 @@ const postToChannelArgsSchema = z.object({
   channelId: z.string().min(1),
   body: z.string().min(1),
   subject: z.string().optional(),
+  approvalToken: z.string().optional(),
 });
 
 const listMeetingsArgsSchema = z.object({
@@ -103,7 +105,7 @@ const TOOLS: ToolRegistration[] = [
   {
     shortName: 'teams.send_chat_message',
     description:
-      'Send a plain-text message into an existing Teams chat the connected account is a member of.',
+      'Send a plain-text message into an existing Teams chat the connected account is a member of. APPROVAL-GATED: requires a non-empty approvalToken from the approval queue — never auto-fires.',
     schema: sendChatMessageArgsSchema,
     invoke: (server, args) =>
       server.sendChatMessage(sendChatMessageArgsSchema.parse(args)),
@@ -119,7 +121,7 @@ const TOOLS: ToolRegistration[] = [
   {
     shortName: 'teams.post_to_channel',
     description:
-      'Post a new message into a Teams channel the connected account participates in.',
+      'Post a new message into a Teams channel the connected account participates in. APPROVAL-GATED: requires a non-empty approvalToken from the approval queue — never auto-fires.',
     schema: postToChannelArgsSchema,
     invoke: (server, args) =>
       server.postToChannel(postToChannelArgsSchema.parse(args)),

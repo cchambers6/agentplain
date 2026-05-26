@@ -68,6 +68,9 @@ const RESOURCE_URI_CHATS_RE =
 const RESOURCE_URI_MEETINGS_RE =
   /^teams:\/\/workspace\/([0-9a-f-]+)\/meetings$/i;
 
+const APPROVAL_REQUIRED_MSG =
+  'Posting to Teams requires human approval; pass approvalToken from the approval queue. This action acts as the customer and never auto-fires.';
+
 /** Microsoft Graph Teams resource shapes — strictly what this server reads. */
 interface GraphIdentity {
   user?: { id?: string; displayName?: string; userIdentityType?: string };
@@ -208,6 +211,11 @@ export class ProdTeamsMcpServer implements TeamsMcpServer {
     if (!input.body) {
       return mcpError('INVALID_ARGUMENT', 'sendChatMessage requires body');
     }
+    // APPROVAL GATE — short-circuit before any Graph call. Mirrors Slack
+    // MCP's `postMessage` / `sendDm` gate (slack-mcp/server.ts:111-115).
+    if (!input.approvalToken || input.approvalToken.trim().length === 0) {
+      return mcpError('APPROVAL_REQUIRED', APPROVAL_REQUIRED_MSG);
+    }
     return this.withCredential(async (cred) => {
       // POST /chats/{id}/messages — Microsoft Graph creates the message
       // and broadcasts it to the chat. `body.contentType=text` keeps us
@@ -273,6 +281,11 @@ export class ProdTeamsMcpServer implements TeamsMcpServer {
     }
     if (!input.body) {
       return mcpError('INVALID_ARGUMENT', 'postToChannel requires body');
+    }
+    // APPROVAL GATE — short-circuit before any Graph call. Mirrors Slack
+    // MCP's `postMessage` / `sendDm` gate (slack-mcp/server.ts:127-131).
+    if (!input.approvalToken || input.approvalToken.trim().length === 0) {
+      return mcpError('APPROVAL_REQUIRED', APPROVAL_REQUIRED_MSG);
     }
     return this.withCredential(async (cred) => {
       const url = this.graph.url(

@@ -29,6 +29,14 @@
  * The same exception holds for SOLO drafts in Outlook (we use the Drafts
  * folder, which is internal to the customer's mailbox). For acquisition
  * outreach, the customer's own system sends — agentplain does not.
+ *
+ * APPROVAL GATE (Slack-parity, N3): even though Teams sends are scoped
+ * to the customer's own surface, BOTH `send_chat_message` and
+ * `post_to_channel` post AS the customer via their token and must NEVER
+ * auto-fire. They return APPROVAL_REQUIRED — before any Graph call —
+ * unless the caller passes a non-empty `approvalToken` (supplied only by
+ * a human approval step). Mirrors the gate the Slack MCP enforces on
+ * `post_message` / `send_dm` (see `lib/integrations/slack-mcp/server.ts`).
  */
 
 import type { McpResult } from '@/lib/integrations/microsoft/mcp-common';
@@ -93,6 +101,13 @@ export interface SendChatMessageInput {
   chatId: string;
   /** Plain-text body. Server wraps to Microsoft Graph `body.contentType=text`. */
   body: string;
+  /**
+   * Approval-queue token. REQUIRED and non-empty — sending routes through
+   * the approval queue and never auto-fires. Supplied only by a human
+   * approval step; absence yields APPROVAL_REQUIRED before any Graph call.
+   * Mirrors the Slack MCP's `post_message` / `send_dm` gate.
+   */
+  approvalToken?: string;
 }
 
 export interface SendChatMessageOutput {
@@ -132,6 +147,8 @@ export interface PostToChannelInput {
   /** Optional subject — Graph requires it on the FIRST message of a
    *  thread (channel root); replies set `replyToMessageId` instead. */
   subject?: string;
+  /** Approval-queue token — same gate as `send_chat_message`. */
+  approvalToken?: string;
 }
 
 export interface PostToChannelOutput {

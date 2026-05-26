@@ -51,6 +51,7 @@ export type McpErrorCode =
   | 'GRANT_REVOKED'
   | 'CREDENTIAL_NOT_FOUND'
   | 'WORKSPACE_NOT_FOUND'
+  | 'APPROVAL_REQUIRED'
   | 'NOT_IMPLEMENTED';
 
 export interface McpError {
@@ -148,6 +149,8 @@ export function mcpErrorCodeToHttpStatus(code: McpErrorCode): number {
     case 'FORBIDDEN':
     case 'GRANT_REVOKED':
       return 403;
+    case 'APPROVAL_REQUIRED':
+      return 409;
     case 'NOT_FOUND':
     case 'CREDENTIAL_NOT_FOUND':
     case 'WORKSPACE_NOT_FOUND':
@@ -207,6 +210,11 @@ export const JSON_RPC_ERROR = {
   WORKSPACE_FORBIDDEN: -32001,
   CREDENTIAL_NOT_FOUND: -32002,
   UPSTREAM_ERROR: -32003,
+  /** Tool needs explicit human approval before it can run. Matches
+   *  `lib/integrations/mcp-core/types.ts:JSON_RPC_ERROR.APPROVAL_REQUIRED`
+   *  so MCP clients can speak to Slack-tier and Graph-tier servers with
+   *  one error-mapping table. */
+  APPROVAL_REQUIRED: -32004,
 } as const;
 
 export function mcpErrorToJsonRpc(err: McpError): number {
@@ -222,6 +230,8 @@ export function mcpErrorToJsonRpc(err: McpError): number {
     case 'CREDENTIAL_NOT_FOUND':
     case 'WORKSPACE_NOT_FOUND':
       return JSON_RPC_ERROR.CREDENTIAL_NOT_FOUND;
+    case 'APPROVAL_REQUIRED':
+      return JSON_RPC_ERROR.APPROVAL_REQUIRED;
     case 'NOT_IMPLEMENTED':
       return JSON_RPC_ERROR.METHOD_NOT_FOUND;
     case 'RATE_LIMITED':

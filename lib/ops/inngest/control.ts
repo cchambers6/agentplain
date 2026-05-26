@@ -1,38 +1,44 @@
 /**
- * Inngest control-plane adapter — Vercel-env backed.
+ * Inngest control-plane adapter.
  *
- * Implemented via the in-house flag pattern per `capability_inbox.md`
- * proposal #13. Inngest itself does not publish a public REST API for
- * pausing or resuming cron functions (verified at
- * https://www.inngest.com/docs/guides/pause-functions on 2026-05-10 —
- * pause is exclusively a Cloud-UI operation). Rather than wait for an
- * upstream API, we wrap every Inngest function in `lib/inngest/functions/*.ts`
- * with an `isFunctionDisabled()` gate (lib/inngest/disable-flag.ts). The
- * gate reads `process.env.INNGEST_FN_DISABLE_<NORMALIZED_ID>`. This
- * adapter writes that env var via the Vercel REST API.
+ * The pause/resume flag is now DB-backed via `OpsFlagStore` (P0-4) —
+ * `OpsFlag` is the source of truth, read by every Inngest function
+ * invocation through `lib/inngest/run-with-disable-gate.ts`. The Vercel
+ * env-var mirror is retained as a best-effort cold-start cache so a
+ * function fired during a brief DB outage still finds its flag in the
+ * env it booted with.
  *
- * Why this beats waiting for Inngest:
- *   - org-ops-management owns the kill-switch, not the vendor (per
- *     `feedback_no_silent_vendor_lock` + `project_living_portable_architecture`).
- *   - The mechanism mirrors the existing `USE_GHA_CRON` repo-variable
- *     pattern — same shape, same audit log, same contract test.
- *   - If Inngest ships a real pause API tomorrow, only this file changes.
- *     The function handlers, the disable-flag helper, the throttle CLI,
- *     and the contract tests stay put.
+ * Why both surfaces? The DB write makes the pause take effect on the
+ * NEXT cron tick (was 5+ minutes via env-only; see the assessment for
+ * the original measurement). The env mirror keeps the prior behavior as
+ * a defense-in-depth fallback — the gate's env path stays meaningful so
+ * a DB outage cannot silently un-pause every cron in the system.
  *
- * Vercel REST endpoints used (documented at https://vercel.com/docs/rest-api/reference/endpoints/projects):
+ * Write semantics (per `feedback_no_quick_fixes`): the DB write is the
+ * gate. If it fails, the call returns an error and the env mirror is
+ * NOT attempted (no half-mutation). If the DB write succeeds and the
+ * env mirror fails, the call still succeeds — the caller can re-run to
+ * heal the mirror later, and the gate will already honor the DB on the
+ * next tick. The env mirror is therefore "best effort": its failure is
+ * downgraded to a warning, never an error.
+ *
+ * The env mirror is OPT-IN — if the caller does not supply Vercel
+ * credentials, the adapter operates DB-only and `getInngestFunctionStatus`
+ * reads from the DB. This is the production shape on hosts that do not
+ * expose the Vercel admin API (e.g. local dev without a Vercel token).
+ *
+ * Inngest itself still does not publish a public REST API for pausing
+ * cron functions (verified at https://www.inngest.com/docs/guides/pause-functions
+ * on 2026-05-10 — pause is exclusively a Cloud-UI operation), so the
+ * in-house flag pattern remains the load-bearing primitive even after
+ * the DB cutover. Per
+ * `feedback_no_silent_vendor_lock` + `project_living_portable_architecture`:
+ * if Inngest ships a real pause API tomorrow only this file changes.
+ *
+ * Vercel REST endpoints used for the env mirror (documented at
+ * https://vercel.com/docs/rest-api/reference/endpoints/projects):
  *   POST   /v9/projects/{id}/env?upsert=true   create-or-update single env var
  *   GET    /v9/projects/{id}/env               list all env vars (we filter by key)
- *
- * We deliberately `?upsert=true` rather than read-then-PATCH/POST so the
- * mutation is a single round-trip with idempotent semantics. Read-back
- * via `getInngestFunctionStatus` is the caller's responsibility (per
- * `feedback_verify_after_create`); the throttle CLI does it
- * automatically.
- *
- * The flag is written with `type: 'plain'` so the GET response includes
- * the literal `"true"`/`"false"` value — encrypted/sensitive types come
- * back masked, which would defeat the read-back invariant.
  */
 
 import {
@@ -47,6 +53,7 @@ import type {
   RepoVariable,
 } from '../types'
 import { opsError, opsOk } from '../types'
+import type { OpsFlagStore } from '../flag-store'
 
 const DEFAULT_API_BASE = 'https://api.vercel.com'
 const DEFAULT_TARGETS: ReadonlyArray<'production' | 'preview' | 'development'> = [
@@ -59,27 +66,33 @@ const VERCEL_ENV_DOCS = 'https://vercel.com/docs/rest-api/reference/endpoints/pr
 
 export interface InngestControlConfig {
   /**
-   * Vercel project id (e.g. `prj_XXX`). The flag env vars live under
-   * this project. Required — never default this from process.env so
-   * separate FlatSBO / agentplain instances cannot accidentally cross
-   * over.
+   * DB-backed flag store. REQUIRED — this is the source of truth for
+   * pause state after P0-4. Production: pass a `PrismaOpsFlagStore`.
+   * Tests: pass an `InMemoryOpsFlagStore`.
    */
-  vercelProjectId: string
+  flagStore: OpsFlagStore
   /**
-   * Vercel API token. Falls back to `VERCEL_TOKEN` env var.
+   * Vercel project id (e.g. `prj_XXX`). Optional after P0-4 — if absent,
+   * the env mirror is skipped and the adapter operates DB-only. If
+   * present, must be paired with a token.
+   */
+  vercelProjectId?: string
+  /**
+   * Vercel API token. Falls back to `VERCEL_TOKEN` env var when
+   * `vercelProjectId` is set; ignored when there is no project id.
    *
    * Per `feedback_no_prod_secrets_in_dev` — this is an account-level
    * secret. In `.env.local` use a dev-tier scoped token (read-only or
-   * limited project access) NOT the same value as Vercel Production. See
-   * lib/ops/README.md credentials section.
+   * limited project access) NOT the same value as Vercel Production.
+   * See lib/ops/README.md credentials section.
    */
   vercelToken?: string
   /** Optional Vercel team scope. Pass when the project is team-owned. */
   vercelTeamId?: string
   /**
    * Inngest app id used as a label on errors / audit rows. Optional —
-   * no functional role. Kept so log lines say `app=flatsbo-prod` rather
-   * than the bare project id.
+   * no functional role. Kept so log lines say `app=agentplain-prod`
+   * rather than the bare project id.
    */
   appId?: string
   /** Override for tests. Defaults to https://api.vercel.com. */
@@ -93,6 +106,18 @@ export interface InngestControlConfig {
    * to pause production but leave dev firing.
    */
   targets?: ReadonlyArray<'production' | 'preview' | 'development'>
+  /**
+   * Free-text actor string written to `OpsFlag.updatedBy`. Defaults to
+   * `'cli:throttle.ts'`. Other callers (the org-ops-management agent
+   * when it lands) should pass their own identifier.
+   */
+  actor?: string
+  /**
+   * Hook invoked when the best-effort Vercel env mirror fails. Defaults
+   * to a no-op. The CLI passes a logger so the operator sees the
+   * blocker; tests assert it was invoked.
+   */
+  onEnvMirrorFailure?: (err: OpsError) => void
 }
 
 interface VercelEnvRecord {
@@ -104,31 +129,46 @@ interface VercelEnvRecord {
 }
 
 export class InngestControlAdapter implements OpsControlPlane {
-  private readonly projectId: string
-  private readonly token: string
+  private readonly flagStore: OpsFlagStore
+  private readonly projectId: string | null
+  private readonly token: string | null
   private readonly teamId?: string
   private readonly appId: string
   private readonly apiBase: string
   private readonly fetchImpl: typeof fetch
   private readonly targets: ReadonlyArray<'production' | 'preview' | 'development'>
+  private readonly actor: string
+  private readonly onEnvMirrorFailure: (err: OpsError) => void
 
   constructor(config: InngestControlConfig) {
-    if (!config.vercelProjectId) {
-      throw new Error('InngestControlAdapter: vercelProjectId is required')
+    if (!config.flagStore) {
+      throw new Error('InngestControlAdapter: flagStore is required (P0-4)')
     }
-    const token = config.vercelToken ?? process.env.VERCEL_TOKEN
-    if (!token) {
-      throw new Error(
-        'InngestControlAdapter: missing token. Set VERCEL_TOKEN or pass `vercelToken` in config.',
-      )
-    }
-    this.projectId = config.vercelProjectId
-    this.token = token
-    this.teamId = config.vercelTeamId
+    this.flagStore = config.flagStore
     this.appId = config.appId ?? '(unspecified)'
     this.apiBase = config.apiBase ?? DEFAULT_API_BASE
     this.fetchImpl = config.fetchImpl ?? fetch
     this.targets = config.targets ?? DEFAULT_TARGETS
+    this.actor = config.actor ?? 'cli:throttle.ts'
+    this.onEnvMirrorFailure = config.onEnvMirrorFailure ?? (() => undefined)
+
+    // Vercel mirror is opt-in. Either supply BOTH projectId + token (or
+    // env-resolved token), or supply NEITHER. Half a credential set
+    // disables the mirror outright.
+    if (config.vercelProjectId) {
+      const token = config.vercelToken ?? process.env.VERCEL_TOKEN
+      if (!token) {
+        throw new Error(
+          'InngestControlAdapter: vercelProjectId set but no token. Set VERCEL_TOKEN or pass `vercelToken`, or omit vercelProjectId to disable the env mirror.',
+        )
+      }
+      this.projectId = config.vercelProjectId
+      this.token = token
+      this.teamId = config.vercelTeamId
+    } else {
+      this.projectId = null
+      this.token = null
+    }
   }
 
   // ── Repo-variable surface — not implemented (composition signal) ─────
@@ -147,7 +187,7 @@ export class InngestControlAdapter implements OpsControlPlane {
     )
   }
 
-  // ── Inngest pause/resume/status — backed by Vercel env API ───────────
+  // ── Inngest pause/resume/status — DB source of truth + env mirror ───
 
   async pauseInngestFunction(functionId: string): Promise<OpsResult<void>> {
     return this.writeFlag(functionId, 'true')
@@ -155,9 +195,9 @@ export class InngestControlAdapter implements OpsControlPlane {
 
   async resumeInngestFunction(functionId: string): Promise<OpsResult<void>> {
     // Set explicit "false" rather than DELETE — both states observable,
-    // mirrors the USE_GHA_CRON pattern, and `isFunctionDisabled` already
-    // treats unset and "false" identically so this is purely about
-    // having a deterministic read-back value.
+    // mirrors the USE_GHA_CRON pattern, and the gate already treats
+    // missing/'false'/garbage identically so this is purely about
+    // having a deterministic read-back value for ops.
     return this.writeFlag(functionId, 'false')
   }
 
@@ -166,6 +206,28 @@ export class InngestControlAdapter implements OpsControlPlane {
   ): Promise<OpsResult<InngestFunctionStatus>> {
     const envName = safeEnvName(functionId)
     if (!envName.ok) return envName
+
+    // DB is source of truth — always consult it first.
+    const dbRead = await this.flagStore.get(envName.value)
+    if (dbRead.ok) {
+      if (dbRead.value !== null) {
+        if (dbRead.value.value === 'true') {
+          return opsOk({ functionId, pauseState: 'paused' })
+        }
+        if (dbRead.value.value === 'false') {
+          return opsOk({ functionId, pauseState: 'active' })
+        }
+        // Some other value — surface as 'unknown' so ops notices the drift.
+        return opsOk({ functionId, pauseState: 'unknown' })
+      }
+      // No DB row → fall through to env mirror (or "active" default).
+    }
+
+    // No env mirror configured → DB-only mode; missing row means active.
+    if (!this.projectId || !this.token) {
+      return opsOk({ functionId, pauseState: 'active' })
+    }
+
     const list = await this.listEnvVars()
     if (!list.ok) return list
     const record = list.value.find((e) => e.key === envName.value)
@@ -181,13 +243,10 @@ export class InngestControlAdapter implements OpsControlPlane {
       // var with a different type — we cannot trust our reading.
       return opsOk({ functionId, pauseState: 'unknown' })
     }
-    // Unrecognized value (e.g. "1", "yes") — treat as active per
-    // disable-flag.ts's strict equality semantics, but surface the
-    // discrepancy via 'unknown' so the operator notices.
     return opsOk({ functionId, pauseState: 'unknown' })
   }
 
-  // ── Internal: Vercel HTTP plumbing ───────────────────────────────────
+  // ── Internal: write path ─────────────────────────────────────────────
 
   private async writeFlag(
     functionId: string,
@@ -196,13 +255,37 @@ export class InngestControlAdapter implements OpsControlPlane {
     const envName = safeEnvName(functionId)
     if (!envName.ok) return envName
 
+    // 1. DB write — source of truth. If this fails, abort: no half-mutation.
+    const dbWrite = await this.flagStore.set(envName.value, value, {
+      updatedBy: this.actor,
+      note: `Inngest ${value === 'true' ? 'pause' : 'resume'} for ${functionId} (app=${this.appId})`,
+    })
+    if (!dbWrite.ok) return dbWrite
+
+    // 2. Env mirror — best effort. Skip if no Vercel credentials.
+    if (!this.projectId || !this.token) return opsOk(undefined)
+
+    const mirrorResult = await this.writeEnvMirror(envName.value, value)
+    if (!mirrorResult.ok) {
+      // Surface for the operator/CLI without failing the call. The DB
+      // is the gate; the mirror is the cold-start cache. A divergence
+      // here heals on the next successful write.
+      this.onEnvMirrorFailure(mirrorResult.error)
+    }
+    return opsOk(undefined)
+  }
+
+  private async writeEnvMirror(
+    envName: string,
+    value: 'true' | 'false',
+  ): Promise<OpsResult<void>> {
     const url = this.envCollectionUrl({ upsert: true })
     const body = {
-      key: envName.value,
+      key: envName,
       value,
       type: 'plain',
       target: this.targets,
-      comment: `Inngest disable flag for ${functionId} (app=${this.appId}). Managed by lib/ops/inngest/control.ts. Toggled via scripts/ops/throttle.ts.`,
+      comment: `Inngest disable flag mirror (DB is source of truth — see OpsFlag.${envName}). Managed by lib/ops/inngest/control.ts.`,
     }
     const res = await this.request('POST', url, body)
     if (!res.ok) return res
@@ -244,7 +327,7 @@ export class InngestControlAdapter implements OpsControlPlane {
   }
 
   private envCollectionUrl(opts: { upsert: boolean }): string {
-    const base = `${this.apiBase}/v9/projects/${encodeURIComponent(this.projectId)}/env`
+    const base = `${this.apiBase}/v9/projects/${encodeURIComponent(this.projectId ?? '')}/env`
     const qs = new URLSearchParams()
     if (opts.upsert) qs.set('upsert', 'true')
     if (this.teamId) qs.set('teamId', this.teamId)

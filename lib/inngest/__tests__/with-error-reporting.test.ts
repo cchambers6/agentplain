@@ -124,12 +124,19 @@ describe('composition with runWithDisableGate', () => {
 
   it('production-shape: gate + reporter together — throw reports + rethrows', async () => {
     const { runWithDisableGate } = await import('../run-with-disable-gate');
+    const { InMemoryOpsFlagStore } = await import('../../ops/flag-store');
     const boom = new Error('skill chain threw');
+    // Inject an empty flag store so the test doesn't touch Prisma. The
+    // store has no row for this fn → gate falls through to env → env
+    // also empty → handler runs → handler throws → reporter catches.
     await assert.rejects(
-      runWithDisableGate(fnId, () =>
-        withInngestErrorReporting({ functionId: fnId }, async () => {
-          throw boom;
-        }),
+      runWithDisableGate(
+        fnId,
+        () =>
+          withInngestErrorReporting({ functionId: fnId }, async () => {
+            throw boom;
+          }),
+        { flagStore: new InMemoryOpsFlagStore() },
       ),
       /skill chain threw/,
     );
@@ -139,18 +146,44 @@ describe('composition with runWithDisableGate', () => {
     assert.equal(recorder.flushed, 1);
   });
 
-  it('disabled gate short-circuits BEFORE the reporter runs', async () => {
+  it('disabled gate short-circuits BEFORE the reporter runs (DB-backed flag)', async () => {
     const { runWithDisableGate } = await import('../run-with-disable-gate');
-    process.env[envKey] = 'true';
-    const result = await runWithDisableGate(fnId, () =>
-      withInngestErrorReporting({ functionId: fnId }, async () => {
-        throw new Error('should never run');
-      }),
+    const { InMemoryOpsFlagStore } = await import('../../ops/flag-store');
+    const { disableFlagEnvName } = await import('../disable-flag');
+    // P0-4: the disable signal is now in the DB flag store, not env.
+    const flagStore = new InMemoryOpsFlagStore({
+      [disableFlagEnvName(fnId)]: 'true',
+    });
+    const result = await runWithDisableGate(
+      fnId,
+      () =>
+        withInngestErrorReporting({ functionId: fnId }, async () => {
+          throw new Error('should never run');
+        }),
+      { flagStore },
     );
     assert.equal(result.disabled, true);
     assert.equal(result.result, null);
     assert.equal(recorder.exceptions.length, 0);
     assert.equal(recorder.flushed, 0);
+  });
+
+  it('env fallback still short-circuits when DB store has no row (cold-start cache)', async () => {
+    const { runWithDisableGate } = await import('../run-with-disable-gate');
+    const { InMemoryOpsFlagStore } = await import('../../ops/flag-store');
+    process.env[envKey] = 'true';
+    const result = await runWithDisableGate(
+      fnId,
+      () =>
+        withInngestErrorReporting({ functionId: fnId }, async () => {
+          throw new Error('should never run');
+        }),
+      { flagStore: new InMemoryOpsFlagStore() },
+    );
+    assert.equal(result.disabled, true);
+    assert.equal(result.source, 'env');
+    assert.equal(result.result, null);
+    assert.equal(recorder.exceptions.length, 0);
   });
 });
 

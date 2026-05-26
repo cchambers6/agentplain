@@ -19,6 +19,7 @@ import type { OpsControlPlane } from '../types'
 import { TestOpsControlPlane } from '../test-ops'
 import { GithubActionsVarsAdapter } from '../github/actions-vars'
 import { InngestControlAdapter } from '../inngest/control'
+import { InMemoryOpsFlagStore } from '../flag-store'
 import { disableFlagEnvName } from '../../inngest/disable-flag'
 
 // ---------------------------------------------------------------------------
@@ -189,9 +190,10 @@ const factories: ImplFactory[] = [
     supportsPause: false,
   },
   {
-    name: 'InngestControlAdapter (fake Vercel fetch)',
+    name: 'InngestControlAdapter (fake Vercel fetch + in-memory flag store)',
     make: () =>
       new InngestControlAdapter({
+        flagStore: new InMemoryOpsFlagStore(),
         vercelProjectId: 'prj_fake_test',
         vercelToken: 'vercel-test-token',
         appId: 'flatsbo-prod',
@@ -447,43 +449,127 @@ describe('GithubActionsVarsAdapter — edge cases', () => {
 // ---------------------------------------------------------------------------
 
 describe('InngestControlAdapter — edge cases', () => {
-  it('writes the env var Vercel-side under the documented name', async () => {
-    const store = new Map<string, FakeVercelEnv>()
+  it('writes the DB flag (source of truth) AND mirrors to Vercel under the documented name', async () => {
+    const envStore = new Map<string, FakeVercelEnv>()
+    const flagStore = new InMemoryOpsFlagStore()
     const adapter = new InngestControlAdapter({
+      flagStore,
       vercelProjectId: 'prj_fake',
       vercelToken: 'tok',
       appId: 'flatsbo-prod',
-      fetchImpl: makeFakeVercelFetch(store),
+      fetchImpl: makeFakeVercelFetch(envStore),
     })
     const fnId = 'flatsbo-capability-builder-morning'
     const res = await adapter.pauseInngestFunction(fnId)
     assert.equal(res.ok, true)
     const expectedKey = disableFlagEnvName(fnId)
-    const stored = Array.from(store.values()).find((e) => e.key === expectedKey)
-    assert.ok(stored, `expected env var ${expectedKey} to be written`)
+    // DB row is the source of truth.
+    const dbRow = flagStore.peek(expectedKey)
+    assert.ok(dbRow, 'DB flag must be written as the source of truth')
+    assert.equal(dbRow?.value, 'true')
+    // Env mirror reflects the same value (cold-start cache).
+    const stored = Array.from(envStore.values()).find((e) => e.key === expectedKey)
+    assert.ok(stored, `expected env mirror ${expectedKey} to be written`)
     assert.equal(stored?.value, 'true')
     assert.equal(stored?.type, 'plain')
   })
 
-  it('resume sets the value to "false" rather than deleting', async () => {
-    const store = new Map<string, FakeVercelEnv>()
+  it('DB-only mode (no Vercel credentials) still flips pause without an env mirror', async () => {
+    // P0-4 path: in environments without a Vercel admin token, the
+    // adapter should still operate on the DB — the gate reads it on the
+    // next tick regardless.
+    const flagStore = new InMemoryOpsFlagStore()
     const adapter = new InngestControlAdapter({
+      flagStore,
+      // No vercelProjectId → env mirror disabled.
+      appId: 'agentplain-dev',
+    })
+    const fnId = 'agentplain-trial-warnings'
+    const res = await adapter.pauseInngestFunction(fnId)
+    assert.equal(res.ok, true)
+    const row = flagStore.peek(disableFlagEnvName(fnId))
+    assert.ok(row)
+    assert.equal(row?.value, 'true')
+
+    const status = await adapter.getInngestFunctionStatus(fnId)
+    assert.equal(status.ok, true)
+    if (status.ok) assert.equal(status.value.pauseState, 'paused')
+  })
+
+  it('resume sets the value to "false" rather than deleting (both DB and env mirror)', async () => {
+    const envStore = new Map<string, FakeVercelEnv>()
+    const flagStore = new InMemoryOpsFlagStore()
+    const adapter = new InngestControlAdapter({
+      flagStore,
       vercelProjectId: 'prj_fake',
       vercelToken: 'tok',
-      fetchImpl: makeFakeVercelFetch(store),
+      fetchImpl: makeFakeVercelFetch(envStore),
     })
     const fnId = 'flatsbo-capability-builder-morning'
     await adapter.pauseInngestFunction(fnId)
     await adapter.resumeInngestFunction(fnId)
-    const stored = Array.from(store.values()).find(
+    assert.equal(flagStore.peek(disableFlagEnvName(fnId))?.value, 'false')
+    const stored = Array.from(envStore.values()).find(
       (e) => e.key === disableFlagEnvName(fnId),
     )
     assert.ok(stored)
     assert.equal(stored?.value, 'false')
   })
 
+  it('DB write failure aborts the call WITHOUT touching the env mirror (no half-mutation)', async () => {
+    const envStore = new Map<string, FakeVercelEnv>()
+    const flagStore = new InMemoryOpsFlagStore()
+    flagStore.failNextRead = false
+    // Monkey-patch set to simulate a DB write failure.
+    const originalSet = flagStore.set.bind(flagStore)
+    flagStore.set = async () => ({
+      ok: false,
+      error: { code: 'UPSTREAM_ERROR', message: 'simulated DB outage' },
+    })
+    const adapter = new InngestControlAdapter({
+      flagStore,
+      vercelProjectId: 'prj_fake',
+      vercelToken: 'tok',
+      fetchImpl: makeFakeVercelFetch(envStore),
+    })
+    const res = await adapter.pauseInngestFunction('flatsbo-capability-builder-morning')
+    assert.equal(res.ok, false)
+    if (!res.ok) assert.equal(res.error.code, 'UPSTREAM_ERROR')
+    // Critical: env mirror was NOT touched — no half-mutation.
+    assert.equal(envStore.size, 0)
+    // Restore for any later assertions.
+    flagStore.set = originalSet
+  })
+
+  it('env-mirror failure is downgraded to a warning — call succeeds because DB is source of truth', async () => {
+    const flagStore = new InMemoryOpsFlagStore()
+    const observed: string[] = []
+    const adapter = new InngestControlAdapter({
+      flagStore,
+      vercelProjectId: 'prj_fake',
+      vercelToken: 'tok',
+      fetchImpl: () =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({ error: { message: 'vercel rate limit' } }),
+            { status: 429, headers: { 'Content-Type': 'application/json', 'retry-after': '30' } },
+          ),
+        ) as unknown as ReturnType<typeof fetch>,
+      onEnvMirrorFailure: (err) => observed.push(err.code),
+    })
+    const fnId = 'flatsbo-capability-builder-morning'
+    const res = await adapter.pauseInngestFunction(fnId)
+    // The call still succeeds — DB is the gate.
+    assert.equal(res.ok, true)
+    // DB has the new value.
+    assert.equal(flagStore.peek(disableFlagEnvName(fnId))?.value, 'true')
+    // And the operator-visible hook saw the env mirror's RATE_LIMITED.
+    assert.deepEqual(observed, ['RATE_LIMITED'])
+  })
+
   it('repo-variable methods return NOT_IMPLEMENTED (composition signal)', async () => {
     const adapter = new InngestControlAdapter({
+      flagStore: new InMemoryOpsFlagStore(),
       vercelProjectId: 'prj_fake',
       vercelToken: 'tok',
       fetchImpl: makeFakeVercelFetch(),
@@ -494,65 +580,29 @@ describe('InngestControlAdapter — edge cases', () => {
     assert.equal(b.ok, false)
   })
 
-  it('maps 401 from Vercel to UNAUTHORIZED', async () => {
-    const adapter = new InngestControlAdapter({
-      vercelProjectId: 'prj_fake',
-      vercelToken: 'bad',
-      fetchImpl: () =>
-        Promise.resolve(
-          new Response(
-            JSON.stringify({ error: { message: 'invalid token' } }),
-            { status: 401, headers: { 'Content-Type': 'application/json' } },
-          ),
-        ) as unknown as ReturnType<typeof fetch>,
-    })
-    const res = await adapter.pauseInngestFunction('flatsbo-capability-builder-morning')
-    assert.equal(res.ok, false)
-    if (!res.ok) assert.equal(res.error.code, 'UNAUTHORIZED')
-  })
-
-  it('maps 429 from Vercel to RATE_LIMITED with retry-after', async () => {
-    const adapter = new InngestControlAdapter({
-      vercelProjectId: 'prj_fake',
-      vercelToken: 'tok',
-      fetchImpl: () =>
-        Promise.resolve(
-          new Response(
-            JSON.stringify({ error: { message: 'rate limited' } }),
-            {
-              status: 429,
-              headers: {
-                'Content-Type': 'application/json',
-                'retry-after': '30',
-              },
-            },
-          ),
-        ) as unknown as ReturnType<typeof fetch>,
-    })
-    const res = await adapter.pauseInngestFunction('flatsbo-capability-builder-morning')
-    assert.equal(res.ok, false)
-    if (!res.ok) {
-      assert.equal(res.error.code, 'RATE_LIMITED')
-      assert.equal(res.error.retryAfterMs, 30000)
-    }
-  })
-
-  it('throws on construction without vercelProjectId', () => {
+  it('throws on construction without flagStore (P0-4 contract)', () => {
     assert.throws(
       () =>
         new InngestControlAdapter({
-          vercelProjectId: '',
+          // @ts-expect-error — exercising the runtime guard
+          flagStore: undefined,
+          vercelProjectId: 'prj_x',
           vercelToken: 'tok',
         }),
+      /flagStore is required/,
     )
   })
 
-  it('throws on construction when token missing (env unset, none passed)', () => {
+  it('throws on construction when vercelProjectId is set but no token (env unset, none passed)', () => {
     const prev = process.env.VERCEL_TOKEN
     delete process.env.VERCEL_TOKEN
     try {
       assert.throws(
-        () => new InngestControlAdapter({ vercelProjectId: 'prj_x' }),
+        () =>
+          new InngestControlAdapter({
+            flagStore: new InMemoryOpsFlagStore(),
+            vercelProjectId: 'prj_x',
+          }),
       )
     } finally {
       if (prev !== undefined) process.env.VERCEL_TOKEN = prev
@@ -561,6 +611,7 @@ describe('InngestControlAdapter — edge cases', () => {
 
   it('rejects empty functionId with INVALID_ARGUMENT', async () => {
     const adapter = new InngestControlAdapter({
+      flagStore: new InMemoryOpsFlagStore(),
       vercelProjectId: 'prj_fake',
       vercelToken: 'tok',
       fetchImpl: makeFakeVercelFetch(),

@@ -12,9 +12,18 @@
  * test impl exposes `sendChatMessage` and `postToChannel` because Teams
  * surfaces are internal customer-system messaging, not cold outbound.
  * Records to in-memory log; never hits a network.
+ *
+ * The fixture STILL enforces the approval gate on `sendChatMessage` /
+ * `postToChannel` (returns APPROVAL_REQUIRED without a non-empty
+ * approvalToken) so the smoke test can assert the gate without a Graph
+ * round-trip. Mirrors the Slack test-server (slack-mcp/test-server.ts).
  */
 
 import { mcpError, mcpOk, type McpResult } from '@/lib/integrations/microsoft/mcp-common';
+
+const APPROVAL_REQUIRED_MSG =
+  'Posting to Teams requires human approval; pass approvalToken from the approval queue. This action acts as the customer and never auto-fires.';
+
 import {
   type ChannelSummary,
   type ChatMessage,
@@ -119,6 +128,10 @@ export class TestTeamsMcpServer implements TeamsMcpServer {
     if (!input.body) {
       return mcpError('INVALID_ARGUMENT', 'sendChatMessage requires body');
     }
+    // APPROVAL GATE — mirrors the prod server so the smoke test can assert it.
+    if (!input.approvalToken || input.approvalToken.trim().length === 0) {
+      return mcpError('APPROVAL_REQUIRED', APPROVAL_REQUIRED_MSG);
+    }
     this.msgCounter += 1;
     const messageId = `19:test-msg-${this.msgCounter}`;
     const createdAt = new Date().toISOString();
@@ -153,6 +166,10 @@ export class TestTeamsMcpServer implements TeamsMcpServer {
     }
     if (!input.body) {
       return mcpError('INVALID_ARGUMENT', 'postToChannel requires body');
+    }
+    // APPROVAL GATE — mirrors the prod server so the smoke test can assert it.
+    if (!input.approvalToken || input.approvalToken.trim().length === 0) {
+      return mcpError('APPROVAL_REQUIRED', APPROVAL_REQUIRED_MSG);
     }
     this.msgCounter += 1;
     const messageId = `19:test-channel-msg-${this.msgCounter}`;

@@ -38,8 +38,7 @@
  */
 
 import type { Workspace } from '@prisma/client';
-import { prisma } from '@/lib/db/prisma';
-import { SYSTEM_OPERATOR_CONTEXT } from '@/lib/db';
+import { SYSTEM_OPERATOR_CONTEXT, withSystemContext } from '@/lib/db';
 import {
   DriveFileSource,
   ingestWorkspaceFiles,
@@ -184,13 +183,20 @@ export async function runCustomerFilesIngestionSweep(
 async function listActiveWorkspaces(): Promise<Pick<Workspace, 'id' | 'slug'>[]> {
   // Only sweep workspaces with at least one ACTIVE membership. Dormant /
   // never-onboarded rows would burn LLM + DB budget for nothing.
-  return prisma.workspace.findMany({
-    where: {
-      memberships: { some: { status: 'ACTIVE' } },
-    },
-    select: { id: true, slug: true },
-    orderBy: { createdAt: 'asc' },
-  });
+  //
+  // Workspace + Membership are both RLS-policied + FORCE'd via force_rls,
+  // so this cron must open the system context to satisfy the
+  // is_operator='true' branch of both policies. Otherwise findMany returns
+  // zero rows under FORCE and the sweep silently NO-OPs forever.
+  return withSystemContext((tx) =>
+    tx.workspace.findMany({
+      where: {
+        memberships: { some: { status: 'ACTIVE' } },
+      },
+      select: { id: true, slug: true },
+      orderBy: { createdAt: 'asc' },
+    }),
+  );
 }
 
 function defaultBuildSource(_workspaceId: string): IFileSource {

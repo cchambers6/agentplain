@@ -54,7 +54,7 @@
 import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import { google, type gmail_v1 } from 'googleapis';
-import { prisma } from '@/lib/db/prisma';
+import { withSystemContext } from '@/lib/db/rls';
 import { decryptCredential } from '@/lib/integrations';
 
 interface CliArgs {
@@ -138,31 +138,43 @@ function headerValue(headers: gmail_v1.Schema$MessagePartHeader[] | undefined, n
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
 
-  // Resolve workspace
-  const workspace = await prisma.workspace.findFirst({
-    where: /^[0-9a-f-]{36}$/i.test(args.workspace)
-      ? { id: args.workspace }
-      : { slug: args.workspace },
-    select: { id: true, slug: true, name: true },
-  });
+  // Resolve workspace, credential, and events under operator context.
+  // IntegrationCredential + WebhookEvent + Workspace are RLS-protected
+  // per 20260526000000_add_integration_rls; bare `prisma.<model>.` reads
+  // throw under enforced RLS because no GUC is set. Wrapping in
+  // withSystemContext seeds `app.is_operator=true` so the policies pass.
+  // (This script is run by operators on demand — never on a customer
+  // request path — so the operator context is the correct identity.)
+  const workspace = await withSystemContext((tx) =>
+    tx.workspace.findFirst({
+      where: /^[0-9a-f-]{36}$/i.test(args.workspace)
+        ? { id: args.workspace }
+        : { slug: args.workspace },
+      select: { id: true, slug: true, name: true },
+    }),
+  );
   if (!workspace) {
     throw new Error(`workspace ${args.workspace} not found`);
   }
 
-  const credential = await prisma.integrationCredential.findFirst({
-    where: { workspaceId: workspace.id, provider: 'GOOGLE', status: 'ACTIVE' },
-  });
+  const credential = await withSystemContext((tx) =>
+    tx.integrationCredential.findFirst({
+      where: { workspaceId: workspace.id, provider: 'GOOGLE', status: 'ACTIVE' },
+    }),
+  );
   if (!credential) {
     throw new Error(`no ACTIVE GOOGLE credential for workspace ${workspace.slug}`);
   }
 
-  const events = await prisma.webhookEvent.findMany({
-    where: {
-      subscription: { credential: { id: credential.id } },
-      receivedAt: { gte: args.since, lte: args.until },
-    },
-    orderBy: { receivedAt: 'asc' },
-  });
+  const events = await withSystemContext((tx) =>
+    tx.webhookEvent.findMany({
+      where: {
+        subscription: { credential: { id: credential.id } },
+        receivedAt: { gte: args.since, lte: args.until },
+      },
+      orderBy: { receivedAt: 'asc' },
+    }),
+  );
 
   // Build a Gmail client.
   const decrypted = decryptCredential(credential);

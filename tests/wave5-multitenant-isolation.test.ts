@@ -232,7 +232,11 @@ describe('wave5 multi-tenant — source-level invariants', () => {
   // `withSystemContext`. The application-layer guarantee is only as good
   // as the discipline of every call site.
   const ROOT = path.resolve(__dirname, '..');
-  const SCAN_DIRS = ['lib', 'app'];
+  // `scripts/` runs against the same RLS-enforced DB as `lib/` + `app/`,
+  // so bare `prisma.<scoped-model>.` calls there will throw at runtime
+  // for the same reason. Tracked under the same grep so future scripts
+  // pick up the discipline by default (see fleet review 2026-05-26).
+  const SCAN_DIRS = ['lib', 'app', 'scripts'];
   const ALLOWED_PRISMA_DIRECT = new Set([
     path.join('lib', 'db', 'prisma.ts'),
     path.join('lib', 'db', 'rls.ts'),

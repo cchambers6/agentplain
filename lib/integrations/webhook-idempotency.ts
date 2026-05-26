@@ -97,14 +97,28 @@ export async function upsertWebhookEvent(
   }
 
   // Race-safe path: try a unique-keyed insert; on UNIQUE violation, the
-  // dupe arrived a moment ago and we resolve to that row id. Both legs
-  // share one operator transaction. Re-bind dedupeKey to a non-null local
-  // so the type narrows inside the async callback (without this TS loses
-  // the input.dedupeKey !== null narrowing across the closure boundary).
+  // dupe arrived a moment ago and we resolve to that row id.
+  //
+  // The two legs MUST run in SEPARATE Postgres transactions. When `create`
+  // raises P2002 inside a `$transaction`, Postgres flips the tx into the
+  // aborted state (SQLSTATE 25P02) and rejects every subsequent statement
+  // — including the `findUnique` we'd use to fetch the existing row.
+  // Wrapping both in one `withSystemContext` therefore breaks the dedupe
+  // path: the provider's redelivered webhook returns 500, the provider
+  // retries, and the row dead-letters. Pub/Sub + MS Graph are both
+  // at-least-once, so this path is hit routinely in production.
+  //
+  // Each `withSystemContext` opens its own transaction and seeds the
+  // operator GUC independently, so RLS is satisfied on BOTH legs without
+  // sharing tx state across them.
+  //
+  // Re-bind dedupeKey to a non-null local so the type narrows inside the
+  // async callbacks (without this TS loses the input.dedupeKey !== null
+  // narrowing across the closure boundary).
   const dedupeKey: string = input.dedupeKey;
-  return withSystemContext(async (tx) => {
-    try {
-      const created = await tx.webhookEvent.create({
+  try {
+    const created = await withSystemContext((tx) =>
+      tx.webhookEvent.create({
         data: {
           subscriptionId: input.subscriptionId,
           workspaceId: input.workspaceId,
@@ -113,35 +127,38 @@ export async function upsertWebhookEvent(
           processed: false,
         },
         select: { id: true },
-      });
-      return { id: created.id, inserted: true };
-    } catch (err) {
-      // P2002 = unique constraint violation. The dupe arrived first; find
-      // the existing row and return its id. Any other error rethrows so
-      // the route handler can return 500 and the provider can retry.
-      if (isPrismaUniqueViolation(err)) {
-        const existing = await tx.webhookEvent.findUnique({
-          where: {
-            subscriptionId_dedupeKey: {
-              subscriptionId: input.subscriptionId,
-              dedupeKey,
-            },
-          },
-          select: { id: true },
-        });
-        if (!existing) {
-          // Extremely unlikely — the unique violation said the row exists,
-          // but findUnique just returned null. Treat as a transient and
-          // surface so the provider retries.
-          throw new Error(
-            `webhook idempotency upsert: unique violation but no row found for (${input.subscriptionId}, ${dedupeKey})`,
-          );
-        }
-        return { id: existing.id, inserted: false };
-      }
+      }),
+    );
+    return { id: created.id, inserted: true };
+  } catch (err) {
+    // P2002 = unique constraint violation. The dupe arrived first; fetch
+    // the existing row in a FRESH operator transaction. Any other error
+    // rethrows so the route handler can return 500 and the provider can
+    // retry.
+    if (!isPrismaUniqueViolation(err)) {
       throw err;
     }
-  });
+    const existing = await withSystemContext((tx) =>
+      tx.webhookEvent.findUnique({
+        where: {
+          subscriptionId_dedupeKey: {
+            subscriptionId: input.subscriptionId,
+            dedupeKey,
+          },
+        },
+        select: { id: true },
+      }),
+    );
+    if (!existing) {
+      // Extremely unlikely — the unique violation said the row exists,
+      // but findUnique just returned null. Treat as a transient and
+      // surface so the provider retries.
+      throw new Error(
+        `webhook idempotency upsert: unique violation but no row found for (${input.subscriptionId}, ${dedupeKey})`,
+      );
+    }
+    return { id: existing.id, inserted: false };
+  }
 }
 
 function isPrismaUniqueViolation(err: unknown): boolean {

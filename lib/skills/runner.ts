@@ -427,10 +427,112 @@ async function appendSkillRunLog(record: SkillRunRecord, dir: string): Promise<v
     await fs.mkdir(dir, { recursive: true });
     const day = record.startedAt.slice(0, 10).replace(/-/g, '');
     const file = path.join(dir, `${day}.jsonl`);
-    await fs.appendFile(file, JSON.stringify(record) + '\n', 'utf8');
+    await fs.appendFile(file, JSON.stringify(redactSkillRunRecord(record)) + '\n', 'utf8');
   } catch (err) {
     // Logging is best-effort — never fail the loop because we couldn't
     // write a log row. Surface to console for ops triage.
     console.warn(`runSkillChain: failed to append skill-run log: ${err instanceof Error ? err.message : String(err)}`);
   }
+}
+
+/**
+ * Strip customer content from a `SkillRunRecord` before it's written to
+ * the JSONL audit file under `agent-state/skill-runs/`.
+ *
+ * What stays: identifiers (workspace/event/draft/thread ids), skill
+ * provenance (vertical, llm/fetcher/persister names), step timings,
+ * step ok/errorCode, outcome category/persisted/tone/confidence.
+ *
+ * What goes: the draft body + subject, the office-admin classification
+ * reason (LLM rationale can echo customer text), the office-admin payload
+ * body fields, the compliance flag `matched` strings (literal-match flags
+ * include the matched draft span).
+ *
+ * Per the data-privacy audit (PR #91 must-close #3): the JSONL file is
+ * an on-disk operator audit and must not carry customer content. The
+ * full typed `SkillRunOutcome` still flows through the in-memory return
+ * value — callers that need the draft body (persist-artifacts, tests)
+ * read it from there, not from the JSONL.
+ */
+export function redactSkillRunRecord(record: SkillRunRecord): SkillRunRecord {
+  const redactedSteps = record.steps.map((s) => ({
+    step: s.step,
+    ok: s.ok,
+    // Step summaries embed the LLM's `reason` field on categorize/admin —
+    // replace with a structural marker. Length is enough for ops triage.
+    summary: s.ok ? `ok len=${s.summary.length}` : `error len=${s.summary.length}`,
+    durationMs: s.durationMs,
+    ...(s.errorCode ? { errorCode: s.errorCode } : {}),
+  }));
+  const redactedOutcome: SkillRunOutcome = {
+    category: record.outcome.category,
+    threadId: record.outcome.threadId,
+    scheduledProposal: record.outcome.scheduledProposal
+      ? {
+          needsResponse: record.outcome.scheduledProposal.needsResponse,
+          proposedSlots: record.outcome.scheduledProposal.proposedSlots,
+          // `reasoning` is LLM-generated and can include quoted customer text.
+          reasoning: '[redacted]',
+          confidence: record.outcome.scheduledProposal.confidence,
+        }
+      : null,
+    draft: record.outcome.draft
+      ? {
+          draftId: record.outcome.draft.draftId,
+          providerDraftId: record.outcome.draft.providerDraftId,
+          // subject + body removed — these are the customer-facing reply we composed.
+          subject: '[redacted]',
+          body: '[redacted]',
+          tone: record.outcome.draft.tone,
+          confidence: record.outcome.draft.confidence,
+          persisted: record.outcome.draft.persisted,
+        }
+      : null,
+    markedProcessed: record.outcome.markedProcessed,
+    officeAdmin: record.outcome.officeAdmin
+      ? {
+          ...record.outcome.officeAdmin,
+          reason: '[redacted]',
+        }
+      : null,
+    officeAdminPayload: record.outcome.officeAdminPayload
+      ? {
+          ...record.outcome.officeAdminPayload,
+          // Payload free-text fields carry the inbound sender's content
+          // shoved into an approval card — keep category/title/priority/
+          // signals/timestamps/confidence, drop body lines + draft text +
+          // sender display + subject.
+          body: ['[redacted]'],
+          fromDisplay: '[redacted]',
+          subject: '[redacted]',
+          draftBody: record.outcome.officeAdminPayload.draftBody ? '[redacted]' : null,
+          draftSubject: record.outcome.officeAdminPayload.draftSubject ? '[redacted]' : null,
+        }
+      : null,
+    complianceFlags: record.outcome.complianceFlags
+      ? record.outcome.complianceFlags.map((f) => ({
+          ...f,
+          // `matchedText` + `excerpt` carry the literal draft text — that's
+          // customer-facing content. `matchedPhrase` is from the corpus rule
+          // (not customer content) and stays so the audit can show which
+          // rule fired.
+          matchedText: '[redacted]',
+          excerpt: '[redacted]',
+        }))
+      : null,
+  };
+  return {
+    startedAt: record.startedAt,
+    finishedAt: record.finishedAt,
+    durationMs: record.durationMs,
+    workspaceId: record.workspaceId,
+    workspaceSlug: record.workspaceSlug,
+    verticalSlug: record.verticalSlug,
+    webhookEventId: record.webhookEventId,
+    llmProviderName: record.llmProviderName,
+    fetcherName: record.fetcherName,
+    persisterName: record.persisterName,
+    steps: redactedSteps,
+    outcome: redactedOutcome,
+  };
 }

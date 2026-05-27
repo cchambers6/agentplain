@@ -5,6 +5,7 @@ import {
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
 import { servicePartnerForWorkspace } from "@/lib/onboarding/service-partner";
+import { decryptPayloadForRead } from "@/lib/security/payload-crypto";
 import { ActivityFeed, type ActivityRow } from "./ActivityFeed";
 
 interface PageProps {
@@ -37,17 +38,20 @@ export default async function WorkspaceActivityPage({
     }),
   );
 
-  const rows: ActivityRow[] = entries.map((e) => ({
-    id: e.id,
-    fromAgent: e.fromAgent,
-    toAgent: e.toAgent,
-    handoffType: e.handoffType,
-    occurredAtIso: e.occurredAt.toISOString(),
-    relatedSubjectTable: e.relatedSubjectTable ?? null,
-    relatedSubjectId: e.relatedSubjectId ?? null,
-    payload: e.payload as unknown,
-    summary: summarizePayload(e.handoffType, e.payload as unknown),
-  }));
+  const rows: ActivityRow[] = entries.map((e) => {
+    const payload = decryptPayloadForRead(e.payload);
+    return {
+      id: e.id,
+      fromAgent: e.fromAgent,
+      toAgent: e.toAgent,
+      handoffType: e.handoffType,
+      occurredAtIso: e.occurredAt.toISOString(),
+      relatedSubjectTable: e.relatedSubjectTable ?? null,
+      relatedSubjectId: e.relatedSubjectId ?? null,
+      payload,
+      summary: summarizePayload(e.handoffType, payload),
+    };
+  });
 
   const filteredRows = filterRows(rows, kindFilter);
   const counts = buildCounts(rows);

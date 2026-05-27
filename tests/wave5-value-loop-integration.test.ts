@@ -31,6 +31,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
 
+// Payload-crypto: persistSkillRunArtifacts writes encrypted payloads.
+// Set a deterministic key so we can decrypt at assert time.
+process.env.ENCRYPTION_KEY =
+  process.env.ENCRYPTION_KEY ??
+  '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
+import { decryptPayloadForRead } from '@/lib/security/payload-crypto';
 import {
   FixtureMessageFetcher,
   buildWebhookEventFromFixture,
@@ -108,7 +115,7 @@ describe('wave5 value loop — draft-needed end-to-end', () => {
     assert.equal(approval.refTable, 'WebhookEvent');
     assert.equal(approval.refId, event.id);
 
-    const payload = approval.payload as Record<string, unknown>;
+    const payload = decryptPayloadForRead(approval.payload) as Record<string, unknown>;
     assert.equal(typeof payload.subject, 'string');
     assert.equal(typeof payload.body, 'string');
     assert.ok((payload.body as string).length > 0);
@@ -166,7 +173,7 @@ describe('wave5 value loop — draft-needed end-to-end', () => {
     });
     const approval = fake.workApprovals[0];
     assert.equal(approval.status, 'PENDING', 'never auto-approved');
-    const payload = approval.payload as Record<string, unknown>;
+    const payload = decryptPayloadForRead(approval.payload) as Record<string, unknown>;
     assert.ok(payload.scheduledProposal, 'expected scheduled proposal in payload');
   });
 

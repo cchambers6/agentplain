@@ -32,6 +32,7 @@ import { ApEyebrow, ApPaperCard, PlainoAvatar } from "@/components/ui/ap";
 import { requireUser } from "@/lib/auth/server";
 import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
 import { withSystemContext } from "@/lib/db/rls";
+import { decryptPayloadForRead } from "@/lib/security/payload-crypto";
 import { getVerticalContent } from "@/lib/verticals";
 import type { AgentRosterEntry, VerticalContent } from "@/lib/verticals/types";
 
@@ -257,7 +258,7 @@ export default async function OperatorFleetPage() {
       toAgent: h.toAgent,
       handoffType: h.handoffType,
       occurredAt: h.occurredAt,
-      summary: summarizeHandoffPayload(h.handoffType, h.payload),
+      summary: summarizeHandoffPayload(h.handoffType, decryptPayloadForRead(h.payload)),
     };
   });
 
@@ -271,7 +272,7 @@ export default async function OperatorFleetPage() {
       verticalSlug: meta?.verticalSlug ?? "",
       agentSlug: a.agentSlug,
       kind: a.kind,
-      title: titleFromApproval(a.kind, a.payload),
+      title: titleFromApproval(a.kind, decryptPayloadForRead(a.payload)),
       proposedAt: a.proposedAt,
     };
   });
@@ -285,7 +286,7 @@ export default async function OperatorFleetPage() {
       verticalSlug: meta?.verticalSlug ?? "",
       agentSlug: a.agentSlug,
       kind: a.kind,
-      title: titleFromApproval(a.kind, a.payload),
+      title: titleFromApproval(a.kind, decryptPayloadForRead(a.payload)),
       decidedAt: a.decidedAt ?? a.proposedAt,
     };
   });

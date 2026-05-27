@@ -27,6 +27,13 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
+// Payload-crypto: persistSkillRunArtifacts now writes encrypted payloads.
+// Set a deterministic key so we can decrypt in-test for the assertions.
+process.env.ENCRYPTION_KEY =
+  process.env.ENCRYPTION_KEY ??
+  '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
+import { decryptPayloadForRead } from '@/lib/security/payload-crypto';
 import { FixtureMessageFetcher, buildWebhookEventFromFixture } from '@/lib/skills/fixture-fetcher';
 import { RecordingDraftPersister } from '@/lib/skills/draft';
 import { runSkillChain } from '@/lib/skills/runner';
@@ -166,7 +173,7 @@ describe('persistSkillRunArtifacts — HandoffLogEntry writes', () => {
   it('payload contains the step summary so the UI can show it', async () => {
     const { handoffRows } = await runAndPersist('re-01-buyer-inquiry');
     for (const row of handoffRows) {
-      const payload = row.payload as Record<string, unknown>;
+      const payload = decryptPayloadForRead(row.payload) as Record<string, unknown>;
       assert.equal(typeof payload.step, 'string');
       assert.equal(typeof payload.summary, 'string');
       assert.equal(typeof payload.ok, 'boolean');
@@ -179,7 +186,7 @@ describe('persistSkillRunArtifacts — HandoffLogEntry writes', () => {
     const noiseFixture = fixtures.find((f) => f.expectedCategory === 'noise');
     assert.ok(noiseFixture, 'expected at least one noise fixture');
     const { handoffRows } = await runAndPersist(noiseFixture!.id);
-    const steps = handoffRows.map((r) => (r.payload as Record<string, unknown>).step as string);
+    const steps = handoffRows.map((r) => (decryptPayloadForRead(r.payload) as Record<string, unknown>).step as string);
     assert.ok(steps.includes('read'), 'noise run missing read handoff');
     assert.ok(steps.includes('categorize'), 'noise run missing categorize handoff');
     assert.ok(steps.includes('mark-processed'), 'noise run missing mark-processed handoff');
@@ -202,7 +209,7 @@ describe('persistSkillRunArtifacts — WorkApprovalQueueItem writes', () => {
 
   it('payload carries subject + body so /approvals can render without raw JSON', async () => {
     const { approvalRows } = await runAndPersist('re-01-buyer-inquiry');
-    const payload = approvalRows[0].payload as Record<string, unknown>;
+    const payload = decryptPayloadForRead(approvalRows[0].payload) as Record<string, unknown>;
     assert.equal(typeof payload.subject, 'string', 'payload.subject must be string');
     assert.equal(typeof payload.body, 'string', 'payload.body must be string');
     assert.ok((payload.subject as string).length > 0, 'subject empty');
@@ -223,7 +230,7 @@ describe('persistSkillRunArtifacts — WorkApprovalQueueItem writes', () => {
 
   it('payload carries the inbound + categorization summary so the approver sees context', async () => {
     const { approvalRows } = await runAndPersist('re-01-buyer-inquiry');
-    const payload = approvalRows[0].payload as Record<string, unknown>;
+    const payload = decryptPayloadForRead(approvalRows[0].payload) as Record<string, unknown>;
     assert.equal(typeof payload.inboundSummary, 'string');
     assert.equal(typeof payload.categorizationSummary, 'string');
   });

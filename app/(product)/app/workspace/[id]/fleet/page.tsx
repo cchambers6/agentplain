@@ -3,6 +3,7 @@ import { requireWorkspaceMember } from "@/lib/auth";
 import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
 import { withRls } from "@/lib/db";
 import { servicePartnerForWorkspace } from "@/lib/onboarding/service-partner";
+import { decryptPayloadForRead } from "@/lib/security/payload-crypto";
 import { getVerticalContent } from "@/lib/verticals";
 import type { AgentRosterEntry } from "@/lib/verticals/types";
 import { ActivityStream, type ActivityStreamRow } from "./ActivityStream";
@@ -120,7 +121,7 @@ export default async function FleetPage({ params }: PageProps) {
     id: a.id,
     agentSlug: a.agentSlug,
     kind: a.kind,
-    title: titleFromApproval(a.kind, a.payload),
+    title: titleFromApproval(a.kind, decryptPayloadForRead(a.payload)),
     proposedAtIso: a.proposedAt.toISOString(),
   }));
 
@@ -129,7 +130,7 @@ export default async function FleetPage({ params }: PageProps) {
     id: a.id,
     agentSlug: a.agentSlug,
     kind: a.kind,
-    title: titleFromApproval(a.kind, a.payload),
+    title: titleFromApproval(a.kind, decryptPayloadForRead(a.payload)),
     proposedAtIso: (a.decidedAt ?? a.proposedAt).toISOString(),
   }));
 
@@ -147,7 +148,7 @@ export default async function FleetPage({ params }: PageProps) {
       id: h.id,
       agentSlug: h.toAgent,
       kind: h.handoffType,
-      title: summarizeHandoffPayload(h.handoffType, h.payload as unknown),
+      title: summarizeHandoffPayload(h.handoffType, decryptPayloadForRead(h.payload)),
       proposedAtIso: h.occurredAt.toISOString(),
     }));
 
@@ -158,15 +159,16 @@ export default async function FleetPage({ params }: PageProps) {
     toAgent: h.toAgent,
     handoffType: h.handoffType,
     occurredAtIso: h.occurredAt.toISOString(),
-    summary: summarizeHandoffPayload(h.handoffType, h.payload as unknown),
+    summary: summarizeHandoffPayload(h.handoffType, decryptPayloadForRead(h.payload)),
   }));
 
   // Recent owner-submitted requests, for the talk-to-the-fleet panel's
   // "you've already asked for" rail. Real rows, real text.
   const recentRequests = recentOwnerRequests.map((r) => {
+    const decrypted = decryptPayloadForRead(r.payload);
     const p =
-      r.payload && typeof r.payload === "object" && !Array.isArray(r.payload)
-        ? (r.payload as Record<string, unknown>)
+      decrypted && typeof decrypted === "object" && !Array.isArray(decrypted)
+        ? (decrypted as Record<string, unknown>)
         : {};
     const body = typeof p.body === "string" ? p.body : "";
     return {

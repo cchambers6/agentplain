@@ -21,6 +21,12 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 
+// Payload-crypto: persistSkillRunArtifacts writes encrypted payloads.
+// Set a deterministic key so the chain can encrypt without throwing.
+process.env.ENCRYPTION_KEY =
+  process.env.ENCRYPTION_KEY ??
+  "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
 import { loadCorpusFor, scanCorpus } from "@/lib/agents/sentinel";
 import { RecordingDraftPersister } from "@/lib/skills/draft";
 import { FixtureMessageFetcher } from "@/lib/skills/fixture-fetcher";

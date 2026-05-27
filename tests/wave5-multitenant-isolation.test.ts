@@ -42,6 +42,12 @@ import assert from 'node:assert/strict';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+// Payload-crypto: persistSkillRunArtifacts writes encrypted payloads.
+// Set a deterministic key so the chain can encrypt without throwing.
+process.env.ENCRYPTION_KEY =
+  process.env.ENCRYPTION_KEY ??
+  '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
 import { withRls, withSystemContext, type RlsContext } from '@/lib/db/rls';
 import { persistSkillRunArtifacts } from '@/lib/skills/persist-artifacts';
 import { runSkillChain } from '@/lib/skills/runner';

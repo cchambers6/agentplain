@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
+import { encryptPayloadForWrite } from "@/lib/security/payload-crypto";
 
 const MAX_REQUEST_LEN = 4_000;
 
@@ -45,11 +46,11 @@ export async function submitFleetRequestAction(form: FormData): Promise<void> {
         fromAgent: "you",
         toAgent: "plaino",
         handoffType: "owner-request",
-        payload: {
+        payload: encryptPayloadForWrite({
           submittedAt: new Date().toISOString(),
           submittedByUserId: member.userId,
           body: request,
-        },
+        }),
       },
     });
 

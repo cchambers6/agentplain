@@ -525,7 +525,7 @@ export default function HomePage() {
               <li>— Human review on every customer-facing output</li>
               <li>— Liability for licensed activities stays with you</li>
               <li>— Per-vertical compliance corpus, counsel-reviewed</li>
-              <li>— No data resold, no client list retained</li>
+              <li>— No data resold; no client list used to train models</li>
               <li>— You own the work product</li>
             </ul>
           </div>

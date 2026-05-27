@@ -63,6 +63,18 @@ enum WorkspaceBillingMode {
   STRIPE_SUBSCRIPTION
 }
 
+// Customer-initiated workspace closure state machine. ACTIVE is the default;
+// CLOSING is the cancellable soft-delete window; CLOSED is the post-purge
+// resting state (Workspace + Membership rows survive for audit/billing
+// history; every tenant-data child table is empty per
+// `lib/customer-files/deletion.ts#tearDownWorkspaceData`). See
+// `prisma/migrations/20260527000000_add_workspace_closure/migration.sql`.
+enum WorkspaceClosureStatus {
+  ACTIVE
+  CLOSING
+  CLOSED
+}
+
 // Per-seat subscription lifecycle. Mirrors Stripe's subscription.status
 // taxonomy 1:1 so webhook payloads upsert without translation. PAUSED is
 // intentionally omitted — Phase 2 doesn't expose pause-collection on
@@ -283,6 +295,26 @@ model Workspace {
   stripeSubscriptionId   String?                 @unique
   tierPriceUsdMonthly    Int? // hundredths of a dollar; populated for manual invoicing
   settings               Json                    @default("{}")
+  // Customer-initiated closure state. Flipped by
+  // `lib/customer-data/closure.ts#initiateWorkspaceClosure` (BROKER_OWNER-
+  // gated, typed-confirmation guarded). The hourly
+  // `workspace-teardown-sweep` Inngest function reads
+  // (closureStatus, scheduledHardPurgeAt) to decide which CLOSING workspaces
+  // have aged out of the grace window and should hard-purge.
+  closureStatus            WorkspaceClosureStatus @default(ACTIVE)
+  closingInitiatedAt       DateTime?
+  /// The User who initiated closure. SetNull so the workspace row survives
+  /// the user being removed (audit + billing remain queryable).
+  closingInitiatedByUserId String?                @db.Uuid
+  /// UTC instant the hard purge becomes eligible. Set by
+  /// `initiateWorkspaceClosure`; reset to NULL on cancel.
+  scheduledHardPurgeAt     DateTime?
+  /// UTC instant the hard purge actually ran (closureStatus = CLOSED).
+  closedAt                 DateTime?
+  /// Optional free-text reason the customer supplied at closure time.
+  /// Captured for the operator/CS triage signal — never resurfaced to
+  /// other customers.
+  closureReason            String?
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
   memberships            Membership[]
@@ -306,6 +338,7 @@ model Workspace {
 
   @@index([slug])
   @@index([vertical])
+  @@index([closureStatus, scheduledHardPurgeAt])
 }
 
 // Phase 2 per-seat subscription. One row per workspace at most.

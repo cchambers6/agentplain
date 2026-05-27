@@ -36,6 +36,16 @@ describe("withWorkspace surface", () => {
         stripeSubscriptionId: null,
         tierPriceUsdMonthly: null,
         settings: {},
+        // Closure state machine fields added 2026-05-27. Default ACTIVE
+        // for any newly-created or existing workspace; the customer-
+        // initiated CLOSING/CLOSED transitions live behind
+        // lib/customer-data/closure.ts.
+        closureStatus: "ACTIVE",
+        closingInitiatedAt: null,
+        closingInitiatedByUserId: null,
+        scheduledHardPurgeAt: null,
+        closedAt: null,
+        closureReason: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       },

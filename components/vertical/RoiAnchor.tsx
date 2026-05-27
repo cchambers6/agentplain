@@ -7,7 +7,7 @@ export default function RoiAnchor({ roi }: { roi: RoiAnchorType }) {
       tone="deep"
       eyebrow="ROI math"
       title="The arithmetic. Audit it."
-      intro="Every claim on this page is grounded in a memory file we can show you. The number below is the headline; the math is the substantiation. If your shop's inputs differ, the same template runs against your numbers in the first month's outcome report."
+      intro="Illustrative inputs, real math — the headline is the multiplier; the row below shows the arithmetic. If your shop's inputs differ, the same template runs against your numbers in the first month's outcome report."
     >
       <div className="grid gap-px overflow-hidden border border-rule bg-rule lg:grid-cols-[1fr_2fr]">
         <div className="bg-paper p-10 md:p-12">
@@ -18,7 +18,7 @@ export default function RoiAnchor({ roi }: { roi: RoiAnchorType }) {
             {roi.multiplier}
           </p>
           <p className="mt-4 max-w-xs text-[14px] leading-relaxed text-ink-soft">
-            on per-seat subscription cost, before residual recurring value
+            Illustrative; your numbers will vary with the hours you reclaim.
           </p>
         </div>
 
@@ -27,7 +27,6 @@ export default function RoiAnchor({ roi }: { roi: RoiAnchorType }) {
             <Row label="Subscription cost" value={roi.inputCost} />
             <Row label="Value delivered" value={roi.outputValue} />
             <Row label="The math" value={roi.math} wide />
-            <Row label="Source" value={roi.citation} wide cite />
           </dl>
         </div>
       </div>
@@ -39,12 +38,10 @@ function Row({
   label,
   value,
   wide = false,
-  cite = false,
 }: {
   label: string;
   value: string;
   wide?: boolean;
-  cite?: boolean;
 }) {
   return (
     <div className={wide ? "" : "flex flex-wrap items-baseline gap-3"}>
@@ -54,9 +51,7 @@ function Row({
       <dd
         className={`${
           wide ? "mt-2" : ""
-        } text-[15px] leading-relaxed text-ink-soft ${
-          cite ? "font-mono text-[12px] text-mute" : ""
-        }`}
+        } text-[15px] leading-relaxed text-ink-soft`}
       >
         {value}
       </dd>

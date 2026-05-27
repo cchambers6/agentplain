@@ -41,10 +41,9 @@ export default function IntegrationsList({
       </div>
 
       <p className="mt-10 max-w-3xl font-mono text-[12px] leading-relaxed text-mute">
-        Source: `project_integration_roadmap.md` (current state) and
-        `feedback_integration_acceptance_is_functional.md` (acceptance bar).
-        Sync-diff alone is a subtest; integration-acceptance means the agent
-        completes the full functional value loop on a real customer system.
+        Sync-diff alone is a subtest. Integration-acceptance means the agent
+        completes the full functional value loop — read, categorize,
+        coordinate, schedule, draft — end-to-end on a real customer system.
       </p>
     </Section>
   );

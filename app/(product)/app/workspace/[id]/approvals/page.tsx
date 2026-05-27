@@ -38,9 +38,10 @@ export default async function ApprovalsPage({ params }: PageProps) {
         Decisions waiting for you.
       </h1>
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
-        Routine items send through automatically. Anything above your
-        threshold lands here for explicit ratification — we draft, you
-        decide, your existing system sends.
+        Nothing leaves agentplain on its own. We draft; you decide; your
+        existing system is what actually sends. Every customer-facing item
+        lands here first — routine work in a quieter lane, anything above
+        your threshold flagged for explicit ratification.
       </p>
 
       {rows.length === 0 ? (

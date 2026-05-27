@@ -14,6 +14,15 @@ const nextConfig = {
         destination: "/#pricing",
         permanent: true,
       },
+      {
+        // /how-it-works is the obvious URL guess + stale-link target. Nav
+        // and footer link to the /#how anchor on the homepage; the bare
+        // path used to 404. Browsers honour the hash on the Location header
+        // so a direct hit lands on the anchor.
+        source: "/how-it-works",
+        destination: "/#how",
+        permanent: true,
+      },
     ];
   },
 };

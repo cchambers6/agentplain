@@ -94,11 +94,6 @@ export default function PricingTierBanner({ tier }: { tier?: VerticalTier }) {
             </Link>
           </div>
         </div>
-        <p className="mt-6 max-w-3xl font-mono text-[12px] leading-relaxed text-mute">
-          Source: <code className="text-[12px]">project_stripe_both_surfaces.md</code>
-          {" "}(Max tier per the 2026-05-15 three-tier ratification — AD-HOC
-          quote-based, not a fixed per-seat price).
-        </p>
       </Section>
     );
   }
@@ -156,10 +151,6 @@ export default function PricingTierBanner({ tier }: { tier?: VerticalTier }) {
         </p>
       </div>
 
-      <p className="mt-6 max-w-3xl font-mono text-[12px] leading-relaxed text-mute">
-        Source: <code className="text-[12px]">project_stripe_both_surfaces.md</code>
-        {" "}({displayName} tier per the 2026-05-15 three-tier ratification).
-      </p>
     </Section>
   );
 }

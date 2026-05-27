@@ -81,7 +81,17 @@ export default async function WorkspaceIntegrationsPage({
   });
 
   const connectedCount = tiles.filter((t) => t.status === "connected").length;
-  const availableCount = tiles.filter((t) => t.status === "available").length;
+  // "available" means the tile is in the marketplace and not coming-soon.
+  // We split it by whether the OAuth credentials are actually wired up in
+  // this environment so the header doesn't overstate self-serve capability:
+  // a tile whose env vars are missing dead-ends at `oauth_not_configured`,
+  // so it's accurate to label it "awaiting connection" rather than "available."
+  const availableNow = tiles.filter(
+    (t) => t.status === "available" && t.configured,
+  ).length;
+  const awaitingConnection = tiles.filter(
+    (t) => t.status === "available" && !t.configured,
+  ).length;
   const comingSoonCount = tiles.filter((t) => t.status === "coming-soon").length;
 
   const connectedEntry = flash.connected
@@ -103,10 +113,16 @@ export default async function WorkspaceIntegrationsPage({
 
       <InlineFlash flash={flash} tiles={tiles} />
 
-      <div className="mt-6 flex items-center gap-4 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+      <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
         <span>{connectedCount} connected</span>
         <span aria-hidden>·</span>
-        <span>{availableCount} available</span>
+        <span>{availableNow} available now</span>
+        {awaitingConnection > 0 ? (
+          <>
+            <span aria-hidden>·</span>
+            <span>{awaitingConnection} awaiting connection</span>
+          </>
+        ) : null}
         <span aria-hidden>·</span>
         <span>{comingSoonCount} coming soon</span>
       </div>

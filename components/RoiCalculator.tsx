@@ -214,11 +214,8 @@ export default function RoiCalculator() {
                 </p>
                 <p className="mt-3 max-w-md text-[14px] leading-relaxed text-ink-soft">
                   Value delivered per dollar of subscription, at the inputs
-                  above. ROI range typically 15x to 110x per{" "}
-                  <code className="font-mono text-[12px] text-mute">
-                    project_pricing_value_anchor.md
-                  </code>
-                  .
+                  above. Typical range 15x to 110x — illustrative; your
+                  numbers will vary with the hours you actually reclaim.
                 </p>
 
                 {result.overEnterprise ? (
@@ -240,18 +237,10 @@ export default function RoiCalculator() {
                 ) : null}
 
                 <p className="mt-6 font-mono text-[11px] leading-relaxed text-mute">
-                  Sources: per-seat ladder from{" "}
-                  <code className="text-[11px]">
-                    project_stripe_both_surfaces.md
-                  </code>
-                  . Value math from{" "}
-                  <code className="text-[11px]">
-                    project_pricing_value_anchor.md
-                  </code>
-                  . Named-partner hour value at $
-                  {PARTNER_HOUR_VALUE_USD_ESTIMATE}/hr is an estimate until
-                  the value-anchor memory commits. First month is $0 across
-                  every Regular and Partner seat band.
+                  Named-partner hour value at $
+                  {PARTNER_HOUR_VALUE_USD_ESTIMATE}/hr is an illustrative
+                  estimate. First month is $0 across every Regular and
+                  Partner seat band.
                 </p>
               </>
             ) : null}
@@ -335,10 +324,7 @@ function MaxQuoteState() {
         </a>
       </div>
       <p className="mt-7 font-mono text-[11px] leading-relaxed text-mute">
-        Source:{" "}
-        <code className="text-[11px]">project_stripe_both_surfaces.md</code>{" "}
-        (2026-05-15 amendment — Max is ad-hoc / quote-based, not productized
-        in Stripe).
+        Max is ad-hoc and quote-based — not productized in Stripe.
       </p>
     </div>
   );

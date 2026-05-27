@@ -40,3 +40,18 @@ export type {
   IFileSource,
 } from './types';
 export { fileSourceOk, fileSourceError } from './types';
+
+export {
+  customerFileSourceNamesForProvider,
+  deleteIntegrationCustomerData,
+  reapTombstonedDriveCustomerData,
+  tearDownWorkspaceData,
+} from './deletion';
+export type {
+  DeleteIntegrationCustomerDataArgs,
+  DeleteIntegrationCustomerDataResult,
+  ReapTombstonedArgs,
+  ReapTombstonedResult,
+  TearDownWorkspaceDataArgs,
+  TearDownWorkspaceDataResult,
+} from './deletion';

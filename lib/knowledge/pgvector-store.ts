@@ -314,10 +314,16 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
   }
 
   async delete(input: KnowledgeDeleteInput): Promise<KnowledgeResult<{ deleted: number }>> {
-    if (!input.embeddingId && !input.documentId) {
+    const hasShape =
+      !!input.embeddingId ||
+      !!input.documentId ||
+      !!input.byWorkspaceAndSource ||
+      !!input.byWorkspaceAndTombstone ||
+      !!input.allWorkspaceCustomerDocs;
+    if (!hasShape) {
       return knowledgeError(
         'INVALID_ARGUMENT',
-        'KnowledgeStore.delete requires either embeddingId or documentId.',
+        'KnowledgeStore.delete requires one of: embeddingId, documentId, byWorkspaceAndSource, byWorkspaceAndTombstone, allWorkspaceCustomerDocs.',
       );
     }
     try {
@@ -339,9 +345,69 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
             await tx.embedding.delete({ where: { id: row.id } });
             return 1;
           }
-          // Delete by documentId — cascades to embeddings.
-          const before = await tx.embedding.count({ where: { documentId: input.documentId } });
-          await tx.knowledgeDocument.delete({ where: { id: input.documentId as string } });
+          if (input.documentId) {
+            // Delete by documentId — cascades to embeddings.
+            const before = await tx.embedding.count({ where: { documentId: input.documentId } });
+            await tx.knowledgeDocument.delete({ where: { id: input.documentId as string } });
+            return before;
+          }
+          if (input.byWorkspaceAndSource) {
+            // Bulk deletion of CUSTOMER docs ingested from one source for
+            // one workspace. The CUSTOMER + workspaceId guards are the
+            // scope precision the customer-data deletion path requires.
+            const { workspaceId, sourceName } = input.byWorkspaceAndSource;
+            const docs = await tx.knowledgeDocument.findMany({
+              where: {
+                contextKind: 'CUSTOMER',
+                workspaceId,
+                metadata: { path: ['source'], equals: sourceName },
+              },
+              select: { id: true },
+            });
+            if (docs.length === 0) return 0;
+            const ids = docs.map((d) => d.id);
+            const before = await tx.embedding.count({ where: { documentId: { in: ids } } });
+            await tx.knowledgeDocument.deleteMany({ where: { id: { in: ids } } });
+            return before;
+          }
+          if (input.byWorkspaceAndTombstone) {
+            const { workspaceId, sourceName, liveFileIds } = input.byWorkspaceAndTombstone;
+            // List the (id, metadata.fileId) pairs scoped to this
+            // workspace + source, then drop the ones whose fileId is no
+            // longer in the live set the caller passed in.
+            const docs = await tx.knowledgeDocument.findMany({
+              where: {
+                contextKind: 'CUSTOMER',
+                workspaceId,
+                metadata: { path: ['source'], equals: sourceName },
+              },
+              select: { id: true, metadata: true },
+            });
+            if (docs.length === 0) return 0;
+            const live = new Set(liveFileIds);
+            const ids: string[] = [];
+            for (const doc of docs) {
+              const meta = (doc.metadata ?? {}) as Record<string, unknown>;
+              const fileId = typeof meta.fileId === 'string' ? meta.fileId : null;
+              // No fileId in metadata = can't be sure it's tombstoned; skip.
+              if (fileId === null) continue;
+              if (!live.has(fileId)) ids.push(doc.id);
+            }
+            if (ids.length === 0) return 0;
+            const before = await tx.embedding.count({ where: { documentId: { in: ids } } });
+            await tx.knowledgeDocument.deleteMany({ where: { id: { in: ids } } });
+            return before;
+          }
+          // allWorkspaceCustomerDocs — workspace-teardown variant.
+          const { workspaceId } = input.allWorkspaceCustomerDocs as { workspaceId: string };
+          const docs = await tx.knowledgeDocument.findMany({
+            where: { contextKind: 'CUSTOMER', workspaceId },
+            select: { id: true },
+          });
+          if (docs.length === 0) return 0;
+          const ids = docs.map((d) => d.id);
+          const before = await tx.embedding.count({ where: { documentId: { in: ids } } });
+          await tx.knowledgeDocument.deleteMany({ where: { id: { in: ids } } });
           return before;
         },
         { client: this.client },

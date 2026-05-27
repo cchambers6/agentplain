@@ -227,7 +227,9 @@ export class TestKnowledgeStore implements IKnowledgeStore {
         if (e.documentId) this.docs.delete(e.documentId);
         deleted = 1;
       }
-    } else if (input.documentId) {
+      return knowledgeOk({ deleted });
+    }
+    if (input.documentId) {
       const doc = this.docs.get(input.documentId);
       if (doc) {
         this.docs.delete(doc.id);
@@ -239,14 +241,75 @@ export class TestKnowledgeStore implements IKnowledgeStore {
           }
         }
       }
-    } else {
-      return knowledgeError(
-        'INVALID_ARGUMENT',
-        'KnowledgeStore.delete requires either embeddingId or documentId.',
-      );
+      return knowledgeOk({ deleted });
     }
-    return knowledgeOk({ deleted });
+    if (input.byWorkspaceAndSource) {
+      const { workspaceId, sourceName } = input.byWorkspaceAndSource;
+      const docIds = new Set<string>();
+      for (const doc of this.docs.values()) {
+        if (doc.contextKind !== 'CUSTOMER') continue;
+        if (doc.workspaceId !== workspaceId) continue;
+        if (readSource(doc.metadata) !== sourceName) continue;
+        docIds.add(doc.id);
+      }
+      return knowledgeOk({ deleted: this.dropDocs(docIds) });
+    }
+    if (input.byWorkspaceAndTombstone) {
+      const { workspaceId, sourceName, liveFileIds } = input.byWorkspaceAndTombstone;
+      const live = new Set(liveFileIds);
+      const docIds = new Set<string>();
+      for (const doc of this.docs.values()) {
+        if (doc.contextKind !== 'CUSTOMER') continue;
+        if (doc.workspaceId !== workspaceId) continue;
+        if (readSource(doc.metadata) !== sourceName) continue;
+        const fileId = readFileId(doc.metadata);
+        // No fileId in metadata = can't classify tombstoned; skip.
+        if (fileId === null) continue;
+        if (live.has(fileId)) continue;
+        docIds.add(doc.id);
+      }
+      return knowledgeOk({ deleted: this.dropDocs(docIds) });
+    }
+    if (input.allWorkspaceCustomerDocs) {
+      const { workspaceId } = input.allWorkspaceCustomerDocs;
+      const docIds = new Set<string>();
+      for (const doc of this.docs.values()) {
+        if (doc.contextKind !== 'CUSTOMER') continue;
+        if (doc.workspaceId !== workspaceId) continue;
+        docIds.add(doc.id);
+      }
+      return knowledgeOk({ deleted: this.dropDocs(docIds) });
+    }
+    return knowledgeError(
+      'INVALID_ARGUMENT',
+      'KnowledgeStore.delete requires one of: embeddingId, documentId, byWorkspaceAndSource, byWorkspaceAndTombstone, allWorkspaceCustomerDocs.',
+    );
   }
+
+  private dropDocs(docIds: Set<string>): number {
+    let deleted = 0;
+    for (const id of docIds) {
+      this.docs.delete(id);
+    }
+    for (const e of Array.from(this.embeddings.values())) {
+      if (e.documentId && docIds.has(e.documentId)) {
+        this.embeddings.delete(e.id);
+        this.bySource.delete(`${e.sourceType}:${e.sourceId}`);
+        deleted += 1;
+      }
+    }
+    return deleted;
+  }
+}
+
+function readSource(metadata: Record<string, unknown>): string | null {
+  const v = metadata?.source;
+  return typeof v === 'string' ? v : null;
+}
+
+function readFileId(metadata: Record<string, unknown>): string | null {
+  const v = metadata?.fileId;
+  return typeof v === 'string' ? v : null;
 }
 
 function visible(rowWorkspaceId: string | null, ctx: TestKnowledgeStoreContext): boolean {

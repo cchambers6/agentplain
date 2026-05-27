@@ -32,7 +32,11 @@ import {
   TestKnowledgeStore,
 } from '@/lib/knowledge';
 import type { IFileSource } from '@/lib/customer-files';
-import { fileSourceError, fileSourceOk } from '@/lib/customer-files';
+import {
+  fileSourceError,
+  fileSourceOk,
+  type FileRef,
+} from '@/lib/customer-files';
 
 const FIXTURE_DIR = path.join(
   process.cwd(),
@@ -183,6 +187,115 @@ describe('runCustomerFilesIngestionSweep — sweep keeps going past a thrown fac
     assert.match(result.failures[0].reason, /factory exploded/);
     // Workspace B's unconfigured source NO-OPs cleanly even though A blew up.
     assert.equal(result.workspacesSkippedUnconfigured, 1);
+  });
+});
+
+describe('runCustomerFilesIngestionSweep — tombstone reaper', () => {
+  /**
+   * A controllable in-memory source that lets us pre-ingest a set of
+   * files and then "drop" one to simulate the customer deleting/trashing
+   * a Drive file. Mirrors the IFileSource shape DriveFileSource uses;
+   * `liveFileIds` is the set the reaper compares against.
+   */
+  class ScriptedFileSource implements IFileSource {
+    readonly name = 'google-drive' as const;
+    private current: Map<string, { ref: FileRef; text: string }> = new Map();
+
+    seed(files: Array<{ ref: FileRef; text: string }>): void {
+      this.current = new Map(files.map((f) => [f.ref.id, f]));
+    }
+
+    drop(fileId: string): void {
+      this.current.delete(fileId);
+    }
+
+    async listFiles() {
+      return fileSourceOk(Array.from(this.current.values()).map((f) => f.ref));
+    }
+
+    async fetchFile(_workspaceId: string, ref: FileRef) {
+      const got = this.current.get(ref.id);
+      if (!got) return fileSourceError('NOT_FOUND', `file ${ref.id} dropped between list and fetch`);
+      return fileSourceOk({ ref, text: got.text });
+    }
+  }
+
+  function makeRef(id: string): FileRef {
+    return {
+      id,
+      title: `Doc ${id}`,
+      mimeType: 'text/plain',
+      sizeBytes: null,
+      sourceUrl: `https://drive.google.com/file/d/${id}/view`,
+      modifiedAt: null,
+      metadata: { driveFileId: id },
+    };
+  }
+
+  it('first sweep ingests three files; second sweep after one is deleted reaps the tombstoned doc', async () => {
+    const WORKSPACE = 'cccccccc-1111-2222-3333-555555555555';
+    const store = makeStore();
+    const source = new ScriptedFileSource();
+    source.seed([
+      { ref: makeRef('alpha'), text: 'alpha body' },
+      { ref: makeRef('beta'), text: 'beta body' },
+      { ref: makeRef('gamma'), text: 'gamma body' },
+    ]);
+
+    const first = await runCustomerFilesIngestionSweep({
+      listWorkspaces: async () => [{ id: WORKSPACE, slug: 'ws-c' }],
+      buildSource: () => source,
+      store,
+    });
+    assert.equal(first.workspacesIngested, 1);
+    assert.equal(first.filesIngested, 3);
+    // Listing was complete (3 < 200), so reaper ran. No tombstones first sweep.
+    assert.equal(first.workspacesReaped, 1);
+    assert.equal(first.embeddingsReaped, 0);
+
+    // Sanity: store has three docs.
+    const visibleAfterFirst = await store.search({ query: 'alpha beta gamma', k: 50 });
+    assert.equal(visibleAfterFirst.ok, true);
+    if (!visibleAfterFirst.ok) return;
+    assert.equal(visibleAfterFirst.value.length, 3);
+
+    // Customer "deletes" beta on the Drive side.
+    source.drop('beta');
+
+    const second = await runCustomerFilesIngestionSweep({
+      listWorkspaces: async () => [{ id: WORKSPACE, slug: 'ws-c' }],
+      buildSource: () => source,
+      store,
+    });
+    assert.equal(second.workspacesIngested, 1);
+    assert.equal(second.filesIngested, 2);
+    assert.equal(second.workspacesReaped, 1);
+    assert.equal(
+      second.embeddingsReaped,
+      1,
+      'expected exactly the beta tombstone to be reaped',
+    );
+
+    const visibleAfterSecond = await store.search({ query: 'alpha beta gamma', k: 50 });
+    assert.equal(visibleAfterSecond.ok, true);
+    if (!visibleAfterSecond.ok) return;
+    const remainingFileIds = visibleAfterSecond.value
+      .map((h) => (h.metadata?.fileId as string | undefined))
+      .filter((s): s is string => typeof s === 'string')
+      .sort();
+    assert.deepEqual(remainingFileIds, ['alpha', 'gamma']);
+  });
+
+  it('NOT_CONFIGURED workspaces do not run the reaper (no listing to compare)', async () => {
+    const WORKSPACE = 'dddddddd-1111-2222-3333-555555555555';
+    const result = await runCustomerFilesIngestionSweep({
+      listWorkspaces: async () => [{ id: WORKSPACE, slug: 'ws-d' }],
+      buildSource: () => new UnconfiguredSource(),
+      store: makeStore(),
+    });
+    assert.equal(result.workspacesSkippedUnconfigured, 1);
+    assert.equal(result.workspacesReaped, 0);
+    assert.equal(result.embeddingsReaped, 0);
   });
 });
 

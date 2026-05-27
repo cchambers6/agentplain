@@ -180,6 +180,40 @@ export interface KnowledgeDeleteInput {
   embeddingId?: string;
   /** Delete a document and all its embeddings. */
   documentId?: string;
+  /**
+   * Delete every CUSTOMER-kind document + embedding for a (workspaceId,
+   * source name) pair. The store matches `metadata->>'source'` against
+   * `sourceName` so disconnecting an integration only purges that
+   * integration's ingested rows — other sources (other connectors,
+   * fixtures, future channels) stay intact. Embeddings cascade via the
+   * Embedding.documentId → KnowledgeDocument.id FK
+   * (`prisma/migrations/20260512000000_add_knowledge_substrate/migration.sql`
+   * line 82, `ON DELETE CASCADE`).
+   */
+  byWorkspaceAndSource?: {
+    workspaceId: string;
+    sourceName: string;
+  };
+  /**
+   * Drive-tombstone reaper variant. Delete every CUSTOMER doc for
+   * (workspaceId, sourceName) whose stored `metadata->>'fileId'` is NOT
+   * in `liveFileIds`. Used after a complete source listing so customer
+   * deletes/trash on the provider propagate into our store.
+   */
+  byWorkspaceAndTombstone?: {
+    workspaceId: string;
+    sourceName: string;
+    liveFileIds: string[];
+  };
+  /**
+   * Workspace teardown variant — delete every CUSTOMER-kind doc +
+   * embedding for the workspace regardless of source. Other context
+   * kinds (SKILL / VERTICAL / CROSS_CUSTOMER / COMPLIANCE) are
+   * shared-substrate and stay put.
+   */
+  allWorkspaceCustomerDocs?: {
+    workspaceId: string;
+  };
 }
 
 export interface IKnowledgeStore {

@@ -66,6 +66,16 @@ export interface IngestWorkspaceFilesResult {
    * from ingested-but-empty ones. Absent on the success path.
    */
   notConfigured?: boolean;
+  /**
+   * Provider-side ids of the files the source listed in this sweep. The
+   * tombstone reaper (`reapTombstonedDriveCustomerData` in
+   * `lib/customer-files/deletion.ts`) uses this as the "currently alive"
+   * set — anything we have ingested for this workspace+source whose
+   * `metadata.fileId` is NOT in this set was deleted/trashed on the
+   * provider and should be removed from our store. Empty when
+   * notConfigured=true OR the source returned zero files.
+   */
+  liveFileIds: string[];
 }
 
 export async function ingestWorkspaceFiles(
@@ -91,6 +101,7 @@ export async function ingestWorkspaceFiles(
         chunksWritten: 0,
         reports: [],
         notConfigured: true,
+        liveFileIds: [],
       };
     }
     throw new Error(
@@ -99,10 +110,12 @@ export async function ingestWorkspaceFiles(
   }
 
   const reports: IngestFileReport[] = [];
+  const liveFileIds: string[] = [];
   let totalChunks = 0;
   let filesIngested = 0;
 
   for (const ref of listed.value) {
+    liveFileIds.push(ref.id);
     const fetched: FileSourceResult<{ text: string }> =
       await args.source.fetchFile(args.workspaceId, ref);
     if (!fetched.ok) {
@@ -192,5 +205,6 @@ export async function ingestWorkspaceFiles(
     filesIngested,
     chunksWritten: totalChunks,
     reports,
+    liveFileIds,
   };
 }

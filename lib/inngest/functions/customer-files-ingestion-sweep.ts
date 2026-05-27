@@ -44,6 +44,7 @@ import { SYSTEM_OPERATOR_CONTEXT, withSystemContext } from '@/lib/db';
 import {
   DriveFileSource,
   ingestWorkspaceFiles,
+  reapTombstonedDriveCustomerData,
   type IFileSource,
   type IngestWorkspaceFilesResult,
 } from '@/lib/customer-files';
@@ -72,6 +73,20 @@ export const CUSTOMER_FILES_INGESTION_SWEEP_CRON = '0 */6 * * *';
 export const CUSTOMER_FILES_INGESTION_SWEEP_TRIGGER_EVENT =
   'agentplain/customer-files-ingestion-sweep.requested';
 
+/**
+ * Threshold used to classify a sweep's listing as complete vs. capped.
+ * Mirrors `DriveFileSource`'s `DEFAULT_MAX_FILES_PER_WORKSPACE = 200`
+ * (`lib/customer-files/drive-source.ts:69`). When `filesSeen` reaches
+ * this value we can't tell whether the source had more files past the
+ * cap, so the tombstone reaper SKIPS the workspace for this sweep —
+ * a still-present file would otherwise be mis-classified as tombstoned
+ * and deleted. The next sweep retries.
+ *
+ * Per-fixture test sources (which have < 10 files) always finish below
+ * the cap, so reaper coverage in tests is unconditional.
+ */
+export const FILE_LISTING_COMPLETENESS_CAP = 200;
+
 export interface CustomerFilesIngestionSweepResult {
   /** Workspaces the sweep considered (filtered to active memberships). */
   workspacesConsidered: number;
@@ -91,6 +106,17 @@ export interface CustomerFilesIngestionSweepResult {
   filesIngested: number;
   /** Total chunks written across all workspaces. */
   chunksWritten: number;
+  /**
+   * Total CUSTOMER Embedding rows the tombstone reaper deleted across
+   * all workspaces this sweep. Reaper SKIPS workspaces with capped
+   * listings (filesSeen >= `FILE_LISTING_COMPLETENESS_CAP`) and those
+   * that returned NOT_CONFIGURED. The reaper is best-effort: a per-
+   * workspace failure here surfaces as a sweep-level `failures` entry
+   * but does not stall other workspaces.
+   */
+  embeddingsReaped: number;
+  /** Workspaces the reaper ran against (i.e. listing was complete). */
+  workspacesReaped: number;
   /** Per-workspace failures — one row dies, the sweep keeps going. */
   failures: Array<{ workspaceId: string; reason: string }>;
 }
@@ -128,6 +154,8 @@ export async function runCustomerFilesIngestionSweep(
     workspacesSkippedUnconfigured: 0,
     filesIngested: 0,
     chunksWritten: 0,
+    embeddingsReaped: 0,
+    workspacesReaped: 0,
     failures: [],
   };
 
@@ -174,6 +202,44 @@ export async function runCustomerFilesIngestionSweep(
         result.failures.push({
           workspaceId: workspace.id,
           reason: `${report.title} (${report.fileId}): ${report.error.code} — ${report.error.message}`,
+        });
+      }
+    }
+
+    // Tombstone reap: a Drive file the customer deleted (or trashed —
+    // DEFAULT_DRIVE_QUERY filters trashed=false) vanishes from listFiles().
+    // Drop our ingested copy so the customer's delete propagates. SKIP
+    // for NOT_CONFIGURED workspaces (no listing to compare against) and
+    // for sweeps that hit the bounded listing cap (we don't have the
+    // full live set, so still-present files would mis-classify as
+    // tombstoned). Best-effort: reap errors surface as failures but do
+    // not stall subsequent workspaces.
+    if (!outcome.notConfigured) {
+      const listingWasComplete = outcome.filesSeen < FILE_LISTING_COMPLETENESS_CAP;
+      try {
+        const reap = await reapTombstonedDriveCustomerData({
+          workspaceId: workspace.id,
+          sourceName: outcome.sourceName,
+          liveFileIds: outcome.liveFileIds,
+          listingWasComplete,
+          store: args.store,
+        });
+        if (reap.ran) {
+          result.workspacesReaped += 1;
+          result.embeddingsReaped += reap.embeddingsDeleted;
+        }
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err);
+        reportInngestItemFailure(err, {
+          functionId: CUSTOMER_FILES_INGESTION_SWEEP_FUNCTION_ID,
+          extraTags: {
+            workspace_id: workspace.id,
+            phase: 'reap',
+          },
+        });
+        result.failures.push({
+          workspaceId: workspace.id,
+          reason: `tombstone reaper: ${reason}`,
         });
       }
     }
@@ -246,6 +312,8 @@ export const customerFilesIngestionSweepFn = inngest.createFunction(
                 skipped_unconfigured: out.workspacesSkippedUnconfigured,
                 files: out.filesIngested,
                 chunks: out.chunksWritten,
+                workspaces_reaped: out.workspacesReaped,
+                embeddings_reaped: out.embeddingsReaped,
                 failed: out.failures.length,
               });
               return out;

@@ -1,23 +1,30 @@
 // Custom-inquiry submit handler. Stays inside agentplain's no-outbound
 // architecture (per `project_no_outbound_architecture.md`):
 //   1. Persist an `Inquiry` row (durable artifact)
-//   2. Send ONE email to Conner's inbox (notification)
-//   3. Render a synchronous ack to the visitor
-// No drip sequences, no auto-follow-ups, no Twilio/SendGrid/dialer plumbing.
+//   2. Send ONE email to Conner's inbox (operator notification)
+//   3. Send ONE confirmation email to the submitter (transactional ack)
+//   4. Render a synchronous ack to the visitor
+// The no-outbound rule governs agentplain *agents* reaching into a customer's
+// contact graph; transactional acks to a person who just submitted a form on
+// our marketing site are the same category as the operator notification — a
+// single response to an explicit submission. No drips, no follow-ups.
 //
-// Persistence runs first so an email-send failure never loses the inquiry.
-// If the DB write fails the visitor sees a retry prompt and Conner is not
-// silently surprised by a missing record later.
+// Persistence runs first so a mail-send failure (operator OR confirmation)
+// never loses the inquiry. The two send legs are independent — if either
+// fails, the other still runs and the submit still returns ok.
 //
 // Vendor coupling per `feedback_no_silent_vendor_lock.md` lives behind
 // `lib/email/getEmailProvider()` — this module never imports `resend`
 // directly. DB writes go through `withSystemContext` (operator RLS) so the
 // public POST satisfies the policy on `Inquiry` without a user session.
 
+import { createHash } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import { env } from "@/lib/env";
-import { withSystemContext } from "@/lib/db/rls";
+import { withSystemContext as defaultWithSystemContext } from "@/lib/db/rls";
 import { getEmailProvider } from "@/lib/email";
+import { getLogger, type Logger } from "@/lib/observability/logger";
+import type { EmailProvider } from "@/lib/email";
 import {
   customInquirySchema,
   INQUIRY_TYPE_LABEL,
@@ -29,8 +36,27 @@ import type {
   InquiryType,
 } from "./types";
 
+/** Function that runs a callback against the operator/system RLS context.
+ *  Production callers pass nothing and pick up the real implementation;
+ *  tests inject a fake-tx runner so the unit doesn't need Postgres.
+ *  Mirrors the `SystemContextRunner` pattern from
+ *  `lib/billing/provisioning.ts`. */
+export type SystemContextRunner = <T>(
+  fn: (tx: Prisma.TransactionClient) => Promise<T>,
+) => Promise<T>;
+
+export interface SubmitCustomInquiryDeps {
+  /** Override for tests; production uses `withSystemContext`. */
+  systemContext?: SystemContextRunner;
+  /** Override for tests; production uses `getEmailProvider()`. */
+  email?: EmailProvider;
+  /** Override for tests; production uses `getLogger()`. */
+  logger?: Logger;
+}
+
 export async function submitCustomInquiry(
   raw: unknown,
+  deps: SubmitCustomInquiryDeps = {},
 ): Promise<CustomInquirySubmitResponse> {
   const parsed = customInquirySchema.safeParse(raw);
   if (!parsed.success) {
@@ -45,7 +71,12 @@ export async function submitCustomInquiry(
   }
   const input = parsed.data;
 
-  // 1. Persist. If this fails we never send the email — the visitor sees a
+  const withSystemContext: SystemContextRunner =
+    deps.systemContext ?? defaultWithSystemContext;
+  const email = deps.email ?? getEmailProvider();
+  const logger = deps.logger ?? getLogger();
+
+  // 1. Persist. If this fails we never send any email — the visitor sees a
   //    retry prompt rather than the inquiry vanishing into Conner's inbox
   //    with no DB trace.
   let inquiryId: string;
@@ -80,9 +111,9 @@ export async function submitCustomInquiry(
     };
   }
 
-  // 2. Email Conner. If this fails we keep the row but flag the issue —
-  //    operator triage can read the row directly on /operator/inquiries.
-  const email = getEmailProvider();
+  // 2. Email Conner (operator notification). If this fails we keep the row
+  //    but flag the issue — operator triage can read the row directly on
+  //    /operator/inquiries.
   const to = env.customInquiryTo();
   const subject = subjectFor(input);
   const { text, html } = bodyFor(input, inquiryId);
@@ -121,6 +152,54 @@ export async function submitCustomInquiry(
           targetId: inquiryId,
           payload: {
             reason: err instanceof Error ? err.message : String(err),
+          } satisfies Prisma.InputJsonValue,
+        },
+      });
+    });
+  }
+
+  // 3. Confirmation email to the submitter. Failure-isolated — must not
+  //    affect the persisted row OR the operator notification leg above.
+  //    Per the just-merged PII-scrubbing work (commit 0db5e12), the
+  //    breadcrumb on failure stores only an address hash + length + error
+  //    name. Never the submitter's address, message body, or the raw
+  //    provider error string (which can echo address fragments back).
+  const confirmation = buildConfirmationEmail(input, inquiryId);
+  try {
+    await email.send({
+      to: input.email,
+      subject: confirmation.subject,
+      text: confirmation.text,
+      html: confirmation.html,
+      tags: {
+        surface: "custom-inquiry-confirmation",
+        inquiry_type: input.inquiryType,
+      },
+    });
+  } catch (err) {
+    const errorName = err instanceof Error ? err.name : "UnknownError";
+    const addressHash = createHash("sha256")
+      .update(input.email)
+      .digest("hex")
+      .slice(0, 16);
+    const addressLength = input.email.length;
+    logger.warn("custom-inquiry confirmation send failed", {
+      error_name: errorName,
+      address_hash: addressHash,
+      address_length: addressLength,
+      inquiry_id: inquiryId,
+      inquiry_type: input.inquiryType,
+    });
+    await withSystemContext(async (tx) => {
+      await tx.auditLog.create({
+        data: {
+          action: "inquiry.confirmation_email_send_failed",
+          targetTable: "Inquiry",
+          targetId: inquiryId,
+          payload: {
+            error_name: errorName,
+            address_hash: addressHash,
+            address_length: addressLength,
           } satisfies Prisma.InputJsonValue,
         },
       });
@@ -212,6 +291,102 @@ function bodyFor(
   ].join("\n");
 
   return { text, html };
+}
+
+// Confirmation email sent to the submitter. Heritage voice — calm,
+// plainspoken, unhurried — and service-partnership tone ("we run it for
+// you", Plaino, agent + the plains). The SLA paragraph mirrors the
+// on-page `SentState` ack (components/CustomInquiryForm.tsx:345-371) so
+// inbox + on-page see the same windows. No DIY-tool framing, no airplane
+// wordplay, no internal pilot/V0 language (per `docs/brand-and-claims.md`
+// §1 and `feedback_everything_tells_a_story.md`).
+export function buildConfirmationEmail(
+  input: CustomInquiryInput,
+  inquiryId: string,
+): { subject: string; text: string; html: string } {
+  const isMax = input.inquiryType === "max_service_engagement";
+  const subject = "We got your note — agentplain";
+
+  const slaParagraph = isMax
+    ? "Within one business day, a service partner will reach out to start scoping the engagement. Max-tier work is quote-based, so the first reply is a real human reading what you wrote — not a form, not an automation."
+    : "Within two business days, a real human will come back with a scoping call invite and a written spec — what we'd build, how long it'd take, what it'd cost. No surprise charges, no drip sequence.";
+
+  const partnerParagraph =
+    "agentplain runs the operational tail for you. Agents handle the steady, repeatable work — drafts, scheduling, follow-ups, hygiene — and Plaino, your service partner, keeps things moving and reports back. You're not learning a tool; we run the work that takes your time away from the people you serve.";
+
+  const text = [
+    `Hi ${input.name},`,
+    ``,
+    `Thanks for reaching out about ${input.business}. Your note made it here, and we're reading it.`,
+    ``,
+    `What happens next`,
+    slaParagraph,
+    ``,
+    `How we work`,
+    partnerParagraph,
+    ``,
+    `If anything changes on your end, or you want to send more context, just reply to this email — it goes to a real inbox we read.`,
+    ``,
+    `— The agentplain team`,
+    `hello@agentplain.com`,
+    ``,
+    `—`,
+    `Inquiry id: ${inquiryId}`,
+  ].join("\n");
+
+  // Brand palette per docs/brand-and-claims.md §2: cream paper #FBF7F0,
+  // forest #1F3D2E, clay #B85540, soil #5B4636, ink #1F1F1F. Display in a
+  // humanist body face; the email surface intentionally avoids loading a
+  // custom display font — every client renders the fallback cleanly.
+  const html = [
+    `<!doctype html>`,
+    `<html><body style="margin:0;padding:0;background:#FBF7F0;">`,
+    `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#FBF7F0;">`,
+    `<tr><td align="center" style="padding:32px 16px;">`,
+    `<table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;background:#FBF7F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#1F1F1F;">`,
+    `<tr><td style="padding:0 0 24px 0;">`,
+    `<p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;color:#1F3D2E;letter-spacing:-0.01em;">agentplain</p>`,
+    `<p style="margin:4px 0 0 0;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#5B4636;">Intelligence rooted in reality</p>`,
+    `</td></tr>`,
+    `<tr><td style="padding:0 0 16px 0;">`,
+    `<p style="margin:0;font-size:16px;line-height:1.6;color:#1F1F1F;">Hi ${escapeHtml(input.name)},</p>`,
+    `</td></tr>`,
+    `<tr><td style="padding:0 0 16px 0;">`,
+    `<p style="margin:0;font-size:16px;line-height:1.6;color:#1F1F1F;">Thanks for reaching out about <strong>${escapeHtml(
+      input.business,
+    )}</strong>. Your note made it here, and we're reading it.</p>`,
+    `</td></tr>`,
+    `<tr><td style="padding:8px 0 8px 0;">`,
+    `<p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#B85540;">What happens next</p>`,
+    `<p style="margin:0;font-size:15px;line-height:1.65;color:#1F1F1F;">${escapeHtml(
+      slaParagraph,
+    )}</p>`,
+    `</td></tr>`,
+    `<tr><td style="padding:16px 0 8px 0;">`,
+    `<p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#B85540;">How we work</p>`,
+    `<p style="margin:0;font-size:15px;line-height:1.65;color:#1F1F1F;">${escapeHtml(
+      partnerParagraph,
+    )}</p>`,
+    `</td></tr>`,
+    `<tr><td style="padding:20px 0 0 0;">`,
+    `<p style="margin:0;font-size:15px;line-height:1.65;color:#1F1F1F;">If anything changes on your end, or you want to send more context, just reply to this email — it goes to a real inbox we read.</p>`,
+    `</td></tr>`,
+    `<tr><td style="padding:24px 0 0 0;">`,
+    `<p style="margin:0;font-size:15px;line-height:1.6;color:#1F3D2E;">— The agentplain team</p>`,
+    `<p style="margin:2px 0 0 0;font-size:14px;line-height:1.6;color:#5B4636;">hello@agentplain.com</p>`,
+    `</td></tr>`,
+    `<tr><td style="padding:28px 0 0 0;border-top:1px solid rgba(31,61,46,0.15);margin-top:24px;">`,
+    `<p style="margin:16px 0 0 0;font-family:'SFMono-Regular',Menlo,Consolas,monospace;font-size:11px;color:#5B4636;">Inquiry id: ${escapeHtml(
+      inquiryId,
+    )}</p>`,
+    `</td></tr>`,
+    `</table>`,
+    `</td></tr>`,
+    `</table>`,
+    `</body></html>`,
+  ].join("\n");
+
+  return { subject, text, html };
 }
 
 function escapeHtml(value: string): string {

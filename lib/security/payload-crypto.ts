@@ -55,6 +55,10 @@ const ENVELOPE_KEY = 'enc' as const;
 export interface EncryptedEnvelope {
   /** Ciphertext in the same `v1:iv:tag:ct` wire format as `encrypt()`. */
   [ENVELOPE_KEY]: string;
+  // Index signature so the envelope satisfies Prisma's `InputJsonObject`
+  // constraint when handed back to the `Json` column write path. The
+  // runtime guard (`isEncryptedPayload`) still enforces exactly-one-key.
+  [key: string]: string;
 }
 
 /**

@@ -80,6 +80,12 @@ export default async function SettingsPage({ params }: PageProps) {
       description: "Every handoff your fleet has executed.",
     },
     {
+      href: `/app/workspace/${workspaceId}/settings/data`,
+      label: "your data",
+      description:
+        "Export a copy of everything in this workspace, or close the workspace.",
+    },
+    {
       label: "team members",
       description: "Add, remove, and assign roles.",
       status: "coming-soon",

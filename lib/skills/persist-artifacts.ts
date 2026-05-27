@@ -27,6 +27,7 @@
 import type { Prisma } from '@prisma/client';
 import type { ComplianceFlag } from '../agents/sentinel';
 import { withRls, type RlsContext } from '../db';
+import { encryptPayloadForWrite } from '../security/payload-crypto';
 import { getVerticalContent } from '../verticals';
 import type { AgentLoopWork } from '../verticals/types';
 import { categoryToApprovalKind, type OfficeAdminApprovalPayload } from './office-admin';
@@ -208,7 +209,7 @@ function buildHandoffsFromSteps(
       fromAgent: prev,
       toAgent,
       handoffType: step.ok ? step.step : `${step.step}.error`,
-      payload: {
+      payload: encryptPayloadForWrite({
         step: step.step,
         ok: step.ok,
         summary: step.summary,
@@ -217,7 +218,7 @@ function buildHandoffsFromSteps(
         webhookEventId: record.webhookEventId,
         verticalSlug: record.verticalSlug,
         runId: record.startedAt,
-      } as Prisma.InputJsonValue,
+      }),
       relatedSubjectTable: 'WebhookEvent',
       relatedSubjectId: record.webhookEventId,
       occurredAt: new Date(base + idx),
@@ -259,7 +260,7 @@ function buildApprovalFromOutcome(
     refTable: 'WebhookEvent',
     refId: record.webhookEventId,
     status: 'PENDING',
-    payload: {
+    payload: encryptPayloadForWrite({
       draftId: draft.draftId,
       providerDraftId: draft.providerDraftId,
       subject: draft.subject,
@@ -275,7 +276,7 @@ function buildApprovalFromOutcome(
       // draft is responding to without leaving the page.
       inboundSummary: extractStepSummary(record.steps, 'read'),
       categorizationSummary: extractStepSummary(record.steps, 'categorize'),
-    } as Prisma.InputJsonValue,
+    }),
   };
 }
 
@@ -296,14 +297,14 @@ function buildAdminApprovalRow(
     refTable: 'WebhookEvent',
     refId: record.webhookEventId,
     status: 'PENDING',
-    payload: {
+    payload: encryptPayloadForWrite({
       ...adminPayload,
       verticalSlug: record.verticalSlug,
       // Surface the step summaries so the audit footer renders without
       // a separate query.
       inboundSummary: extractStepSummary(record.steps, 'read'),
       officeAdminSummary: extractStepSummary(record.steps, 'office-admin-classify'),
-    } as unknown as Prisma.InputJsonValue,
+    }),
   };
 }
 
@@ -396,7 +397,7 @@ function buildComplianceApproval(args: {
     refTable: 'WebhookEvent',
     refId: record.webhookEventId,
     status: 'PENDING',
-    payload: {
+    payload: encryptPayloadForWrite({
       rule: primary.ruleId,
       summary: `Sentinel matched ${flags.length} literal-trigger phrase${flags.length === 1 ? '' : 's'} against the draft. Each match is grounded in a published citation; rewrite or approve with rationale.`,
       source: primary.source === 'subject' ? 'draft subject line' : 'draft body',
@@ -411,7 +412,7 @@ function buildComplianceApproval(args: {
         citation: { ...f.citation },
       })),
       verticalSlug: record.verticalSlug,
-    } as unknown as Prisma.InputJsonValue,
+    }),
   };
 }
 

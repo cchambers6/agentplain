@@ -22,6 +22,13 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Prisma } from '@prisma/client';
 
+// Payload-crypto: PrismaApprovalSink now writes encrypted envelopes.
+// Set a deterministic key so the sink can encrypt without throwing.
+process.env.ENCRYPTION_KEY =
+  process.env.ENCRYPTION_KEY ??
+  '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
+import { decryptPayloadForRead } from '../../security/payload-crypto';
 import {
   buildApprovalRow,
   CHIEF_OF_STAFF_AGENT_SLUG,
@@ -157,7 +164,7 @@ describe('PrismaApprovalSink — proposal → WorkApprovalQueueItem mapping', ()
     assert.equal(row.agentSlug, CHIEF_OF_STAFF_AGENT_SLUG);
     assert.equal(row.refTable, CHIEF_OF_STAFF_REF_TABLE);
     assert.equal(row.refId, 'pp-meet-1');
-    const payload = row.payload as Record<string, unknown>;
+    const payload = decryptPayloadForRead(row.payload) as Record<string, unknown>;
     assert.equal(payload.subject, 'Proposed time: Q3 planning');
     assert.ok(Array.isArray(payload.candidateSlots));
     assert.equal((payload.candidateSlots as unknown[]).length, 1);
@@ -175,7 +182,7 @@ describe('PrismaApprovalSink — proposal → WorkApprovalQueueItem mapping', ()
     const row = writes[0];
     assert.equal(row.kind, 'CHIEF_OF_STAFF_REPLY_DRAFT');
     assert.equal(row.status, 'PENDING');
-    const payload = row.payload as Record<string, unknown>;
+    const payload = decryptPayloadForRead(row.payload) as Record<string, unknown>;
     assert.equal(payload.subject, 'Re: Invoice question');
     assert.equal(payload.persisted, false);
     assert.match(String(payload.noOutbound), /No email sent/);
@@ -192,7 +199,7 @@ describe('PrismaApprovalSink — proposal → WorkApprovalQueueItem mapping', ()
     const row = writes[0];
     assert.equal(row.kind, 'CHIEF_OF_STAFF_TODO');
     assert.equal(row.status, 'PENDING');
-    const payload = row.payload as Record<string, unknown>;
+    const payload = decryptPayloadForRead(row.payload) as Record<string, unknown>;
     assert.equal(payload.title, 'Follow up: Send the deck');
     assert.equal(payload.suggestedDueLocal, '2026-05-21');
     assert.match(

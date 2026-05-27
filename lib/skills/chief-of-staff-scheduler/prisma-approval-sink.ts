@@ -32,6 +32,7 @@
 
 import type { Prisma, PrismaClient, WorkApprovalKind } from '@prisma/client';
 import { withRls } from '../../db/rls';
+import { encryptPayloadForWrite } from '../../security/payload-crypto';
 import { skillError, skillOk, type SkillResult } from '../types';
 import type {
   ApprovalSink,
@@ -125,7 +126,7 @@ export function buildApprovalRow(
     refTable: CHIEF_OF_STAFF_REF_TABLE,
     refId: proposal.proposalId,
     status: 'PENDING',
-    payload: buildPayload(proposal) as Prisma.InputJsonValue,
+    payload: encryptPayloadForWrite(buildPayload(proposal)),
   };
 }
 

@@ -1,5 +1,6 @@
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
+import { decryptPayloadForRead } from "@/lib/security/payload-crypto";
 import { ApEyebrow, ApRootedEmptyState } from "@/components/ui/ap";
 import { renderApprovalPayload } from "./renderApprovalPayload";
 import { ApprovalsList } from "./ApprovalsList";
@@ -28,7 +29,7 @@ export default async function ApprovalsPage({ params }: PageProps) {
     agentSlug: item.agentSlug,
     kind: item.kind,
     proposedAtIso: item.proposedAt.toISOString(),
-    rendered: renderApprovalPayload(item.kind, item.payload),
+    rendered: renderApprovalPayload(item.kind, decryptPayloadForRead(item.payload)),
   }));
 
   return (

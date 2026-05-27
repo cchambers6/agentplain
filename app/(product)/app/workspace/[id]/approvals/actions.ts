@@ -8,6 +8,10 @@ import {
   captureDraftEditSignal,
   captureDraftRejectSignal,
 } from "@/lib/preferences";
+import {
+  decryptPayloadForRead,
+  encryptPayloadForWrite,
+} from "@/lib/security/payload-crypto";
 
 const VALID_DECISIONS = ["APPROVED", "REJECTED"] as const;
 type Decision = (typeof VALID_DECISIONS)[number];
@@ -111,9 +115,10 @@ export async function editApprovalDraftAction(form: FormData): Promise<void> {
       throw new Error(`Item already decided (${item.status})`);
     }
 
+    const decrypted = decryptPayloadForRead(item.payload);
     const existing =
-      item.payload && typeof item.payload === "object" && !Array.isArray(item.payload)
-        ? (item.payload as Record<string, unknown>)
+      decrypted && typeof decrypted === "object" && !Array.isArray(decrypted)
+        ? (decrypted as Record<string, unknown>)
         : {};
     if (typeof existing.body === "string") {
       originalBody = existing.body;
@@ -122,7 +127,7 @@ export async function editApprovalDraftAction(form: FormData): Promise<void> {
 
     await tx.workApprovalQueueItem.update({
       where: { id: itemId },
-      data: { payload: next },
+      data: { payload: encryptPayloadForWrite(next) },
     });
 
     await tx.auditLog.create({

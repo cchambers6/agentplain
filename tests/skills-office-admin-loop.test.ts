@@ -24,11 +24,18 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
+// Payload-crypto: persistSkillRunArtifacts writes encrypted payloads.
+// Set a deterministic key so the loop can encrypt without throwing.
+process.env.ENCRYPTION_KEY =
+  process.env.ENCRYPTION_KEY ??
+  '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
 import {
   FixtureMessageFetcher,
   buildWebhookEventFromFixture,
   type WebhookEventFixture,
 } from '@/lib/skills/fixture-fetcher';
+import { decryptPayloadForRead } from '@/lib/security/payload-crypto';
 import { RecordingDraftPersister } from '@/lib/skills/draft';
 import { runSkillChain } from '@/lib/skills/runner';
 import { TestLlmProvider } from '@/lib/llm/test-provider';
@@ -189,7 +196,7 @@ describe('office-admin loop — approval payload carries signals', () => {
     assert.ok(fx);
     const { approvalRows } = await runAdminFixture(fx!.message);
     assert.equal(approvalRows.length, 1);
-    const payload = approvalRows[0].payload as Record<string, unknown>;
+    const payload = decryptPayloadForRead(approvalRows[0].payload) as Record<string, unknown>;
     assert.equal((payload.signals as Record<string, unknown>).amount, '$20.00');
     assert.equal(typeof payload.draftBody, 'string');
   });
@@ -199,7 +206,7 @@ describe('office-admin loop — approval payload carries signals', () => {
     assert.ok(fx);
     const { approvalRows } = await runAdminFixture(fx!.message);
     assert.equal(approvalRows.length, 1);
-    const payload = approvalRows[0].payload as Record<string, unknown>;
+    const payload = decryptPayloadForRead(approvalRows[0].payload) as Record<string, unknown>;
     assert.equal((payload.signals as Record<string, unknown>).verificationCode, '482915');
     assert.equal(payload.priority, 'normal');
     assert.equal(payload.draftBody, null);
@@ -210,7 +217,7 @@ describe('office-admin loop — approval payload carries signals', () => {
     assert.ok(fx);
     const { approvalRows } = await runAdminFixture(fx!.message);
     assert.equal(approvalRows.length, 1);
-    const payload = approvalRows[0].payload as Record<string, unknown>;
+    const payload = decryptPayloadForRead(approvalRows[0].payload) as Record<string, unknown>;
     assert.equal(payload.priority, 'critical');
     assert.equal(approvalRows[0].kind, 'ADMIN_SECURITY_ALERT');
   });

@@ -145,7 +145,7 @@ export default function PricingPage() {
             ctaLabel="Talk to a service partner"
             ctaHref="mailto:hello@agentplain.com?subject=agentplain%20Partner%20tier%20interest"
             ctaStyle="secondary"
-            footnote="Schema-backed Partner tier per project_stripe_both_surfaces.md HISTORICAL."
+            footnote="First month free. Month-to-month. Per seat."
             featured
           />
           <TierColumn
@@ -159,13 +159,6 @@ export default function PricingPage() {
             footnote="Sales-led — no self-checkout."
           />
         </div>
-        <p className="mt-6 max-w-3xl font-mono text-[12px] leading-relaxed text-mute">
-          Source:{" "}
-          <code className="text-[12px]">project_stripe_both_surfaces.md</code>{" "}
-          (three-tier service-partnership model ratified 2026-05-15;
-          Regular ladder + Partner per-seat mapping (PLUS in schema) per
-          HISTORICAL block).
-        </p>
       </Section>
 
       <Section

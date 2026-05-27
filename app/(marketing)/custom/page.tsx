@@ -146,10 +146,10 @@ const proof = [
     cite: "project_pricing_value_anchor.md",
   },
   {
-    label: "Counsel-reviewed compliance",
+    label: "Compliance corpus is real, not vapor",
     body:
-      "The compliance corpus that ships with every vertical is reviewed by outside counsel — and bespoke compliance work is reviewed the same way. When counsel returns we name them publicly. Until then the corpus is gated, not vapor.",
-    cite: "project_counsel_engaged.md",
+      "Every vertical ships with a compliance corpus drafted around the regulations that govern that line of work. The real-estate fair-housing rule (HUD's enumerated trigger phrases) is a literal-match scanner that fires on every customer-facing draft today; the other verticals' rules are loaded as drafts and don't fire until counsel red-lines them. We say so on the page rather than claim coverage we don't have.",
+    cite: "",
   },
   {
     label: "Open feedback loop",
@@ -337,11 +337,6 @@ export default async function CustomPage({ searchParams }: PageProps) {
             detail="Integration drift, model updates, corpus refreshes, weekly review. Includes everything that ships with a Regular seat. Cancel any time."
           />
         </div>
-        <p className="mt-6 max-w-3xl font-mono text-[12px] leading-relaxed text-mute">
-          Source:{" "}
-          <code className="text-[12px]">project_stripe_both_surfaces.md</code>{" "}
-          (Custom engagement pricing framework; locked 2026-05-12).
-        </p>
       </Section>
 
       {/* Q5 — proof */}
@@ -359,9 +354,6 @@ export default async function CustomPage({ searchParams }: PageProps) {
               </p>
               <p className="mt-4 max-w-prose text-[15px] leading-relaxed text-ink-soft">
                 {p.body}
-              </p>
-              <p className="mt-5 border-t border-rule pt-4 font-mono text-[11px] leading-relaxed text-mute">
-                Source: <code className="text-[11px]">{p.cite}</code>
               </p>
             </div>
           ))}

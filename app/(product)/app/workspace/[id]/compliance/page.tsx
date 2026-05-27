@@ -5,6 +5,8 @@ import {
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
 import { servicePartnerForWorkspace } from "@/lib/onboarding/service-partner";
+import { loadCorpusFor } from "@/lib/agents/sentinel";
+import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -17,13 +19,21 @@ export default async function CompliancePage({ params }: PageProps) {
   const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
   const ctx = { userId: member.userId, workspaceId, isOperator: false };
 
-  const flags = await withRls(ctx, (tx) =>
-    tx.complianceFlag.findMany({
-      where: { workspaceId, state: "OPEN" },
-      orderBy: [{ severity: "desc" }, { slaDueAt: "asc" }],
-      take: 50,
-    }),
-  );
+  const [flags, workspace] = await Promise.all([
+    withRls(ctx, (tx) =>
+      tx.complianceFlag.findMany({
+        where: { workspaceId, state: "OPEN" },
+        orderBy: [{ severity: "desc" }, { slaDueAt: "asc" }],
+        take: 50,
+      }),
+    ),
+    withRls(ctx, (tx) =>
+      tx.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { vertical: true },
+      }),
+    ),
+  ]);
 
   // SLA-aware ordering at app layer (DB sort is stable but enum order != severity order).
   flags.sort(
@@ -33,6 +43,26 @@ export default async function CompliancePage({ params }: PageProps) {
   );
 
   const partner = servicePartnerForWorkspace(workspaceId);
+
+  // Corpus maturity: distinguish rules that fire today from rules loaded
+  // as drafts/candidates that do NOT fire. The scanner skips any rule with
+  // `unverified: true` (lib/agents/sentinel/scanner.ts), so the firing set
+  // is rules with `purpose === 'literal-match'` and `unverified` falsy.
+  // Anything else is corpus content visible to counsel but not enforced.
+  const verticalSlug = workspace?.vertical
+    ? verticalSlugFromEnum(workspace.vertical)
+    : null;
+  const corpus = verticalSlug ? loadCorpusFor(verticalSlug) : null;
+  const firingRules = corpus
+    ? corpus.rules.filter(
+        (r) => r.purpose === "literal-match" && r.unverified !== true,
+      )
+    : [];
+  const draftRules = corpus
+    ? corpus.rules.filter(
+        (r) => r.purpose !== "literal-match" || r.unverified === true,
+      )
+    : [];
 
   return (
     <div>
@@ -47,6 +77,39 @@ export default async function CompliancePage({ params }: PageProps) {
         they leave your brokerage. Triage them in order of severity and
         SLA — your broker-of-record review still gates every send.
       </p>
+
+      {corpus ? (
+        <div className="mt-4 max-w-2xl border-l-2 border-rule bg-paper-deep p-4">
+          <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+            Corpus maturity · {corpus.verticalSlug}
+          </p>
+          <p className="mt-2 text-[14px] leading-relaxed text-ink-soft">
+            {firingRules.length === 0 ? (
+              <>
+                No rules fire on drafts in this vertical today. {draftRules.length}{" "}
+                {draftRules.length === 1 ? "rule is" : "rules are"} loaded as
+                DRAFT — visible to counsel, not enforced — and will not raise
+                flags until counsel red-lines them.
+              </>
+            ) : (
+              <>
+                {firingRules.length}{" "}
+                {firingRules.length === 1 ? "rule fires" : "rules fire"} on
+                drafts today (literal-match against verified trigger lists).
+                {draftRules.length > 0 ? (
+                  <>
+                    {" "}
+                    {draftRules.length} additional{" "}
+                    {draftRules.length === 1 ? "rule is" : "rules are"} loaded
+                    as DRAFT — visible to counsel, not enforced — and will not
+                    raise flags until counsel red-lines them.
+                  </>
+                ) : null}
+              </>
+            )}
+          </p>
+        </div>
+      ) : null}
 
       {flags.length === 0 ? (
         <div className="mt-8">

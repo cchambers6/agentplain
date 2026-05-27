@@ -64,7 +64,7 @@ export const uniques = [
   },
   {
     label: "Compliance-first",
-    body: "Deep in real estate today: the sentinel runs a literal-phrase scan against HUD-prohibited fair-housing copy, with TCPA + RESPA rules counsel-reviewed. The corpora for the other nine verticals are drafted with the regulatory citations in place — explicitly counsel-reference until counsel signs off. We don't assert a regulatory violation the runner can't literally pattern-match.",
+    body: "Deep in real estate today: the sentinel runs a literal-phrase scan against HUD-prohibited fair-housing copy on every customer-facing draft. The corpora for the other nine verticals are drafted with the regulatory citations in place but are loaded as drafts — they don't fire until counsel red-lines them. We don't assert a regulatory violation the runner can't literally pattern-match.",
   },
 ];
 
@@ -80,7 +80,7 @@ export const chatbotContrast = [
   },
   {
     free: "Starts blank every session.",
-    us: "Pre-trained on your vertical, with a counsel-reviewed compliance corpus.",
+    us: "Pre-trained on your vertical, with a compliance corpus drafted around the regulations that govern your work.",
   },
   {
     free: "Gives you text to copy-paste.",
@@ -96,8 +96,11 @@ export const chatbotContrast = [
   },
 ];
 
-// Q6 — proof points. Each item must cite a memory rule or a concrete artifact.
-// "Why should anyone believe us?"
+// Q6 — proof points. "Why should anyone believe us?"
+// `cite` retained on the type for internal traceability — the customer-facing
+// component no longer renders it (was leaking internal memory filenames to
+// marketing pages). The string lives here so future-us can trace each claim
+// without breaking the type, but it never reaches a customer browser.
 export const proof = [
   {
     label: "Eat our own cooking",
@@ -105,9 +108,9 @@ export const proof = [
     cite: "project_agentplain_built_by_agents.md",
   },
   {
-    label: "Counsel-reviewed corpus",
-    body: "Outside counsel is reviewing the broker-of-record term sheet, GA TCPA + RESPA compliance corpus. When counsel returns we'll name them publicly; until then the corpus is gated, not vapor.",
-    cite: "project_counsel_engaged.md",
+    label: "Compliance corpus is real, not vapor",
+    body: "The real-estate fair-housing rule (HUD's enumerated trigger phrases) is a literal-match scanner that fires on every customer-facing draft today. The other verticals' rules are drafted with the regulatory citation in place but loaded as drafts — they don't fire until counsel red-lines them, and we say so plainly rather than claim coverage we don't have.",
+    cite: "",
   },
   {
     label: "ROI math, not vibes",

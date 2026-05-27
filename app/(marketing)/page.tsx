@@ -65,8 +65,11 @@ export default function HomePage() {
       <section className="border-b border-rule bg-paper">
         <div className="container-wide pb-24 pt-20 md:pb-28 md:pt-24">
           {/* Wordmark-and-tagline lockup. The wordmark is rendered by the
-              header logo above; this hero echoes the brand thesis line. */}
-          <p className="font-display text-base leading-snug text-clay md:text-lg">
+              header logo above; this hero echoes the brand thesis line.
+              Visual hierarchy: tagline is a small eyebrow above the mission
+              line so the h1 is unambiguously the page headline (the locked
+              mission line — words unchanged, sizing dominates). */}
+          <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
             {tokens.tagline}
           </p>
           <h1 className="mt-6 max-w-[58rem] font-display text-4xl leading-[1.08] text-ink sm:text-5xl md:text-[4.5rem] md:leading-[1.04]">
@@ -75,7 +78,7 @@ export default function HomePage() {
             work that takes their time and money away from the people they
             serve.
           </h1>
-          <p className="mt-8 max-w-3xl font-display text-2xl leading-snug text-ink md:text-[28px]">
+          <p className="mt-8 max-w-3xl font-display text-xl leading-snug text-ink-soft md:text-2xl">
             Your AI ops team — without hiring one.
           </p>
           <p className="mt-5 max-w-3xl text-lg leading-relaxed text-ink-soft md:text-xl">
@@ -424,7 +427,7 @@ export default function HomePage() {
         tone="deep"
         eyebrow="What the fleet knows on day one"
         title="A working knowledge base, not a blank prompt box."
-        intro="The fleet doesn't start cold. Before a customer signs up, the knowledge substrate already ships pre-loaded with vertical-specific jobs-to-be-done, the value-loop skill docs the runner consumes, a counsel-reviewed compliance corpus, and the ratified product doctrine that grounds every draft. Counts below are computed at build time from the actual rows the substrate loads — not aspirational, not invented."
+        intro="The fleet doesn't start cold. Before a customer signs up, the knowledge substrate already ships pre-loaded with vertical-specific jobs-to-be-done, the value-loop skill docs the runner consumes, a per-vertical compliance corpus, and the ratified product doctrine that grounds every draft. Counts below are computed at build time from the actual rows the substrate loads — not aspirational, not invented."
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-4">
           <KnowledgeStat
@@ -435,7 +438,7 @@ export default function HomePage() {
           <KnowledgeStat
             count={SEED_COUNTS.COMPLIANCE}
             label="Compliance rules"
-            body="Counsel-reviewed fair-housing, ECOA, broker-of-record, and per-vertical regulatory rules. Unverified placeholders are intentionally excluded — flagged for counsel, never seeded."
+            body="Per-vertical regulatory rules drafted with the citation in place. The real-estate fair-housing literal-match scanner (HUD-enumerated trigger phrases) fires today; the other verticals' rules are loaded as drafts and don't fire until counsel red-lines them."
           />
           <KnowledgeStat
             count={SEED_COUNTS.SKILL}
@@ -449,10 +452,8 @@ export default function HomePage() {
           />
         </div>
         <p className="mt-8 max-w-prose text-[13px] leading-relaxed text-mute">
-          Source:{" "}
-          <code className="text-[12px]">lib/knowledge/seed-data.ts</code> ·{" "}
-          counts computed at build time from{" "}
-          <code className="text-[12px]">SEED_COUNTS</code>.
+          Counts are computed at build time from the rows the substrate
+          actually loads. Nothing here is aspirational.
         </p>
       </Section>
 
@@ -502,7 +503,7 @@ export default function HomePage() {
             ctaLabel="Talk to a service partner"
             ctaHref="mailto:hello@agentplain.com?subject=agentplain%20Partner%20tier%20interest"
             ctaStyle="secondary"
-            footnote="Schema-backed Partner tier per project_stripe_both_surfaces.md."
+            footnote="First month free. Month-to-month. Per seat."
             featured
           />
           <TierCard

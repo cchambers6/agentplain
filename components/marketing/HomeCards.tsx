@@ -99,11 +99,13 @@ export function KnowledgeStat({
 export function ProofCard({
   label,
   body,
-  cite,
 }: {
   label: string;
   body: string;
-  cite: string;
+  // `cite` is intentionally absent from the runtime props. The data files
+  // still carry an internal `cite` for traceability — kept off the render
+  // tree so internal memory filenames can never surface to a customer.
+  cite?: string;
 }) {
   return (
     <div className="flex flex-col bg-paper p-7 md:p-8">
@@ -112,9 +114,6 @@ export function ProofCard({
       </p>
       <p className="mt-4 max-w-prose text-[15px] leading-relaxed text-ink-soft">
         {body}
-      </p>
-      <p className="mt-5 border-t border-rule pt-4 font-mono text-[11px] leading-relaxed text-mute">
-        Source: <code className="text-[11px]">{cite}</code>
       </p>
     </div>
   );

@@ -22,11 +22,31 @@
  * Distance operator: `<=>` (cosine distance) per
  * https://github.com/pgvector/pgvector#querying (read 2026-05-12).
  * Lower = more similar; `1 - <=>` = cosine similarity.
+ *
+ * ── Encryption-at-rest for KnowledgeDocument.body ──────────────────────
+ *
+ * Customer file text is encrypted on write (AES-256-GCM via
+ * `lib/security/encryption.ts`, same codec as the OAuth tokens in
+ * `IntegrationCredential`) and transparently decrypted at the search
+ * boundary, so callers (`lib/customer-files/retrieve.ts`, the knowledge
+ * MCP route, etc.) keep receiving plaintext. The wrappers live in
+ * `lib/knowledge/body-crypto.ts`.
+ *
+ * Residual: the `Embedding.vector` column STAYS plaintext. pgvector ANN
+ * search compares floats with cosine distance — there is no homomorphic
+ * encryption scheme that preserves that comparison at the latency and
+ * price envelope we ship at. The 1536-dim float vector leaks some
+ * statistical structure of the underlying chunk (similar inputs produce
+ * similar vectors); it is NOT a recoverable copy of the text. Disk-level
+ * encryption-at-rest is provided by Neon (Postgres host) as the baseline
+ * for vectors. See docs/data-privacy-file-storage-audit-2026-05-26.md
+ * §"Encryption-at-rest residual" for the full discussion.
  */
 
 import type { ContextKind, PrismaClient } from '@prisma/client';
 import { prisma } from '../db/prisma';
 import { RlsContext, withRls } from '../db/rls';
+import { decryptBodyForRead, encryptBodyForWrite } from './body-crypto';
 import {
   IEmbeddingProvider,
   IKnowledgeStore,
@@ -66,6 +86,10 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
 
     let vector = input.vector;
     if (!vector) {
+      // Embedder MUST see plaintext — the cosine-similarity index would
+      // be useless against ciphertext. Encryption happens AFTER this
+      // call, just before the row is persisted. Vectors stay plaintext
+      // (residual documented at the top of this file).
       const emb = await this.embedder.embed(input.body);
       if (!emb.ok) return emb;
       vector = emb.value.vector;
@@ -79,6 +103,13 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
     const sourceType = input.sourceType ?? 'knowledge_document';
     const literal = pgvectorLiteral(vector);
     const metadata = { ...(input.metadata ?? {}), model: this.embedder.model };
+    // Encrypt-at-rest seam for the customer file text. AES-256-GCM via
+    // lib/security/encryption.ts — same codec as IntegrationCredential's
+    // accessTokenEncrypted/refreshTokenEncrypted. `encryptBodyForWrite`
+    // is idempotent (returns input unchanged if the v1 marker is
+    // already present), so the back-fill migration can call straight
+    // through this same seam.
+    const bodyAtRest = encryptBodyForWrite(input.body);
 
     try {
       const result = await withRls(
@@ -101,7 +132,7 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
                 contextKind: input.contextKind,
                 workspaceId: input.workspaceId ?? null,
                 title: input.title,
-                body: input.body,
+                body: bodyAtRest,
                 sourceUrl: input.sourceUrl ?? null,
                 verticalSlug: input.verticalSlug ?? null,
                 metadata: metadata as object,
@@ -140,7 +171,7 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
                 contextKind: input.contextKind,
                 workspaceId: input.workspaceId ?? null,
                 title: input.title,
-                body: input.body,
+                body: bodyAtRest,
                 sourceUrl: input.sourceUrl ?? null,
                 verticalSlug: input.verticalSlug ?? null,
                 metadata: metadata as object,
@@ -149,7 +180,7 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
                 contextKind: input.contextKind,
                 workspaceId: input.workspaceId ?? null,
                 title: input.title,
-                body: input.body,
+                body: bodyAtRest,
                 sourceUrl: input.sourceUrl ?? null,
                 verticalSlug: input.verticalSlug ?? null,
                 metadata: metadata as object,
@@ -181,7 +212,7 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
               contextKind: input.contextKind,
               workspaceId: input.workspaceId ?? null,
               title: input.title,
-              body: input.body,
+              body: bodyAtRest,
               sourceUrl: input.sourceUrl ?? null,
               verticalSlug: input.verticalSlug ?? null,
               metadata: metadata as object,
@@ -290,13 +321,18 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
       );
       const hits: KnowledgeSearchHit[] = rows.map((r) => {
         const distance = typeof r.distance === 'number' ? r.distance : Number(r.distance);
+        // Transparent decrypt at the store boundary. Legacy plaintext
+        // rows (no v1 marker) pass through unchanged so retrieval keeps
+        // working through the migration window. A row with a corrupt /
+        // undecryptable body comes back as '' rather than throwing —
+        // single bad row must not crash the whole retrieval pass.
         return {
           embeddingId: r.embeddingId,
           documentId: r.documentId,
           contextKind: r.contextKind as ContextKind,
           workspaceId: r.workspaceId,
           title: r.title,
-          body: r.body,
+          body: decryptBodyForRead(r.body),
           sourceUrl: r.sourceUrl,
           verticalSlug: r.verticalSlug,
           metadata: (r.metadata ?? {}) as Record<string, unknown>,

@@ -155,9 +155,14 @@ function parseDraftJson(text: string): SkillResult<ParsedDraft> {
   try {
     raw = JSON.parse(stripFences(text));
   } catch (err) {
+    // Strip raw LLM text from error messages — the draft model is prompted
+    // with the inbound customer body, and when it deviates from the JSON
+    // contract its text response can echo that body. Operators correlate
+    // via run-id in the audit log. (Data-privacy audit PR #91 must-close #3.)
+    const errType = err instanceof Error ? err.name : 'NonError';
     return skillError(
       'PARSE_ERROR',
-      `draft response not JSON: ${err instanceof Error ? err.message : String(err)} — got: ${text.slice(0, 200)}`,
+      `draft response not JSON (error=${errType} responseLen=${text.length})`,
     );
   }
   if (!raw || typeof raw !== 'object') {

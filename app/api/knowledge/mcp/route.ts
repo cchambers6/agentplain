@@ -192,9 +192,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         );
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error('knowledge.mcp uncaught', err);
-    return NextResponse.json(jsonRpcError(requestId, -32603, message), { status: 500 });
+    // Log identifiers + error class only — never the raw `err` object.
+    // Substrate writes carry document `body` text; a thrown error mid-
+    // upsert (e.g. a Zod refinement throw, a Prisma constraint violation)
+    // can surface that body via err.message or err.cause. Operators
+    // correlate via method + requestId. (Data-privacy audit PR #91 must-
+    // close #3.)
+    const errName = err instanceof Error ? err.name : 'NonError';
+    const message = err instanceof Error ? err.message : 'unknown error';
+    console.error(
+      `knowledge.mcp uncaught: method=${method} requestId=${String(requestId)} error=${errName}`,
+    );
+    return NextResponse.json(
+      // The JSON-RPC error message we return to the CALLER is still the
+      // error message (callers need actionable info), but the SERVER-SIDE
+      // log line above is scrubbed. The Sentry beforeSend scrubber adds
+      // a second defense layer for anything that reaches the reporter.
+      jsonRpcError(requestId, -32603, message),
+      { status: 500 },
+    );
   }
 }
 

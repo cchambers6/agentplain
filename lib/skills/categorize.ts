@@ -92,9 +92,14 @@ function parseCategorizationJson(
   try {
     raw = JSON.parse(stripJsonFences(text));
   } catch (err) {
+    // Log only identifiers — the raw LLM text can echo customer content
+    // back when the model deviates from the JSON contract. Per the data-
+    // privacy audit (PR #91 must-close #3), error messages must not embed
+    // raw model output. Operators correlate via the run-id in the audit log.
+    const errType = err instanceof Error ? err.name : 'NonError';
     return skillError(
       'PARSE_ERROR',
-      `categorize response was not JSON: ${err instanceof Error ? err.message : String(err)} — got: ${text.slice(0, 200)}`,
+      `categorize response was not JSON (error=${errType} responseLen=${text.length})`,
     );
   }
   if (!raw || typeof raw !== 'object') {
@@ -102,11 +107,19 @@ function parseCategorizationJson(
   }
   const rec = raw as { intent?: unknown; confidence?: unknown; reason?: unknown };
   if (!isValidIntent(rec.intent)) {
-    return skillError('PARSE_ERROR', `categorize response missing/invalid intent: ${JSON.stringify(rec.intent)}`);
+    // Describe the SHAPE of what we got, not the value — the LLM sometimes
+    // emits `intent: "<a paraphrase of customer text>"` when prompted poorly.
+    return skillError(
+      'PARSE_ERROR',
+      `categorize response missing/invalid intent (type=${typeof rec.intent})`,
+    );
   }
   const confidence = clamp01(rec.confidence);
   if (confidence === null) {
-    return skillError('PARSE_ERROR', `categorize response missing/invalid confidence: ${JSON.stringify(rec.confidence)}`);
+    return skillError(
+      'PARSE_ERROR',
+      `categorize response missing/invalid confidence (type=${typeof rec.confidence})`,
+    );
   }
   const reason = typeof rec.reason === 'string' ? rec.reason : '';
   return skillOk({ intent: rec.intent, confidence, reason });

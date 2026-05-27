@@ -132,9 +132,13 @@ function parseClassificationJson(
   try {
     raw = JSON.parse(stripJsonFences(text));
   } catch (err) {
+    // Strip raw LLM text — same reasoning as categorize.ts: the classifier
+    // is prompted with the inbound body and the model may echo it on
+    // contract violation. (Data-privacy audit PR #91 must-close #3.)
+    const errType = err instanceof Error ? err.name : 'NonError';
     return skillError(
       'PARSE_ERROR',
-      `office-admin classify response was not JSON: ${err instanceof Error ? err.message : String(err)} — got: ${text.slice(0, 200)}`,
+      `office-admin classify response was not JSON (error=${errType} responseLen=${text.length})`,
     );
   }
   if (!raw || typeof raw !== 'object') {
@@ -144,7 +148,7 @@ function parseClassificationJson(
   if (!isValidCategory(rec.category)) {
     return skillError(
       'PARSE_ERROR',
-      `office-admin classify response missing/invalid category: ${JSON.stringify(rec.category)}`,
+      `office-admin classify response missing/invalid category (type=${typeof rec.category})`,
     );
   }
   const confidence = clamp01(rec.confidence);

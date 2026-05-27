@@ -76,7 +76,7 @@ const exampleBuilds = [
   {
     label: "Custom integration",
     body:
-      "A CRM, AMS, LOS, PMS, or accounting tool that isn't on the public roadmap yet. Read-only OAuth, your existing data stays put, the fleet drafts into your tool the way it already drafts into Gmail and Follow Up Boss.",
+      "A CRM, AMS, LOS, PMS, or accounting tool that isn't on the public roadmap yet. Read-only OAuth, your existing tool stays the system of record, the fleet drafts into it the way it already drafts into Gmail and Follow Up Boss.",
   },
   {
     label: "Bespoke compliance corpus",

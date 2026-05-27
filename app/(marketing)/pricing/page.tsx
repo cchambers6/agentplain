@@ -47,7 +47,7 @@ const sharedGuarantees = [
   "Human review on every customer-facing output",
   "Liability for licensed activities stays with you",
   "Per-vertical compliance corpus, counsel-reviewed",
-  "No data resold; no client list retained as training data",
+  "No data resold; no client list used to train models",
   "You own the work product",
 ];
 

@@ -57,7 +57,7 @@ export const FAQ_ITEMS: FAQItem[] = [
   },
   {
     q: "What data do you need access to?",
-    a: "Read-only OAuth into your inbox, calendar, CRM, transaction system, and (for some verticals) accounting. Vertical-specific feeds where they exist — MLS for real estate, AMS for insurance, LOS for mortgage. Your service partner sets this up with you on a call; you're not stitching OAuth flows alone. The fleet reads what's needed for the task, drafts the response, and returns the draft to your review queue. We don't retain client lists as training data.",
+    a: "Read-only OAuth into your inbox, calendar, CRM, transaction system, and (for some verticals) accounting. Vertical-specific feeds where they exist — MLS for real estate, AMS for insurance, LOS for mortgage. Your service partner sets this up with you on a call; you're not stitching OAuth flows alone. The fleet reads what's needed for the task, drafts the response, and returns the draft to your review queue. We don't use your client list to train foundation models.",
   },
   {
     q: "How does pricing work?",
@@ -85,11 +85,11 @@ export const FAQ_ITEMS: FAQItem[] = [
   },
   {
     q: "Is my data safe?",
-    a: "Your data stays in your stack. The fleet pulls what it needs to do a task, returns a result, doesn't retain client lists or transaction records as training data. Liability for licensed activities — anything that requires a state license — stays with you and your firm. We don't act as a brokerage, lender, insurance carrier, law firm, RIA, or any other licensed party. Your service partner runs the AI ops; you run the licensed business.",
+    a: "The fleet reads through read-only OAuth and pulls only what a task needs. To do the work, your content is processed by the AI providers that power the fleet (OpenAI for retrieval embeddings, Anthropic for drafting) and stored in our database under per-workspace isolation. The full data-handling specifics — including the current subprocessor list — live in our privacy policy. Liability for licensed activities — anything that requires a state license — stays with you and your firm. We don't act as a brokerage, lender, insurance carrier, law firm, RIA, or any other licensed party. Your service partner runs the AI ops; you run the licensed business.",
   },
   {
     q: "Is my data resold or used to train someone else's model?",
-    a: "No. We don't resell your data. We don't train foundation models on your inbox, your client list, your transaction records, or your drafts. The fleet pulls what it needs to do a task, returns a draft to your review queue, and the underlying provider call runs under enterprise terms that exclude training on your content. Your client list is not a corpus for someone else's product.",
+    a: "We don't resell your data, and we don't train foundation models — agentplain has no training infrastructure. Your inbox, client list, transaction records, and drafts are not used to build agentplain or anyone else's product on our side. What the AI providers themselves do with API content is governed by their terms — our privacy policy names the subprocessors and links to their data-usage policies.",
   },
   {
     q: "Who owns the drafts and the work product?",
@@ -97,7 +97,7 @@ export const FAQ_ITEMS: FAQItem[] = [
   },
   {
     q: "What happens if I cancel?",
-    a: "Cancel from billing settings anytime — month-to-month from day one. Your seats stop billing at the end of the current month. The fleet stops drafting at that boundary; nothing keeps writing into your tools after you've ended the relationship. You can export your workspace data (handoff log, approval history, draft archive) before cancellation. We don't retain operational copies of your data once your workspace closes, and we don't keep your client list for a future relaunch.",
+    a: "Cancel from billing settings anytime — month-to-month from day one. Your seats stop billing at the end of the current month. The fleet stops drafting at that boundary; nothing keeps writing into your tools after you've ended the relationship. Self-serve workspace export is on the roadmap and not shipped yet — if you need your handoff log, approval history, or draft archive before cancellation, ask your service partner. What happens to your data after a workspace closes lives in our privacy policy; we don't use your client list to train models and we don't keep it to relaunch.",
   },
   {
     q: "What about HIPAA or other regulated-data postures?",

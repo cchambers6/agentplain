@@ -18,6 +18,7 @@ import { trialExpirationWarningsFn } from "@/lib/inngest/functions/trial-expirat
 import { integrationRenewalSweepFn } from "@/lib/inngest/functions/integration-renewal-sweep";
 import { processWebhookEventFn } from "@/lib/inngest/functions/process-webhook-event";
 import { customerFilesIngestionSweepFn } from "@/lib/inngest/functions/customer-files-ingestion-sweep";
+import { schedulerSweepFn } from "@/lib/inngest/functions/scheduler-sweep";
 import { workspaceTeardownSweepFn } from "@/lib/customer-data";
 
 export const runtime = "nodejs";
@@ -30,6 +31,7 @@ export const { GET, POST, PUT } = serve({
     integrationRenewalSweepFn,
     processWebhookEventFn,
     customerFilesIngestionSweepFn,
+    schedulerSweepFn,
     workspaceTeardownSweepFn,
   ],
 });

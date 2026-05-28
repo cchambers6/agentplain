@@ -128,6 +128,18 @@ async function fetchSnapshot(
 ): Promise<SkillResult<ChiefOfStaffSnapshot>> {
   const res = await fetcher.fetchSnapshot(args);
   if (!res.ok) {
+    // NOT_CONFIGURED bubbles through unchanged so the cron sweep can
+    // distinguish "workspace has no connector" (a clean skip) from
+    // "upstream errored" (a counted failure). Other error codes get
+    // re-shaped into UPSTREAM_GMAIL_ERROR for back-compat with the
+    // existing runner's error handling.
+    if (res.error.code === 'NOT_CONFIGURED') {
+      return skillError(
+        'NOT_CONFIGURED',
+        `chief-of-staff fetcher (${fetcher.name}) needs a connector: ${res.error.message}`,
+        res.error.reference,
+      );
+    }
     return skillError(
       'UPSTREAM_GMAIL_ERROR',
       `chief-of-staff fetcher (${fetcher.name}) failed: ${res.error.message}`,

@@ -2,17 +2,22 @@ import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
 import { decryptPayloadForRead } from "@/lib/security/payload-crypto";
 import { ApEyebrow, ApRootedEmptyState } from "@/components/ui/ap";
+import { asDisciplineId } from "@/lib/disciplines";
 import { renderApprovalPayload } from "./renderApprovalPayload";
-import { ApprovalsList } from "./ApprovalsList";
+import { ApprovalsList, type ApprovalRow } from "./ApprovalsList";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ discipline?: string }>;
 }
 
 export const dynamic = "force-dynamic";
 
-export default async function ApprovalsPage({ params }: PageProps) {
+export default async function ApprovalsPage({ params, searchParams }: PageProps) {
   const { id: workspaceId } = await params;
+  const sp = await searchParams;
+  const initialDiscipline = asDisciplineId(sp.discipline ?? null);
+
   const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
   const ctx = { userId: member.userId, workspaceId, isOperator: false };
 
@@ -24,10 +29,11 @@ export default async function ApprovalsPage({ params }: PageProps) {
     }),
   );
 
-  const rows = items.map((item) => ({
+  const rows: ApprovalRow[] = items.map((item) => ({
     id: item.id,
     agentSlug: item.agentSlug,
     kind: item.kind,
+    discipline: asDisciplineId(item.discipline),
     proposedAtIso: item.proposedAt.toISOString(),
     rendered: renderApprovalPayload(item.kind, decryptPayloadForRead(item.payload)),
   }));
@@ -41,8 +47,9 @@ export default async function ApprovalsPage({ params }: PageProps) {
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
         Nothing leaves agentplain on its own. We draft; you decide; your
         existing system is what actually sends. Every customer-facing item
-        lands here first — routine work in a quieter lane, anything above
-        your threshold flagged for explicit ratification.
+        lands here first — routine work auto-marked APPROVED in a quieter
+        lane, anything above your threshold flagged for explicit
+        ratification.
       </p>
 
       {rows.length === 0 ? (
@@ -54,7 +61,11 @@ export default async function ApprovalsPage({ params }: PageProps) {
           />
         </div>
       ) : (
-        <ApprovalsList workspaceId={workspaceId} rows={rows} />
+        <ApprovalsList
+          workspaceId={workspaceId}
+          rows={rows}
+          initialDiscipline={initialDiscipline}
+        />
       )}
     </div>
   );

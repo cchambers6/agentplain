@@ -1,16 +1,17 @@
 import { ApEyebrow, ApRootedEmptyState } from "@/components/ui/ap";
 import { requireWorkspaceMember } from "@/lib/auth";
+import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
 import { withRls } from "@/lib/db";
 import {
+  entryAppliesToVertical,
   listIntegrations,
   type MarketplaceEntry,
 } from "@/lib/integrations/marketplace";
 import { isIntegrationConfigured } from "@/lib/integrations/config-status";
-import {
-  IntegrationTile,
-  type TileStatus,
-} from "@/components/marketplace/IntegrationTile";
+import { getVerticalContent } from "@/lib/verticals";
+import { type TileStatus } from "@/components/marketplace/IntegrationTile";
 import { ConnectionFlash } from "./ConnectionFlash";
+import { MarketplaceFacets } from "./MarketplaceFacets";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -37,7 +38,7 @@ export default async function WorkspaceIntegrationsPage({
 
   const ctx = { userId: member.userId, workspaceId, isOperator: false };
 
-  const [credentials, onboardingState] = await Promise.all([
+  const [credentials, onboardingState, workspaceRow] = await Promise.all([
     withRls(ctx, (tx) =>
       tx.integrationCredential.findMany({
         where: { workspaceId },
@@ -56,10 +57,25 @@ export default async function WorkspaceIntegrationsPage({
         select: { completedAt: true },
       }),
     ),
+    withRls(ctx, (tx) =>
+      tx.workspace.findUniqueOrThrow({
+        where: { id: workspaceId },
+        select: { vertical: true },
+      }),
+    ),
   ]);
   const onboardingComplete = onboardingState?.completedAt != null;
+  const verticalSlug = verticalSlugFromEnum(workspaceRow.vertical);
+  const verticalLabel =
+    getVerticalContent(verticalSlug)?.name ?? verticalSlug;
 
-  const entries = listIntegrations();
+  // Per-vertical relevance: hide tiles that aren't part of this
+  // vertical's roadmap by default. Horizontal tiles (`verticalRelevance:
+  // 'all'`) always pass. A CPA workspace never sees realty-only AMS tiles
+  // — that's the load-bearing UX fix.
+  const entries = listIntegrations().filter((e) =>
+    entryAppliesToVertical(e, verticalSlug),
+  );
   const connectedByProvider = new Map(
     credentials
       .filter((c) => c.status === "ACTIVE")
@@ -136,18 +152,12 @@ export default async function WorkspaceIntegrationsPage({
           />
         </div>
       ) : (
-        <div className="mt-8 grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-3">
-          {tiles.map(({ entry, status, accountLabel, configured }) => (
-            <IntegrationTile
-              key={entry.id}
-              entry={entry}
-              status={status}
-              workspaceId={workspaceId}
-              accountLabel={accountLabel}
-              configured={configured}
-            />
-          ))}
-        </div>
+        <MarketplaceFacets
+          workspaceId={workspaceId}
+          tiles={tiles}
+          verticalSlug={verticalSlug}
+          verticalLabel={verticalLabel}
+        />
       )}
 
       <p className="mt-8 max-w-2xl text-[13px] leading-relaxed text-mute">

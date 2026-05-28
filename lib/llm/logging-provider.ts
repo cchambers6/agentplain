@@ -28,9 +28,25 @@ import type {
   LlmCompletion,
   LlmCompletionRequest,
   LlmProvider,
+  LlmRequestMeta,
   LlmResult,
   LlmUsage,
 } from './types';
+
+/** Sink callback invoked on every successful `complete()` whose result
+ *  carries a usage payload. The wrapper forwards meta + model + usage;
+ *  the sink decides whether to persist (e.g. a workspace-tagged call
+ *  writes a row; an untagged call no-ops). Async so the wrapper can
+ *  await the write and surface failures via the standard log path.
+ *
+ *  Kept as a structural callback (not an interface import) so this file
+ *  stays free of `lib/billing/*` — the inversion lets tests pin a
+ *  stub recorder without standing up Prisma. */
+export type UsageSink = (
+  meta: LlmRequestMeta | undefined,
+  model: string,
+  usage: LlmUsage,
+) => Promise<void>;
 
 export interface LoggingLlmProviderOptions {
   /** Override the logger seam — useful in tests that recorded a writer
@@ -39,6 +55,12 @@ export interface LoggingLlmProviderOptions {
   /** When false, the wrapper still forwards but does not emit log lines.
    *  Useful for unit tests that want quiet output. Default true. */
   enabled?: boolean;
+  /** Optional usage sink. Default factory (`lib/llm/index.ts`) injects
+   *  the Prisma-backed persistor (`lib/billing/usage/recorder.ts`); tests
+   *  pin a recording stub or omit entirely. Failures in the sink are
+   *  logged + swallowed — billing accounting must never take down a
+   *  customer-facing LLM call. */
+  recorder?: UsageSink;
 }
 
 export class LoggingLlmProvider implements LlmProvider {
@@ -46,6 +68,7 @@ export class LoggingLlmProvider implements LlmProvider {
   private readonly inner: LlmProvider;
   private readonly logger: Logger | null;
   private readonly enabled: boolean;
+  private readonly recorder: UsageSink | null;
 
   constructor(inner: LlmProvider, opts: LoggingLlmProviderOptions = {}) {
     this.inner = inner;
@@ -53,6 +76,7 @@ export class LoggingLlmProvider implements LlmProvider {
     // Lazy: only resolve the logger when we actually need to emit, so
     // env-dependent code in `getLogger()` does not run at construction.
     this.logger = opts.logger ?? null;
+    this.recorder = opts.recorder ?? null;
   }
 
   /** The underlying provider — useful for assertions in tests and for
@@ -65,6 +89,24 @@ export class LoggingLlmProvider implements LlmProvider {
   async complete(request: LlmCompletionRequest): Promise<LlmResult<LlmCompletion>> {
     const startedAt = Date.now();
     const res = await this.inner.complete(request);
+    // The recorder side effect is independent of `enabled` — `enabled`
+    // governs log-line emission for noisy-test quietness; the billing
+    // row is a durable customer artifact that must be written even when
+    // a test silenced log output. Sink failures are swallowed so a DB
+    // hiccup never propagates back to the LLM caller.
+    if (this.recorder && res.ok && res.value.usage) {
+      try {
+        await this.recorder(request.meta, res.value.model, res.value.usage);
+      } catch (err) {
+        // Fall through to the standard logger only if logging is on.
+        if (this.enabled) {
+          const logger = this.logger ?? getLogger();
+          logger.warn('llm.usage.sink_failed', {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+    }
     if (!this.enabled) return res;
     const logger = this.logger ?? getLogger();
     const durationMs = Date.now() - startedAt;

@@ -29,6 +29,8 @@ import type {
   CreateSubscriptionInput,
   CreateSubscriptionResult,
   ProviderSubscriptionStatus,
+  ReportMeterEventInput,
+  ReportMeterEventResult,
   RetrieveSubscriptionResult,
   UpdateSubscriptionInput,
   VerifyWebhookInput,
@@ -50,6 +52,7 @@ type StripeClientSurface = Pick<
   | "billingPortal"
   | "prices"
   | "webhooks"
+  | "billing"
 >;
 
 export interface StripeProviderOptions {
@@ -306,6 +309,35 @@ export class StripeBillingProvider implements BillingProvider {
       pdfUrl: finalized.invoice_pdf ?? null,
       status: finalized.status ?? "draft",
     };
+  }
+
+  // -------------------------------------------------------------------
+  // Metered billing — Billing Meter Events API.
+  //
+  // Stripe's modern usage-based billing uses Meters (configured in the
+  // Dashboard with an event_name + customer_mapping + price linkage)
+  // and Meter Events submitted by the merchant. The customer is
+  // identified by `payload.stripe_customer_id` and the quantity by
+  // `payload.value` — both string keys Stripe enforces. We pass the
+  // caller's `identifier` as the Stripe identifier so a same-day retry
+  // is a no-op on Stripe's side (24h idempotency window).
+  //
+  // Per feedback_no_silent_vendor_lock: the Stripe SDK call stays here.
+  // -------------------------------------------------------------------
+
+  async reportMeterEvent(
+    input: ReportMeterEventInput,
+  ): Promise<ReportMeterEventResult> {
+    const event = await this.client.billing.meterEvents.create({
+      event_name: input.eventName,
+      identifier: input.identifier,
+      timestamp: input.timestampSeconds,
+      payload: {
+        stripe_customer_id: input.providerCustomerId,
+        value: String(input.quantity),
+      },
+    });
+    return { identifier: event.identifier };
   }
 
   // -------------------------------------------------------------------

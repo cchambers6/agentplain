@@ -113,6 +113,9 @@ ALTER TABLE "IntegrationCredential" ALTER COLUMN "id" DROP DEFAULT;
 ALTER TABLE "KnowledgeDocument" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AlterTable
+ALTER TABLE "LlmUsageRecord" ALTER COLUMN "id" DROP DEFAULT;
+
+-- AlterTable
 ALTER TABLE "MagicLinkToken" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AlterTable

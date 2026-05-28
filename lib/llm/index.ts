@@ -25,6 +25,7 @@
  * Production-grade output kicks in the moment the key lands.
  */
 
+import { persistUsageRecorder } from '../billing/usage/recorder';
 import { AnthropicProvider } from './anthropic-provider';
 import { LoggingLlmProvider } from './logging-provider';
 import { TestLlmProvider, TestLlmSeed } from './test-provider';
@@ -45,7 +46,12 @@ export function getLlmProvider(): LlmProvider {
 
 function buildProvider(): LlmProvider {
   const inner = buildInnerProvider();
-  return new LoggingLlmProvider(inner);
+  // The default factory wires the Prisma-backed usage recorder so every
+  // workspace-tagged LLM call writes a `LlmUsageRecord` row used by the
+  // customer billing usage pane + the daily Stripe-meter sweep. Tests
+  // that don't want a DB write construct `LoggingLlmProvider` directly
+  // or omit the `recorder` option.
+  return new LoggingLlmProvider(inner, { recorder: persistUsageRecorder });
 }
 
 function buildInnerProvider(): LlmProvider {

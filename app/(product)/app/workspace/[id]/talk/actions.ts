@@ -8,6 +8,7 @@ import {
   buildCapabilitySnapshot,
   InngestEventEmitter,
   PrismaChatStore,
+  PrismaMemoryStore,
   runPlainoTurn,
   type PersistedChatMessage,
 } from "@/lib/plaino";
@@ -75,6 +76,7 @@ export async function sendPlainoMessageAction(
   } as const;
 
   const store = new PrismaChatStore(workspaceId, { ctx });
+  const memory = new PrismaMemoryStore(workspaceId, { ctx });
   const events = new InngestEventEmitter();
   const substrate = new CustomerFilesKnowledgeSubstrate();
   const capabilities = await buildCapabilitySnapshot({ workspaceId, ctx });
@@ -102,6 +104,7 @@ export async function sendPlainoMessageAction(
     substrate,
     events,
     store,
+    memory,
   });
 
   // Re-render the page even on dispatcher error — the placeholder

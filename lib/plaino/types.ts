@@ -31,6 +31,7 @@ import type {
   IKnowledgeSubstratePort,
   SupportContextSnippet,
 } from '../skills/support-handler';
+import type { IMemoryStore, MemoryEntry } from './memory/types';
 
 export type {
   IKnowledgeSubstratePort,
@@ -159,6 +160,13 @@ export interface PlainoTurnInput {
   substrate: IKnowledgeSubstratePort;
   events: IEventEmitter;
   store: IChatStore;
+  /** Optional customer-persistent memory store. When provided, the
+   *  dispatcher reads pinned + recently-relevant memory entries into
+   *  the prompt at the start of the turn, and after the turn pair is
+   *  persisted, fires an async extract-from-conversation pass to
+   *  upsert any new durable memory. When omitted, the dispatcher
+   *  behaves exactly as before. */
+  memory?: IMemoryStore;
   /** Override the LLM provider — tests pass a StubLlm. Defaults to
    *  the configured provider via getLlmProvider(). */
   llm?: import('../llm/types').LlmProvider;
@@ -179,6 +187,17 @@ export interface PlainoTurnOutput {
   supportRequestId: string | null;
   /** Snippets cited in the ANSWER path. Empty otherwise. */
   citations: SupportContextSnippet[];
+  /** Memory entries included in the prompt for this turn. Empty when
+   *  no memory store was attached or when the workspace has no memory
+   *  yet. Surfaces on the run result for telemetry + tests; not
+   *  rendered to the customer (the entries themselves are visible on
+   *  the memory page). */
+  recalledMemory: MemoryEntry[];
+  /** Promise that resolves when the post-turn memory-extract pass has
+   *  completed. Awaited by tests + callers that need determinism;
+   *  ignored by the production fire-and-forget path. Resolves to the
+   *  number of entries upserted. */
+  memoryWritebackPromise: Promise<number> | null;
   /** Note recorded in the run output so the no-outbound stance is
    *  explicit on every fire. */
   noOutboundNote: string;

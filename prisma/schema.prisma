@@ -273,6 +273,27 @@ enum SupportRequestStatus {
   RESOLVED
 }
 
+// WorkspaceMemoryEntry kind. Mirrors the four-bucket memory taxonomy
+// already in use by the agent system:
+//   USER       — facts about the people in the workspace (names, role
+//                preferences, communication style).
+//   FEEDBACK   — guidance Plaino has been given on how to work (avoid X,
+//                always do Y, prefer this format).
+//   PROJECT    — in-flight initiatives, deadlines, named entities the
+//                customer is moving on.
+//   REFERENCE  — pointers to where information lives (a Notion page, a
+//                Drive folder, a CRM segment).
+//
+// Stored as a Prisma enum so the dispatcher's prompt-side bucketing
+// stays loud at the type level and the customer-facing memory page can
+// group entries cleanly. Adding a kind requires a migration.
+enum WorkspaceMemoryKind {
+  USER
+  FEEDBACK
+  PROJECT
+  REFERENCE
+}
+
 model User {
   id                   String                  @id @default(uuid()) @db.Uuid
   email                String                  @unique @db.Citext
@@ -354,6 +375,7 @@ model Workspace {
   preferenceSignals      PreferenceSignal[]
   chatThreads            ChatThread[]
   chatMessages           ChatMessage[]
+  memoryEntries          WorkspaceMemoryEntry[]
 
   @@index([slug])
   @@index([vertical])
@@ -1131,7 +1153,63 @@ model ChatMessage {
   createdAt   DateTime   @default(now())
   thread      ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
   workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  /// Memory entries Plaino extracted from this message. Cascade-deletes
+  /// when the source message is cleared so a deleted turn doesn't leave
+  /// a dangling sourceChatMessageId reference.
+  derivedMemoryEntries WorkspaceMemoryEntry[] @relation("MemoryFromChatMessage")
 
   @@index([threadId, createdAt])
   @@index([workspaceId, createdAt])
+}
+
+/// Customer-persistent memory for Plaino. Read at dispatch time so the
+/// service partner has continuity across sessions; written by the
+/// extract-from-conversation pass after each turn. Workspace-isolated
+/// under RLS (same posture as ChatThread / ChatMessage).
+///
+/// `body` is encrypted at rest with the v1 envelope
+/// (`lib/security/encryption` — `v1:iv:tag:ct`) because customers will
+/// inevitably surface PII (a teammate's name, an account number, a
+/// vendor email) into a memory entry. `title` is plaintext so the
+/// memory page + the dispatcher's bucketing logic can list and filter
+/// without round-tripping every row through decryption; the extractor
+/// is instructed to keep PII out of the title.
+///
+/// `pinned = true` means the customer asked Plaino to always include
+/// this entry. The dispatcher cap-budgets unpinned entries but never
+/// drops pinned ones — pin is the customer's load-bearing knob.
+model WorkspaceMemoryEntry {
+  id                  String              @id @default(uuid()) @db.Uuid
+  workspaceId         String              @db.Uuid
+  kind                WorkspaceMemoryKind
+  /// Short label used in UI lists + dispatcher prompts. NOT encrypted.
+  /// The extractor is instructed to keep PII out of this field.
+  title               String
+  /// AES-256-GCM ciphertext using the v1 envelope. NEVER plaintext at
+  /// rest. The dispatcher + memory UI are the only readers; they always
+  /// decrypt before surfacing.
+  body                String
+  /// Optional FK back to the ChatMessage Plaino learned this from. Lets
+  /// the memory page link "→ from this turn" so the customer can verify
+  /// where Plaino picked it up. SetNull on message delete: the memory
+  /// outlives a thread cleanup.
+  sourceChatMessageId String?             @db.Uuid
+  /// True when the customer pinned this entry — the dispatcher always
+  /// includes pinned entries, never drops them for budget pressure.
+  pinned              Boolean             @default(false)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  /// Bumped every time the dispatcher includes the entry in a prompt.
+  /// Lets future eviction passes prefer "stale and unpinned" entries
+  /// without reading the chat log.
+  lastReadAt          DateTime?
+  workspace           Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sourceChatMessage   ChatMessage?        @relation("MemoryFromChatMessage", fields: [sourceChatMessageId], references: [id], onDelete: SetNull)
+
+  /// Composite index for the dispatcher's per-fire read — "pinned first,
+  /// then by recency, scoped to this workspace + kind." Postgres uses it
+  /// to satisfy the ORDER BY pinned DESC, createdAt DESC pattern without
+  /// a sort step.
+  @@index([workspaceId, kind, pinned, createdAt])
+  @@index([workspaceId, pinned, updatedAt])
 }

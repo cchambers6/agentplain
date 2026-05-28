@@ -49,7 +49,7 @@ export const FAQ_ITEMS: FAQItem[] = [
   },
   {
     q: "Can my firm actually use it today?",
-    a: "Yes. You sign up free, your service partner handles the install (connecting your tools, loading your vertical's corpus, walking through the workspace), and the fleet starts drafting within the first few days. Real estate ships with the deepest integration set today; the other nine verticals carry ratified JTBD tables and a committed integration roadmap. Each vertical page shows what's locked and what's in flight.",
+    a: "Yes. You sign up free, your service partner handles the install (connecting your available tools on the /integrations page — email, calendar, document, accounting, e-signature today — loading your vertical's corpus, walking through the workspace), and the fleet starts drafting within the first few days. Every vertical carries ratified JTBD tables and a committed per-vertical integration roadmap; each vertical page shows what's connectable today and what's on the roadmap.",
   },
   {
     q: "Does the fleet send anything on its own?",
@@ -57,7 +57,7 @@ export const FAQ_ITEMS: FAQItem[] = [
   },
   {
     q: "What data do you need access to?",
-    a: "Read-only OAuth into your inbox, calendar, CRM, transaction system, and (for some verticals) accounting. Vertical-specific feeds where they exist — MLS for real estate, AMS for insurance, LOS for mortgage. Your service partner sets this up with you on a call; you're not stitching OAuth flows alone. The fleet reads what's needed for the task, drafts the response, and returns the draft to your review queue. We don't use your client list to train foundation models.",
+    a: "OAuth into your email (Gmail, Outlook), file substrate (Google Drive, OneDrive), spreadsheets (Excel), e-signature (DocuSign), messaging (Slack, Teams), and accounting (QuickBooks Online) — those connect tiles live on the /integrations page today. The vertical-specific feeds — MLS for real estate, AMS for insurance, LOS for mortgage, practice-management for CPA / law / RIA — sit on the per-vertical integration roadmap; your service partner sets up what's available with you on a call and runs the unbuilt ones by hand until those adapters land. The fleet reads what's needed for the task, drafts the response, and returns the draft to your review queue. We don't use your client list to train foundation models.",
   },
   {
     q: "How does pricing work?",

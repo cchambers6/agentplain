@@ -114,14 +114,20 @@ export const law: VerticalContent = {
   hero: {
     eyebrow: "Built for small law firms and solo practitioners",
     headline: "The fleet for the small law firm.",
+    // INTEGRATES list names only the connect tiles in `lib/integrations/marketplace.ts`
+    // that ship `status: 'available'` today. Practice-management (Clio / MyCase
+    // / Smokeball / PracticePanther), DMS (NetDocuments / iManage), legal-research,
+    // and court-e-filing adapters live in the per-vertical integration roadmap
+    // below and surface honestly there as planned, not in this present-tense
+    // hero clause.
     valueProp:
-      "agentplain REPLACES the intake-to-engagement bottleneck, INTEGRATES with Clio / MyCase / Smokeball and your court e-filing + research stack, and AUGMENTS the partner's read on every client communication and every drafted pleading with a privilege-aware compliance pass.",
+      "agentplain REPLACES the intake-to-engagement bottleneck, INTEGRATES with Outlook, OneDrive, and DocuSign on day one, and AUGMENTS the partner's read on every client communication and every drafted pleading with a privilege-aware compliance pass.",
   },
 
   metaTitle:
     "agentplain for law firms — solo and 2–5 attorney practices",
   metaDescription:
-    "An agentic fleet for the solo or 2–5 attorney law firm. Client intake, engagement-letter drafting, conflict-check coordination, drafted client communication with privilege guard, document chase, billing on milestone, and matter-state reporting — coordinated across Clio, MyCase, Smokeball, and your court e-filing channels. Note: Clio Work shipped agentic in April 2026; agentplain differentiates on the fleet-coordination layer above any single practice-management vendor.",
+    "An agentic fleet for the solo or 2–5 attorney law firm. Client intake, engagement-letter drafting, conflict-check coordination, drafted client communication with privilege guard, document chase, billing on milestone, and matter-state reporting — drafted for the partner's review and sent from your own systems. Note: Clio Work shipped agentic in April 2026; agentplain differentiates on the fleet-coordination layer above any single practice-management vendor.",
 
   jtbdTables: [
     {
@@ -266,15 +272,9 @@ export const law: VerticalContent = {
       "Spreadsheet aged-WIP review — replaced by drafted milestone invoices and AR escalations",
     ],
     integrate: [
-      "Clio Manage (practice mgmt)",
-      "MyCase (practice mgmt)",
-      "Smokeball (practice mgmt)",
-      "PracticePanther (practice mgmt)",
-      "NetDocuments (DMS — mid-market)",
-      "iManage Work (DMS — mid-market+)",
-      "Westlaw / Lexis (research — read-only, ToS-compliant)",
-      "Court e-filing portals (state-specific)",
-      "Outlook + Microsoft 365 Graph",
+      "Outlook (per-attorney OAuth — email + calendar)",
+      "OneDrive (document substrate for matter files)",
+      "DocuSign (engagement-letter + retainer signatures)",
     ],
     augment: [
       "Partner review on every privilege-sensitive draft — ABA Model Rule 1.6 + 1.7 + 1.18 awareness",

@@ -95,13 +95,18 @@ export const insurance: VerticalContent = {
   hero: {
     eyebrow: "Built for independent P&C agencies",
     headline: "The fleet for the independent P&C agency.",
+    // INTEGRATES list names only the connect tiles in `lib/integrations/marketplace.ts`
+    // that ship `status: 'available'` today. The AMS / comparative-rater /
+    // carrier-portal adapters live in the per-vertical integration roadmap
+    // below and surface honestly there as planned, not in this present-tense
+    // hero clause.
     valueProp:
-      "agentplain REPLACES the CSR hours spent on certificates of insurance and renewal prep, INTEGRATES with your AMS, comparative rater, and 8–15 carrier portals, and AUGMENTS the producer's read on every renewal proposal and claims update.",
+      "agentplain REPLACES the CSR hours spent on certificates of insurance and renewal prep, INTEGRATES with Outlook, OneDrive, and DocuSign on day one, and AUGMENTS the producer's read on every renewal proposal and claims update.",
   },
 
   metaTitle: "agentplain for insurance brokerages — independent P&C agencies",
   metaDescription:
-    "An agentic fleet for the 3–15 producer independent insurance agency. COI generation, renewal coordination, carrier appetite intelligence, claims-status outreach, and commission reconciliation — coordinated across EZLynx, Applied Epic, AMS360, HawkSoft, and the carrier-portal stack.",
+    "An agentic fleet for the 3–15 producer independent insurance agency. COI generation, renewal coordination, carrier appetite intelligence, claims-status outreach, and commission reconciliation — drafted for the producer's review and sent from your own systems.",
 
   jtbdTables: [
     {
@@ -244,13 +249,9 @@ export const insurance: VerticalContent = {
       "Reactive claims-status communication — replaced by a drafted update on every carrier movement",
     ],
     integrate: [
-      "EZLynx (AMS + comparative rater)",
-      "Applied Epic (AMS)",
-      "AMS360 (AMS)",
-      "HawkSoft (AMS)",
-      "AgencyZoom (retention sequences)",
-      "Carrier portals — Travelers, Liberty Mutual, Nationwide, Progressive, Safeco, Hartford, Chubb, and 8+ regional",
-      "Outlook + Microsoft 365 Graph",
+      "Outlook (per-producer OAuth — email + calendar)",
+      "OneDrive (working files + policy declarations)",
+      "DocuSign (COI delivery + endorsement signatures)",
     ],
     augment: [
       "Producer review on every drafted renewal proposal — the agent drafts, the producer signs",

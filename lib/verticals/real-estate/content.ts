@@ -95,8 +95,12 @@ export const realEstate: VerticalContent = {
   hero: {
     eyebrow: "Built for independent real-estate brokerages",
     headline: "The operating layer behind the independent brokerage.",
+    // INTEGRATES list names only the connect tiles in `lib/integrations/marketplace.ts`
+    // that ship `status: 'available'` today. The MLS / CRM / transaction-management
+    // adapters live in the per-vertical integration roadmap below and surface
+    // honestly there as planned, not in this present-tense hero clause.
     valueProp:
-      "agentplain REPLACES the 8–12 weekly hours a broker-owner spends on coordination work, INTEGRATES with Follow Up Boss, dotloop, FMLS, GAMLS, and Outlook, and AUGMENTS the broker-of-record's review on every customer-facing draft.",
+      "agentplain REPLACES the 8–12 weekly hours a broker-owner spends on coordination work, INTEGRATES with Outlook, Gmail, Google Drive, and DocuSign on day one, and AUGMENTS the broker-of-record's review on every customer-facing draft.",
   },
 
   metaTitle: "agentplain for real estate brokerages — agentic operating layer",
@@ -226,11 +230,9 @@ export const realEstate: VerticalContent = {
       "Reactive compliance review — every customer-facing draft is pre-checked instead",
     ],
     integrate: [
-      "Follow Up Boss (read + write — P1, ~3 days)",
-      "dotloop (read + write — P1, ~3–5 days)",
-      "FMLS + GAMLS (read-only feed for Georgia markets)",
-      "Microsoft 365 Graph — calendar + email (per-agent OAuth)",
-      "Google Calendar + Workspace email",
+      "Outlook + Gmail (per-agent OAuth — email + calendar)",
+      "Google Drive (your file substrate — past offers, playbooks, listing photos)",
+      "DocuSign (per-listing signature routing)",
       "QuickBooks Online (production-reporter dependency)",
     ],
     augment: [

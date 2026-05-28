@@ -102,14 +102,19 @@ export const cpa: VerticalContent = {
   hero: {
     eyebrow: "Built for small CPA and tax practices",
     headline: "The fleet for the small-firm CPA.",
+    // INTEGRATES list names only the connect tiles in `lib/integrations/marketplace.ts`
+    // that ship `status: 'available'` today. Practice-management and tax-prep
+    // vendors (TaxDome / Karbon / Lacerte / UltraTax / Drake / ProSeries / Xero)
+    // live in the per-vertical integration roadmap below and surface honestly
+    // there as planned, not in this present-tense hero clause.
     valueProp:
-      "agentplain REPLACES the 8-week document-chase cycle, INTEGRATES with TaxDome / Karbon, Lacerte / UltraTax / Drake, and QuickBooks / Xero, and AUGMENTS the partner's review on every return with a federal + state checklist run before the file hits the desk.",
+      "agentplain REPLACES the 8-week document-chase cycle, INTEGRATES with Outlook, OneDrive, QuickBooks Online, and DocuSign on day one, and AUGMENTS the partner's review on every return with a federal + state checklist run before the file hits the desk.",
   },
 
   metaTitle:
     "agentplain for CPA firms — 2–10 person practices",
   metaDescription:
-    "An agentic fleet for the solo or 2–10 partner CPA firm doing 1040s + 1120-S + bookkeeping retainers. Engagement-letter onboarding, document chase, compliance review, books reconciliation, and milestone billing — coordinated across TaxDome, Karbon, Lacerte, UltraTax, Drake, QuickBooks, and Xero.",
+    "An agentic fleet for the solo or 2–10 partner CPA firm doing 1040s + 1120-S + bookkeeping retainers. Engagement-letter onboarding, document chase, compliance review, books reconciliation, and milestone billing — drafted for the partner's review and sent from your own systems.",
 
   jtbdTables: [
     {
@@ -266,18 +271,10 @@ export const cpa: VerticalContent = {
       "Spreadsheet-driven aged AR — replaced by drafted 30/60/90 escalations",
     ],
     integrate: [
-      "TaxDome (practice management)",
-      "Karbon (practice management)",
-      "Canopy (practice management)",
-      "Lacerte (tax prep)",
-      "UltraTax (tax prep)",
-      "Drake (tax prep)",
-      "ProSeries (tax prep)",
-      "CCH ProSystem fx Engagement (audit workpapers)",
-      "CaseWare (audit workpapers)",
-      "QuickBooks Online + Xero (write-up)",
-      "SmartVault + Box (documents)",
-      "Outlook + Microsoft 365 Graph",
+      "Outlook (per-staff OAuth — email + calendar)",
+      "OneDrive + Excel (working files + workbook reads)",
+      "QuickBooks Online (write-up + bookkeeping reads)",
+      "DocuSign (engagement letters + 8879 routing)",
     ],
     augment: [
       "Partner review on every return — staff prep is pre-flagged against federal + state checklist",

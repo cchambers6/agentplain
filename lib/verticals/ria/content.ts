@@ -113,14 +113,21 @@ export const ria: VerticalContent = {
   hero: {
     eyebrow: "Built for independent RIAs and wealth practices",
     headline: "The fleet for the independent RIA.",
+    // INTEGRATES list names only the connect tiles in `lib/integrations/marketplace.ts`
+    // that ship `status: 'available'` today. CRM (Wealthbox / Redtail /
+    // Salesforce FSC), planning (eMoney / RightCapital / MoneyGuidePro),
+    // portfolio (Orion / Black Diamond / Tamarac), and custodian (Schwab /
+    // Fidelity / Pershing) adapters live in the per-vertical integration
+    // roadmap below and surface honestly there as planned, not in this
+    // present-tense hero clause.
     valueProp:
-      "agentplain REPLACES the meeting-prep + post-meeting documentation cycle, INTEGRATES with your CRM (Wealthbox / Redtail / Salesforce FSC), planning software (eMoney / RightCapital / MoneyGuidePro), and custodian portals, and AUGMENTS the advisor's review on every client-facing communication with a fiduciary-aware compliance pass.",
+      "agentplain REPLACES the meeting-prep + post-meeting documentation cycle, INTEGRATES with Outlook, OneDrive, Excel, and DocuSign on day one, and AUGMENTS the advisor's review on every client-facing communication with a fiduciary-aware compliance pass.",
   },
 
   metaTitle:
     "agentplain for RIAs — independent registered investment advisors",
   metaDescription:
-    "An agentic fleet for the 1–10 advisor independent registered investment advisor firm. Client-meeting prep, post-meeting note + task drafting, financial-plan refresh cadence, fiduciary-aware communication review, billing on AUM cycle, and ADV-aware compliance — coordinated across Wealthbox, Redtail, Salesforce FSC, eMoney, RightCapital, MoneyGuidePro, and your custodian portals.",
+    "An agentic fleet for the 1–10 advisor independent registered investment advisor firm. Client-meeting prep, post-meeting note + task drafting, financial-plan refresh cadence, fiduciary-aware communication review, billing on AUM cycle, and ADV-aware compliance — drafted for the advisor's review and sent from your own systems.",
 
   jtbdTables: [
     {
@@ -275,17 +282,9 @@ export const ria: VerticalContent = {
       "Manual account-opening paperwork — replaced by drafted packages against current custodian forms",
     ],
     integrate: [
-      "Wealthbox (CRM)",
-      "Redtail (CRM)",
-      "Salesforce Financial Services Cloud",
-      "eMoney Advisor (planning)",
-      "RightCapital (planning)",
-      "MoneyGuidePro (planning)",
-      "Orion Advisor Tech (portfolio mgmt + performance reporting)",
-      "Black Diamond (portfolio mgmt + performance reporting)",
-      "Envestnet Tamarac (portfolio mgmt + rebalancing)",
-      "Schwab Advisor Center, Fidelity Wealthscape, Pershing NetX360 (custodian — read-only)",
-      "Outlook + Microsoft 365 Graph",
+      "Outlook (per-advisor OAuth — email + calendar)",
+      "OneDrive + Excel (working files + performance workbooks)",
+      "DocuSign (client agreements + ADV delivery signatures)",
     ],
     augment: [
       "Advisor review on every client-facing communication — ADV + suitability + plain-English check",

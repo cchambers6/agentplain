@@ -95,13 +95,18 @@ export const propertyManagement: VerticalContent = {
   hero: {
     eyebrow: "Built for small-portfolio property managers",
     headline: "The fleet for the small-portfolio property manager.",
+    // INTEGRATES list names only the connect tiles in `lib/integrations/marketplace.ts`
+    // that ship `status: 'available'` today. PMS (Buildium / AppFolio /
+    // Propertyware / Yardi Breeze), screening, and work-order-vendor portal
+    // adapters live in the per-vertical integration roadmap below and surface
+    // honestly there as planned, not in this present-tense hero clause.
     valueProp:
-      "agentplain REPLACES tenant inbound triage and maintenance ticket routing, INTEGRATES with Buildium, AppFolio, Propertyware, and your accounting stack, and AUGMENTS the owner report cadence so landlords stop calling you for status.",
+      "agentplain REPLACES tenant inbound triage and maintenance ticket routing, INTEGRATES with Outlook, Gmail, and QuickBooks Online on day one, and AUGMENTS the owner report cadence so landlords stop calling you for status.",
   },
 
   metaTitle: "agentplain for property managers — single-family and small-portfolio operators",
   metaDescription:
-    "An agentic fleet for 50–500-door single-family and small-portfolio property management companies. Tenant inbound triage, maintenance ticket routing, rent-collection chase, lease renewal cadence, and owner reporting — coordinated across Buildium, AppFolio, Propertyware, and the work-order vendor stack.",
+    "An agentic fleet for 50–500-door single-family and small-portfolio property management companies. Tenant inbound triage, maintenance ticket routing, rent-collection chase, lease renewal cadence, and owner reporting — drafted for the property manager's review and sent from your own systems.",
 
   jtbdTables: [
     {
@@ -259,13 +264,9 @@ export const propertyManagement: VerticalContent = {
       "Form-letter collections chase — replaced by history-aware cadence with PM in the loop",
     ],
     integrate: [
-      "Buildium (PMS)",
-      "AppFolio (PMS)",
-      "Propertyware (PMS)",
-      "Yardi Breeze (PMS)",
-      "QuickBooks Online (trust accounting layer)",
-      "Outlook + Microsoft 365 Graph",
-      "Work-order vendor portals (varies by region)",
+      "Outlook + Gmail (per-PM OAuth — email + calendar)",
+      "OneDrive + Google Drive (working files + owner-report substrate)",
+      "QuickBooks Online (trust accounting + owner reporting)",
     ],
     augment: [
       "Owner-policy matching on every work order — drafts cite the policy line, never invent",

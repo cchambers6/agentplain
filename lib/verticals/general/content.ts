@@ -88,14 +88,18 @@ export const general: VerticalContent = {
   hero: {
     eyebrow: "Don't see your industry?",
     headline: "Same service partnership. Lighter scaffolding.",
+    // INTEGRATES list names only the connect tiles in `lib/integrations/marketplace.ts`
+    // that ship `status: 'available'` today. (The Generic CRM webhook receiver
+    // and standalone Google Calendar tile are roadmap, not present — they
+    // surface honestly in the planned-integrations roadmap below.)
     valueProp:
-      "agentplain REPLACES the universal admin work — inbox triage, scheduling, follow-up, basic documentation — INTEGRATES with the tools every local business already runs (Gmail, Outlook, Google Calendar, QuickBooks), and AUGMENTS the owner's review on every customer-facing draft. No vertical-specific compliance corpus; if you need one, we scope it as a Custom engagement.",
+      "agentplain REPLACES the universal admin work — inbox triage, scheduling, follow-up, basic documentation — INTEGRATES with the tools every local business already runs (Gmail, Outlook, Google Drive, QuickBooks, DocuSign), and AUGMENTS the owner's review on every customer-facing draft. No vertical-specific compliance corpus; if you need one, we scope it as a Custom engagement.",
   },
 
   metaTitle:
     "agentplain for local businesses — service partnership for any industry",
   metaDescription:
-    "An honest on-ramp for local businesses outside our ten named verticals. The same service partnership — inbox triage, scheduling, follow-up, drafted responses — scaffolded against common-denominator tools (Gmail, Outlook, Google Calendar, QuickBooks). Lighter compliance corpus than the named verticals; if you need bespoke vertical depth, we scope it as a Custom engagement.",
+    "An honest on-ramp for local businesses outside our ten named verticals. The same service partnership — inbox triage, scheduling, follow-up, drafted responses — scaffolded against common-denominator tools (Gmail, Outlook, Google Drive, QuickBooks, DocuSign). Lighter compliance corpus than the named verticals; if you need bespoke vertical depth, we scope it as a Custom engagement.",
 
   jtbdTables: [
     {
@@ -191,9 +195,9 @@ export const general: VerticalContent = {
     integrate: [
       "Gmail (read-only OAuth, drafts to your account)",
       "Microsoft 365 / Outlook (read-only OAuth, drafts to your account)",
-      "Google Calendar (per-user OAuth)",
+      "Google Drive + OneDrive (file substrate for past work + playbooks)",
       "QuickBooks Online (read-only, for books-light reconciliation)",
-      "Generic CRM webhook receiver (for tools we haven't named)",
+      "DocuSign (signature routing for the documents that need it)",
     ],
     augment: [
       "Owner review on every customer-facing draft — the fleet drafts, you sign and send",

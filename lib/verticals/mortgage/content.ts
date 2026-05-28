@@ -181,7 +181,7 @@ export const mortgage: VerticalContent = {
           when: "Inbound from realtor partners, sub-hour expected",
           today: "Open Optimal Blue, run a scenario, redraw guidelines, draft a referral-back email",
           withAgentplain:
-            "Pre-qual agent pulls Optimal Blue scenario + DU eligibility, drafts the pre-qual letter and the realtor-facing summary in <5 minutes",
+            "Pre-qual agent drafts the pre-qual letter from the LO's pricing inputs and the realtor-facing summary in <5 minutes",
         },
       ],
     },

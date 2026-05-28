@@ -162,7 +162,7 @@ export const insurance: VerticalContent = {
           when: "Inbound, all day",
           today: "CSR spends ~30% of their day on this",
           withAgentplain:
-            "COI agent reads the request, pulls the policy from the AMS, drafts the certificate, routes for one-click issue",
+            "COI agent reads the request, drafts the certificate against the producer's policy reference, routes for one-click issue",
         },
         {
           job: "Triage a claim FNOL or status request",

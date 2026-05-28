@@ -327,6 +327,65 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
     ],
   },
   {
+    slug: 'support-handler',
+    name: 'Support handler — first-touch draft from /help',
+    vertical: 'all',
+    description:
+      'Cross-role support handler. Fires on every customer-submitted ' +
+      'SupportRequest from /help, queries the knowledge substrate for ' +
+      'relevant context, and drafts a first-touch reply that lands in the ' +
+      'operator approval queue tagged customer-success. High-confidence ' +
+      'drafts cite the snippets they grounded in so the operator can ' +
+      'verify; low-confidence retrieval falls back to a templated ' +
+      "\"a human is taking a closer look\" placeholder — NEVER fabricates " +
+      'an answer. Per project_no_outbound_architecture.md the skill drafts ' +
+      "only — the customer's existing operator email path performs the " +
+      'send once the operator approves.',
+    kind: 'draft',
+    mcpDependencies: [
+      {
+        provider: 'knowledge-substrate',
+        status: 'built',
+        note:
+          'Retrieval rides retrieveCustomerContext (the MCP-fronted ' +
+          'boundary), so the skill never opens a direct DB connection to ' +
+          'pgvector. Two impls of IKnowledgeSubstratePort: ' +
+          'CustomerFilesKnowledgeSubstrate (production) + ' +
+          'RecordingKnowledgeSubstrate (tests).',
+      },
+      {
+        provider: 'work-approval-queue',
+        status: 'built',
+        note:
+          'PrismaApprovalSink writes WorkApprovalQueueItem rows tagged ' +
+          'kind=SUPPORT_HANDLER_REPLY_DRAFT, refTable=SupportRequest, ' +
+          'discipline=customer-success. Tests bind RecordingApprovalSink.',
+      },
+      {
+        provider: 'anthropic-llm',
+        status: 'built',
+        note:
+          'Draft synthesis rides the provider-neutral LlmProvider ' +
+          'interface. The system prompt is workspace-agnostic — stable ' +
+          "preamble (brand voice + no-outbound + escalation policy) so the " +
+          'prompt-cache wrapper can mark it cacheable.',
+      },
+    ],
+    groundedIn: [
+      'project_no_outbound_architecture.md',
+      'project_hierarchical_approval_chain.md (operator approves; only ' +
+        'escalations reach Conner)',
+      'project_mcp_first_integration_architecture.md (substrate via the ' +
+        'MCP boundary, not direct DB)',
+      'project_plaino_named_agent.md (service-partner voice in the draft)',
+      'feedback_no_guesses_no_estimates.md (placeholder, not fabrication, ' +
+        'when substrate is empty)',
+      'feedback_runner_portability.md (two-impl rule on every port)',
+      'feedback_cold_start_safe_agents.md (stateless, reads durable state)',
+    ],
+    defaultEnabled: true,
+  },
+  {
     slug: 'invoice-chasing-realestate',
     name: 'Commission invoice chasing — real estate',
     vertical: 'real-estate',

@@ -41,6 +41,7 @@ import { getLlmProvider } from '../llm';
 import {
   llmOk,
   type LlmCompletionRequest,
+  type LlmProvider,
 } from '../llm/types';
 import { skillError, skillOk } from '../skills/types';
 import { buildSystemPrompt } from './system-prompt';
@@ -57,6 +58,14 @@ import {
   type PlainoTurnOutput,
   type SupportContextSnippet,
 } from './types';
+import {
+  DEFAULT_DISPATCH_MEMORY_BUDGET,
+  DISPATCH_MEMORY_CHAR_CAP,
+  extractMemoryFromConversation,
+  type IMemoryStore,
+  type MemoryEntry,
+  type ProposedMemoryEntry,
+} from './memory';
 
 const SUPPORT_REQUEST_CREATED_EVENT = 'agentplain/support-request.created';
 
@@ -105,6 +114,18 @@ export async function runPlainoTurn(
     snippets = [];
   }
 
+  // 2b. Pull customer-persistent memory if a store is attached.
+  //     Pinned entries always included; the rest selected by recency
+  //     + keyword overlap with the inbound message. Failures here
+  //     never block the turn — Plaino simply runs without memory and
+  //     the customer never sees a hint that anything went wrong.
+  const recalledMemory = await readMemoryForTurn({
+    store: input.memory,
+    workspaceId: input.workspaceId,
+    customerMessage: trimmedMessage,
+    now: input.now,
+  });
+
   // 3. Classify + draft via the LLM.
   const provider = input.llm ?? getLlmProvider();
   const system = buildSystemPrompt({
@@ -115,6 +136,7 @@ export async function runPlainoTurn(
     customerMessage: trimmedMessage,
     history: input.history.slice(-HISTORY_CAP),
     snippets,
+    memory: recalledMemory,
   });
   const completion = await provider.complete({
     system,
@@ -222,12 +244,27 @@ export async function runPlainoTurn(
     namedGap: decision.namedGap,
   };
 
+  // 6. Fire-and-forget memory write-back. The dispatcher does NOT
+  //    block on this — a slow or failed extract pass leaves the chat
+  //    intact. The returned promise lets tests await determinism.
+  const memoryWritebackPromise = input.memory
+    ? runMemoryWriteback({
+        memory: input.memory,
+        llm: provider,
+        workspaceId: input.workspaceId,
+        customerMessage,
+        plainoMessage,
+      })
+    : null;
+
   return skillOk({
     classification,
     customerMessage,
     plainoMessage,
     supportRequestId,
     citations,
+    recalledMemory,
+    memoryWritebackPromise,
     noOutboundNote: NO_OUTBOUND_NOTE,
   } satisfies PlainoTurnOutput);
 }
@@ -423,10 +460,29 @@ interface BuildUserArgs {
   customerMessage: string;
   history: Array<{ role: 'customer' | 'plaino'; body: string }>;
   snippets: SupportContextSnippet[];
+  memory: MemoryEntry[];
 }
 
 function buildUserMessage(args: BuildUserArgs): string {
   const lines: string[] = [];
+  // Per the honesty rule (reference_product_claims_vs_reality): when
+  // memory is empty for the workspace, OMIT this block entirely. Do
+  // not include an empty "What you've told me before" header — that
+  // would invite the model to fabricate "as you mentioned…" framing
+  // out of thin air. Empty memory means no memory section.
+  if (args.memory.length > 0) {
+    lines.push(
+      "WHAT_YOU_HAVE_TOLD_ME_BEFORE (durable customer memory — honor",
+    );
+    lines.push(
+      '  these facts; do not confuse them with the live message below):',
+    );
+    for (const m of args.memory) {
+      const pin = m.pinned ? ' · pinned' : '';
+      lines.push(`  • [${m.kind}${pin}] ${m.title} — ${m.body}`);
+    }
+    lines.push('');
+  }
   if (args.history.length > 0) {
     lines.push('PRIOR_TURNS (oldest first):');
     for (const turn of args.history) {
@@ -452,6 +508,189 @@ function buildUserMessage(args: BuildUserArgs): string {
   lines.push('CURRENT_TURN:');
   lines.push(args.customerMessage);
   return lines.join('\n');
+}
+
+// ── Memory read path ───────────────────────────────────────────────────
+
+interface ReadMemoryArgs {
+  store: IMemoryStore | undefined;
+  workspaceId: string;
+  customerMessage: string;
+  now: Date | undefined;
+}
+
+/**
+ * Pull memory for the dispatcher prompt. Pinned entries always
+ * included; unpinned entries selected by recency + keyword overlap
+ * with the inbound message body, capped by the per-fire budget +
+ * character cap.
+ *
+ * Failures are swallowed — Plaino runs without memory rather than
+ * blocking the customer reply. The store's `markRead` call is
+ * fire-and-forget for the same reason.
+ */
+async function readMemoryForTurn(args: ReadMemoryArgs): Promise<MemoryEntry[]> {
+  if (!args.store) return [];
+  let all: MemoryEntry[];
+  try {
+    all = await args.store.listForWorkspace({
+      workspaceId: args.workspaceId,
+      limit: 500,
+    });
+  } catch {
+    return [];
+  }
+  const selected = selectMemoryForPrompt({
+    entries: all,
+    customerMessage: args.customerMessage,
+    budget: DEFAULT_DISPATCH_MEMORY_BUDGET,
+    charCap: DISPATCH_MEMORY_CHAR_CAP,
+  });
+  if (selected.length > 0) {
+    void args.store
+      .markRead({
+        workspaceId: args.workspaceId,
+        ids: selected.map((m) => m.id),
+        now: args.now ?? new Date(),
+      })
+      .catch(() => undefined);
+  }
+  return selected;
+}
+
+interface SelectMemoryArgs {
+  entries: MemoryEntry[];
+  customerMessage: string;
+  budget: number;
+  charCap: number;
+}
+
+/**
+ * Pure selector. Pinned entries first (never dropped for budget). Then
+ * fill remaining slots with unpinned entries scored by keyword overlap
+ * with the customer message, tie-broken by recency. The character cap
+ * is a soft cap — once exceeded, we stop adding unpinned entries; the
+ * pinned ones already included still ship.
+ */
+function selectMemoryForPrompt(args: SelectMemoryArgs): MemoryEntry[] {
+  const pinned = args.entries.filter((e) => e.pinned);
+  const unpinned = args.entries.filter((e) => !e.pinned);
+  const tokens = tokenize(args.customerMessage);
+  const scored = unpinned
+    .map((e) => ({ e, score: scoreOverlap(tokens, e) }))
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return b.e.updatedAt.getTime() - a.e.updatedAt.getTime();
+    });
+
+  const picked: MemoryEntry[] = [];
+  let chars = 0;
+  for (const p of pinned) {
+    picked.push(p);
+    chars += p.title.length + p.body.length;
+  }
+  for (const { e } of scored) {
+    if (picked.length >= args.budget) break;
+    if (chars + e.title.length + e.body.length > args.charCap) break;
+    picked.push(e);
+    chars += e.title.length + e.body.length;
+  }
+  return picked;
+}
+
+function tokenize(s: string): Set<string> {
+  return new Set(
+    s
+      .toLowerCase()
+      .split(/[^a-z0-9]+/g)
+      .filter((t) => t.length >= 4),
+  );
+}
+
+function scoreOverlap(tokens: Set<string>, entry: MemoryEntry): number {
+  if (tokens.size === 0) return 0;
+  const entryTokens = tokenize(`${entry.title} ${entry.body}`);
+  let score = 0;
+  for (const t of tokens) {
+    if (entryTokens.has(t)) score++;
+  }
+  return score;
+}
+
+// ── Memory write path ─────────────────────────────────────────────────
+
+interface MemoryWritebackArgs {
+  memory: IMemoryStore;
+  llm: LlmProvider;
+  workspaceId: string;
+  customerMessage: PersistedChatMessage;
+  plainoMessage: PersistedChatMessage;
+}
+
+/**
+ * Async post-turn memory write-back. Pulls the last few turns from
+ * the store (best-effort), runs the extractor, upserts each
+ * validated entry. Errors are swallowed — a failed memory write
+ * never breaks the customer-visible chat reply.
+ *
+ * Returns the count of entries upserted. The dispatcher's caller can
+ * await this for determinism in tests; production code ignores it
+ * (fire-and-forget).
+ */
+async function runMemoryWriteback(
+  args: MemoryWritebackArgs,
+): Promise<number> {
+  try {
+    const result = await extractMemoryFromConversation({
+      workspaceId: args.workspaceId,
+      turns: [
+        {
+          role: 'customer',
+          body: args.customerMessage.body,
+          chatMessageId: args.customerMessage.id,
+        },
+        {
+          role: 'plaino',
+          body: args.plainoMessage.body,
+          chatMessageId: args.plainoMessage.id,
+        },
+      ],
+      llm: args.llm,
+    });
+    let upserted = 0;
+    for (const p of result.proposed) {
+      try {
+        await persistProposedMemoryEntry({
+          memory: args.memory,
+          workspaceId: args.workspaceId,
+          proposed: p,
+          defaultSource: args.customerMessage.id,
+        });
+        upserted++;
+      } catch {
+        // Single-entry failure is not fatal — try the next one.
+      }
+    }
+    return upserted;
+  } catch {
+    return 0;
+  }
+}
+
+async function persistProposedMemoryEntry(args: {
+  memory: IMemoryStore;
+  workspaceId: string;
+  proposed: ProposedMemoryEntry;
+  defaultSource: string;
+}): Promise<void> {
+  await args.memory.upsert({
+    workspaceId: args.workspaceId,
+    kind: args.proposed.kind,
+    title: args.proposed.title,
+    body: args.proposed.body,
+    sourceChatMessageId:
+      args.proposed.sourceChatMessageId ?? args.defaultSource,
+  });
 }
 
 interface PlaceholderArgs {

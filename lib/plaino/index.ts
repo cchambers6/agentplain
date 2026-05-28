@@ -16,6 +16,21 @@ export {
 export { PrismaChatStore } from './prisma-chat-store';
 export { RecordingChatStore } from './recording-chat-store';
 export { InngestEventEmitter, RecordingEventEmitter } from './event-emitter';
+export {
+  PrismaMemoryStore,
+  RecordingMemoryStore,
+  EXTRACT_SYSTEM_PROMPT_VERSION,
+  extractMemoryFromConversation,
+  DEFAULT_DISPATCH_MEMORY_BUDGET,
+  DISPATCH_MEMORY_CHAR_CAP,
+  MEMORY_KINDS,
+} from './memory';
+export type {
+  IMemoryStore,
+  MemoryEntry,
+  MemoryKind,
+  ProposedMemoryEntry,
+} from './memory';
 export type {
   IChatStore,
   IEventEmitter,

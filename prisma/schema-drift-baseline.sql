@@ -155,6 +155,9 @@ ALTER TABLE "Workspace" ALTER COLUMN "id" DROP DEFAULT;
 ALTER TABLE "WorkspaceInvoice" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AlterTable
+ALTER TABLE "WorkspaceMemoryEntry" ALTER COLUMN "id" DROP DEFAULT;
+
+-- AlterTable
 ALTER TABLE "WorkspacePreference" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AddForeignKey

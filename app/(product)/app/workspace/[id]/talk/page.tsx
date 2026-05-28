@@ -46,14 +46,22 @@ export default async function TalkPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="mb-6 flex items-center gap-3 text-ink">
-        <PlainoAvatar size="lg" decorative={false} />
-        <div>
-          <ApEyebrow>talk with Plaino</ApEyebrow>
-          <h1 className="font-display text-3xl leading-tight text-ink">
-            What do you need today?
-          </h1>
+      <div className="mb-6 flex items-start justify-between gap-4 text-ink">
+        <div className="flex items-center gap-3">
+          <PlainoAvatar size="lg" decorative={false} />
+          <div>
+            <ApEyebrow>talk with Plaino</ApEyebrow>
+            <h1 className="font-display text-3xl leading-tight text-ink">
+              What do you need today?
+            </h1>
+          </div>
         </div>
+        <a
+          href={`/app/workspace/${workspaceId}/talk/memory`}
+          className="mt-1 font-mono text-[11px] tracking-eyebrow uppercase text-ink-soft underline-offset-4 hover:underline"
+        >
+          memory →
+        </a>
       </div>
 
       {messages.length === 0 ? (

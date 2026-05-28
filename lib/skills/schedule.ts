@@ -37,6 +37,8 @@ export interface ScheduleSkillInput {
   message: ParsedMessage;
   prompts: VerticalPromptBundle;
   preferences?: SchedulingPreferences;
+  /** Telemetry context for the `llm.usage` log line. */
+  workspaceId?: string;
 }
 
 export class ScheduleSkill implements ISkill<ScheduleSkillInput, SchedulingProposal> {
@@ -48,10 +50,20 @@ export class ScheduleSkill implements ISkill<ScheduleSkillInput, SchedulingPropo
     const userPrompt = renderUserPrompt(input.message, prefs);
     const res = await this.llm.complete({
       system: input.prompts.schedule,
+      // Schedule's system prompt is the largest stable surface — vertical
+      // scheduling rules + workspace business-hour preferences. Cache it
+      // so back-to-back scheduling-needed fires (a common batch) hit the
+      // cache on every call after the first.
+      cacheSystem: true,
       messages: [{ role: 'user', content: userPrompt }],
       responseFormat: 'json',
       temperature: 0.1,
       maxTokens: 700,
+      meta: {
+        skill: 'schedule',
+        workspaceId: input.workspaceId,
+        verticalSlug: input.prompts.verticalSlug,
+      },
     });
     if (!res.ok) {
       return skillError(

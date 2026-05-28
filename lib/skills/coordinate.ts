@@ -35,6 +35,8 @@ export interface CoordinateSkillInput {
   /** Soft cap on how many prior messages to feed the LLM. Default 6 —
    *  beyond that the signal-to-noise on the summary drops. */
   priorMessageCap?: number;
+  /** Telemetry context for the `llm.usage` log line. */
+  workspaceId?: string;
 }
 
 export class CoordinateSkill implements ISkill<CoordinateSkillInput, ThreadContext> {
@@ -60,10 +62,20 @@ export class CoordinateSkill implements ISkill<CoordinateSkillInput, ThreadConte
     const userPrompt = renderUserPrompt(input.message, slice);
     const res = await this.llm.complete({
       system: input.prompts.coordinate,
+      // Coordinate's system prompt embeds the vertical's thread-summary
+      // rules + the workspace's customer-context block (stable within
+      // the 5-min cache TTL). Per-fire dynamic content (thread + newest
+      // message) rides on the user message and stays uncached.
+      cacheSystem: true,
       messages: [{ role: 'user', content: userPrompt }],
       responseFormat: 'text',
       temperature: 0.0,
       maxTokens: 800,
+      meta: {
+        skill: 'coordinate',
+        workspaceId: input.workspaceId,
+        verticalSlug: input.prompts.verticalSlug,
+      },
     });
     if (!res.ok) {
       return skillError(

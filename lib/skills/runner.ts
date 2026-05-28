@@ -196,7 +196,12 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
   // the classifier returns `not-admin`, the vertical chain proceeds as
   // before.
   const tAdmin = Date.now();
-  const adminRes = await classifyOfficeAdmin({ message: newestMessage, llm });
+  const adminRes = await classifyOfficeAdmin({
+    message: newestMessage,
+    llm,
+    workspaceId: args.workspace.id,
+    verticalSlug: prompts.verticalSlug,
+  });
   steps.push({
     step: 'office-admin-classify',
     ok: adminRes.ok,
@@ -236,7 +241,11 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
   // ── 2. Categorize ───────────────────────────────────────────────────
   const categorizeSkill = new CategorizeSkill(llm);
   const tCat = Date.now();
-  const catRes = await categorizeSkill.run({ message: newestMessage, prompts });
+  const catRes = await categorizeSkill.run({
+    message: newestMessage,
+    prompts,
+    workspaceId: args.workspace.id,
+  });
   steps.push({
     step: 'categorize',
     ok: catRes.ok,
@@ -283,6 +292,7 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
     message: newestMessage,
     fetcher: args.fetcher,
     prompts,
+    workspaceId: args.workspace.id,
   });
   steps.push({
     step: 'coordinate',
@@ -302,6 +312,7 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
       message: newestMessage,
       prompts,
       preferences: args.schedulingPreferences,
+      workspaceId: args.workspace.id,
     });
     steps.push({
       step: 'schedule',

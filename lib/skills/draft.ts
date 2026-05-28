@@ -59,10 +59,22 @@ export class DraftSkill implements ISkill<DraftSkillInput, DraftReply> {
     const userPrompt = renderUserPrompt(input);
     const res = await this.llm.complete({
       system: input.prompts.draft,
+      // Draft's system prompt is the biggest in the chain — it carries
+      // the vertical's tone guide + workspace preferences (including the
+      // learned-from-corrections bullets) + the inlined customer-context
+      // snippets. All stable within the 5-min Anthropic cache TTL. Per-
+      // fire dynamic content (inbound message, thread summary, proposed
+      // slots) rides on the user message.
+      cacheSystem: true,
       messages: [{ role: 'user', content: userPrompt }],
       responseFormat: 'json',
       temperature: 0.3,
       maxTokens: 1200,
+      meta: {
+        skill: 'draft',
+        workspaceId: input.workspaceId,
+        verticalSlug: input.prompts.verticalSlug,
+      },
     });
     if (!res.ok) {
       return skillError(

@@ -66,13 +66,36 @@ export function llmError(
 // ── DTOs ─────────────────────────────────────────────────────────────────
 
 /**
+ * A single text block inside a structured message or system payload.
+ * Setting `cacheable: true` marks this block as a prompt-cache breakpoint
+ * (Anthropic prompt caching). The Anthropic adapter translates this into
+ * `cache_control: { type: 'ephemeral' }` on the matching SDK block.
+ * Other providers ignore the flag — it is purely opt-in performance
+ * metadata, never correctness.
+ *
+ * Per `feedback_no_silent_vendor_lock`: this is the provider-neutral
+ * shape. The Anthropic SDK's `cache_control` field never leaks past
+ * `lib/llm/anthropic-provider.ts`.
+ */
+export interface LlmContentBlock {
+  type: 'text';
+  text: string;
+  /** Mark as a prompt-cache breakpoint. Opt-in. */
+  cacheable?: boolean;
+}
+
+/** Content payload — either a plain string (current callers) or a list
+ *  of typed blocks (new callers that need cache breakpoints). */
+export type LlmContent = string | LlmContentBlock[];
+
+/**
  * One step in a multi-turn conversation. Mirrors the Anthropic message
  * shape (`role: 'user' | 'assistant'` + content). Kept narrow so an
  * OpenAI-shaped provider can map without lossy translation.
  */
 export interface LlmMessage {
   role: 'user' | 'assistant';
-  content: string;
+  content: LlmContent;
 }
 
 /**
@@ -83,6 +106,13 @@ export interface LlmMessage {
  * via native JSON mode or via prompt-engineering on the system message).
  */
 export interface LlmCompletionRequest {
+  /** System prompt. Kept as `string` (not `LlmContent`) so the many
+   *  callers + tests that introspect via `system.includes(MARKER)` stay
+   *  working unchanged. To opt into prompt-cache breakpoints on the
+   *  system prompt, set `cacheSystem: true` — the adapter promotes the
+   *  string to a single ephemeral-cacheable block. To mark CONTENT
+   *  blocks inside the user message as cacheable, pass
+   *  `LlmContentBlock[]` for that message's `content`. */
   system: string;
   messages: LlmMessage[];
   /** Model identifier (per-provider). Adapters may map this to a default. */
@@ -93,6 +123,25 @@ export interface LlmCompletionRequest {
   temperature?: number;
   /** Hint that the caller needs JSON back. Strict-JSON adapters use this. */
   responseFormat?: 'json' | 'text';
+  /** Convenience: when true AND `system` is a plain string, the adapter
+   *  promotes it to a single cacheable block. Ignored when `system` is
+   *  already an array (the caller marked blocks explicitly). */
+  cacheSystem?: boolean;
+  /** Opaque telemetry metadata. The Anthropic adapter does NOT send
+   *  this to Anthropic — it is read by `LoggingLlmProvider` for
+   *  per-call observability (skill name, workspace id, etc.). */
+  meta?: LlmRequestMeta;
+}
+
+export interface LlmRequestMeta {
+  /** Skill / call-site name (e.g. `categorize`, `draft`, `office-admin-classify`). */
+  skill?: string;
+  /** Workspace identifier so we can slice cache-hit rate by workspace. */
+  workspaceId?: string;
+  /** Vertical slug (`real-estate`, `cpa`, ...) for per-vertical rollups. */
+  verticalSlug?: string;
+  /** Free-form correlation id — e.g. webhook event id. */
+  correlationId?: string;
 }
 
 export interface LlmCompletion {
@@ -101,17 +150,47 @@ export interface LlmCompletion {
    *  the provider does not report one. */
   stopReason: string | null;
   /** Best-effort usage report. NULL when the provider does not return one. */
-  usage: {
-    inputTokens: number;
-    outputTokens: number;
-  } | null;
+  usage: LlmUsage | null;
   /** Model id the provider actually served. */
   model: string;
+}
+
+export interface LlmUsage {
+  /** Standard (uncached) input tokens billed at full rate. */
+  inputTokens: number;
+  outputTokens: number;
+  /** Tokens written to the cache on this call. Charged at ~1.25× input
+   *  rate; amortized across subsequent cache reads. 0 when nothing was
+   *  marked cacheable; absent when the provider does not report it. */
+  cacheCreationInputTokens?: number;
+  /** Tokens read FROM the cache on this call. Charged at ~0.1× input
+   *  rate. The savings number. */
+  cacheReadInputTokens?: number;
 }
 
 // ── The interface ───────────────────────────────────────────────────────
 
 export interface LlmProvider {
-  readonly name: 'anthropic' | 'test';
+  readonly name: 'anthropic' | 'test' | 'logging';
   complete(request: LlmCompletionRequest): Promise<LlmResult<LlmCompletion>>;
+}
+
+// ── Content helpers ─────────────────────────────────────────────────────
+
+/** Coerce LlmContent to a single text string. Provider-neutral — used
+ *  by the test provider for digesting + by callers that need to inspect
+ *  the rendered prompt. */
+export function flattenContent(content: LlmContent): string {
+  if (typeof content === 'string') return content;
+  return content
+    .filter((b) => b.type === 'text')
+    .map((b) => b.text)
+    .join('');
+}
+
+/** True when any block in the content is flagged cacheable, OR when the
+ *  request used the `cacheSystem` shortcut. Adapter-side check. */
+export function hasCacheableBlock(content: LlmContent): boolean {
+  if (typeof content === 'string') return false;
+  return content.some((b) => b.cacheable === true);
 }

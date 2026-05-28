@@ -113,6 +113,16 @@ async function fetchSnapshot(
 ): Promise<SkillResult<ProcessDocSnapshot>> {
   const res = await fetcher.fetchSnapshot(args);
   if (!res.ok) {
+    // NOT_CONFIGURED bubbles through so the cron sweep can treat it
+    // as a clean skip (workspace disconnected mid-sweep) rather than
+    // counting it as a failure.
+    if (res.error.code === 'NOT_CONFIGURED') {
+      return skillError(
+        'NOT_CONFIGURED',
+        `process-doc-drafter fetcher (${fetcher.name}) reported NOT_CONFIGURED: ${res.error.message}`,
+        res.error.code,
+      );
+    }
     return skillError(
       'UPSTREAM_GMAIL_ERROR',
       `process-doc-drafter fetcher (${fetcher.name}) failed: ${res.error.message}`,

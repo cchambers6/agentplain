@@ -33,6 +33,7 @@ interface PrismaPreferenceRow {
   categorizationNotes: string | null;
   calendarWindow: string | null;
   learnedDraftNotes: string[];
+  disabledDisciplines: string[];
   updatedAt: Date;
 }
 
@@ -43,6 +44,7 @@ function toView(row: PrismaPreferenceRow): WorkspacePreferenceView {
     categorizationNotes: row.categorizationNotes,
     calendarWindow: normalizeCalendarWindow(row.calendarWindow),
     learnedDraftNotes: row.learnedDraftNotes,
+    disabledDisciplines: row.disabledDisciplines ?? [],
     updatedAt: row.updatedAt,
   };
 }

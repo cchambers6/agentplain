@@ -19,6 +19,8 @@ import { integrationRenewalSweepFn } from "@/lib/inngest/functions/integration-r
 import { processWebhookEventFn } from "@/lib/inngest/functions/process-webhook-event";
 import { customerFilesIngestionSweepFn } from "@/lib/inngest/functions/customer-files-ingestion-sweep";
 import { schedulerSweepFn } from "@/lib/inngest/functions/scheduler-sweep";
+import { followUpChaserSweepFn } from "@/lib/inngest/functions/follow-up-chaser-sweep";
+import { processDocDrafterSweepFn } from "@/lib/inngest/functions/process-doc-drafter-sweep";
 import { workspaceTeardownSweepFn } from "@/lib/customer-data";
 
 export const runtime = "nodejs";
@@ -32,6 +34,8 @@ export const { GET, POST, PUT } = serve({
     processWebhookEventFn,
     customerFilesIngestionSweepFn,
     schedulerSweepFn,
+    followUpChaserSweepFn,
+    processDocDrafterSweepFn,
     workspaceTeardownSweepFn,
   ],
 });

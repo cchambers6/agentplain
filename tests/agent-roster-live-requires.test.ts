@@ -66,6 +66,38 @@ describe('chief-of-staff cards across all verticals declare liveRequires', () =>
   });
 });
 
+describe('/general cross-role cards declare liveRequires for mailbox-bound skills', () => {
+  it('inbox-triage / follow-up-chaser / process-doc-drafter on /general all require GOOGLE or M365', () => {
+    const verticals = getAllVerticalsIncludingOnRamps();
+    const general = verticals.find((v) => v.slug === 'general');
+    assert.ok(general, '/general surface must be registered');
+    const mailboxBoundSkills = new Set([
+      'inbox-triage-general',
+      'follow-up-chaser-general',
+      'process-doc-drafter-general',
+    ]);
+    const cards = (general!.agentRoster ?? []).filter(
+      (a) => a.boundSkill && mailboxBoundSkills.has(a.boundSkill),
+    );
+    assert.equal(
+      cards.length,
+      3,
+      'expect three cross-role cards bound to mailbox skills on /general',
+    );
+    for (const card of cards) {
+      assert.ok(
+        card.liveRequires?.connectors?.length,
+        `/general/${card.slug} must declare liveRequires.connectors`,
+      );
+      assert.deepEqual(
+        card.liveRequires!.connectors.sort(),
+        ['GOOGLE', 'M365'],
+        `/general/${card.slug} should require GOOGLE or M365`,
+      );
+    }
+  });
+});
+
 describe('liveRequiresSatisfied — workspace with no connectors degrades the card', () => {
   it('returns false when none of the required connectors are active', () => {
     const agent: AgentRosterEntry = {

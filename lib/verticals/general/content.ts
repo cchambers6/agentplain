@@ -72,6 +72,10 @@ export const general: VerticalContent = {
       job: "Sorts whatever lands in your inbox by priority — urgent, customer-active, vendor-pending, needs-your-decision, noise — and drafts a gentle acknowledgement on the two middle classes so the people you serve hear back today.",
       runtime: "live",
       boundSkill: "inbox-triage-general",
+      // Card is LIVE only when a mailbox connector is wired. With
+      // neither GOOGLE nor M365 active the agents page degrades to
+      // "connect to activate" so the roster never overclaims.
+      liveRequires: { connectors: ["GOOGLE", "M365"] },
     },
     {
       slug: "general-follow-up-chaser",
@@ -79,6 +83,7 @@ export const general: VerticalContent = {
       job: "Spots the threads you sent days ago without a reply and drafts the gentle nudge — oldest first, capped per run so your queue stays sane.",
       runtime: "live",
       boundSkill: "follow-up-chaser-general",
+      liveRequires: { connectors: ["GOOGLE", "M365"] },
     },
     {
       slug: "general-process-doc-drafter",
@@ -86,6 +91,7 @@ export const general: VerticalContent = {
       job: "Watches how you actually handle recurring work and, once a pattern repeats three or more times, drafts the SOP so the process moves out of your head and into a doc you can hand off.",
       runtime: "live",
       boundSkill: "process-doc-drafter-general",
+      liveRequires: { connectors: ["GOOGLE", "M365"] },
     },
   ],
 

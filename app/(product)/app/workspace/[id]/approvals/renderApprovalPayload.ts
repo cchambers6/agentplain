@@ -84,6 +84,9 @@ const KIND_LABEL: Record<WorkApprovalKind, string> = {
   CHIEF_OF_STAFF_MEETING: "proposed meeting time",
   CHIEF_OF_STAFF_REPLY_DRAFT: "draft reply",
   CHIEF_OF_STAFF_TODO: "proposed to-do",
+  INBOX_TRIAGE: "inbox triage",
+  FOLLOW_UP_NUDGE: "follow-up nudge",
+  PROCESS_DOC_DRAFT: "process doc draft",
 };
 
 export function renderApprovalPayload(
@@ -118,6 +121,12 @@ export function renderApprovalPayload(
       return renderChiefOfStaffReplyDraft(p);
     case "CHIEF_OF_STAFF_TODO":
       return renderChiefOfStaffTodo(p);
+    case "INBOX_TRIAGE":
+      return renderInboxTriage(p);
+    case "FOLLOW_UP_NUDGE":
+      return renderFollowUpNudge(p);
+    case "PROCESS_DOC_DRAFT":
+      return renderProcessDocDraft(p);
     default: {
       const _exhaustive: never = kind;
       // Runtime safety: if a new enum value reaches production before the
@@ -462,6 +471,119 @@ function renderChiefOfStaffTodo(p: Record<string, unknown>): RenderedApproval {
     body: lines,
     metaLine: composeMeta({ confidence, tone: undefined }),
     inboundSummary: reasoning,
+  };
+}
+
+/**
+ * /general inbox-triage proposal — surfaces a priority bucket, the
+ * classifier's reasoning, and (for customer-active and vendor-pending
+ * only) the drafted ack body. urgent / needs-decision / noise do not
+ * carry a draft.
+ */
+function renderInboxTriage(p: Record<string, unknown>): RenderedApproval {
+  const priority = pickString(p, ["priority"]) ?? "noise";
+  const reasoning = pickString(p, ["reasoning"]);
+  const confidence = pickNumber(p, ["confidence"]);
+  const ackDraft = isRecord(p.ackDraft) ? p.ackDraft : null;
+  const draftBody = ackDraft
+    ? (pickString(ackDraft, ["body"]) ?? undefined)
+    : undefined;
+  const draftSubject = ackDraft
+    ? pickString(ackDraft, ["subject"])
+    : undefined;
+  const recipient = ackDraft ? pickRecipientFromToEmails(ackDraft) : undefined;
+  const recipientLine =
+    recipient && draftSubject
+      ? `To: ${recipient}    Re: ${draftSubject}`
+      : recipient
+        ? `To: ${recipient}`
+        : draftSubject
+          ? `Re: ${draftSubject}`
+          : undefined;
+  const tone = ackDraft ? pickString(ackDraft, ["tone"]) : undefined;
+  const bodyLines = draftBody
+    ? splitParagraphs(draftBody)
+    : [
+        `Priority: ${priority}`,
+        reasoning ?? "Classified by the inbox-triage agent.",
+      ];
+
+  return {
+    kindLabel: `${KIND_LABEL.INBOX_TRIAGE} — ${priority}`,
+    recipientLine,
+    body: bodyLines,
+    metaLine: composeMeta({ confidence, tone }),
+    inboundSummary: reasoning,
+    tone,
+    editableBody: draftBody,
+  };
+}
+
+/**
+ * /general follow-up nudge — drafted reply quoting the operator's
+ * previous send. Always carries body + recipient.
+ */
+function renderFollowUpNudge(p: Record<string, unknown>): RenderedApproval {
+  const subject = pickString(p, ["subject"]);
+  const body = pickString(p, ["body"]) ?? "";
+  const confidence = pickNumber(p, ["confidence"]);
+  const reasoning = pickString(p, ["reasoning"]);
+  const stage = pickString(p, ["stage"]);
+  const ageDays = pickNumber(p, ["ageDays"]);
+  const recipient = pickRecipientFromToEmails(p);
+  const recipientLine =
+    recipient && subject
+      ? `To: ${recipient}    Re: ${subject}`
+      : recipient
+        ? `To: ${recipient}`
+        : subject
+          ? `Re: ${subject}`
+          : undefined;
+  const meta = composeMeta({ confidence, tone: stage ?? undefined });
+  const ageLabel =
+    typeof ageDays === "number"
+      ? `${ageDays}d stale${stage ? ` · ${stage} nudge` : ""}`
+      : undefined;
+  const metaLine = ageLabel ? `${meta ?? ""}${meta ? " · " : ""}${ageLabel}` : meta;
+
+  return {
+    kindLabel: KIND_LABEL.FOLLOW_UP_NUDGE,
+    recipientLine,
+    body: body ? splitParagraphs(body) : ["No nudge body was attached."],
+    metaLine,
+    inboundSummary: reasoning,
+    persisted: false,
+    editableBody: body || undefined,
+  };
+}
+
+/**
+ * /general process-doc-draft — drafted SOP markdown body for the
+ * operator to copy into their own documentation system. No recipient,
+ * no send affordance.
+ */
+function renderProcessDocDraft(p: Record<string, unknown>): RenderedApproval {
+  const title = pickString(p, ["title"]) ?? "Drafted SOP";
+  const body = pickString(p, ["body"]) ?? "";
+  const occurrenceCount = pickNumber(p, ["occurrenceCount"]);
+  const confidence = pickNumber(p, ["confidence"]);
+  const reasoning = pickString(p, ["reasoning"]);
+  const occurrenceLine =
+    typeof occurrenceCount === "number"
+      ? `${occurrenceCount} repeats observed`
+      : undefined;
+  const meta = composeMeta({ confidence, tone: undefined });
+  const metaLine = occurrenceLine
+    ? `${meta ?? ""}${meta ? " · " : ""}${occurrenceLine}`
+    : meta;
+
+  return {
+    kindLabel: KIND_LABEL.PROCESS_DOC_DRAFT,
+    title,
+    body: body ? splitParagraphs(body) : ["No SOP body was drafted."],
+    metaLine,
+    inboundSummary: reasoning,
+    editableBody: body || undefined,
   };
 }
 

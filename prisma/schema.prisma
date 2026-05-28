@@ -123,6 +123,16 @@ enum WorkApprovalKind {
   CHIEF_OF_STAFF_MEETING
   CHIEF_OF_STAFF_REPLY_DRAFT
   CHIEF_OF_STAFF_TODO
+  // /general runtime catalog kinds. Each maps one production caller
+  // (process-webhook-event for INBOX_TRIAGE; follow-up-chaser-sweep
+  // for FOLLOW_UP_NUDGE; process-doc-drafter-sweep for PROCESS_DOC_DRAFT)
+  // to the approvals UI affordance the operator reviews. Like the
+  // chief-of-staff kinds, all three are DRAFT-only — no send, no book,
+  // no publish. See lib/skills/{inbox-triage-general,follow-up-chaser-
+  // general,process-doc-drafter-general} and project_no_outbound_architecture.md.
+  INBOX_TRIAGE
+  FOLLOW_UP_NUDGE
+  PROCESS_DOC_DRAFT
 }
 
 enum WorkApprovalStatus {

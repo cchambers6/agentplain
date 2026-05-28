@@ -11,6 +11,10 @@ interface AgentCard {
   status: string;
   discipline: DisciplineId | null;
   disabled: boolean;
+  /** True when the card's runtime is "live" but the workspace's
+   *  `liveRequires.connectors` are not yet wired. Rendered as a
+   *  "connect to activate" badge above the status line. */
+  needsConnector: boolean;
 }
 
 interface AgentsFleetGridProps {
@@ -82,6 +86,14 @@ export function AgentsFleetGrid({
             <p className="mt-2 text-[13px] leading-relaxed text-ink-soft">
               {agent.job}
             </p>
+            {agent.needsConnector ? (
+              <p
+                className="mt-3 inline-flex items-center gap-2 border border-clay px-2 py-1 font-mono text-[10px] tracking-eyebrow uppercase text-clay"
+                data-testid="needs-connector-badge"
+              >
+                connect to activate
+              </p>
+            ) : null}
             <p className="mt-3 text-[13px] text-mute">{agent.status}</p>
             {agent.discipline ? (
               <p className="mt-3 inline-flex items-center gap-2 font-mono text-[11px] tracking-eyebrow uppercase text-mute">

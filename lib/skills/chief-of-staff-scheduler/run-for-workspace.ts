@@ -17,17 +17,23 @@
  * and reads everything it needs from the caller's input.
  */
 
+import { ChiefOfStaffMcpFetcher } from '../scheduler/chief-of-staff-fetcher';
 import { runSkill } from './skill';
 import { PrismaApprovalSink } from './prisma-approval-sink';
 import type { SkillResult } from '../types';
 import type {
   ApprovalSink,
+  ChiefOfStaffFetcher,
   ChiefOfStaffInput,
   ChiefOfStaffOutput,
 } from './types';
 
 export interface RunChiefOfStaffForWorkspaceInput
-  extends Omit<ChiefOfStaffInput, 'sink'> {
+  extends Omit<ChiefOfStaffInput, 'sink' | 'fetcher'> {
+  /** Override the calendar/inbox/todo fetcher — defaults to the real
+   *  MCP-backed multiplexer (`ChiefOfStaffMcpFetcher`). Tests pass a
+   *  `JsonChiefOfStaffFetcher` seeded with deterministic fixtures. */
+  fetcher?: ChiefOfStaffFetcher;
   /** Override the sink — defaults to `PrismaApprovalSink`. Tests pass a
    *  `RecordingApprovalSink` to assert no-outbound without touching the
    *  database. Production callers should leave this undefined. */
@@ -38,5 +44,7 @@ export async function runChiefOfStaffForWorkspace(
   input: RunChiefOfStaffForWorkspaceInput,
 ): Promise<SkillResult<ChiefOfStaffOutput>> {
   const sink = input.sink === undefined ? new PrismaApprovalSink() : input.sink;
-  return runSkill({ ...input, sink });
+  const fetcher =
+    input.fetcher ?? new ChiefOfStaffMcpFetcher({ workspaceId: input.workspaceId });
+  return runSkill({ ...input, fetcher, sink });
 }

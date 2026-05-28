@@ -9,6 +9,22 @@ import { getVerticalContent } from "@/lib/verticals";
 import type { AgentRosterEntry } from "@/lib/verticals/types";
 import { AgentsFleetGrid } from "./AgentsFleetGrid";
 
+/**
+ * Render-time precondition check for `liveRequires`. A roster card with
+ * `runtime: "live"` AND a `liveRequires.connectors` list is HONESTLY live
+ * only when at least one of the listed connectors is ACTIVE for the
+ * workspace. With no active connector, the card degrades to "connect to
+ * activate" instead of a stale "live" badge.
+ */
+function liveRequiresSatisfied(
+  agent: AgentRosterEntry,
+  activeConnectors: ReadonlySet<string>,
+): boolean {
+  const required = agent.liveRequires?.connectors;
+  if (!required || required.length === 0) return true;
+  return required.some((c) => activeConnectors.has(c));
+}
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
@@ -27,7 +43,7 @@ export default async function AgentsPage({ params }: PageProps) {
   const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
   const ctx = { userId: member.userId, workspaceId, isOperator: false };
 
-  const [counts, workspace, activation] = await Promise.all([
+  const [counts, workspace, activation, activeConnectorRows] = await Promise.all([
     withRls(ctx, async (tx) => {
       const grouped = await tx.handoffLogEntry.groupBy({
         by: ["fromAgent"],
@@ -47,7 +63,20 @@ export default async function AgentsPage({ params }: PageProps) {
       }),
     ),
     getActivationState(ctx, workspaceId),
+    // ACTIVE IntegrationCredential provider keys for this workspace.
+    // Powers the `liveRequires` check below — a roster card whose live
+    // status depends on a connector (e.g. chief-of-staff needs GOOGLE
+    // or M365 calendar) degrades honestly when nothing's connected.
+    withRls(ctx, (tx) =>
+      tx.integrationCredential.findMany({
+        where: { workspaceId, status: "ACTIVE" },
+        select: { provider: true },
+      }),
+    ),
   ]);
+  const activeConnectors = new Set<string>(
+    activeConnectorRows.map((r) => r.provider),
+  );
 
   const verticalSlug = verticalSlugFromEnum(workspace.vertical);
   const realEstateRoster =
@@ -61,18 +90,31 @@ export default async function AgentsPage({ params }: PageProps) {
     // Truthful status — see prior derivation rules in
     // docs/realty-fleet-binding-2026-05-22.md.
     const isRooting = agent.runtime === "rooting";
+    const requiresOk = liveRequiresSatisfied(agent, activeConnectors);
+    const requiresConnector =
+      agent.runtime === "live" &&
+      !requiresOk &&
+      Array.isArray(agent.liveRequires?.connectors);
     const isLiveSkillBound =
       agent.runtime === "live" &&
       typeof agent.boundSkill === "string" &&
       agent.boundSkill.length > 0 &&
+      requiresOk &&
       handoffCount === 0;
-    const status = isRooting
-      ? agent.rootingNote ?? "rooting now — runtime still being built."
-      : isLiveSkillBound
-        ? "ready — capability tested, first run lands when triggered"
-        : handoffCount === 0
-          ? "rooting in — first handoff lands soon"
-          : `${handoffCount} handoff${handoffCount === 1 ? "" : "s"} logged`;
+    // "connect to activate" wins over "ready/rooting" when a card's
+    // liveRequires connector list is unfulfilled. The customer's next
+    // step is to wire the integration; the agents page surfaces that
+    // explicitly with the connector list so the call to action is
+    // unambiguous.
+    const status = requiresConnector
+      ? `connect to activate — needs ${formatConnectors(agent.liveRequires!.connectors)}`
+      : isRooting
+        ? agent.rootingNote ?? "rooting now — runtime still being built."
+        : isLiveSkillBound
+          ? "ready — capability tested, first run lands when triggered"
+          : handoffCount === 0
+            ? "rooting in — first handoff lands soon"
+            : `${handoffCount} handoff${handoffCount === 1 ? "" : "s"} logged`;
     const disciplineId = AGENT_DISCIPLINE[agent.slug] ?? null;
     return {
       slug: agent.slug,
@@ -82,6 +124,7 @@ export default async function AgentsPage({ params }: PageProps) {
       discipline: disciplineId,
       disabled:
         disciplineId !== null && activation.disabled.includes(disciplineId),
+      needsConnector: requiresConnector,
     };
   });
 
@@ -120,4 +163,38 @@ export type AgentCard = {
   status: string;
   discipline: DisciplineId | null;
   disabled: boolean;
+  /** True when the card's runtime is "live" but the workspace has not yet
+   *  connected one of the required integrations from `liveRequires`. The
+   *  grid renders this as a "connect to activate" affordance. */
+  needsConnector: boolean;
 };
+
+/**
+ * Render a `liveRequires.connectors` list as a human-readable phrase
+ * for the status line. Maps provider keys (the durable identifier on
+ * `IntegrationCredential.provider`) to the marketplace tile names a
+ * customer recognizes. Falls back to the raw key when no mapping
+ * exists so a new connector key doesn't render as blank.
+ */
+function formatConnectors(connectors: string[]): string {
+  if (connectors.length === 0) return "a connector";
+  const labels = connectors.map((c) => {
+    switch (c) {
+      case "GOOGLE":
+        return "Google Calendar";
+      case "M365":
+        return "Outlook Calendar";
+      case "QUICKBOOKS":
+        return "QuickBooks";
+      case "DOCUSIGN":
+        return "DocuSign";
+      case "SLACK":
+        return "Slack";
+      default:
+        return c.toLowerCase();
+    }
+  });
+  if (labels.length === 1) return labels[0];
+  if (labels.length === 2) return `${labels[0]} or ${labels[1]}`;
+  return `${labels.slice(0, -1).join(", ")}, or ${labels[labels.length - 1]}`;
+}

@@ -61,6 +61,10 @@ export const general: VerticalContent = {
       job: "Proposes meetings, reply drafts, and to-dos against your calendar + inbox + board.",
       runtime: "live",
       boundSkill: "chief-of-staff-scheduler",
+      // Card is LIVE only when a calendar connector is wired. With
+      // neither GOOGLE nor M365 active the agents page degrades the
+      // badge to "connect to activate" so the roster never overclaims.
+      liveRequires: { connectors: ["GOOGLE", "M365"] },
     },
     {
       slug: "general-inbox-triage",

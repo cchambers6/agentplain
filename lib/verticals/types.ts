@@ -211,6 +211,27 @@ export interface AgentRosterEntry {
    */
   boundSkill?: string;
   rootingNote?: string;
+  /**
+   * Runtime preconditions a workspace must satisfy before this card is
+   * honestly LIVE. Set ONLY on cards whose `runtime === 'live'` AND
+   * whose bound skill depends on a per-workspace integration that the
+   * customer must connect themselves (e.g. calendar credentials for the
+   * chief-of-staff scheduler).
+   *
+   * - `connectors` — `IntegrationCredential.provider` keys (GOOGLE,
+   *   M365, QUICKBOOKS, etc.). The card is LIVE iff at least one of
+   *   these has status=ACTIVE for the workspace. When NONE are active,
+   *   the agents page degrades the card to "connect to activate" with
+   *   the explicit connector list so the customer knows what to wire.
+   *
+   * Per `reference_product_claims_vs_reality_2026_05_22`: the LIVE
+   * badge derives from real state, not from a static roster claim. This
+   * field is the seam that lets the roster declare "live IFF
+   * connector is wired" without inventing a third runtime status.
+   */
+  liveRequires?: {
+    connectors: string[];
+  };
 }
 
 /**

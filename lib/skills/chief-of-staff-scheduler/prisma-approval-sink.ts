@@ -32,6 +32,7 @@
 
 import type { Prisma, PrismaClient, WorkApprovalKind } from '@prisma/client';
 import { withRls } from '../../db/rls';
+import { SKILL_DISCIPLINE } from '@/lib/disciplines/skill-mapping';
 import { encryptPayloadForWrite } from '../../security/payload-crypto';
 import { skillError, skillOk, type SkillResult } from '../types';
 import type {
@@ -126,6 +127,11 @@ export function buildApprovalRow(
     refTable: CHIEF_OF_STAFF_REF_TABLE,
     refId: proposal.proposalId,
     status: 'PENDING',
+    // Tag every chief-of-staff proposal with its discipline so the
+    // discipline-grouped approval queue (Strand 3 UX wedge) flips from
+    // empty to populated for real workspaces. The sidecar mapping in
+    // lib/disciplines/skill-mapping.ts is the source of truth.
+    discipline: SKILL_DISCIPLINE[CHIEF_OF_STAFF_AGENT_SLUG] ?? null,
     payload: encryptPayloadForWrite(buildPayload(proposal)),
   };
 }

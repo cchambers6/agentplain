@@ -33,6 +33,11 @@ export const SKILL_DISCIPLINE: Record<string, DisciplineId> = {
   'inbox-triage-general': 'operations',
   'follow-up-chaser-general': 'sales-enablement',
   'process-doc-drafter-general': 'operations',
+  // Support-handler — drafts a first-touch reply to /help SupportRequests
+  // and queues it for operator approval. Tagged customer-success so the
+  // discipline-grouped approvals page groups these alongside the rest of
+  // the customer-facing-comms drafts.
+  'support-handler': 'customer-success',
   // Vertical-specific skills
   'invoice-chasing-realestate': 'finance',
   'lead-triage-realestate': 'sales-enablement',

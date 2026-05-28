@@ -18,6 +18,8 @@ import type { Prisma } from "@prisma/client";
 import { withRls, type RlsContext } from "@/lib/db/rls";
 import { getEmailProvider } from "@/lib/email";
 import { env } from "@/lib/env";
+import { inngest } from "@/lib/inngest/client";
+import { SUPPORT_REQUEST_CREATED_EVENT } from "@/lib/inngest/functions/support-handler-on-create";
 import { supportRequestSchema } from "./types";
 import type { SupportRequestInput, SupportSubmitResult } from "./types";
 
@@ -78,9 +80,44 @@ export async function submitSupportRequest(
     };
   }
 
-  // 2. Notify the support inbox. The row is already saved; a send failure is
+  // 2. Fire the draft-into-review event. The support-handler skill
+  //    consumes this and writes a first-touch draft to the operator
+  //    approval queue. Best-effort: a send-event failure NEVER fails
+  //    the customer submit — the operator-email path below + the
+  //    persisted row guarantee the message isn't lost. See
+  //    lib/inngest/functions/support-handler-on-create.ts.
+  try {
+    await inngest.send({
+      name: SUPPORT_REQUEST_CREATED_EVENT,
+      data: {
+        supportRequestId: requestId,
+        workspaceId: args.workspaceId,
+      },
+    });
+  } catch (err) {
+    // Audit the event-send failure under the customer's context so
+    // operator can correlate "no draft showed up" with the cause.
+    await withRls(ctx, async (tx) => {
+      await tx.auditLog.create({
+        data: {
+          actorUserId: args.fromUserId,
+          workspaceId: args.workspaceId,
+          action: "support_request.event_send_failed",
+          targetTable: "SupportRequest",
+          targetId: requestId,
+          payload: {
+            reason: err instanceof Error ? err.message : String(err),
+          } satisfies Prisma.InputJsonValue,
+        },
+      });
+    });
+  }
+
+  // 3. Notify the support inbox. The row is already saved; a send failure is
   //    logged to the audit trail (operator-visible) rather than surfaced as a
-  //    form error, since the customer's message is not lost.
+  //    form error, since the customer's message is not lost. The
+  //    operator-email path stays live in parallel until the draft-into-review
+  //    path is verified in prod (see PR-A: support-handler).
   const email = getEmailProvider();
   const { subject, text, html } = buildEmail(args, input, requestId);
 

@@ -133,6 +133,13 @@ enum WorkApprovalKind {
   INBOX_TRIAGE
   FOLLOW_UP_NUDGE
   PROCESS_DOC_DRAFT
+  // Support-handler draft. Produced by lib/skills/support-handler in
+  // response to a customer-submitted SupportRequest (the in-app /help
+  // form). Drafts a first-touch reply from the knowledge substrate and
+  // queues it for operator review — never sent by agentplain. Operator
+  // approves / edits / escalates; the customer's existing email path
+  // performs the send.
+  SUPPORT_HANDLER_REPLY_DRAFT
 }
 
 enum WorkApprovalStatus {

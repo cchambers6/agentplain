@@ -87,6 +87,7 @@ const KIND_LABEL: Record<WorkApprovalKind, string> = {
   INBOX_TRIAGE: "inbox triage",
   FOLLOW_UP_NUDGE: "follow-up nudge",
   PROCESS_DOC_DRAFT: "process doc draft",
+  SUPPORT_HANDLER_REPLY_DRAFT: "support reply draft",
 };
 
 export function renderApprovalPayload(
@@ -127,6 +128,8 @@ export function renderApprovalPayload(
       return renderFollowUpNudge(p);
     case "PROCESS_DOC_DRAFT":
       return renderProcessDocDraft(p);
+    case "SUPPORT_HANDLER_REPLY_DRAFT":
+      return renderSupportHandlerReplyDraft(p);
     default: {
       const _exhaustive: never = kind;
       // Runtime safety: if a new enum value reaches production before the
@@ -585,6 +588,76 @@ function renderProcessDocDraft(p: Record<string, unknown>): RenderedApproval {
     inboundSummary: reasoning,
     editableBody: body || undefined,
   };
+}
+
+/**
+ * Support-handler reply draft — a first-touch reply drafted by
+ * lib/skills/support-handler in response to a customer-submitted
+ * SupportRequest. Surfaces:
+ *   - the draft subject + body (editable)
+ *   - the cited substrate snippets (operator can verify before approving)
+ *   - the confidence tier + suggested operator action
+ *
+ * Operator approves / edits / escalates; the customer's existing
+ * operator email path performs the send. Never auto-sent.
+ */
+function renderSupportHandlerReplyDraft(
+  p: Record<string, unknown>,
+): RenderedApproval {
+  const subject = pickString(p, ["subject"]);
+  const body = pickString(p, ["body"]) ?? "";
+  // The skill writes confidence as a tier-string ("high" / "medium" /
+  // "placeholder") and there's no numeric tone here. We expose the tier
+  // through the meta line so the operator sees the routing hint.
+  const confidenceTier = pickString(p, ["confidence"]);
+  const suggestedAction = pickString(p, ["suggestedAction"]);
+  const reasoning = pickString(p, ["reasoning"]);
+  const citations = pickCitations(p);
+  const citationLines =
+    citations.length > 0
+      ? citations.map(
+          (c) =>
+            `· ${c.title}${c.similarity !== null ? ` (similarity ${c.similarity.toFixed(2)})` : ""}`,
+        )
+      : [];
+  const metaParts: string[] = [];
+  if (confidenceTier) metaParts.push(`confidence: ${confidenceTier}`);
+  if (suggestedAction) metaParts.push(`suggested: ${suggestedAction}`);
+  const metaLine = metaParts.length > 0 ? metaParts.join(" · ") : undefined;
+  const bodyLines = body ? splitParagraphs(body) : ["No draft body was attached."];
+  const fullBody =
+    citationLines.length > 0
+      ? [...bodyLines, "", "Cited snippets:", ...citationLines]
+      : bodyLines;
+
+  return {
+    kindLabel: KIND_LABEL.SUPPORT_HANDLER_REPLY_DRAFT,
+    recipientLine: subject ? `Re: ${subject}` : undefined,
+    body: fullBody,
+    metaLine,
+    inboundSummary: reasoning,
+    persisted: false,
+    editableBody: body || undefined,
+  };
+}
+
+interface SupportCitation {
+  title: string;
+  similarity: number | null;
+}
+
+function pickCitations(p: Record<string, unknown>): SupportCitation[] {
+  const raw = p.citations;
+  if (!Array.isArray(raw)) return [];
+  const out: SupportCitation[] = [];
+  for (const item of raw) {
+    if (!isRecord(item)) continue;
+    const title = pickString(item, ["title"]);
+    if (!title) continue;
+    const similarity = pickNumber(item, ["similarity"]);
+    out.push({ title, similarity: similarity ?? null });
+  }
+  return out;
 }
 
 function pickAttendeeLine(p: Record<string, unknown>): string | undefined {

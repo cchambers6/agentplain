@@ -107,6 +107,7 @@ describe('renderPreferencesBlock', () => {
         'Treat any pre-approved-buyer language as a hot inquiry.',
       calendarWindow: '8-7 + Sat AM',
       learnedDraftNotes: [],
+      disabledDisciplines: [],
       updatedAt: new Date(),
     };
     const out = renderPreferencesBlock(view);
@@ -127,6 +128,7 @@ describe('renderPreferencesBlock', () => {
         'Broker-owner edited a draft — shortened the draft by 32%; removed "happy to help".',
         'Rejected a draft because: do not use the phrase "best regards" — sign with "— Carter".',
       ],
+      disabledDisciplines: [],
       updatedAt: new Date(),
     };
     const out = renderPreferencesBlock(view);
@@ -142,6 +144,7 @@ describe('renderPreferencesBlock', () => {
       categorizationNotes: null,
       calendarWindow: null,
       learnedDraftNotes: ['some learned note'],
+      disabledDisciplines: [],
       updatedAt: new Date(),
     };
     const out = renderPreferencesBlock(view, { includeLearnedNotes: false });
@@ -160,6 +163,7 @@ describe('runSkillChain wires preferences into the LLM call', () => {
       'Broker-owner edited a draft — shortened the draft by 32%; removed "happy to help"',
       'Rejected a draft because: sign with "— Carter", not "Best regards"',
     ],
+    disabledDisciplines: [],
     updatedAt: new Date(),
   };
 

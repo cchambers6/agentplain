@@ -66,6 +66,11 @@ export interface WorkspacePreferenceView {
   categorizationNotes: string | null;
   calendarWindow: CalendarWindow | string | null;
   learnedDraftNotes: string[];
+  /** Discipline ids the operator has turned OFF on the Discipline
+   *  panel. Read by the webhook-event sweep + the cron sweeps to skip
+   *  workspaces whose corresponding discipline has been disabled.
+   *  Empty array when nothing is disabled. */
+  disabledDisciplines: string[];
   updatedAt: Date;
 }
 

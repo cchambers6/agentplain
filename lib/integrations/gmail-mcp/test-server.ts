@@ -380,6 +380,14 @@ function applyTestQueryFilter(messages: FullMessage[], query?: string): FullMess
       } else if (trimmed.startsWith('subject:')) {
         const want = trimmed.slice(8).toLowerCase();
         if (!m.subject.toLowerCase().includes(want)) return false;
+      } else if (
+        // Gmail date tokens — the test server doesn't track relative
+        // time. We accept them as a no-op so adapters that include
+        // them (follow-up-chaser, process-doc-drafter) don't end up
+        // matching zero messages on the seed.
+        /^(newer_than|older_than|newer|older|after|before):/.test(trimmed)
+      ) {
+        continue;
       } else {
         const want = trimmed.toLowerCase();
         if (

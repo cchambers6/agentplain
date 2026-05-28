@@ -91,6 +91,16 @@ async function fetchSnapshot(
 ): Promise<SkillResult<FollowUpSnapshot>> {
   const res = await fetcher.fetchSnapshot(args);
   if (!res.ok) {
+    // NOT_CONFIGURED bubbles through unchanged so the cron sweep can
+    // treat it as a clean skip (workspace disconnected mid-sweep)
+    // rather than counting it as a failure.
+    if (res.error.code === 'NOT_CONFIGURED') {
+      return skillError(
+        'NOT_CONFIGURED',
+        `follow-up-chaser fetcher (${fetcher.name}) reported NOT_CONFIGURED: ${res.error.message}`,
+        res.error.code,
+      );
+    }
     return skillError(
       'UPSTREAM_GMAIL_ERROR',
       `follow-up-chaser fetcher (${fetcher.name}) failed: ${res.error.message}`,

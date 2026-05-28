@@ -41,6 +41,9 @@ import {
   persistSkillRunArtifacts,
   summarizeOutcome,
 } from '@/lib/skills/persist-artifacts';
+import { runInboxTriageForEvent } from '@/lib/skills/inbox-triage-general/run-for-event';
+import { asDisciplineId } from '@/lib/disciplines';
+import { SKILL_DISCIPLINE } from '@/lib/disciplines/skill-mapping';
 import type { DraftPersister, MessageFetcher } from '@/lib/skills/types';
 import { getWorkspacePreference } from '@/lib/preferences';
 import { retrieveCustomerContext } from '@/lib/customer-files';
@@ -157,6 +160,63 @@ export async function processUnprocessedWebhookEvents(
         record,
       });
 
+      // Inbox-triage-general runs IN ADDITION TO the vertical chain so
+      // every workspace with an active Gmail/M365 credential gets
+      // priority triage proposals (urgent / customer-active / vendor-
+      // pending / needs-decision / noise) alongside the chain's draft.
+      // Per the audit (`docs/agent-interviews/01-runtime-skills.md`):
+      //   "No production caller. The wrapper already binds PrismaApprovalSink…"
+      // This is the production caller. Gated by the workspace's
+      // discipline-disable setting so an operator who turned off the
+      // triage skill's discipline stops seeing rows.
+      //
+      // Triage failure is non-fatal — we log it and continue rather
+      // than fail the entire webhook event, so the vertical chain's
+      // work isn't held hostage by a triage hiccup.
+      const triageDisciplineId = SKILL_DISCIPLINE['inbox-triage-general'];
+      const triageDisabledIds = (workspacePreferences?.disabledDisciplines ?? [])
+        .map((d) => asDisciplineId(d))
+        .filter((d): d is NonNullable<ReturnType<typeof asDisciplineId>> => d !== null);
+      const triageDisabled = triageDisciplineId
+        ? triageDisabledIds.includes(triageDisciplineId)
+        : false;
+      let triageScanned = 0;
+      let triageSunk = 0;
+      if (!triageDisabled) {
+        try {
+          const triageRes = await runInboxTriageForEvent({
+            workspaceId: workspace.id,
+            fetcher: adapter,
+            event,
+          });
+          if (triageRes.ok) {
+            triageScanned = triageRes.value.messagesScanned;
+            triageSunk = triageRes.value.sunk;
+          } else {
+            reportInngestItemFailure(new Error(triageRes.error.message), {
+              functionId: PROCESS_WEBHOOK_EVENT_FUNCTION_ID,
+              extraTags: {
+                webhook_event_id: event.id,
+                workspace_id: workspace.id,
+                provider: credential.provider,
+                phase: 'inbox-triage',
+                error_code: triageRes.error.code,
+              },
+            });
+          }
+        } catch (triageErr) {
+          reportInngestItemFailure(triageErr, {
+            functionId: PROCESS_WEBHOOK_EVENT_FUNCTION_ID,
+            extraTags: {
+              webhook_event_id: event.id,
+              workspace_id: workspace.id,
+              provider: credential.provider,
+              phase: 'inbox-triage',
+            },
+          });
+        }
+      }
+
       // Success: clear backoff, bump attempt count for the audit trail.
       // Combine the WebhookEvent update + AuditLog insert into one
       // system-context transaction so both pass RLS on a single GUC set.
@@ -183,6 +243,11 @@ export async function processUnprocessedWebhookEvents(
               approvalsWritten: artifacts.approvalsWritten,
               approvalId: artifacts.approvalId,
               steps: record.steps.map((s) => ({ step: s.step, ok: s.ok })),
+              inboxTriage: {
+                disabled: triageDisabled,
+                messagesScanned: triageScanned,
+                proposalsSunk: triageSunk,
+              },
             },
           },
         });

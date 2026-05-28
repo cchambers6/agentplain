@@ -89,6 +89,12 @@ ALTER TABLE "BillingEvent" ALTER COLUMN "id" DROP DEFAULT;
 ALTER TABLE "CapabilityProposal" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AlterTable
+ALTER TABLE "ChatMessage" ALTER COLUMN "id" DROP DEFAULT;
+
+-- AlterTable
+ALTER TABLE "ChatThread" ALTER COLUMN "id" DROP DEFAULT;
+
+-- AlterTable
 ALTER TABLE "ComplianceFlag" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AlterTable

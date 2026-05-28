@@ -352,6 +352,8 @@ model Workspace {
   supportRequests        SupportRequest[]
   preference             WorkspacePreference?
   preferenceSignals      PreferenceSignal[]
+  chatThreads            ChatThread[]
+  chatMessages           ChatMessage[]
 
   @@index([slug])
   @@index([vertical])
@@ -1083,4 +1085,53 @@ model OpsFlag {
   note      String?
 
   @@index([updatedAt])
+}
+
+/// Talk-to-Plaino chat thread. One per workspace in v1 (deferred:
+/// multi-thread / archive UI — see PR description). Holds the
+/// customer ↔ Plaino conversation that drives the `/talk` surface.
+/// Workspace-isolated under RLS (see migration policy
+/// `chat_thread_workspace_isolation`).
+model ChatThread {
+  id          String        @id @default(uuid()) @db.Uuid
+  workspaceId String        @db.Uuid
+  /// Display title for the thread. Defaults to "talk with Plaino" in
+  /// v1; v2 may auto-summarize from the first exchange.
+  title       String        @default("talk with Plaino")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messages    ChatMessage[]
+
+  @@index([workspaceId, updatedAt])
+}
+
+/// One message in a Plaino chat thread. `body` is encrypted at rest
+/// with the v1 envelope (`lib/security/encryption` — `v1:iv:tag:ct`)
+/// because the customer routinely pastes account details, addresses,
+/// and other PII into chat. `metadata` carries the dispatcher's
+/// classification (ANSWER / REGISTER / DECLINE_HONESTLY) and any
+/// registered SupportRequest id when the message hand-off happened.
+model ChatMessage {
+  id          String     @id @default(uuid()) @db.Uuid
+  threadId    String     @db.Uuid
+  workspaceId String     @db.Uuid
+  /// "customer" — the human; "plaino" — the named service partner.
+  /// Stored as a String (not an enum) because v2 may introduce a
+  /// "system" role for status pings; widening a String column is
+  /// schema-cheap, widening an enum is not.
+  role        String
+  /// AES-256-GCM ciphertext using the v1 envelope. NEVER plaintext at
+  /// rest. The dispatcher + render path are the only readers; they
+  /// always decrypt before surfacing.
+  body        String
+  /// Dispatcher decision + any registered SupportRequest id.
+  /// NULLABLE — v2 may attach more metadata; v1 is best-effort.
+  metadata    Json?
+  createdAt   DateTime   @default(now())
+  thread      ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@index([workspaceId, createdAt])
 }

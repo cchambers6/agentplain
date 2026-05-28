@@ -21,6 +21,8 @@
  * duplicating the catalog.
  */
 
+import type { DisciplineId } from '@/lib/disciplines';
+
 export type MarketplaceStatus = 'available' | 'coming-soon' | 'beta';
 
 /**
@@ -35,6 +37,18 @@ export type MarketplaceProviderKey =
   | 'QUICKBOOKS'
   | 'SLACK'
   | null;
+
+/**
+ * Per-vertical relevance. A connector tile is only shown to a workspace
+ * whose vertical is in this list. The sentinel `'all'` means horizontal —
+ * relevant across every vertical (Gmail, Slack, QuickBooks, etc.).
+ *
+ * Verticals match `lib/auth/vertical-enum.ts → SLUG_TO_ENUM` keys (the
+ * customer-facing slug). Keeping this as a sibling field on the marketplace
+ * entry (rather than a separate registry) means the catalog stays the one
+ * source of truth — per `feedback_no_silent_vendor_lock.md`.
+ */
+export type VerticalRelevance = 'all' | readonly string[];
 
 export interface MarketplaceEntry {
   /** Slug used in the MCP endpoint path. */
@@ -66,6 +80,17 @@ export interface MarketplaceEntry {
   /** Which `IntegrationProvider` row this entry persists as. Null for
    *  Coming Soon — no rows exist until the connector ships. */
   providerKey: MarketplaceProviderKey;
+  /** Disciplines this connector serves (Strand 1 UX wedge, 2026-05-28).
+   *  A single connector can serve multiple disciplines — Slack lands in
+   *  both customer-success and operations; HubSpot in marketing,
+   *  sales-enablement, and customer-success. The Discipline panel + the
+   *  marketplace facet read this to bucket and filter tiles. */
+  disciplines: readonly DisciplineId[];
+  /** Per-vertical relevance. The marketplace UI hides tiles whose
+   *  `verticalRelevance` does not include the workspace's vertical (or
+   *  is not `'all'`). Lets a CPA workspace stop seeing realty-only AMS
+   *  tiles by default. */
+  verticalRelevance: VerticalRelevance;
 }
 
 export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
@@ -80,6 +105,11 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     oauthConfigKey: 'GMAIL_OAUTH',
     status: 'available',
     providerKey: 'GOOGLE',
+    // Email is the substrate every discipline reads from — inbox triage
+    // is the operations spine; sales follow-ups, customer-success checks,
+    // and marketing reply drafts all sit on top of it.
+    disciplines: ['operations', 'sales-enablement', 'customer-success', 'marketing'],
+    verticalRelevance: 'all',
   },
   {
     id: 'outlook',
@@ -96,6 +126,8 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     oauthConfigKey: 'MICROSOFT_OAUTH',
     status: 'available',
     providerKey: 'M365',
+    disciplines: ['operations', 'sales-enablement', 'customer-success', 'marketing'],
+    verticalRelevance: 'all',
   },
   {
     id: 'teams',
@@ -120,6 +152,8 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     oauthConfigKey: 'MICROSOFT_OAUTH',
     status: 'available',
     providerKey: 'M365',
+    disciplines: ['operations', 'customer-success', 'sales-enablement'],
+    verticalRelevance: 'all',
   },
   {
     id: 'onedrive',
@@ -141,6 +175,8 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     oauthConfigKey: 'MICROSOFT_OAUTH',
     status: 'available',
     providerKey: 'M365',
+    disciplines: ['operations', 'legal', 'finance'],
+    verticalRelevance: 'all',
   },
   {
     id: 'excel',
@@ -159,6 +195,8 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     oauthConfigKey: 'MICROSOFT_OAUTH',
     status: 'available',
     providerKey: 'M365',
+    disciplines: ['analytics', 'finance', 'operations'],
+    verticalRelevance: 'all',
   },
   // ── Coming soon: the next six connectors on the substrate. Each has a
   // waitlist CTA that funnels through /custom?type=integration-waitlist&id=…
@@ -175,6 +213,8 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     oauthConfigKey: 'QUICKBOOKS_OAUTH',
     status: 'available',
     providerKey: 'QUICKBOOKS',
+    disciplines: ['finance', 'analytics'],
+    verticalRelevance: 'all',
   },
   {
     id: 'hubspot',
@@ -187,6 +227,8 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     oauthConfigKey: 'HUBSPOT_OAUTH',
     status: 'coming-soon',
     providerKey: null,
+    disciplines: ['sales-enablement', 'marketing', 'customer-success'],
+    verticalRelevance: 'all',
   },
   {
     id: 'docusign',
@@ -199,6 +241,8 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     oauthConfigKey: 'DOCUSIGN_OAUTH',
     status: 'available',
     providerKey: 'DOCUSIGN',
+    disciplines: ['legal', 'sales-enablement', 'operations'],
+    verticalRelevance: 'all',
   },
   {
     id: 'google-drive',
@@ -218,6 +262,8 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     oauthConfigKey: 'GOOGLE_OAUTH',
     status: 'available',
     providerKey: 'GOOGLE',
+    disciplines: ['operations', 'legal', 'research'],
+    verticalRelevance: 'all',
   },
   {
     id: 'slack',
@@ -243,6 +289,8 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     oauthConfigKey: 'SLACK_OAUTH',
     status: 'available',
     providerKey: 'SLACK',
+    disciplines: ['customer-success', 'operations'],
+    verticalRelevance: 'all',
   },
   {
     id: 'paypal',
@@ -255,6 +303,8 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     oauthConfigKey: 'PAYPAL_OAUTH',
     status: 'coming-soon',
     providerKey: null,
+    disciplines: ['finance'],
+    verticalRelevance: 'all',
   },
   {
     id: 'canva',
@@ -267,6 +317,8 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     oauthConfigKey: 'CANVA_OAUTH',
     status: 'coming-soon',
     providerKey: null,
+    disciplines: ['marketing'],
+    verticalRelevance: 'all',
   },
 ];
 
@@ -321,4 +373,31 @@ export function oauthStartPath(
  */
 export function waitlistPath(entry: MarketplaceEntry): string {
   return `/custom?type=integration-waitlist&id=${encodeURIComponent(entry.id)}`;
+}
+
+/**
+ * Whether a marketplace entry is relevant to the given vertical slug.
+ * `verticalRelevance === 'all'` is always relevant; otherwise the slug
+ * must appear in the list. The marketplace facet uses this to hide tiles
+ * a workspace would not connect (e.g. realty-only AMS tiles in a CPA
+ * workspace).
+ */
+export function entryAppliesToVertical(
+  entry: MarketplaceEntry,
+  verticalSlug: string,
+): boolean {
+  if (entry.verticalRelevance === 'all') return true;
+  return entry.verticalRelevance.includes(verticalSlug);
+}
+
+/**
+ * Marketplace entries that serve a given discipline. Used by the
+ * discipline detail page and by the panel card's connector-count badge.
+ */
+export function entriesForDiscipline(
+  disciplineId: string,
+): readonly MarketplaceEntry[] {
+  return MARKETPLACE_ENTRIES.filter((e) =>
+    (e.disciplines as readonly string[]).includes(disciplineId),
+  );
 }

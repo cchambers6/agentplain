@@ -452,11 +452,18 @@ model WorkApprovalQueueItem {
   decidedAt       DateTime?
   decidedByUserId String?            @db.Uuid
   decisionReason  String?
+  /// Discipline this item belongs to — one of the 8 from `lib/disciplines`.
+  /// NULL on legacy rows written before the discipline axis landed; the
+  /// UI buckets NULL items into "All recent" (the fallback section).
+  /// New inserts populate this where the producing skill / agent has a
+  /// known discipline tag.
+  discipline      String?
   workspace       Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   decidedBy       User?              @relation("DecidedBy", fields: [decidedByUserId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, status])
   @@index([workspaceId, kind, status])
+  @@index([workspaceId, discipline, status])
 }
 
 // Append-only inter-agent handoff log; powers per-listing/per-lead activity feeds.
@@ -953,6 +960,14 @@ model WorkspacePreference {
   /// line observation derived from a DRAFT_EDIT or DRAFT_REJECT
   /// signal. Inlined verbatim into the draft prompt.
   learnedDraftNotes   String[]  @default([])
+  /// Disciplines the customer has explicitly turned OFF on the
+  /// Discipline panel. Defaults to empty — every discipline is enabled
+  /// for a new workspace, and the panel toggle adds to this list when
+  /// the operator opts out. The panel toggle is the customer-facing
+  /// activation surface from Strand 1 §5.2 (the UX wedge); the runtime
+  /// wiring (skip vs. fire) deepens in later waves — this column is the
+  /// truth source those later layers read.
+  disabledDisciplines String[]  @default([])
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)

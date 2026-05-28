@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ApHeritageButton,
   ApPaperCard,
   ApPaperSheet,
   PlainoAvatar,
 } from "@/components/ui/ap";
+import {
+  listDisciplines,
+  type DisciplineId,
+} from "@/lib/disciplines";
+import { bucketApprovals } from "@/lib/disciplines/grouping";
 import { decideApprovalAction, editApprovalDraftAction } from "./actions";
 import type { RenderedApproval } from "./renderApprovalPayload";
 
@@ -14,6 +19,9 @@ export interface ApprovalRow {
   id: string;
   agentSlug: string;
   kind: string;
+  /** Validated DisciplineId or null for legacy rows written before the
+   *  discipline axis landed. NULL rows land in the "All recent" fallback. */
+  discipline: DisciplineId | null;
   proposedAtIso: string;
   rendered: RenderedApproval;
 }
@@ -21,25 +29,142 @@ export interface ApprovalRow {
 interface ApprovalsListProps {
   workspaceId: string;
   rows: ApprovalRow[];
+  initialDiscipline: DisciplineId | null;
 }
 
-export function ApprovalsList({ workspaceId, rows }: ApprovalsListProps) {
+const ALL = "all" as const;
+type FilterValue = typeof ALL | DisciplineId;
+
+/**
+ * Items that get elevated into the "Needs you specifically" section.
+ * Today the explicit-tag signal is `priority === 'critical'` on admin
+ * cards (the existing `adminBorderClass` pattern); the same rule wins for
+ * compliance-flagged drafts because they ride the same priority field.
+ * The bar stays deliberately narrow — items in this bucket should be
+ * things the broker MUST read, not just "items needing approval at all."
+ */
+function isNeedsYou(row: ApprovalRow): boolean {
+  return row.rendered.admin?.priority === "critical";
+}
+
+export function ApprovalsList({
+  workspaceId,
+  rows,
+  initialDiscipline,
+}: ApprovalsListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<FilterValue>(
+    initialDiscipline ?? ALL,
+  );
   const editing = rows.find((r) => r.id === editingId) ?? null;
+  const disciplines = listDisciplines();
+
+  // Apply the discipline filter once, up front. The pure-function
+  // bucketing helper then carves the filtered list into three buckets;
+  // its unit tests are in `tests/disciplines-ux-wedge.test.ts`.
+  const filtered = useMemo(() => {
+    if (activeFilter === ALL) return rows;
+    return rows.filter((r) => r.discipline === activeFilter);
+  }, [rows, activeFilter]);
+
+  const buckets = useMemo(
+    () =>
+      bucketApprovals(
+        filtered.map((r) => ({ ...r, isNeedsYou: isNeedsYou(r) })),
+      ),
+    [filtered],
+  );
+  const needsYou = buckets.needsYou;
+  const byDiscipline = buckets.byDiscipline;
+  const allRecentFallback = buckets.fallback;
+
+  // Per-chip counts (unfiltered universe so a chip never reads 0 just
+  // because the user picked a different chip first).
+  const chipCounts = useMemo(() => {
+    const m = new Map<FilterValue, number>();
+    m.set(ALL, rows.length);
+    for (const d of disciplines) {
+      m.set(d.id, rows.filter((r) => r.discipline === d.id).length);
+    }
+    return m;
+  }, [rows, disciplines]);
 
   return (
     <>
-      <ul className="mt-8 space-y-4">
-        {rows.map((row) => (
-          <li key={row.id}>
-            <ApprovalArticle
-              row={row}
-              workspaceId={workspaceId}
-              onEdit={() => setEditingId(row.id)}
-            />
-          </li>
+      <div
+        className="mt-6 flex flex-wrap items-center gap-2"
+        role="group"
+        aria-label="Filter approvals by discipline"
+      >
+        <FilterChip
+          label="all"
+          count={chipCounts.get(ALL) ?? 0}
+          active={activeFilter === ALL}
+          onClick={() => setActiveFilter(ALL)}
+        />
+        {disciplines.map((d) => (
+          <FilterChip
+            key={d.id}
+            label={d.name.toLowerCase()}
+            count={chipCounts.get(d.id) ?? 0}
+            active={activeFilter === d.id}
+            onClick={() => setActiveFilter(d.id)}
+            disabled={(chipCounts.get(d.id) ?? 0) === 0}
+          />
         ))}
-      </ul>
+      </div>
+
+      <Section
+        title="Needs you specifically"
+        subtitle="High-urgency items elevated above the queue."
+        items={needsYou}
+        empty="Nothing flagged as urgent right now."
+        workspaceId={workspaceId}
+        onEdit={(id) => setEditingId(id)}
+      />
+
+      <h2 className="mt-12 font-display text-2xl text-ink">By discipline</h2>
+      <p className="mt-2 text-[13px] leading-relaxed text-mute">
+        Grouped by the discipline that produced each draft.
+      </p>
+      {byDiscipline.size === 0 ? (
+        <p className="mt-6 border-l-2 border-rule pl-4 text-[13px] leading-relaxed text-mute">
+          Nothing to group right now. Items appear here as your fleet
+          produces tagged drafts.
+        </p>
+      ) : (
+        <div className="mt-6 space-y-10">
+          {disciplines
+            .filter((d) => (byDiscipline.get(d.id)?.length ?? 0) > 0)
+            .map((d) => {
+              const items = byDiscipline.get(d.id) ?? [];
+              return (
+                <DisciplineSection
+                  key={d.id}
+                  name={d.name}
+                  count={items.length}
+                  items={items}
+                  workspaceId={workspaceId}
+                  onEdit={(id) => setEditingId(id)}
+                />
+              );
+            })}
+        </div>
+      )}
+
+      <h2 className="mt-12 font-display text-2xl text-ink">All recent</h2>
+      <p className="mt-2 text-[13px] leading-relaxed text-mute">
+        Anything not yet tagged with a discipline lands here so nothing
+        slips through.
+      </p>
+      <Section
+        title=""
+        items={allRecentFallback}
+        empty="Every recent item already grouped above."
+        workspaceId={workspaceId}
+        onEdit={(id) => setEditingId(id)}
+        hideTitle
+      />
 
       <ApPaperSheet
         open={editing !== null}
@@ -92,6 +217,127 @@ export function ApprovalsList({ workspaceId, rows }: ApprovalsListProps) {
         ) : null}
       </ApPaperSheet>
     </>
+  );
+}
+
+interface SectionProps {
+  title: string;
+  subtitle?: string;
+  items: ApprovalRow[];
+  empty: string;
+  workspaceId: string;
+  onEdit: (id: string) => void;
+  hideTitle?: boolean;
+}
+
+function Section({
+  title,
+  subtitle,
+  items,
+  empty,
+  workspaceId,
+  onEdit,
+  hideTitle,
+}: SectionProps) {
+  return (
+    <section className={hideTitle ? "mt-6" : "mt-12"}>
+      {hideTitle ? null : (
+        <>
+          <h2 className="font-display text-2xl text-ink">{title}</h2>
+          {subtitle ? (
+            <p className="mt-2 text-[13px] leading-relaxed text-mute">
+              {subtitle}
+            </p>
+          ) : null}
+        </>
+      )}
+      {items.length === 0 ? (
+        <p className="mt-4 border-l-2 border-rule pl-4 text-[13px] leading-relaxed text-mute">
+          {empty}
+        </p>
+      ) : (
+        <ul className="mt-6 space-y-4">
+          {items.map((row) => (
+            <li key={row.id}>
+              <ApprovalArticle
+                row={row}
+                workspaceId={workspaceId}
+                onEdit={() => onEdit(row.id)}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+interface DisciplineSectionProps {
+  name: string;
+  count: number;
+  items: ApprovalRow[];
+  workspaceId: string;
+  onEdit: (id: string) => void;
+}
+
+function DisciplineSection({
+  name,
+  count,
+  items,
+  workspaceId,
+  onEdit,
+}: DisciplineSectionProps) {
+  return (
+    <section aria-label={`${name} approvals`}>
+      <header className="flex flex-wrap items-baseline gap-3">
+        <h3 className="font-display text-xl text-ink">{name}</h3>
+        <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+          {count} {count === 1 ? "item" : "items"}
+        </span>
+      </header>
+      <ul className="mt-4 space-y-4">
+        {items.map((row) => (
+          <li key={row.id}>
+            <ApprovalArticle
+              row={row}
+              workspaceId={workspaceId}
+              onEdit={() => onEdit(row.id)}
+            />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+interface FilterChipProps {
+  label: string;
+  count: number;
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}
+
+function FilterChip({ label, count, active, disabled, onClick }: FilterChipProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-pressed={active}
+      className={[
+        "inline-flex items-center gap-2 border px-3 py-1 font-mono text-[11px] tracking-eyebrow uppercase transition",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
+        active
+          ? "border-ink bg-ink text-paper"
+          : disabled
+            ? "cursor-not-allowed border-rule text-mute/60"
+            : "border-rule bg-paper text-ink hover:border-ink",
+      ].join(" ")}
+    >
+      {label}
+      <span className="opacity-70">{count}</span>
+    </button>
   );
 }
 

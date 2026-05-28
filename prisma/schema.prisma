@@ -102,6 +102,27 @@ enum SeatBand {
   SEATS_50_99
 }
 
+// Source surface that produced an LLM call. Tagged onto every
+// `LlmUsageRecord` row so the usage pane can break down spend by agent.
+// Adding a new surface widens the enum; OTHER is the safety net for any
+// LLM call that doesn't yet carry a `sourceSurface` in its meta.
+// Mirrors the call-site names already used by `LlmRequestMeta.skill`.
+enum LlmSourceSurface {
+  PLAINO_CHAT
+  OFFICE_ADMIN
+  CATEGORIZE
+  COORDINATE
+  SCHEDULE
+  DRAFT
+  SUPPORT_HANDLER
+  INBOX_TRIAGE
+  FOLLOW_UP_CHASER
+  PROCESS_DOC_DRAFTER
+  SCHEDULER_SWEEP
+  MEMORY_EXTRACT
+  OTHER
+}
+
 enum WorkApprovalKind {
   COMPLIANCE_FLAG
   LISTING_RECOMMENDATION
@@ -315,35 +336,35 @@ model User {
 }
 
 model Workspace {
-  id                     String                  @id @default(uuid()) @db.Uuid
-  name                   String
-  slug                   String                  @unique
+  id                       String                  @id @default(uuid()) @db.Uuid
+  name                     String
+  slug                     String                  @unique
   // Phase 1 audience tier (legacy). See WorkspaceTier comment.
-  tier                   WorkspaceTier           @default(HIGH_TOUCH)
+  tier                     WorkspaceTier           @default(HIGH_TOUCH)
   // Canonical per-seat tier (product_spec.md §13.1). Drives pricing, gating,
   // and the marketing/[vertical] CTAs. Required on every workspace; defaults
   // REGULAR so existing Phase 1 realty workspaces backfill cleanly.
-  verticalTier           WorkspaceVerticalTier   @default(REGULAR)
+  verticalTier             WorkspaceVerticalTier   @default(REGULAR)
   // Vertical the workspace operates in. Required, defaults REAL_ESTATE for
   // Phase 1 backfill. Spec §13.2 lines 444–453.
-  vertical               Vertical                @default(REAL_ESTATE)
-  stateCode              String                  @default("GA") @db.VarChar(2)
-  billingMode            WorkspaceBillingMode    @default(MANUAL_INVOICE)
-  stripeCustomerId       String?                 @unique
-  stripeSubscriptionId   String?                 @unique
-  tierPriceUsdMonthly    Int? // hundredths of a dollar; populated for manual invoicing
-  settings               Json                    @default("{}")
+  vertical                 Vertical                @default(REAL_ESTATE)
+  stateCode                String                  @default("GA") @db.VarChar(2)
+  billingMode              WorkspaceBillingMode    @default(MANUAL_INVOICE)
+  stripeCustomerId         String?                 @unique
+  stripeSubscriptionId     String?                 @unique
+  tierPriceUsdMonthly      Int? // hundredths of a dollar; populated for manual invoicing
+  settings                 Json                    @default("{}")
   // Customer-initiated closure state. Flipped by
   // `lib/customer-data/closure.ts#initiateWorkspaceClosure` (BROKER_OWNER-
   // gated, typed-confirmation guarded). The hourly
   // `workspace-teardown-sweep` Inngest function reads
   // (closureStatus, scheduledHardPurgeAt) to decide which CLOSING workspaces
   // have aged out of the grace window and should hard-purge.
-  closureStatus            WorkspaceClosureStatus @default(ACTIVE)
+  closureStatus            WorkspaceClosureStatus  @default(ACTIVE)
   closingInitiatedAt       DateTime?
   /// The User who initiated closure. SetNull so the workspace row survives
   /// the user being removed (audit + billing remain queryable).
-  closingInitiatedByUserId String?                @db.Uuid
+  closingInitiatedByUserId String?                 @db.Uuid
   /// UTC instant the hard purge becomes eligible. Set by
   /// `initiateWorkspaceClosure`; reset to NULL on cancel.
   scheduledHardPurgeAt     DateTime?
@@ -353,29 +374,30 @@ model Workspace {
   /// Captured for the operator/CS triage signal — never resurfaced to
   /// other customers.
   closureReason            String?
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  memberships            Membership[]
-  workApprovalItems      WorkApprovalQueueItem[]
-  thresholds             WorkThresholdConfig[]
-  handoffs               HandoffLogEntry[]
-  flags                  ComplianceFlag[]
-  capabilityProposals    CapabilityProposal[]
-  invoices               WorkspaceInvoice[]
-  auditEntries           AuditLog[]
-  onboardingState        OnboardingState?
-  subscription           Subscription?
-  integrationCredentials IntegrationCredential[]
-  webhookSubscriptions   WebhookSubscription[]
-  webhookEvents          WebhookEvent[]
-  knowledgeDocuments     KnowledgeDocument[]
-  embeddings             Embedding[]
-  supportRequests        SupportRequest[]
-  preference             WorkspacePreference?
-  preferenceSignals      PreferenceSignal[]
-  chatThreads            ChatThread[]
-  chatMessages           ChatMessage[]
-  memoryEntries          WorkspaceMemoryEntry[]
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  memberships              Membership[]
+  workApprovalItems        WorkApprovalQueueItem[]
+  thresholds               WorkThresholdConfig[]
+  handoffs                 HandoffLogEntry[]
+  flags                    ComplianceFlag[]
+  capabilityProposals      CapabilityProposal[]
+  invoices                 WorkspaceInvoice[]
+  auditEntries             AuditLog[]
+  onboardingState          OnboardingState?
+  subscription             Subscription?
+  integrationCredentials   IntegrationCredential[]
+  webhookSubscriptions     WebhookSubscription[]
+  webhookEvents            WebhookEvent[]
+  knowledgeDocuments       KnowledgeDocument[]
+  embeddings               Embedding[]
+  supportRequests          SupportRequest[]
+  preference               WorkspacePreference?
+  preferenceSignals        PreferenceSignal[]
+  chatThreads              ChatThread[]
+  chatMessages             ChatMessage[]
+  memoryEntries            WorkspaceMemoryEntry[]
+  llmUsageRecords          LlmUsageRecord[]
 
   @@index([slug])
   @@index([vertical])
@@ -1135,24 +1157,24 @@ model ChatThread {
 /// classification (ANSWER / REGISTER / DECLINE_HONESTLY) and any
 /// registered SupportRequest id when the message hand-off happened.
 model ChatMessage {
-  id          String     @id @default(uuid()) @db.Uuid
-  threadId    String     @db.Uuid
-  workspaceId String     @db.Uuid
+  id                   String                 @id @default(uuid()) @db.Uuid
+  threadId             String                 @db.Uuid
+  workspaceId          String                 @db.Uuid
   /// "customer" — the human; "plaino" — the named service partner.
   /// Stored as a String (not an enum) because v2 may introduce a
   /// "system" role for status pings; widening a String column is
   /// schema-cheap, widening an enum is not.
-  role        String
+  role                 String
   /// AES-256-GCM ciphertext using the v1 envelope. NEVER plaintext at
   /// rest. The dispatcher + render path are the only readers; they
   /// always decrypt before surfacing.
-  body        String
+  body                 String
   /// Dispatcher decision + any registered SupportRequest id.
   /// NULLABLE — v2 may attach more metadata; v1 is best-effort.
-  metadata    Json?
-  createdAt   DateTime   @default(now())
-  thread      ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  metadata             Json?
+  createdAt            DateTime               @default(now())
+  thread               ChatThread             @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  workspace            Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   /// Memory entries Plaino extracted from this message. Cascade-deletes
   /// when the source message is cleared so a deleted turn doesn't leave
   /// a dangling sourceChatMessageId reference.
@@ -1212,4 +1234,41 @@ model WorkspaceMemoryEntry {
   /// a sort step.
   @@index([workspaceId, kind, pinned, createdAt])
   @@index([workspaceId, pinned, updatedAt])
+}
+
+// Per-LLM-call token + cost accounting. One row per successful
+// LLM completion that carries a workspaceId in its meta (the
+// LoggingLlmProvider drops workspaceId-less calls instead of fabricating
+// a fake tag — see lib/billing/usage/recorder.ts). Cost is captured at
+// write time using current list pricing in micro-cents so the row
+// remains source-of-truth even if pricing later shifts. `stripeReportedAt`
+// is the marker for the daily Stripe meter-emission cron; NULL = backlog,
+// non-NULL = already reported (idempotent).
+//
+// RLS isolation matches every other workspace-scoped table (operator
+// sees all; otherwise workspaceId GUC must match). See
+// prisma/migrations/20260528400000_add_llm_usage_record/migration.sql.
+model LlmUsageRecord {
+  id                  String           @id @default(uuid()) @db.Uuid
+  workspaceId         String           @db.Uuid
+  model               String
+  inputTokens         Int              @default(0)
+  outputTokens        Int              @default(0)
+  cacheCreationTokens Int              @default(0)
+  cacheReadTokens     Int              @default(0)
+  /// Computed at write time from `pricing.ts` using Anthropic list rates.
+  /// BigInt micro-cents to avoid rounding drift across millions of rows.
+  costMicroCents      BigInt           @default(0)
+  sourceSurface       LlmSourceSurface
+  /// Daily Stripe-meter cron sets this once a row has been reported as a
+  /// usage record on the workspace's Subscription. NULL = backlog.
+  stripeReportedAt    DateTime?
+  createdAt           DateTime         @default(now())
+  workspace           Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  /// Window aggregations + per-surface breakdown on the billing page.
+  @@index([workspaceId, createdAt(sort: Desc)])
+  /// Daily Stripe cron sweep — only unreported rows. Postgres partial
+  /// index keeps the cron's scan tiny once backlog drains.
+  @@index([workspaceId, stripeReportedAt], map: "LlmUsageRecord_workspace_meter_idx")
 }

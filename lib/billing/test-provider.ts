@@ -31,6 +31,8 @@ import type {
   CreateSubscriptionInput,
   CreateSubscriptionResult,
   ProviderSubscriptionStatus,
+  ReportMeterEventInput,
+  ReportMeterEventResult,
   RetrieveSubscriptionResult,
   UpdateSubscriptionInput,
   VerifyWebhookInput,
@@ -196,6 +198,20 @@ export class TestBillingProvider implements BillingProvider {
       pdfUrl: `https://invoice.example/${id}.pdf`,
       status: "open",
     };
+  }
+
+  // -------------------------------------------------------------------
+  // Metered billing — captures every reported event in-memory so tests
+  // can assert on the cron's emission shape without a Stripe round-trip.
+  // -------------------------------------------------------------------
+
+  readonly reportedMeterEvents: ReportMeterEventInput[] = [];
+
+  async reportMeterEvent(
+    input: ReportMeterEventInput,
+  ): Promise<ReportMeterEventResult> {
+    this.reportedMeterEvents.push(input);
+    return { identifier: input.identifier };
   }
 
   // -------------------------------------------------------------------

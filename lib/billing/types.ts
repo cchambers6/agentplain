@@ -151,6 +151,40 @@ export interface CreateInvoiceResult {
 }
 
 // =====================================================================
+// Metered billing — token-usage emission
+// =====================================================================
+
+export interface ReportMeterEventInput {
+  /** The Stripe meter's `event_name` — set during meter creation in the
+   *  Stripe Dashboard. Stored in env (`STRIPE_USAGE_METER_EVENT_NAME`)
+   *  so the cron, the dashboard, and the provider all share one string. */
+  eventName: string;
+  /** The workspace's Stripe customer id. The meter's `customer_mapping`
+   *  is configured against `stripe_customer_id` in the payload (the
+   *  Stripe default). */
+  providerCustomerId: string;
+  /** Quantity reported on this event. Integer (Stripe meter events
+   *  accept integer-or-decimal strings; we round to the nearest unit at
+   *  the call site). Per the cron, this is per-workspace summed
+   *  micro-cents so the meter's price-per-unit is "1 micro-cent". */
+  quantity: number;
+  /** Idempotency key — Stripe enforces uniqueness within a 24h rolling
+   *  window. We compose this from the workspace id + a UTC date stamp
+   *  so retrying the cron the same day no-ops. */
+  identifier: string;
+  /** Optional UNIX-seconds timestamp. Defaults to "now" at Stripe. We
+   *  pass an explicit timestamp so the event sits inside the billing
+   *  period the rows belonged to (rather than the cron's wall clock). */
+  timestampSeconds?: number;
+}
+
+export interface ReportMeterEventResult {
+  /** Stripe's returned event identifier — same as `input.identifier`
+   *  unless the request omitted it. */
+  identifier: string;
+}
+
+// =====================================================================
 // Webhook
 // =====================================================================
 
@@ -201,6 +235,16 @@ export interface BillingProvider {
 
   // --- Manual invoicing (Phase 1 high-touch) ---
   createManualInvoice(input: CreateInvoiceInput): Promise<CreateInvoiceResult>;
+
+  // --- Metered billing — token-usage meter events ---
+  /** Report one meter event. Implementations forward to Stripe Billing
+   *  Meter Events. The `identifier` is the idempotency key — the same
+   *  call within a 24h Stripe window is a no-op on Stripe's side. Per
+   *  feedback_no_silent_vendor_lock: the Stripe SDK call lives inside
+   *  the provider, not at the cron. */
+  reportMeterEvent(
+    input: ReportMeterEventInput,
+  ): Promise<ReportMeterEventResult>;
 
   // --- Pricing ---
   /** Resolve the provider-side Price id for (tier, band). Implementations

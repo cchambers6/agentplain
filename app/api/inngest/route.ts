@@ -22,6 +22,7 @@ import { schedulerSweepFn } from "@/lib/inngest/functions/scheduler-sweep";
 import { followUpChaserSweepFn } from "@/lib/inngest/functions/follow-up-chaser-sweep";
 import { processDocDrafterSweepFn } from "@/lib/inngest/functions/process-doc-drafter-sweep";
 import { supportHandlerOnCreateFn } from "@/lib/inngest/functions/support-handler-on-create";
+import { stripeUsageMeterSweepFn } from "@/lib/inngest/functions/stripe-usage-meter-sweep";
 import { workspaceTeardownSweepFn } from "@/lib/customer-data";
 
 export const runtime = "nodejs";
@@ -38,6 +39,7 @@ export const { GET, POST, PUT } = serve({
     followUpChaserSweepFn,
     processDocDrafterSweepFn,
     supportHandlerOnCreateFn,
+    stripeUsageMeterSweepFn,
     workspaceTeardownSweepFn,
   ],
 });

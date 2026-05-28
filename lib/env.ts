@@ -102,6 +102,25 @@ export const env = {
   // scripts/stripe/setup-products.ts). No per-tier Price-id env vars.
   stripeSecretKey: () => required("STRIPE_SECRET_KEY"),
   stripeWebhookSecret: () => required("STRIPE_WEBHOOK_SECRET"),
+  // Stripe Billing Meter for token-usage emission. Two things must line
+  // up before the cron actually POSTs anything:
+  //   1. STRIPE_USAGE_METER_ENABLED=true (master switch).
+  //   2. STRIPE_USAGE_METER_EVENT_NAME set to the `event_name` of a
+  //      Meter you've created in the Stripe Dashboard. The Meter must
+  //      be configured with:
+  //        * customer_mapping.event_payload_key = "stripe_customer_id"
+  //        * value_settings.event_payload_key  = "value"
+  //        * default_aggregation.formula       = "sum"
+  //      …and the Meter must be linked to a metered Price on each
+  //      workspace's Subscription (Stripe Dashboard → Pricing →
+  //      Add price → Recurring → Per package + meter).
+  // Both vars are OPTIONAL so dev/preview don't fail at import. The
+  // daily cron logs + skips when either is missing, and the customer
+  // billing UI shows "tracked but not yet metered" — never fabricates.
+  stripeUsageMeterEnabled: (): boolean =>
+    optional("STRIPE_USAGE_METER_ENABLED") === "true",
+  stripeUsageMeterEventName: () =>
+    optional("STRIPE_USAGE_METER_EVENT_NAME"),
 
   // Inngest — trial-expiration cron + future skill scheduling. Local dev
   // mode auto-detects the dev server and signing is a no-op; production

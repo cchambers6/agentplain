@@ -142,7 +142,30 @@ export interface LlmRequestMeta {
   verticalSlug?: string;
   /** Free-form correlation id — e.g. webhook event id. */
   correlationId?: string;
+  /** Source surface (matches the `LlmSourceSurface` Prisma enum) for
+   *  per-agent breakdowns on the billing usage pane. When omitted the
+   *  recorder falls back to `OTHER`. Adding a new value here means
+   *  widening both this string union AND the Prisma enum — see
+   *  `lib/billing/usage/recorder.ts` for the resolver. */
+  sourceSurface?: LlmSourceSurfaceTag;
 }
+
+/** Mirrors `LlmSourceSurface` Prisma enum. Strings, not the enum import,
+ *  so `lib/llm` stays free of a Prisma dependency. */
+export type LlmSourceSurfaceTag =
+  | 'PLAINO_CHAT'
+  | 'OFFICE_ADMIN'
+  | 'CATEGORIZE'
+  | 'COORDINATE'
+  | 'SCHEDULE'
+  | 'DRAFT'
+  | 'SUPPORT_HANDLER'
+  | 'INBOX_TRIAGE'
+  | 'FOLLOW_UP_CHASER'
+  | 'PROCESS_DOC_DRAFTER'
+  | 'SCHEDULER_SWEEP'
+  | 'MEMORY_EXTRACT'
+  | 'OTHER';
 
 export interface LlmCompletion {
   text: string;

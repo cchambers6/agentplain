@@ -26,6 +26,7 @@ import {
   changePlanAction,
   openPortalAction,
 } from "./actions";
+import { UsagePanel } from "./UsagePanel";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -385,6 +386,16 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
             </section>
           ) : null}
 
+          {/* Token + cost usage. Falls back to the 30-day window when the
+              subscription has no current-period anchor (e.g. a workspace
+              still on a manual invoice that hasn't been mapped). */}
+          <UsagePanel
+            workspaceId={workspaceId}
+            rls={rls}
+            periodStart={derivePeriodStart(subscription.currentPeriodEnd)}
+            periodEnd={subscription.currentPeriodEnd}
+          />
+
           <p className="mt-12 border-t border-rule pt-6 text-[13px] leading-relaxed text-mute">
             Cancel anytime. Your service partner stays on through the
             end of the current period.
@@ -681,4 +692,16 @@ function readFlash(
 function pickFirst(v: string | string[] | undefined): string | null {
   if (!v) return null;
   return Array.isArray(v) ? v[0] ?? null : v;
+}
+
+// Derive the inclusive start of the current billing period from Stripe's
+// `currentPeriodEnd`. Stripe bills monthly on agentplain — the previous
+// anchor is exactly one month before the current one. We approximate by
+// subtracting one calendar month (handles 28/29/30/31-day months by
+// letting JS clamp).
+function derivePeriodStart(currentPeriodEnd: Date | null): Date | null {
+  if (!currentPeriodEnd) return null;
+  const d = new Date(currentPeriodEnd);
+  d.setUTCMonth(d.getUTCMonth() - 1);
+  return d;
 }

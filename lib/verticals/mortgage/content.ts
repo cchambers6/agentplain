@@ -100,13 +100,18 @@ export const mortgage: VerticalContent = {
   hero: {
     eyebrow: "Built for independent mortgage brokerages",
     headline: "The fleet for the independent loan-officer office.",
+    // INTEGRATES list names only the connect tiles in `lib/integrations/marketplace.ts`
+    // that ship `status: 'available'` today. LOS (Encompass / Calyx Point /
+    // LendingPad), pricing (Optimal Blue), AUS (DU / LP), and wholesale-lender
+    // portal adapters live in the per-vertical integration roadmap below and
+    // surface honestly there as planned, not in this present-tense hero clause.
     valueProp:
-      "agentplain REPLACES the document-chase that drowns every loan file, INTEGRATES with your LOS, wholesale lender portals, and DU/LP, and AUGMENTS the loan officer's read on every borrower interaction and TRID-sensitive disclosure.",
+      "agentplain REPLACES the document-chase that drowns every loan file, INTEGRATES with Outlook, OneDrive, and DocuSign on day one, and AUGMENTS the loan officer's read on every borrower interaction and TRID-sensitive disclosure.",
   },
 
   metaTitle: "agentplain for mortgage brokerages — independent loan-officer offices",
   metaDescription:
-    "An agentic fleet for the 2–10 loan-officer independent mortgage brokerage. Borrower triage, document collection, status updates, RESPA/TRID-aware compliance review on consumer-facing communication, and pipeline reporting — coordinated across Encompass, Calyx Point, LendingPad, and Optimal Blue.",
+    "An agentic fleet for the 2–10 loan-officer independent mortgage brokerage. Borrower triage, document collection, status updates, RESPA/TRID-aware compliance review on consumer-facing communication, and pipeline reporting — drafted for the loan officer's review and sent from your own systems.",
 
   jtbdTables: [
     {
@@ -223,13 +228,9 @@ export const mortgage: VerticalContent = {
       "Spreadsheet-driven production reporting — replaced by weekly drafted reads",
     ],
     integrate: [
-      "Encompass (ICE Mortgage Technology) — LOS",
-      "Calyx Point — LOS",
-      "LendingPad — LOS",
-      "Optimal Blue — pricing engine",
-      "DU / LP (Fannie / Freddie AUS)",
-      "Wholesale lender portals — UWM, Rocket Pro TPO, Pennymac, AmeriHome, and 10+ regional",
-      "Outlook + Microsoft 365 Graph",
+      "Outlook (per-LO OAuth — email + calendar)",
+      "OneDrive (working files + borrower-doc substrate)",
+      "DocuSign (TRID-compliant disclosure signatures)",
     ],
     augment: [
       "LO review on every borrower-facing draft — the agent drafts, the LO signs",

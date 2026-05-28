@@ -109,13 +109,19 @@ export const recruiting: VerticalContent = {
   hero: {
     eyebrow: "Built for boutique recruiting firms and in-house talent teams",
     headline: "The fleet for the boutique recruiting practice.",
+    // INTEGRATES list names only the connect tiles in `lib/integrations/marketplace.ts`
+    // that ship `status: 'available'` today. ATS (Bullhorn / Greenhouse / Lever
+    // / JobAdder / Recruiterflow / Workable), LinkedIn Recruiter, Apollo, and
+    // sequence-tool adapters live in the per-vertical integration roadmap
+    // below and surface honestly there as planned, not in this present-tense
+    // hero clause.
     valueProp:
-      "agentplain REPLACES the manual sourcing + first-touch drafting cycle, INTEGRATES with your ATS and the public license / production boards your candidates show up on, and AUGMENTS the recruiter's read on every outreach with substantiated production evidence.",
+      "agentplain REPLACES the manual sourcing + first-touch drafting cycle, INTEGRATES with Outlook, Gmail, Slack, and DocuSign on day one, and AUGMENTS the recruiter's read on every outreach with substantiated production evidence.",
   },
 
   metaTitle: "agentplain for recruiting firms — boutique and in-house talent teams",
   metaDescription:
-    "An agentic fleet for the 2–10 recruiter boutique firm or in-house talent team. Sourcing against public production data, drafted outreach with one substantiated reference per touch, opt-out compliance, pipeline tracking, and offer-package assembly — coordinated across Bullhorn, Greenhouse, LinkedIn Recruiter, and the verticalized license boards where your candidates live.",
+    "An agentic fleet for the 2–10 recruiter boutique firm or in-house talent team. Sourcing against public production data, drafted outreach with one substantiated reference per touch, opt-out compliance, pipeline tracking, and offer-package assembly — drafted for the recruiter's review and sent from your own systems.",
 
   jtbdTables: [
     {
@@ -272,15 +278,9 @@ export const recruiting: VerticalContent = {
       "Hand-built offer packages — replaced by drafted comp letters with role context",
     ],
     integrate: [
-      "Bullhorn (ATS — staffing-firm dominant)",
-      "Greenhouse (ATS — corporate)",
-      "Lever (ATS — corporate)",
-      "JobAdder (ATS — staffing/SMB)",
-      "Recruiterflow (ATS — boutique staffing)",
-      "LinkedIn Recruiter (sourcing — read-only)",
-      "Apollo / Sales Navigator (enrichment, where ToS-compliant)",
-      "Outlook + Microsoft 365 Graph",
-      "Public license / production boards (per vertical — FMLS for real-estate recruiters, state bar for legal recruiters, etc.)",
+      "Outlook + Gmail (per-recruiter OAuth — email + calendar)",
+      "Slack (coordinator messaging)",
+      "DocuSign (offer-letter signatures)",
     ],
     augment: [
       "Recruiter review on every outreach draft — opt-out line always present",

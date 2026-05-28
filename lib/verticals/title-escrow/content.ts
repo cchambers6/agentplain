@@ -101,13 +101,19 @@ export const titleEscrow: VerticalContent = {
   hero: {
     eyebrow: "Built for local title and escrow agencies",
     headline: "The fleet for the local title agency.",
+    // INTEGRATES list names only the connect tiles in `lib/integrations/marketplace.ts`
+    // that ship `status: 'available'` today. Title-production (SoftPro /
+    // RamQuest / Qualia / ResWare), underwriter-portal, county-recording, and
+    // title-plant adapters live in the per-vertical integration roadmap below
+    // and surface honestly there as planned, not in this present-tense hero
+    // clause.
     valueProp:
-      "agentplain REPLACES the file-intake and document-collection scramble, INTEGRATES with your title production system and the realtor/lender source documents, and AUGMENTS the closer's read on every closing-day prep packet.",
+      "agentplain REPLACES the file-intake and document-collection scramble, INTEGRATES with Outlook, OneDrive, Excel, and DocuSign on day one, and AUGMENTS the closer's read on every closing-day prep packet.",
   },
 
   metaTitle: "agentplain for title and escrow — local title agencies and closing offices",
   metaDescription:
-    "An agentic fleet for the 3–20 person title and escrow operation. File intake from realtor + lender channels, milestone tracking, closing-day prep, recording follow-up, and CFPB-aware customer communication — coordinated across SoftPro, RamQuest, Qualia, and your underwriter portals.",
+    "An agentic fleet for the 3–20 person title and escrow operation. File intake from realtor + lender channels, milestone tracking, closing-day prep, recording follow-up, and CFPB-aware customer communication — drafted for the closer's review and sent from your own systems.",
 
   jtbdTables: [
     {
@@ -238,13 +244,9 @@ export const titleEscrow: VerticalContent = {
       "Per-county recording portal navigation — drafted submissions for clerk to confirm",
     ],
     integrate: [
-      "SoftPro (title production)",
-      "RamQuest (title production)",
-      "Qualia (title production)",
-      "ResWare (title production)",
-      "Underwriter portals — Fidelity, First American, Old Republic, Stewart",
-      "Outlook + Microsoft 365 Graph",
-      "County recording portals (varies)",
+      "Outlook (per-closer OAuth — email + calendar)",
+      "OneDrive + Excel (file substrate + trust workbooks)",
+      "DocuSign (closing-day signature routing)",
     ],
     augment: [
       "Closer review on every customer-facing communication — CFPB-aware draft",

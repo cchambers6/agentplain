@@ -116,14 +116,20 @@ export const homeServices: VerticalContent = {
   hero: {
     eyebrow: "Built for residential trades operations",
     headline: "The fleet for the residential trades operation.",
+    // INTEGRATES list names only the connect tiles in `lib/integrations/marketplace.ts`
+    // that ship `status: 'available'` today. FSM (ServiceTitan / Jobber /
+    // Housecall Pro / FieldEdge), CRM (AccuLynx / JobNimbus / Roofr),
+    // CompanyCam, EagleView, Xactimate, and Local Service Ads / GBP adapters
+    // live in the per-vertical integration roadmap below and surface honestly
+    // there as planned, not in this present-tense hero clause.
     valueProp:
-      "agentplain REPLACES the lead-source juggle and the insurance-supplement scramble, INTEGRATES with AccuLynx, JobNimbus, CompanyCam, EagleView, and the carrier adjuster channels, and AUGMENTS the owner's read on every estimate, supplement, and homeowner-facing reply.",
+      "agentplain REPLACES the lead-source juggle and the insurance-supplement scramble, INTEGRATES with Outlook, Gmail, and QuickBooks Online on day one, and AUGMENTS the owner's read on every estimate, supplement, and homeowner-facing reply.",
   },
 
   metaTitle:
     "agentplain for home services — roofing, HVAC, GC remodel, landscaping",
   metaDescription:
-    "An agentic fleet for the 5–25 crew residential trades operation. Lead routing across HomeAdvisor / Angi / LSA / GBP, estimate generation from EagleView measurements, insurance-supplement drafting for storm work, project coordination, and review-and-referral cadence — coordinated across AccuLynx, JobNimbus, CompanyCam, and your insurance-claim channels.",
+    "An agentic fleet for the 5–25 crew residential trades operation. Lead routing across inbound sources, estimate drafting from measurement data, insurance-supplement drafting for storm work, project coordination, and review-and-referral cadence — drafted for the owner's review and sent from your own systems.",
 
   jtbdTables: [
     {
@@ -274,18 +280,9 @@ export const homeServices: VerticalContent = {
       "Reactive review collection — replaced by a T+7 cadence on every completed job",
     ],
     integrate: [
-      "ServiceTitan (FSM — HVAC/plumbing/electrical)",
-      "Jobber (FSM — multi-trade SMB)",
-      "Housecall Pro (FSM — multi-trade SMB)",
-      "FieldEdge (FSM — HVAC/plumbing)",
-      "AccuLynx (CRM — roofing)",
-      "JobNimbus (CRM — roofing/restoration)",
-      "Roofr (CRM — roofing)",
-      "CompanyCam (photo)",
-      "EagleView (aerial measurement — roofing)",
-      "Xactimate (insurance estimating — storm/restoration)",
-      "QuickBooks Online (accounting)",
-      "Local Service Ads + Google Business Profile (lead-source feeds)",
+      "Outlook + Gmail (per-rep OAuth — email + calendar)",
+      "Google Drive + OneDrive (photo + measurement substrate)",
+      "QuickBooks Online (accounting + invoice writes)",
     ],
     augment: [
       "Owner sign-off on every supplement before it leaves the office",

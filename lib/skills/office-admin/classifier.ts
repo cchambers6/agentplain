@@ -38,6 +38,9 @@ import {
 export interface ClassifyOfficeAdminInput {
   message: ParsedMessage;
   llm: LlmProvider;
+  /** Telemetry context for the `llm.usage` log line. */
+  workspaceId?: string;
+  verticalSlug?: string;
 }
 
 export async function classifyOfficeAdmin(
@@ -61,10 +64,19 @@ export async function classifyOfficeAdmin(
   const userPrompt = renderClassifierUserPrompt(message, screen.signals);
   const res = await llm.complete({
     system: OFFICE_ADMIN_SYSTEM_PROMPT,
+    // The office-admin classifier prompt is a workspace-agnostic
+    // constant — the same string across every workspace, every vertical,
+    // every fire. The highest cache-hit-rate surface in the chain.
+    cacheSystem: true,
     messages: [{ role: 'user', content: userPrompt }],
     responseFormat: 'json',
     temperature: 0.0,
     maxTokens: 256,
+    meta: {
+      skill: 'office-admin-classify',
+      workspaceId: input.workspaceId,
+      verticalSlug: input.verticalSlug,
+    },
   });
   if (!res.ok) {
     return skillError(

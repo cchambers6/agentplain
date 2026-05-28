@@ -20,14 +20,23 @@
  * Per `project_no_outbound_architecture.md`: this provider produces
  * text. It does not send, post, or otherwise execute. Whatever the
  * skill does with the text is the skill's concern.
+ *
+ * Prompt caching: callers mark `LlmContentBlock`s as `cacheable` (or
+ * pass `cacheSystem: true` on the request); the adapter translates that
+ * into the Anthropic SDK's `cache_control: { type: 'ephemeral' }`
+ * breakpoint and reads `cache_creation_input_tokens` +
+ * `cache_read_input_tokens` from the response usage. The
+ * `cache_control` SDK shape never leaks past this file.
  */
 
 import Anthropic, { APIError } from '@anthropic-ai/sdk';
 import {
   LlmCompletion,
   LlmCompletionRequest,
+  LlmContent,
   LlmProvider,
   LlmResult,
+  LlmUsage,
   llmError,
   llmOk,
 } from './types';
@@ -45,6 +54,9 @@ export interface AnthropicProviderConfig {
 
 const DEFAULT_MODEL = 'claude-sonnet-4-5';
 const DEFAULT_MAX_TOKENS = 2048;
+
+type SdkSystemBlock = { type: 'text'; text: string; cache_control?: { type: 'ephemeral' } };
+type SdkMessageBlock = { type: 'text'; text: string; cache_control?: { type: 'ephemeral' } };
 
 export class AnthropicProvider implements LlmProvider {
   readonly name = 'anthropic' as const;
@@ -82,22 +94,26 @@ export class AnthropicProvider implements LlmProvider {
     // SDK version; the universal pattern is to ask for JSON in the
     // system message and parse the text response. The skill code does the
     // parsing.
-    const system =
+    const jsonSuffix =
       request.responseFormat === 'json'
-        ? `${request.system}\n\nRespond with strict JSON only. Do not include explanatory prose, markdown fences, or surrounding text — only the JSON object.`
-        : request.system;
+        ? '\n\nRespond with strict JSON only. Do not include explanatory prose, markdown fences, or surrounding text — only the JSON object.'
+        : '';
+    const system = toSdkSystem(request.system, request.cacheSystem === true, jsonSuffix);
+    const messages = request.messages.map((m) => ({
+      role: m.role,
+      content: toSdkMessageContent(m.content),
+    }));
     try {
+      // `meta` is a telemetry passthrough — strip before hitting the SDK.
       const res = await this.client.messages.create({
         model,
         max_tokens: maxTokens,
         temperature,
         system,
-        messages: request.messages.map((m) => ({ role: m.role, content: m.content })),
+        messages,
       });
       const text = extractText(res);
-      const usage = res.usage
-        ? { inputTokens: res.usage.input_tokens, outputTokens: res.usage.output_tokens }
-        : null;
+      const usage = res.usage ? toLlmUsage(res.usage) : null;
       return llmOk({
         text,
         stopReason: res.stop_reason ?? null,
@@ -108,6 +124,51 @@ export class AnthropicProvider implements LlmProvider {
       return mapAnthropicError(err);
     }
   }
+}
+
+/** Convert the system string + optional JSON suffix to the SDK's
+ *  system shape. When `cacheSystem` is set we promote to a single
+ *  ephemeral-cacheable text block; otherwise we emit the plain string
+ *  the SDK also accepts. The JSON suffix attaches to the trailing block
+ *  / string so the model reads it last. */
+function toSdkSystem(
+  system: string,
+  cacheSystemShortcut: boolean,
+  jsonSuffix: string,
+): string | SdkSystemBlock[] {
+  const text = system + jsonSuffix;
+  if (!cacheSystemShortcut) return text;
+  return [{ type: 'text', text, cache_control: { type: 'ephemeral' } }];
+}
+
+/** Same translation for per-message content. Strings stay strings (the
+ *  SDK accepts both shapes for messages.content). */
+function toSdkMessageContent(content: LlmContent): string | SdkMessageBlock[] {
+  if (typeof content === 'string') return content;
+  return content.map((b) => {
+    const out: SdkMessageBlock = { type: 'text', text: b.text };
+    if (b.cacheable) out.cache_control = { type: 'ephemeral' };
+    return out;
+  });
+}
+
+function toLlmUsage(u: {
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_input_tokens?: number | null;
+  cache_read_input_tokens?: number | null;
+}): LlmUsage {
+  const out: LlmUsage = {
+    inputTokens: u.input_tokens,
+    outputTokens: u.output_tokens,
+  };
+  if (typeof u.cache_creation_input_tokens === 'number') {
+    out.cacheCreationInputTokens = u.cache_creation_input_tokens;
+  }
+  if (typeof u.cache_read_input_tokens === 'number') {
+    out.cacheReadInputTokens = u.cache_read_input_tokens;
+  }
+  return out;
 }
 
 function extractText(res: {

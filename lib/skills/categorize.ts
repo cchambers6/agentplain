@@ -33,6 +33,9 @@ export interface CategorizeSkillInput {
   /** Per-vertical prompt bundle. The runner looks one up from the
    *  workspace's vertical enum. */
   prompts: VerticalPromptBundle;
+  /** Telemetry context. The runner inlines workspace + vertical so the
+   *  `llm.usage` log line can slice cache-hit rate by workspace. */
+  workspaceId?: string;
 }
 
 export class CategorizeSkill implements ISkill<CategorizeSkillInput, Categorization> {
@@ -43,10 +46,23 @@ export class CategorizeSkill implements ISkill<CategorizeSkillInput, Categorizat
     const userPrompt = renderUserPrompt(input.message);
     const res = await this.llm.complete({
       system: input.prompts.categorize,
+      // Per `lib/llm/types.ts`: the categorize system prompt is stable
+      // across every fire of the loop for a given workspace+vertical
+      // within the 5-min Anthropic cache TTL — vertical-specific rules
+      // + workspace preference snippets + customer-context overlay only
+      // change when the workspace itself changes. Marking the system
+      // cacheable converts the heavy stable prefix into a cache-read on
+      // every subsequent fire.
+      cacheSystem: true,
       messages: [{ role: 'user', content: userPrompt }],
       responseFormat: 'json',
       temperature: 0.0,
       maxTokens: 512,
+      meta: {
+        skill: 'categorize',
+        workspaceId: input.workspaceId,
+        verticalSlug: input.prompts.verticalSlug,
+      },
     });
     if (!res.ok) {
       return skillError(

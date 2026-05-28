@@ -34,6 +34,7 @@ import {
   LlmCompletionRequest,
   LlmProvider,
   LlmResult,
+  flattenContent,
   llmOk,
 } from './types';
 
@@ -81,13 +82,13 @@ export class TestLlmProvider implements LlmProvider {
 export function digestRequest(req: LlmCompletionRequest): string {
   return [
     req.system.trim(),
-    ...req.messages.map((m) => `${m.role}:${m.content.trim()}`),
+    ...req.messages.map((m) => `${m.role}:${flattenContent(m.content).trim()}`),
   ].join('\n---\n');
 }
 
 function lastUserText(req: LlmCompletionRequest): string {
   for (let i = req.messages.length - 1; i >= 0; i--) {
-    if (req.messages[i].role === 'user') return req.messages[i].content.trim();
+    if (req.messages[i].role === 'user') return flattenContent(req.messages[i].content).trim();
   }
   return '';
 }
@@ -96,13 +97,30 @@ function wrap(text: string, req: LlmCompletionRequest): LlmCompletion {
   return {
     text,
     stopReason: 'end_turn',
-    usage: { inputTokens: estimateTokens(req), outputTokens: estimateTokens({ ...req, messages: [{ role: 'assistant', content: text }], system: '' }) },
+    usage: {
+      inputTokens: estimateTokens(req),
+      outputTokens: estimateTokens({
+        ...req,
+        messages: [{ role: 'assistant', content: text }],
+        system: '',
+      }),
+      // Cache flags are a no-op for the test provider: report 0 so any
+      // downstream metrics surface still parses cleanly. The Anthropic
+      // path is where real cache hits/writes get reported.
+      cacheCreationInputTokens: 0,
+      cacheReadInputTokens: 0,
+    },
     model: req.model ?? 'test-stub',
   };
 }
 
 function estimateTokens(req: LlmCompletionRequest): number {
-  const total = req.system.length + req.messages.reduce((sum, m) => sum + m.content.length, 0);
+  const sysLen = req.system.length;
+  const msgLen = req.messages.reduce(
+    (sum, m) => sum + flattenContent(m.content).length,
+    0,
+  );
+  const total = sysLen + msgLen;
   return Math.max(1, Math.ceil(total / 4));
 }
 

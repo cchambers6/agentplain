@@ -14,6 +14,11 @@
  *     skill chain remains exercisable in environments that have not yet
  *     wired up Anthropic credentials.
  *
+ * In every case the chosen inner provider is wrapped in a
+ * `LoggingLlmProvider` so every call emits a `llm.usage` log line with
+ * cache-hit metrics. Tests that want raw counts pull the inner provider
+ * via `innerProvider()` or pass an unwrapped provider directly.
+ *
  * This last rule is deliberate: PR-C ships *before* Conner has wired
  * `ANTHROPIC_API_KEY` to a budget — the heuristic test provider keeps
  * the value loop demonstrable on mock data without burning prod tokens.
@@ -21,6 +26,7 @@
  */
 
 import { AnthropicProvider } from './anthropic-provider';
+import { LoggingLlmProvider } from './logging-provider';
 import { TestLlmProvider, TestLlmSeed } from './test-provider';
 import type { LlmProvider } from './types';
 
@@ -38,6 +44,11 @@ export function getLlmProvider(): LlmProvider {
 }
 
 function buildProvider(): LlmProvider {
+  const inner = buildInnerProvider();
+  return new LoggingLlmProvider(inner);
+}
+
+function buildInnerProvider(): LlmProvider {
   const mode = process.env.LLM_PROVIDER;
   if (mode === 'test') {
     return new TestLlmProvider();
@@ -60,7 +71,19 @@ export function makeTestLlmProvider(seed?: TestLlmSeed): TestLlmProvider {
   return new TestLlmProvider(seed);
 }
 
-export type { LlmProvider, LlmCompletionRequest, LlmCompletion, LlmResult, LlmError, LlmErrorCode } from './types';
-export { llmOk, llmError } from './types';
+export type {
+  LlmProvider,
+  LlmCompletionRequest,
+  LlmCompletion,
+  LlmContent,
+  LlmContentBlock,
+  LlmRequestMeta,
+  LlmUsage,
+  LlmResult,
+  LlmError,
+  LlmErrorCode,
+} from './types';
+export { llmOk, llmError, flattenContent, hasCacheableBlock } from './types';
 export { TestLlmProvider, digestRequest } from './test-provider';
 export { AnthropicProvider } from './anthropic-provider';
+export { LoggingLlmProvider } from './logging-provider';

@@ -35,16 +35,16 @@ export default async function MemoryPage({ params }: PageProps) {
     <div className="mx-auto max-w-3xl">
       <div className="mb-6 flex items-start justify-between gap-4 text-ink">
         <div className="flex items-center gap-3">
-          <PlainoAvatar size="lg" decorative={false} />
+          <PlainoAvatar size="lg" pose="sit" decorative={false} />
           <div>
             <ApEyebrow>what Plaino remembers</ApEyebrow>
             <h1 className="font-display text-3xl leading-tight text-ink">
               Memory for this workspace
             </h1>
             <p className="mt-2 max-w-prose text-[14px] leading-relaxed text-ink-soft">
-              Durable facts Plaino has saved from your conversations. Pin the
-              ones you want me to always have on hand. Everything is encrypted
-              at rest and stays inside this workspace.
+              Durable facts Plaino fetches from on every turn. Pin the ones
+              you want kept on hand always. Everything is encrypted at rest
+              and stays inside this workspace.
             </p>
           </div>
         </div>
@@ -61,7 +61,7 @@ export default async function MemoryPage({ params }: PageProps) {
           eyebrow="a quiet shelf"
           motif="lone-tree"
           reality="Plaino doesn't have anything saved yet."
-          change="It'll start remembering as you talk — durable facts about you, your work, and the way you like things done."
+          change="The shelf fills as you talk — durable facts about you, your work, and the way you like things done. Plaino fetches from here on every turn."
         />
       ) : (
         <div className="space-y-10">

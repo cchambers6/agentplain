@@ -48,11 +48,11 @@ export default async function TalkPage({ params }: PageProps) {
     <div className="mx-auto max-w-3xl">
       <div className="mb-6 flex items-start justify-between gap-4 text-ink">
         <div className="flex items-center gap-3">
-          <PlainoAvatar size="lg" decorative={false} />
+          <PlainoAvatar size="lg" pose="sit" decorative={false} />
           <div>
             <ApEyebrow>talk with Plaino</ApEyebrow>
             <h1 className="font-display text-3xl leading-tight text-ink">
-              What do you need today?
+              What do you need fetched, herded, or figured out?
             </h1>
           </div>
         </div>
@@ -68,8 +68,8 @@ export default async function TalkPage({ params }: PageProps) {
         <ApRootedEmptyState
           eyebrow="your service partner"
           motif="lone-tree"
-          reality="Hi, I'm Plaino — your service partner."
-          change="Ask me anything about your workspace, or tell me what you need. I read what we have on file and route work to the right hands."
+          reality="Plaino's waiting at the workspace door."
+          change="Ask a question and I'll fetch from your files and the substrate. Hand me work and I'll herd it through the team — the draft lands in your approval queue. I'll wait here in the meantime."
         />
       ) : (
         <ol
@@ -170,7 +170,7 @@ function PlainoFooter({
       ) : null}
       {kind === "DECLINE_HONESTLY" && namedGap ? (
         <div className="text-clay">
-          not yet wired: {namedGap}
+          can't fetch yet: {namedGap}
         </div>
       ) : null}
       {kind === "REGISTER" && requestId ? (
@@ -183,7 +183,7 @@ function PlainoFooter({
               drafted reply in your approval queue →
             </a>
           ) : (
-            <span>handed to the team — drafting now</span>
+            <span>herding this through the team — drafting now</span>
           )}
         </div>
       ) : null}

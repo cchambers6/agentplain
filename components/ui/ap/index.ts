@@ -35,6 +35,7 @@ export { ApRootedLoader } from "./ApRootedLoader";
 export type { ApRootedLoaderKind } from "./ApRootedLoader";
 export { PlainoAvatar } from "./PlainoAvatar";
 export type {
+  PlainoAvatarPose,
   PlainoAvatarSize,
   PlainoAvatarTone,
 } from "./PlainoAvatar";

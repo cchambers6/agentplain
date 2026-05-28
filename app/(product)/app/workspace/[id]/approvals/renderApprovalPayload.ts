@@ -140,7 +140,7 @@ export function renderApprovalPayload(
       console.warn(`[approvals] unhandled WorkApprovalKind: ${String(_exhaustive)}`);
       return {
         kindLabel: String(kind).toLowerCase().replace(/_/g, " "),
-        body: ["The fleet surfaced an item for your review."],
+        body: ["Plaino herded this through for your review."],
       };
     }
   }

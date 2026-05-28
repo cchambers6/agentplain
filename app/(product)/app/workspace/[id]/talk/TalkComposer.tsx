@@ -34,7 +34,7 @@ export function TalkComposer({ workspaceId }: { workspaceId: string }) {
         rows={4}
         required
         error={state.fieldErrors?.body}
-        helper="A few sentences. Plaino reads your workspace context and either answers, hands the work off, or says honestly what's not yet wired."
+        helper="A few sentences. Plaino fetches from your workspace context, herds work through the team, or says honestly what's not yet wired."
       />
       {state.formError ? (
         <p className="text-[13px] leading-relaxed text-flag" role="alert">
@@ -50,7 +50,7 @@ function Submit() {
   const { pending } = useFormStatus();
   return (
     <ApHeritageButton variant="primary" type="submit" disabled={pending}>
-      {pending ? "sending…" : "send to Plaino"}
+      {pending ? "Plaino is fetching that…" : "send to Plaino"}
     </ApHeritageButton>
   );
 }

@@ -270,7 +270,7 @@ export const realEstate: VerticalContent = {
     before:
       "Open dotloop, pull the counter, scan the buyer's agent thread, find three comparable closings in MLS, draft a response in Outlook. ~45 minutes before her first showing.",
     after:
-      "The fleet has already drafted the counter-offer response, summarized the buyer's agent's response history across this transaction, and surfaced three comparable closings within the last 30 days. Sarah reviews, edits one number, signs and sends from dotloop.",
+      "The fleet has already drafted the counter-offer response, summarized the buyer's agent's response history across this transaction, and surfaced three comparable closings from the brokerage's own past-listing files in Drive. Sarah reviews, edits one number, signs and sends from dotloop.",
     outcome:
       "Four minutes instead of forty-five. The fleet drafts; Sarah's broker-of-record review stays in place; dotloop sends.",
   },

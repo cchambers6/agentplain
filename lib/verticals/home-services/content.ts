@@ -219,7 +219,7 @@ export const homeServices: VerticalContent = {
           when: "Per-call, pre-arrival",
           today: "Glance at the work-order PDF; call dispatcher for missing details",
           withAgentplain:
-            "Prep agent surfaces the prior-job history, equipment age, brand notes, and homeowner preferences pulled from ServiceTitan/Jobber",
+            "Prep agent surfaces the prior-job history, equipment age, brand notes, and homeowner preferences from the field-service tool your team already runs in",
         },
         {
           job: "Build the estimate / repair scope on-site",

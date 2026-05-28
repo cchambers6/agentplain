@@ -58,13 +58,30 @@ export const env = {
   // WebAuthn / passkeys (feat/passkey-auth). The Relying Party ID is the
   // registrable domain the browser binds the credential to — NO scheme, NO
   // port (e.g. "agentplain.com" or "localhost"). When RP_ID is unset we derive
-  // it from APP_PUBLIC_ORIGIN's hostname, which is correct for both localhost
-  // dev and the apex production host. Override RP_ID only when the served
-  // origin's host differs from the registrable domain you want credentials
-  // scoped to (e.g. serving from www. but wanting apex-scoped passkeys).
-  // RP_NAME is the user-visible name shown in the OS passkey prompt.
+  // it from APP_PUBLIC_ORIGIN's hostname, which is correct for localhost dev.
+  // In production, set RP_ID to the registrable apex (e.g. "agentplain.com")
+  // so a single credential works across every subdomain the product is served
+  // on (apex + www + app) — the browser only accepts an rpID equal to or a
+  // registrable-domain suffix of the current host, so a subdomain-scoped rpID
+  // breaks sign-in on sibling hosts. RP_NAME is the user-visible name shown
+  // in the OS passkey prompt.
   webauthnRpId: () => optional("RP_ID"),
   webauthnRpName: () => optional("RP_NAME") ?? "agentplain",
+  // WebAuthn expected-origins list — every host the product is served on.
+  // Comma-separated full origins (scheme + host, no trailing slash):
+  //   WEBAUTHN_ALLOWED_ORIGINS=https://agentplain.com,https://www.agentplain.com,https://app.agentplain.com
+  // The server passes this array to verify*Response so an assertion from any
+  // listed origin verifies. When unset we fall back to [APP_PUBLIC_ORIGIN]
+  // — correct for single-host dev/preview, NOT correct for prod where the
+  // marketing apex, www redirect, and app subdomain all serve sign-in.
+  webauthnAllowedOrigins: (): string[] => {
+    const raw = optional("WEBAUTHN_ALLOWED_ORIGINS");
+    if (!raw) return [];
+    return raw
+      .split(",")
+      .map((o) => o.trim().replace(/\/$/, ""))
+      .filter(Boolean);
+  },
 
   // DB
   databaseUrl: () => required("DATABASE_URL"),

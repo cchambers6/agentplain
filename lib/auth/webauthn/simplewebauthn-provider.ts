@@ -81,7 +81,8 @@ export class SimpleWebAuthnProvider implements WebAuthnProvider {
     const verification = await verifyRegistrationResponse({
       response: input.responseJSON as RegistrationResponseJSON,
       expectedChallenge: input.expectedChallenge,
-      expectedOrigin: this.config.origin,
+      // string | string[] — pass the list so apex + www + app all verify.
+      expectedOrigin: this.config.expectedOrigins,
       expectedRPID: this.config.rpID,
       requireUserVerification: false,
     });
@@ -137,7 +138,7 @@ export class SimpleWebAuthnProvider implements WebAuthnProvider {
     const verification = await verifyAuthenticationResponse({
       response: input.responseJSON as AuthenticationResponseJSON,
       expectedChallenge: input.expectedChallenge,
-      expectedOrigin: this.config.origin,
+      expectedOrigin: this.config.expectedOrigins,
       expectedRPID: this.config.rpID,
       requireUserVerification: false,
       credential: {

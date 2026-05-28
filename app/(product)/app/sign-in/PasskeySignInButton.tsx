@@ -49,10 +49,25 @@ export function PasskeySignInButton() {
         return;
       }
       window.location.href = result.redirect ?? "/app";
-    } catch {
-      // Includes the user dismissing the OS prompt — stay quiet about the
-      // cancel, just reset so they can use email or try again.
-      setStatus("idle");
+    } catch (err) {
+      // NotAllowedError covers the legitimate quiet cases — user dismissed
+      // the OS prompt, timed out, or no eligible passkey was offered. Other
+      // DOM errors are configuration bugs (SecurityError on rpID/origin
+      // mismatch, NotSupportedError on missing algos, AbortError on a
+      // programmatic abort) and MUST surface — silent-swallowing those is
+      // what made the apex-rpID regression invisible.
+      const name =
+        err && typeof err === "object" && "name" in err
+          ? String((err as { name?: unknown }).name)
+          : "";
+      if (name === "NotAllowedError") {
+        setStatus("idle");
+        return;
+      }
+      setStatus("error");
+      setMessage(
+        "Your browser blocked that passkey request. If this keeps happening, sign in with your email instead.",
+      );
     }
   };
 

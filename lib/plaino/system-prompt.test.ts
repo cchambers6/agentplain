@@ -80,6 +80,52 @@ describe('plaino system prompt', () => {
     assert.match(prompt, /none connected yet/);
   });
 
+  it('threads the persona verbs (fetch, herd, sit/wait) through the prompt', () => {
+    const snapshot = buildCapabilitySnapshotSync({
+      connectedProviders: new Set(),
+    });
+    const prompt = buildSystemPrompt({
+      workspaceName: 'Acme Brokerage',
+      capabilities: snapshot,
+    });
+    // The persona is encoded as VERBS, not as a literal mascot. Each
+    // of the three behaviors must appear in the prompt — the dispatcher
+    // routes ANSWER/REGISTER/DECLINE_HONESTLY using fetch/herd/sit
+    // language respectively.
+    assert.match(prompt, /\bfetch\b/i, 'expected FETCH verb in prompt');
+    assert.match(prompt, /\bherd\b/i, 'expected HERD verb in prompt');
+    assert.match(prompt, /\bwait\b/i, 'expected SIT/WAIT framing in prompt');
+  });
+
+  it('NEVER literalizes the persona metaphor to the customer', () => {
+    // The internal scaffold is a working sheepdog on the plains. The
+    // prompt's instructions to the model MUST forbid disclosure of the
+    // animal/dog metaphor to customers. This test pins the no-leak rule
+    // — if it ever softens, a customer-visible "I am a dog" answer
+    // becomes possible and brand integrity breaks.
+    const snapshot = buildCapabilitySnapshotSync({
+      connectedProviders: new Set(),
+    });
+    const prompt = buildSystemPrompt({
+      workspaceName: 'Acme Brokerage',
+      capabilities: snapshot,
+    });
+    assert.match(
+      prompt,
+      /DO NOT DISCLOSE/,
+      'expected an explicit DO NOT DISCLOSE directive for the persona scaffolding',
+    );
+    assert.match(
+      prompt,
+      /never literalize/i,
+      'expected the prompt to forbid literalizing the persona to customers',
+    );
+    // And the explicit forbidden phrases must be named in the prompt so
+    // the model has no ambiguity about what counts as a leak.
+    assert.match(prompt, /NEVER[\s\S]*?say you are a dog/);
+    assert.match(prompt, /robot dog/);
+  });
+
   it('includes the 8 disciplines from the catalog', () => {
     const snapshot = buildCapabilitySnapshotSync({
       connectedProviders: new Set(),

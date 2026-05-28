@@ -177,8 +177,8 @@ export default async function DisciplinesPanelPage({ params }: PageProps) {
       </p>
 
       <p className="mt-4 flex max-w-2xl items-center gap-2 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-        <PlainoAvatar size="xs" />
-        <span>led by Plaino</span>
+        <PlainoAvatar size="xs" pose="herd" />
+        <span>herded by Plaino</span>
       </p>
 
       <div

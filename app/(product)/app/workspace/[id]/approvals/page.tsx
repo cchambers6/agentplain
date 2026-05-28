@@ -57,7 +57,7 @@ export default async function ApprovalsPage({ params, searchParams }: PageProps)
           <ApRootedEmptyState
             motif="lone-tree"
             reality="Nothing waiting on you."
-            change="Your fleet is reading and acting. New decisions land here as they cross your threshold."
+            change="Plaino is sitting ready, fetching from your connected sources and herding work as it surfaces. New decisions land here as they cross your threshold."
           />
         </div>
       ) : (

@@ -161,6 +161,13 @@ enum WorkApprovalKind {
   // approves / edits / escalates; the customer's existing email path
   // performs the send.
   SUPPORT_HANDLER_REPLY_DRAFT
+  // Plaino INSTRUCT path — fired when /talk classifies a customer
+  // message as a request to DO WORK (not a question, not a feedback
+  // statement). The Inngest instruction-handler reads this queue item,
+  // drafts the work via discipline-tagged LLM call, persists the draft
+  // back into the same row's payload, and re-surfaces for operator
+  // approval. Draft-only by contract — see lib/plaino/dispatcher.ts.
+  PLAINO_INSTRUCTION
 }
 
 enum WorkApprovalStatus {

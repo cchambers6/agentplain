@@ -38,7 +38,7 @@ import assert from 'node:assert/strict';
 
 import { withRls, type RlsContext } from '@/lib/db/rls';
 import { FakePrismaClient } from './fixtures/_fake-prisma';
-import type { PrismaClient } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@prisma/client';
 
 const WORKSPACE_A_ID = 'aaaa2222-3333-4444-5555-666666666666';
 const WORKSPACE_B_ID = 'bbbb2222-3333-4444-5555-777777777777';
@@ -157,7 +157,7 @@ async function editApproval(
       const next = { ...existing, body: args.body, editedAt: new Date().toISOString() };
       await tx.workApprovalQueueItem.update({
         where: { id: args.itemId },
-        data: { payload: next as unknown as Record<string, unknown> },
+        data: { payload: next as unknown as Prisma.InputJsonValue },
       });
       await tx.auditLog.create({
         data: {

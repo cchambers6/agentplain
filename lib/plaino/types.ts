@@ -40,8 +40,33 @@ export type {
 
 // ── Classification ──────────────────────────────────────────────────────
 
-/** The three honest paths the dispatcher can route a turn into. */
-export type PlainoDispatchKind = 'ANSWER' | 'REGISTER' | 'DECLINE_HONESTLY';
+/**
+ * The five honest paths the dispatcher can route a turn into.
+ *
+ *  - ANSWER: substrate-grounded Q&A. Reply carries citations.
+ *  - REGISTER: customer submitted a support request (a problem they
+ *    want resolved); we file a SupportRequest + emit the legacy
+ *    `agentplain/support-request.created` event. The downstream
+ *    support-handler drafts a first-touch reply.
+ *  - INSTRUCT: customer asked the FLEET TO DO WORK — draft an email,
+ *    chase a doc, summarize a contract, prep a brief. We tag the
+ *    discipline, create a PLAINO_INSTRUCTION approval queue item,
+ *    and emit `agentplain/instruction.created`; the Inngest
+ *    instruction-handler drafts the work back into the same row.
+ *  - PREFERENCE: customer told us HOW THEY WANT THINGS DONE going
+ *    forward ("next time flag legal mail as high priority"). We
+ *    extract the rule + scope and persist it as a FEEDBACK
+ *    WorkspaceMemoryEntry so future skill fires inject it into their
+ *    prompt assembly.
+ *  - DECLINE_HONESTLY: ask is outside what the fleet can do today.
+ *    Reply NAMES a specific gap; no fabrication.
+ */
+export type PlainoDispatchKind =
+  | 'ANSWER'
+  | 'REGISTER'
+  | 'INSTRUCT'
+  | 'PREFERENCE'
+  | 'DECLINE_HONESTLY';
 
 export interface PlainoClassification {
   kind: PlainoDispatchKind;
@@ -53,6 +78,43 @@ export interface PlainoClassification {
    *  the other paths this is null. The decline path REQUIRES a named
    *  gap; the dispatcher refuses to emit a generic "I can't" reply. */
   namedGap: string | null;
+  /** Populated on INSTRUCT — one of the 8 discipline ids the work
+   *  belongs to. The Inngest instruction-handler uses this to bias
+   *  the drafting prompt (an analytics ask gets a different shape
+   *  from a legal ask). null on every other path. */
+  targetDiscipline: string | null;
+  /** Populated on PREFERENCE — the customer's preference distilled
+   *  into one rule statement ("Flag mail from county clerks as high
+   *  priority") + the scope it applies in. null on every other path. */
+  preferenceRule: string | null;
+  preferenceScope: string | null;
+}
+
+/**
+ * Allowed scopes for PREFERENCE entries. The set is intentionally
+ * small + skill-aligned: when a skill assembles its prompt it asks
+ * for FEEDBACK rules with a matching scope (or `general` for
+ * universally-applicable rules). Adding a new scope is a code change
+ * — the wrapper rejects a PREFERENCE classification that names a
+ * scope outside this set.
+ *
+ * Scope ids are kebab-case and stable; they appear in the
+ * `WorkspaceMemoryEntry.body` so the skill-side reader can filter.
+ */
+export const PREFERENCE_SCOPE_IDS = [
+  'general',
+  'inbox-triage',
+  'email-draft',
+  'scheduling',
+  'legal-flagging',
+  'customer-comms',
+  'internal-comms',
+  'reporting',
+] as const;
+export type PreferenceScopeId = (typeof PREFERENCE_SCOPE_IDS)[number];
+
+export function isPreferenceScopeId(value: string): value is PreferenceScopeId {
+  return (PREFERENCE_SCOPE_IDS as readonly string[]).includes(value);
 }
 
 // ── Chat persistence port ───────────────────────────────────────────────
@@ -185,6 +247,15 @@ export interface PlainoTurnOutput {
   plainoMessage: PersistedChatMessage;
   /** Populated when the REGISTER path created a SupportRequest. */
   supportRequestId: string | null;
+  /** Populated when the INSTRUCT path created a PLAINO_INSTRUCTION
+   *  approval queue item. The chat surface uses this to render a
+   *  "drafted into your approval queue" tile per turn. */
+  instructionApprovalId: string | null;
+  /** Populated when the PREFERENCE path wrote a FEEDBACK memory entry.
+   *  Tests assert against this; the chat surface doesn't render it
+   *  (the customer sees the confirmation in the Plaino reply body
+   *  itself, and the entry surfaces on /talk/memory). */
+  preferenceMemoryId: string | null;
   /** Snippets cited in the ANSWER path. Empty otherwise. */
   citations: SupportContextSnippet[];
   /** Memory entries included in the prompt for this turn. Empty when

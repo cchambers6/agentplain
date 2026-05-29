@@ -6,7 +6,12 @@ import {
 } from "@/components/ui/ap";
 import { requireWorkspaceMember } from "@/lib/auth/server";
 import { withSystemContext } from "@/lib/db/rls";
-import { PrismaChatStore, type PersistedChatMessage } from "@/lib/plaino";
+import {
+  checkDegradedMode,
+  PrismaChatStore,
+  type PersistedChatMessage,
+} from "@/lib/plaino";
+import { decryptPayloadForRead } from "@/lib/security/payload-crypto";
 import { TalkComposer } from "./TalkComposer";
 
 export const dynamic = "force-dynamic";
@@ -20,24 +25,50 @@ export default async function TalkPage({ params }: PageProps) {
   const { id: workspaceId } = await params;
   const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
 
+  // Phase-1 honesty seam — if the deploy is missing ENCRYPTION_KEY or
+  // ANTHROPIC_API_KEY, the dispatcher would throw or stub. Detect
+  // BEFORE touching the chat store so the page still renders without
+  // any DB-side errors, and surface a calm "Plaino is offline" notice
+  // with operator-facing guidance.
+  const degraded = checkDegradedMode();
+
   const ctx = {
     userId: member.userId,
     workspaceId,
     isOperator: member.isOperator,
   } as const;
 
-  const store = new PrismaChatStore(workspaceId, { ctx });
-  const thread = await store.ensureWorkspaceThread({ workspaceId });
-  const messages = await store.listMessages({
-    threadId: thread.id,
-    workspaceId,
-    limit: 200,
-  });
+  // In degraded mode we skip the chat-store read too — the listMessages
+  // path itself decrypts each row, which can throw when ENCRYPTION_KEY
+  // is missing. Render an empty thread with the degraded notice.
+  const store = degraded.degraded
+    ? null
+    : new PrismaChatStore(workspaceId, { ctx });
+  const thread = store
+    ? await store.ensureWorkspaceThread({ workspaceId })
+    : null;
+  const messages = store && thread
+    ? await store.listMessages({
+        threadId: thread.id,
+        workspaceId,
+        limit: 200,
+      })
+    : [];
 
   const draftedSupportRequestIds = collectSupportRequestIds(messages);
   const draftedSet = await findDraftedSupportRequestIds({
     workspaceId,
     supportRequestIds: draftedSupportRequestIds,
+  });
+
+  // Look up the current drafting state for any INSTRUCT approval queue
+  // items referenced by Plaino messages. This is what powers the
+  // WORK_LINK tile under each INSTRUCT turn — "drafting now", "draft
+  // ready for review", or "approved & queued".
+  const instructionApprovalIds = collectInstructionApprovalIds(messages);
+  const instructionStateMap = await findInstructionApprovalStates({
+    workspaceId,
+    approvalIds: instructionApprovalIds,
   });
 
   // Bump the cached page so a fresh refresh from another tab also
@@ -64,7 +95,15 @@ export default async function TalkPage({ params }: PageProps) {
         </a>
       </div>
 
-      {messages.length === 0 ? (
+      {degraded.degraded ? (
+        <DegradedNotice
+          customerNotice={degraded.customerNotice}
+          operatorNotice={degraded.operatorNotice}
+          isOperator={member.isOperator}
+        />
+      ) : null}
+
+      {messages.length === 0 && !degraded.degraded ? (
         <ApRootedEmptyState
           eyebrow="your service partner"
           motif="lone-tree"
@@ -85,6 +124,13 @@ export default async function TalkPage({ params }: PageProps) {
                   ? draftedSet.has(supportRequestIdOf(m) ?? "")
                   : false
               }
+              instructionState={
+                m.role === "plaino"
+                  ? instructionStateMap.get(
+                      instructionApprovalIdOf(m) ?? "",
+                    ) ?? null
+                  : null
+              }
               workspaceId={workspaceId}
             />
           ))}
@@ -98,13 +144,31 @@ export default async function TalkPage({ params }: PageProps) {
   );
 }
 
+/**
+ * Tile state for an INSTRUCT turn — derived from the underlying
+ * PLAINO_INSTRUCTION approval queue row. "drafting" while the Inngest
+ * handler is still working, "awaiting_review" once the draft lands,
+ * "approved" once the operator approves.
+ */
+type InstructionState =
+  | "drafting"
+  | "awaiting_review"
+  | "approved"
+  | "rejected";
+
 interface ChatBubbleProps {
   message: PersistedChatMessage;
   showDraftedLink: boolean;
+  instructionState: InstructionState | null;
   workspaceId: string;
 }
 
-function ChatBubble({ message, showDraftedLink, workspaceId }: ChatBubbleProps) {
+function ChatBubble({
+  message,
+  showDraftedLink,
+  instructionState,
+  workspaceId,
+}: ChatBubbleProps) {
   const isPlaino = message.role === "plaino";
   const speaker = isPlaino ? "Plaino" : "You";
   return (
@@ -130,6 +194,7 @@ function ChatBubble({ message, showDraftedLink, workspaceId }: ChatBubbleProps) 
         <PlainoFooter
           message={message}
           showDraftedLink={showDraftedLink}
+          instructionState={instructionState}
           workspaceId={workspaceId}
         />
       ) : null}
@@ -140,12 +205,16 @@ function ChatBubble({ message, showDraftedLink, workspaceId }: ChatBubbleProps) 
 function PlainoFooter({
   message,
   showDraftedLink,
+  instructionState,
   workspaceId,
 }: ChatBubbleProps) {
   const citations = extractCitations(message);
   const kind = extractKind(message);
   const namedGap = extractNamedGap(message);
   const requestId = supportRequestIdOf(message);
+  const instructionId = instructionApprovalIdOf(message);
+  const targetDiscipline = extractTargetDiscipline(message);
+  const preferenceScope = extractPreferenceScope(message);
   return (
     <div className="mt-2 space-y-1 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
       {citations.length > 0 ? (
@@ -187,6 +256,100 @@ function PlainoFooter({
           )}
         </div>
       ) : null}
+      {kind === "INSTRUCT" && instructionId ? (
+        <div>
+          <InstructionTile
+            state={instructionState}
+            approvalId={instructionId}
+            targetDiscipline={targetDiscipline}
+            workspaceId={workspaceId}
+          />
+        </div>
+      ) : null}
+      {kind === "PREFERENCE" && preferenceScope ? (
+        <div>
+          <span className="text-ink-soft">saved as feedback:</span>{" "}
+          <a
+            href={`/app/workspace/${workspaceId}/talk/memory`}
+            className="text-ink underline-offset-4 hover:underline"
+          >
+            scope={preferenceScope} →
+          </a>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+interface InstructionTileProps {
+  state: InstructionState | null;
+  approvalId: string;
+  targetDiscipline: string | null;
+  workspaceId: string;
+}
+
+function InstructionTile({
+  state,
+  approvalId,
+  targetDiscipline,
+  workspaceId,
+}: InstructionTileProps) {
+  const disciplineSuffix = targetDiscipline
+    ? ` · ${targetDiscipline}`
+    : "";
+  if (state === "approved" || state === "rejected") {
+    return (
+      <span className="text-ink-soft">
+        {state === "approved"
+          ? `approved — queued to send by your team${disciplineSuffix}`
+          : `rejected${disciplineSuffix} — re-ask if you want a fresh draft`}
+      </span>
+    );
+  }
+  if (state === "awaiting_review") {
+    return (
+      <a
+        href={`/app/workspace/${workspaceId}/approvals?focus=${approvalId}`}
+        className="text-ink underline-offset-4 hover:underline"
+      >
+        draft ready for review{disciplineSuffix} →
+      </a>
+    );
+  }
+  // "drafting" or null (still drafting / state unknown)
+  return (
+    <span>
+      herding through the {targetDiscipline ?? "team"} — drafting now
+    </span>
+  );
+}
+
+interface DegradedNoticeProps {
+  customerNotice: string;
+  operatorNotice: string;
+  isOperator: boolean;
+}
+
+function DegradedNotice({
+  customerNotice,
+  operatorNotice,
+  isOperator,
+}: DegradedNoticeProps) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="mb-8 border border-clay/40 bg-paper-deep p-4 text-[15px] leading-relaxed text-ink"
+    >
+      <p className="mb-1 font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+        Plaino is offline
+      </p>
+      <p>{customerNotice}</p>
+      {isOperator ? (
+        <p className="mt-3 border-t border-rule pt-3 font-mono text-[12px] leading-relaxed text-ink-soft">
+          <span className="text-clay">operator only:</span> {operatorNotice}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -203,6 +366,30 @@ function formatTimestamp(date: Date): string {
 function supportRequestIdOf(message: PersistedChatMessage): string | null {
   if (!message.metadata) return null;
   const v = message.metadata.supportRequestId;
+  return typeof v === "string" ? v : null;
+}
+
+function instructionApprovalIdOf(
+  message: PersistedChatMessage,
+): string | null {
+  if (!message.metadata) return null;
+  const v = message.metadata.instructionApprovalId;
+  return typeof v === "string" ? v : null;
+}
+
+function extractTargetDiscipline(
+  message: PersistedChatMessage,
+): string | null {
+  if (!message.metadata) return null;
+  const v = message.metadata.targetDiscipline;
+  return typeof v === "string" ? v : null;
+}
+
+function extractPreferenceScope(
+  message: PersistedChatMessage,
+): string | null {
+  if (!message.metadata) return null;
+  const v = message.metadata.preferenceScope;
   return typeof v === "string" ? v : null;
 }
 
@@ -250,6 +437,65 @@ function collectSupportRequestIds(
     if (id) ids.push(id);
   }
   return ids;
+}
+
+function collectInstructionApprovalIds(
+  messages: PersistedChatMessage[],
+): string[] {
+  const ids: string[] = [];
+  for (const m of messages) {
+    if (m.role !== "plaino") continue;
+    const id = instructionApprovalIdOf(m);
+    if (id) ids.push(id);
+  }
+  return ids;
+}
+
+async function findInstructionApprovalStates(args: {
+  workspaceId: string;
+  approvalIds: string[];
+}): Promise<Map<string, InstructionState>> {
+  const out = new Map<string, InstructionState>();
+  if (args.approvalIds.length === 0) return out;
+  const rows = await withSystemContext((tx) =>
+    tx.workApprovalQueueItem.findMany({
+      where: {
+        workspaceId: args.workspaceId,
+        kind: "PLAINO_INSTRUCTION",
+        id: { in: args.approvalIds },
+      },
+      select: { id: true, status: true, payload: true },
+    }),
+  );
+  for (const row of rows) {
+    // The Inngest handler writes status='awaiting_review' into the
+    // payload once the draft lands. Combine that with the row's
+    // approval-status to derive the customer-facing tile state.
+    const payloadStatus = readPayloadStatus(row.payload);
+    if (row.status === "APPROVED" || row.status === "AUTO_APPROVED") {
+      out.set(row.id, "approved");
+    } else if (row.status === "REJECTED" || row.status === "EXPIRED") {
+      out.set(row.id, "rejected");
+    } else if (payloadStatus === "awaiting_review") {
+      out.set(row.id, "awaiting_review");
+    } else {
+      out.set(row.id, "drafting");
+    }
+  }
+  return out;
+}
+
+function readPayloadStatus(payload: unknown): string | null {
+  // The payload is encrypted-at-rest with the v1 envelope (see
+  // lib/security/payload-crypto.ts). Decrypt to read the
+  // status field; on any decrypt failure, return null so the tile
+  // falls back to the "drafting" state.
+  if (!payload || typeof payload !== "object") return null;
+  const decrypted = decryptPayloadForRead(payload);
+  if (!decrypted || typeof decrypted !== "object") return null;
+  const obj = decrypted as Record<string, unknown>;
+  const status = obj.status;
+  return typeof status === "string" ? status : null;
 }
 
 const SUPPORT_HANDLER_REF_TABLE = "SupportRequest";

@@ -88,6 +88,7 @@ const KIND_LABEL: Record<WorkApprovalKind, string> = {
   FOLLOW_UP_NUDGE: "follow-up nudge",
   PROCESS_DOC_DRAFT: "process doc draft",
   SUPPORT_HANDLER_REPLY_DRAFT: "support reply draft",
+  PLAINO_INSTRUCTION: "Plaino instruction",
 };
 
 export function renderApprovalPayload(
@@ -130,6 +131,8 @@ export function renderApprovalPayload(
       return renderProcessDocDraft(p);
     case "SUPPORT_HANDLER_REPLY_DRAFT":
       return renderSupportHandlerReplyDraft(p);
+    case "PLAINO_INSTRUCTION":
+      return renderPlainoInstruction(p);
     default: {
       const _exhaustive: never = kind;
       // Runtime safety: if a new enum value reaches production before the
@@ -639,6 +642,78 @@ function renderSupportHandlerReplyDraft(
     persisted: false,
     editableBody: body || undefined,
   };
+}
+
+/**
+ * Render a PLAINO_INSTRUCTION approval queue item — the customer
+ * asked the fleet (via /talk) to do concrete work, and the Inngest
+ * instruction-handler drafted the artifact into the payload. While
+ * the handler is still drafting, payload.status='drafting' and the
+ * body shows "still drafting"; once draftBody lands the operator
+ * sees the actual work product.
+ */
+function renderPlainoInstruction(
+  p: Record<string, unknown>,
+): RenderedApproval {
+  const status = pickString(p, ["status"]) ?? "drafting";
+  const discipline = pickString(p, ["targetDiscipline"]) ?? "—";
+  const instructionText = pickString(p, ["instructionText"]) ?? "";
+  const draftBody = pickString(p, ["draftBody"]);
+  const draftReasoning = pickString(p, ["draftReasoning"]);
+  const honoredRules = pickHonoredRules(p);
+
+  const metaParts: string[] = [`discipline: ${discipline}`];
+  if (status) metaParts.push(`status: ${status}`);
+  if (honoredRules.length > 0) {
+    metaParts.push(`honored ${honoredRules.length} preference rule${honoredRules.length === 1 ? "" : "s"}`);
+  }
+  const metaLine = metaParts.join(" · ");
+
+  const lines: string[] = [];
+  lines.push("Customer instruction:");
+  lines.push(instructionText || "(no instruction text captured)");
+  lines.push("");
+  if (draftBody) {
+    lines.push("Drafted by Plaino:");
+    lines.push(...splitParagraphs(draftBody));
+  } else {
+    lines.push("Plaino is still drafting — refresh shortly.");
+  }
+  if (honoredRules.length > 0) {
+    lines.push("");
+    lines.push("Customer rules honored:");
+    for (const r of honoredRules) {
+      lines.push(`· [${r.scope}] ${r.rule}`);
+    }
+  }
+
+  return {
+    kindLabel: KIND_LABEL.PLAINO_INSTRUCTION,
+    body: lines,
+    metaLine,
+    inboundSummary: draftReasoning,
+    persisted: false,
+    editableBody: draftBody ?? undefined,
+  };
+}
+
+interface HonoredRule {
+  scope: string;
+  rule: string;
+}
+
+function pickHonoredRules(p: Record<string, unknown>): HonoredRule[] {
+  const raw = p.honoredRules;
+  if (!Array.isArray(raw)) return [];
+  const out: HonoredRule[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const obj = item as Record<string, unknown>;
+    const scope = typeof obj.scope === "string" ? obj.scope : null;
+    const rule = typeof obj.rule === "string" ? obj.rule : null;
+    if (scope && rule) out.push({ scope, rule });
+  }
+  return out;
 }
 
 interface SupportCitation {

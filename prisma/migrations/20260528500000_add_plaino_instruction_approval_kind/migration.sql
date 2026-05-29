@@ -1,0 +1,13 @@
+-- Plaino-instruction approval kind. When the /talk dispatcher classifies
+-- a customer message as INSTRUCT (the customer asking the fleet to DO
+-- WORK on their behalf rather than asking a question), an approval queue
+-- item lands with this kind. The Inngest instruction-handler then reads
+-- the row, drafts the work, writes the draft back, and flips the queue
+-- item to PENDING for operator review.
+--
+-- Draft-only by contract — agentplain never sends. The operator (or the
+-- customer themselves on small workspaces) reviews + approves; the
+-- customer's existing email/scheduler path performs the send. See
+-- lib/plaino/dispatcher.ts (INSTRUCT branch) + lib/inngest/functions/
+-- instruction-handler-on-create.ts + project_no_outbound_architecture.md.
+ALTER TYPE "WorkApprovalKind" ADD VALUE IF NOT EXISTS 'PLAINO_INSTRUCTION';

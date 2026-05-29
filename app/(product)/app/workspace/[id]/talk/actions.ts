@@ -6,6 +6,7 @@ import { requireWorkspaceMember } from "@/lib/auth/server";
 import { withSystemContext } from "@/lib/db/rls";
 import {
   buildCapabilitySnapshot,
+  checkDegradedMode,
   InngestEventEmitter,
   PrismaChatStore,
   PrismaMemoryStore,
@@ -55,6 +56,19 @@ export async function sendPlainoMessageAction(
     return { ok: false, fieldErrors };
   }
   const body = parsed.data.body;
+
+  // Phase-1 honesty: if a load-bearing env var is missing, do NOT call
+  // runPlainoTurn (which would throw at the first encrypt() call inside
+  // PrismaChatStore.appendMessage, or silently fall through to the
+  // TestLlmProvider heuristic stub). Return the operator-resolvable
+  // notice as a formError so the customer sees an honest message under
+  // the composer. The page renderer also surfaces this state inline so
+  // they don't have to send to find out. No DB write, no plaintext
+  // customer content persisted. See lib/plaino/degraded-mode.ts.
+  const degraded = checkDegradedMode();
+  if (degraded.degraded) {
+    return { ok: false, formError: degraded.customerNotice };
+  }
 
   const workspace = await withSystemContext((tx) =>
     tx.workspace.findUnique({

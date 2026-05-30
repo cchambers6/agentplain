@@ -346,6 +346,7 @@ model User {
   memberships          Membership[]
   decidedItems         WorkApprovalQueueItem[] @relation("DecidedBy")
   configuredThresholds WorkThresholdConfig[]   @relation("ConfiguredBy")
+  configuredSkills     SkillConfig[]           @relation("SkillConfigBy")
   auditEntriesActor    AuditLog[]              @relation("AuditActor")
   auditEntriesActAs    AuditLog[]              @relation("AuditActingAs")
   magicLinkTokens      MagicLinkToken[]
@@ -420,6 +421,7 @@ model Workspace {
   memoryEntries            WorkspaceMemoryEntry[]
   llmUsageRecords          LlmUsageRecord[]
   briefings                WorkspaceBriefing[]
+  skillConfigs             SkillConfig[]
 
   @@index([slug])
   @@index([vertical])
@@ -1261,6 +1263,34 @@ model WorkspaceMemoryEntry {
   /// a sort step.
   @@index([workspaceId, kind, pinned, createdAt])
   @@index([workspaceId, pinned, updatedAt])
+}
+
+/// Wave-2 per-skill config. One row per workspace × skill. The
+/// customer adjusts knobs from the settings UI (wait days for
+/// follow-up-chaser, priority keywords for inbox-triage, default
+/// meeting length for the scheduler), and the skill's runtime caller
+/// reads + applies the config on every fire.
+///
+/// `configJson` is encrypted at rest with the v1 envelope
+/// (`lib/security/encryption` — `v1:iv:tag:ct`) because customers
+/// will inevitably put PII in a config (sender allowlists, paralegal
+/// email cc lists). Shapes live in `lib/skills/config.ts` as typed
+/// interfaces; persisted as JSON inside the envelope.
+model SkillConfig {
+  id                 String    @id @default(uuid()) @db.Uuid
+  workspaceId        String    @db.Uuid
+  /// Matches `lib/skills/<slug>/`. Free-form so adding a skill is
+  /// not a migration.
+  skillSlug          String    @db.VarChar(64)
+  /// AES-256-GCM v1-envelope ciphertext. NEVER plaintext at rest.
+  configJson         String
+  configuredByUserId String?   @db.Uuid
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  workspace          Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  configuredBy       User?     @relation("SkillConfigBy", fields: [configuredByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([workspaceId, skillSlug])
 }
 
 /// Wave-2 briefings generator. The page at

@@ -87,6 +87,9 @@ describe('runInboxTriageForEvent — happy path', () => {
       event: fakeEvent(),
       sink,
       now: new Date('2026-05-28T12:00:00.000Z'),
+      // Wave-2: this unit test doesn't have a DB; skip the SkillConfig
+      // read and use the typed defaults.
+      skipConfigRead: true,
       // Lower threshold so the urgent proposal is recorded.
       sinkThreshold: 0,
     });
@@ -110,6 +113,9 @@ describe('runInboxTriageForEvent — empty payload', () => {
       event: fakeEvent(),
       sink,
       now: new Date('2026-05-28T12:00:00.000Z'),
+      // Wave-2: this unit test doesn't have a DB; skip the SkillConfig
+      // read and use the typed defaults.
+      skipConfigRead: true,
     });
     assert.ok(res.ok);
     assert.equal(res.value.messagesScanned, 0);
@@ -133,6 +139,9 @@ describe('runInboxTriageForEvent — customer-active draft path', () => {
       event: fakeEvent(),
       sink,
       now: new Date('2026-05-28T12:00:00.000Z'),
+      // Wave-2: this unit test doesn't have a DB; skip the SkillConfig
+      // read and use the typed defaults.
+      skipConfigRead: true,
       sinkThreshold: 0,
     });
     assert.ok(res.ok);

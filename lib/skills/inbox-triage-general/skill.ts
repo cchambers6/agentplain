@@ -120,6 +120,12 @@ export async function runSkill(
   const now = input.now ?? new Date();
   const noiseFloor = input.noiseConfidenceFloor ?? DEFAULT_NOISE_CONFIDENCE_FLOOR;
   const sinkThreshold = input.sinkThreshold ?? 0;
+  // Wave-2 per-skill config: customer's extra urgency cues. Lower-case
+  // + dedup at the seam so the classifier's `includes` check stays
+  // case-insensitive (the haystack is already lower-cased).
+  const extraUrgentCues = (input.extraUrgentCues ?? [])
+    .map((c) => c.trim().toLowerCase())
+    .filter((c) => c.length > 0);
 
   const snapshotRes = await fetchSnapshot(input.fetcher, {
     workspaceId: input.workspaceId,
@@ -129,7 +135,7 @@ export async function runSkill(
   const snapshot = snapshotRes.value;
 
   const proposals = snapshot.inbox.map((msg) =>
-    buildProposal({ msg, noiseFloor, now }),
+    buildProposal({ msg, noiseFloor, now, extraUrgentCues }),
   );
 
   // Sort by descending priority — same order operators read.
@@ -175,11 +181,12 @@ interface BuildArgs {
   msg: TriageMessage;
   noiseFloor: number;
   now: Date;
+  extraUrgentCues: string[];
 }
 
 function buildProposal(args: BuildArgs): TriageProposal {
-  const { msg, noiseFloor } = args;
-  const { priority, confidence, reasoning } = classify(msg);
+  const { msg, noiseFloor, extraUrgentCues } = args;
+  const { priority, confidence, reasoning } = classify(msg, extraUrgentCues);
   const finalPriority: TriagePriority =
     confidence < noiseFloor ? 'noise' : priority;
   const ackDraft =
@@ -202,19 +209,29 @@ function buildProposal(args: BuildArgs): TriageProposal {
   };
 }
 
-function classify(msg: TriageMessage): {
+function classify(
+  msg: TriageMessage,
+  extraUrgentCues: string[] = [],
+): {
   priority: TriagePriority;
   confidence: number;
   reasoning: string;
 } {
   const haystack = `${msg.subject}\n${msg.bodyText}`.toLowerCase();
   // Precedence: most-specific signal wins. Urgent is the strongest
-  // signal regardless of counterparty class. Noise/decision are
-  // explicit-form cues. Vendor checks come BEFORE customer because
-  // vendor cues are multi-word + specific ("invoice attached",
-  // "payment due"); customer cues are deliberately broader ("order",
-  // "receipt", "quote"). Putting customer first would swallow vendor
-  // notices that happen to mention an invoice.
+  // signal regardless of counterparty class. Customer-specific
+  // priority keywords (wave-2 per-skill config) ride alongside the
+  // built-in URGENT_CUES so the customer's own vocabulary becomes
+  // load-bearing — flagged with a distinct reasoning prefix so the
+  // operator can tell which signal fired.
+  const customerUrgentMatch = extraUrgentCues.find((c) => haystack.includes(c));
+  if (customerUrgentMatch) {
+    return {
+      priority: 'urgent',
+      confidence: 0.85,
+      reasoning: `Customer priority keyword: "${customerUrgentMatch}".`,
+    };
+  }
   const urgentMatch = URGENT_CUES.find((c) => haystack.includes(c));
   if (urgentMatch) {
     return {

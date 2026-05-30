@@ -57,6 +57,11 @@ import { SKILL_DISCIPLINE } from '@/lib/disciplines/skill-mapping';
 import { runChiefOfStaffForWorkspace } from '@/lib/skills/chief-of-staff-scheduler';
 import { ChiefOfStaffMcpFetcher } from '@/lib/skills/scheduler/chief-of-staff-fetcher';
 import type { CalendarFetcher } from '@/lib/skills/scheduler/types';
+import {
+  DEFAULT_CHIEF_OF_STAFF_CONFIG,
+  readChiefOfStaffConfig,
+  type ChiefOfStaffConfig,
+} from '@/lib/skills/config';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
 import {
@@ -115,6 +120,10 @@ export interface RunSchedulerSweepArgs {
   now?: Date;
   /** Lookahead window in days. Defaults to 7. */
   lookaheadDays?: number;
+  /** Override the per-skill config reader. Tests pass a deterministic
+   *  fake; production leaves this undefined and the live reader hits
+   *  SkillConfig via the system context. */
+  readConfig?: (workspaceId: string) => Promise<ChiefOfStaffConfig>;
 }
 
 /**
@@ -168,12 +177,27 @@ export async function runSchedulerSweep(
       calendarFetcher,
     });
 
+    // Wave-2 per-skill config: read scheduler knobs at fire time. The
+    // customer's `defaultMeetingMinutes` + `businessHoursStart/End` flow
+    // straight into the chief-of-staff input so slots match what they
+    // configured in /settings/skills. Per `feedback_cold_start_safe_agents`
+    // this is a per-fire durable read. Tests inject `readConfig` to
+    // bypass the DB; the production fallback uses the SkillConfig table.
+    const skillConfig = await (args.readConfig
+      ? args.readConfig(ws.id)
+      : readChiefOfStaffConfig(ws.id).catch(() => DEFAULT_CHIEF_OF_STAFF_CONFIG));
+
     try {
       const run = await runChiefOfStaffForWorkspace({
         workspaceId: ws.id,
         fetcher,
         now,
         lookaheadDays,
+        defaultMeetingMinutes: skillConfig.defaultMeetingMinutes,
+        businessHours: {
+          startLocalHour: skillConfig.businessHoursStart,
+          endLocalHour: skillConfig.businessHoursEnd,
+        },
       });
       if (!run.ok) {
         if (run.error.code === 'NOT_CONFIGURED') {

@@ -48,6 +48,11 @@ import { SKILL_DISCIPLINE } from '@/lib/disciplines/skill-mapping';
 import { runFollowUpChaserForWorkspace } from '@/lib/skills/follow-up-chaser-general/run-for-workspace';
 import { FollowUpMultiplexFetcher } from '@/lib/skills/follow-up-chaser-general/multiplex-fetcher';
 import type { FollowUpFetcher } from '@/lib/skills/follow-up-chaser-general/types';
+import {
+  DEFAULT_FOLLOW_UP_CHASER_CONFIG,
+  readFollowUpChaserConfig,
+  type FollowUpChaserConfig,
+} from '@/lib/skills/config';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
 import {
@@ -96,6 +101,10 @@ export interface RunFollowUpChaserSweepArgs {
   now?: Date;
   /** Lookback window in days. Defaults to 14. */
   lookbackDays?: number;
+  /** Override the per-skill config reader. Tests pass a deterministic
+   *  fake; production leaves this undefined and the live reader hits
+   *  SkillConfig via the system context. */
+  readConfig?: (workspaceId: string) => Promise<FollowUpChaserConfig>;
 }
 
 /**
@@ -140,12 +149,24 @@ export async function runFollowUpChaserSweep(
       args.buildFetcher?.(ws.id) ??
       new FollowUpMultiplexFetcher({ workspaceId: ws.id });
 
+    // Wave-2 per-skill config: read the customer's chaser knobs at fire
+    // time so the sweep honors `staleAfterDays` + `maxNudgesPerRun`
+    // straight from the settings UI. Per `feedback_cold_start_safe_agents`
+    // this is a per-fire durable read, never cached across sweeps.
+    // Tests inject `readConfig` to bypass the DB; the production
+    // fallback uses the SkillConfig table.
+    const skillConfig = await (args.readConfig
+      ? args.readConfig(ws.id)
+      : readFollowUpChaserConfig(ws.id).catch(() => DEFAULT_FOLLOW_UP_CHASER_CONFIG));
+
     try {
       const run = await runFollowUpChaserForWorkspace({
         workspaceId: ws.id,
         fetcher,
         now,
         lookbackDays,
+        staleAfterDays: skillConfig.staleAfterDays,
+        maxNudgesPerRun: skillConfig.maxNudgesPerRun,
       });
       if (!run.ok) {
         if (run.error.code === 'NOT_CONFIGURED') {

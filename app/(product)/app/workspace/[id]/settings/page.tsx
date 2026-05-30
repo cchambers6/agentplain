@@ -65,6 +65,12 @@ export default async function SettingsPage({ params }: PageProps) {
         "Tell your service team which agent decisions need explicit ratification.",
     },
     {
+      href: `/app/workspace/${workspaceId}/settings/skills`,
+      label: "skill config",
+      description:
+        "Per-skill knobs — wait days for follow-ups, priority keywords for triage, default meeting length for the scheduler.",
+    },
+    {
       href: `/app/workspace/${workspaceId}/settings/billing`,
       label: "billing",
       description: "Plan, seats, invoices, payment method.",

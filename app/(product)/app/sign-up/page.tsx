@@ -46,8 +46,9 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
         </h1>
         <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-ink-soft">
           Tell us your shop and the work you do. {PLAINO_PARTNER.name}, your
-          service partner, picks up your install within one business day —
-          first month is on us.
+          service partner, picks up your install within one business day.
+          30-day free trial, card captured at signup so your fleet keeps
+          running when the trial ends. Cancel any time.
         </p>
         <div className="mt-10">
           <SignUpForm

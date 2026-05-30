@@ -171,7 +171,16 @@ export class TestBillingProvider implements BillingProvider {
     input: CreateCheckoutSessionInput,
   ): Promise<CreateCheckoutSessionResult> {
     const id = `cs_test_${this.nextSessionId++}`;
-    this.checkoutSessions.push({ ...input, id });
+    // Mirror the Stripe provider's default — `payment_method_collection`
+    // unset becomes `"always"` for the wave-2 CC-at-trial signup flow.
+    // Tests assert on the recorded shape so the default has to live in
+    // both providers, not just the real one.
+    const recorded: CreateCheckoutSessionInput & { id: string } = {
+      ...input,
+      id,
+      paymentMethodCollection: input.paymentMethodCollection ?? "always",
+    };
+    this.checkoutSessions.push(recorded);
     const url = `https://checkout.example/test/${id}`;
     return { id, url };
   }

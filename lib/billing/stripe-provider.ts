@@ -254,6 +254,23 @@ export class StripeBillingProvider implements BillingProvider {
       success_url: input.successUrl,
       cancel_url: input.cancelUrl,
       allow_promotion_codes: input.allowPromotionCodes ?? true,
+      // payment_method_collection="always" forces card capture even
+      // during the trial — the wave-2 CC-at-trial default. The legacy
+      // pause-on-missing-PM behavior triggers when this is unset.
+      payment_method_collection: input.paymentMethodCollection ?? "always",
+      ...(input.clientReferenceId
+        ? { client_reference_id: input.clientReferenceId }
+        : {}),
+      subscription_data: {
+        ...(input.trialPeriodDays && input.trialPeriodDays > 0
+          ? { trial_period_days: input.trialPeriodDays }
+          : {}),
+        metadata: {
+          agentplain_tier: input.tier,
+          agentplain_seat_band: input.seatBand,
+          ...(input.metadata ?? {}),
+        },
+      },
       metadata: input.metadata ?? {},
     });
     return ensureCheckoutUrl(session);

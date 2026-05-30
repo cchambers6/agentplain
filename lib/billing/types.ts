@@ -93,7 +93,8 @@ export type ProviderSubscriptionStatus =
   | "incomplete"
   | "incomplete_expired"
   | "canceled"
-  | "unpaid";
+  | "unpaid"
+  | "paused";
 
 // =====================================================================
 // Checkout + portal (the customer-action surface)
@@ -102,7 +103,8 @@ export type ProviderSubscriptionStatus =
 export interface CreateCheckoutSessionInput {
   /** `setup` collects + attaches a payment method to an existing customer
    *  (used by the "Add payment method" button mid-trial). `subscription`
-   *  starts a brand-new subscription (used by upgrade-tier flow). */
+   *  starts a brand-new subscription (used by upgrade-tier flow + the
+   *  wave-2 CC-at-trial signup flow). */
   mode: "setup" | "subscription";
   providerCustomerId: string;
   /** Required when mode === "subscription". */
@@ -113,6 +115,21 @@ export interface CreateCheckoutSessionInput {
   cancelUrl: string;
   allowPromotionCodes?: boolean;
   metadata?: Record<string, string>;
+  /** Days of trial to attach to the underlying subscription when
+   *  mode === "subscription". Forwarded to Stripe as
+   *  `subscription_data.trial_period_days`. When omitted, no trial. */
+  trialPeriodDays?: number;
+  /** When true (mode === "subscription"), Stripe forces card capture
+   *  even during the trial. We default this to `"always"` for the
+   *  signup flow — that's the whole point of the wave-2 CC-at-trial
+   *  pivot. Passed through verbatim as
+   *  `payment_method_collection`. */
+  paymentMethodCollection?: "always" | "if_required";
+  /** Application-side reference threaded onto the Checkout Session and
+   *  echoed on `checkout.session.completed`. We use this to link the
+   *  workspace at signup so the webhook can resolve it even if the
+   *  subscription event arrives first. */
+  clientReferenceId?: string;
 }
 
 export interface CreateCheckoutSessionResult {

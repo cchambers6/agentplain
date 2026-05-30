@@ -12,12 +12,16 @@ import {
 } from "@/lib/auth";
 import { verticalEnumFromSlug } from "@/lib/auth/vertical-enum";
 import { getVerticalContent } from "@/lib/verticals";
+import { createTrialCheckoutForSignup } from "@/lib/billing/checkout";
+import { provisionTrialSubscriptionSafe } from "@/lib/billing/provisioning";
+import { env } from "@/lib/env";
 import {
   isSelfServeTier,
   SELF_SERVE_TIERS,
   verticalTierFromTier,
   type TierName,
 } from "@/lib/pricing/tiers";
+import { getLogger } from "@/lib/observability";
 
 const formString = (form: FormData, key: string): string => {
   const v = form.get(key);
@@ -30,6 +34,11 @@ export interface ActionResult {
   error?: string;
   /** Optional follow-up message rendered by the page. */
   notice?: string;
+  /** Wave-2 CC-at-trial: when set, the SignUpForm redirects the browser
+   *  to Stripe Checkout. The form already issued the magic link before
+   *  redirecting, so the customer can sign in from the email even if
+   *  they cancel out of Checkout. */
+  checkoutUrl?: string;
 }
 
 export async function signUpAction(
@@ -73,19 +82,29 @@ export async function signUpAction(
     };
   }
 
+  let signUpResult: Awaited<ReturnType<typeof signUpBrokerOwner>>;
   try {
-    await signUpBrokerOwner({
+    signUpResult = await signUpBrokerOwner({
       email,
       brokerageName,
       ownerName,
       vertical: verticalEnum,
       verticalTier: verticalTierFromTier(selectedTier),
+      // Pass skipBillingProvisioning so the workspace tx commits WITHOUT
+      // creating the legacy no-card Stripe Customer + trialing
+      // Subscription. The CC-at-trial flow below provisions the customer
+      // + Checkout session itself; the legacy fallback (Checkout off)
+      // does the manual provisioning post-hoc.
+      skipBillingProvisioning: true,
     });
   } catch (err) {
     return { ok: false, error: errorMessage(err) };
   }
 
-  // Issue a magic link immediately so they can verify and land in their workspace.
+  // Issue a magic link immediately so they can verify and land in their
+  // workspace. We do this BEFORE the Checkout redirect on purpose — if
+  // the customer abandons Checkout, the magic-link email still arrives
+  // and they can sign in to finish billing setup from /settings/billing.
   try {
     await requestMagicLink({ email, purpose: "sign_up" });
   } catch (err) {
@@ -94,6 +113,71 @@ export async function signUpAction(
       error: `Account created, but we couldn't send the verification email: ${errorMessage(err)}`,
     };
   }
+
+  // Wave-2 CC-at-trial pivot. When STRIPE_CHECKOUT_ENABLED is true (the
+  // prod default), route to Stripe Checkout for card capture before the
+  // trial subscription is provisioned. Stripe creates the subscription
+  // when Checkout completes and our existing `customer.subscription.
+  // created` webhook upserts the Subscription row by stripeCustomerId
+  // (which is set on the workspace by `createTrialCheckoutForSignup`).
+  //
+  // On Stripe outage / Checkout failure / `STRIPE_CHECKOUT_ENABLED=false`,
+  // fall back to the legacy `provisionTrialSubscriptionSafe` path —
+  // workspace exists, magic link is on the way, customer can add a card
+  // later from /settings/billing. This degrades but never blocks signup.
+  if (env.stripeCheckoutEnabled()) {
+    try {
+      const checkout = await createTrialCheckoutForSignup({
+        workspaceId: signUpResult.workspace.id,
+        workspaceName: signUpResult.workspace.name,
+        email,
+        tier: selectedTier,
+        appOrigin: env.appPublicOrigin(),
+      });
+      return {
+        ok: true,
+        notice: `Check ${email} for the sign-in link. Redirecting to secure card capture…`,
+        checkoutUrl: checkout.checkoutUrl,
+      };
+    } catch (err) {
+      // Honesty: log the failure (operator must triage why Checkout
+      // failed) and degrade to the legacy provisioning path so the
+      // customer is not blocked. Their card capture moves to the
+      // post-signup /settings/billing page.
+      getLogger()
+        .child({ boundary: "signup", workspace_id: signUpResult.workspace.id })
+        .error(
+          "stripe checkout-at-signup failed — degrading to legacy provisioning",
+          err,
+        );
+      await provisionTrialSubscriptionSafe(
+        {
+          workspaceId: signUpResult.workspace.id,
+          workspaceName: signUpResult.workspace.name,
+          email,
+          verticalTier: verticalTierFromTier(selectedTier),
+        },
+        { id: signUpResult.workspace.id },
+      );
+      return {
+        ok: true,
+        notice: `Check ${email}. Your trial started — add your card from billing once you sign in. The sign-in link is valid for 15 minutes.`,
+      };
+    }
+  }
+
+  // STRIPE_CHECKOUT_ENABLED=false path — legacy provisioning so dev /
+  // preview without Stripe creds + the `BILLING_PROVIDER=test` flow
+  // keep working unchanged.
+  await provisionTrialSubscriptionSafe(
+    {
+      workspaceId: signUpResult.workspace.id,
+      workspaceName: signUpResult.workspace.name,
+      email,
+      verticalTier: verticalTierFromTier(selectedTier),
+    },
+    { id: signUpResult.workspace.id },
+  );
 
   return {
     ok: true,

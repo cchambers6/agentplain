@@ -26,6 +26,12 @@ interface CheckoutCall {
   success_url: string;
   cancel_url: string;
   allow_promotion_codes?: boolean;
+  payment_method_collection?: string;
+  client_reference_id?: string;
+  subscription_data?: {
+    trial_period_days?: number;
+    metadata?: Record<string, string>;
+  };
 }
 
 const fakeStripe = () => {
@@ -264,6 +270,50 @@ describe("StripeBillingProvider — Stripe-shape translation", () => {
     assert.equal(call.mode, "subscription");
     assert.equal(call.line_items?.[0].quantity, 30);
     assert.equal(call.allow_promotion_codes, true);
+    // Wave-2 CC-at-trial default: payment_method_collection defaults to
+    // "always" so the trial subscription captures a card up-front,
+    // ending the "no card required" lie. The signup flow can opt out
+    // by passing "if_required" — but the default must be "always".
+    assert.equal(call.payment_method_collection, "always");
+  });
+
+  it("createCheckoutSession(mode=subscription) wave-2: forwards trial + client_reference_id + paymentMethodCollection", async () => {
+    const { client, calls } = fakeStripe();
+    const p = new StripeBillingProvider({
+      secretKey: "sk_test_x",
+      webhookSecret: "whsec_x",
+      client: client as never,
+    });
+    await p.createCheckoutSession({
+      mode: "subscription",
+      providerCustomerId: "cus_signup_42",
+      tier: "regular",
+      seatBand: "SEATS_1",
+      seats: 1,
+      successUrl: "https://app.test/done",
+      cancelUrl: "https://app.test/back",
+      trialPeriodDays: 30,
+      paymentMethodCollection: "always",
+      clientReferenceId: "ws_signup_42",
+      metadata: { agentplain_workspace_id: "ws_signup_42" },
+    });
+    const call = calls.checkout[0];
+    assert.equal(call.mode, "subscription");
+    assert.equal(call.client_reference_id, "ws_signup_42");
+    assert.equal(call.payment_method_collection, "always");
+    assert.equal(call.subscription_data?.trial_period_days, 30);
+    // Subscription metadata carries the tier/seatBand AND the caller's
+    // workspace id — the dispatcher reads both off the eventual
+    // subscription.created event to resolve the workspace and tag the
+    // BillingEvent row.
+    assert.equal(
+      call.subscription_data?.metadata?.agentplain_workspace_id,
+      "ws_signup_42",
+    );
+    assert.equal(
+      call.subscription_data?.metadata?.agentplain_tier,
+      "regular",
+    );
   });
 
   it("cancelSubscription({atPeriodEnd:true}) uses update, not cancel", async () => {

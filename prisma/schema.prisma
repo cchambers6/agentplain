@@ -76,9 +76,15 @@ enum WorkspaceClosureStatus {
 }
 
 // Per-seat subscription lifecycle. Mirrors Stripe's subscription.status
-// taxonomy 1:1 so webhook payloads upsert without translation. PAUSED is
-// intentionally omitted — Phase 2 doesn't expose pause-collection on
-// agentplain's surface (project_stripe_both_surfaces lines 78–80).
+// taxonomy 1:1 so webhook payloads upsert without translation. PAUSED
+// accepts the value Stripe emits when a trial ends without a payment
+// method on a subscription created with
+// trial_settings.end_behavior.missing_payment_method="pause" — before
+// the wave-2 CC-at-trial pivot every signup hit this path, the webhook
+// upsert threw on the unknown enum, and the route returned 500 (audit
+// §6, 2026-05-28). CC-at-trial avoids the path going forward; the
+// enum value stays for Phase-1 high-touch rows that may still pause and
+// for future Stripe pause-collection workflows.
 enum SubscriptionStatus {
   TRIALING
   ACTIVE
@@ -87,6 +93,7 @@ enum SubscriptionStatus {
   INCOMPLETE_EXPIRED
   CANCELED
   UNPAID
+  PAUSED
 }
 
 // Seat-band axis for the per-seat ladder. Five self-serve bands; the 100+

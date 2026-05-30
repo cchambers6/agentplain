@@ -128,6 +128,9 @@ ALTER TABLE "OnboardingState" ALTER COLUMN "id" DROP DEFAULT;
 ALTER TABLE "PreferenceSignal" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AlterTable
+ALTER TABLE "SkillConfig" ALTER COLUMN "id" DROP DEFAULT;
+
+-- AlterTable
 ALTER TABLE "Subscription" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AlterTable
@@ -155,6 +158,9 @@ ALTER TABLE "WorkThresholdConfig" ALTER COLUMN "id" DROP DEFAULT;
 ALTER TABLE "Workspace" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AlterTable
+ALTER TABLE "WorkspaceBriefing" ALTER COLUMN "id" DROP DEFAULT;
+
+-- AlterTable
 ALTER TABLE "WorkspaceInvoice" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AlterTable
@@ -162,6 +168,9 @@ ALTER TABLE "WorkspaceMemoryEntry" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AlterTable
 ALTER TABLE "WorkspacePreference" ALTER COLUMN "id" DROP DEFAULT;
+
+-- AlterTable
+ALTER TABLE "WorkspaceSkillInstallation" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AddForeignKey
 ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;

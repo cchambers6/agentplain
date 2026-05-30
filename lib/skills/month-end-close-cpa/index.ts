@@ -10,6 +10,10 @@
 
 export { runSkill } from './skill';
 export { JsonCloseFetcher } from './json-fetcher';
+export {
+  QuickBooksCloseFetcher,
+  QUICKBOOKS_NOT_CONNECTED_MESSAGE,
+} from './quickbooks-fetcher';
 export type {
   ChaseEmailDraft,
   ChecklistCategory,

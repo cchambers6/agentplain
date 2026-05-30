@@ -52,6 +52,17 @@ export async function runSkill(
     workspaceId: input.workspaceId,
   });
   if (!invoicesRes.ok) {
+    // Preserve NOT_CONFIGURED upstream so the operator notice on
+    // /approvals reads as "connect QuickBooks" instead of a generic
+    // upstream error. Per the audit's honesty bar — the gap is named,
+    // not buried under a wrapped error code.
+    if (invoicesRes.error.code === 'NOT_CONFIGURED') {
+      return skillError(
+        'NOT_CONFIGURED',
+        invoicesRes.error.message,
+        invoicesRes.error.reference,
+      );
+    }
     return skillError(
       'UPSTREAM_GMAIL_ERROR',
       `invoice fetcher (${input.fetcher.name}) failed: ${invoicesRes.error.message}`,

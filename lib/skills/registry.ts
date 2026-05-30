@@ -396,11 +396,12 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
     mcpDependencies: [
       {
         provider: 'quickbooks',
-        status: 'stubbed-json',
+        status: 'built',
         note:
-          'QuickBooks MCP not yet built. Skill accepts a generic InvoiceRecord[] ' +
-          'JSON payload today; the QuickBooks MCP will populate this same shape ' +
-          'when it lands.',
+          'QuickBooks MCP wired. lib/skills/invoice-chasing-realestate/quickbooks-fetcher.ts ' +
+          'pulls open invoices + customers via the workspace-scoped MCP server. ' +
+          'When QuickBooks is not yet connected the adapter returns a calm ' +
+          'NOT_CONFIGURED notice instead of throwing; nothing fake lands in /approvals.',
       },
       {
         provider: 'follow-up-boss',
@@ -478,10 +479,16 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
     mcpDependencies: [
       {
         provider: 'quickbooks',
-        status: 'stubbed-json',
+        status: 'built',
         note:
-          'QuickBooks MCP not yet built. Skill accepts QuickBooks-shaped JSON ' +
-          '(client + period + checklist) today; MCP will populate the same shape.',
+          'QuickBooks MCP wired. lib/skills/month-end-close-cpa/quickbooks-fetcher.ts ' +
+          'derives the engagement (customer + primary contact) from the QB customer ' +
+          'record and the checklist from the engagement scope (standard CPA ' +
+          'engagement-letter pattern). Received-docs are not a QB concept — the ' +
+          'adapter returns empty so the skill chases everything outstanding by ' +
+          'dueAt; TaxDome / Karbon MCPs land received-doc detection later. ' +
+          'When QuickBooks is not yet connected the adapter returns a calm ' +
+          'NOT_CONFIGURED notice instead of throwing.',
       },
       {
         provider: 'gmail',

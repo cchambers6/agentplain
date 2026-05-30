@@ -51,6 +51,19 @@ const SEVERITIES: Array<"INFO" | "LOW" | "MEDIUM" | "HIGH" | "BLOCKER" | "NONE">
   "BLOCKER",
 ];
 
+/** Read the persisted `autoApproveWhen` JSON for display. Returns null
+ *  when the field is absent or malformed — the form input renders as
+ *  blank, matching "no opt-in" / "every item PENDING" (safe default). */
+function readAutoApproveMinConfidence(raw: unknown): number | null {
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw !== "object" || Array.isArray(raw)) return null;
+  const m = (raw as { minConfidence?: unknown }).minConfidence;
+  if (typeof m !== "number" || !Number.isFinite(m) || m < 0 || m > 1) {
+    return null;
+  }
+  return m;
+}
+
 export default async function WorkThresholdsPage({ params }: PageProps) {
   const { id: workspaceId } = await params;
   const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
@@ -77,7 +90,11 @@ export default async function WorkThresholdsPage({ params }: PageProps) {
         {KINDS.map((k) => {
           const current = byKind.get(k.kind);
           const currentSeverity = current?.requiresApprovalAboveSeverity ?? "NONE";
-          const fieldId = `threshold-${k.kind.toLowerCase()}`;
+          const currentAutoApprove = readAutoApproveMinConfidence(
+            current?.autoApproveWhen,
+          );
+          const severityFieldId = `threshold-severity-${k.kind.toLowerCase()}`;
+          const autoApproveFieldId = `threshold-autoapprove-${k.kind.toLowerCase()}`;
           return (
             <li key={k.kind}>
               <ApPaperCard
@@ -93,12 +110,12 @@ export default async function WorkThresholdsPage({ params }: PageProps) {
                 >
                   <input type="hidden" name="workspaceId" value={workspaceId} />
                   <input type="hidden" name="kind" value={k.kind} />
-                  <label htmlFor={fieldId} className="flex flex-col gap-1 text-sm">
+                  <label htmlFor={severityFieldId} className="flex flex-col gap-1 text-sm">
                     <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-                      approve when severity ≥
+                      require review when severity ≥
                     </span>
                     <select
-                      id={fieldId}
+                      id={severityFieldId}
                       name="severity"
                       defaultValue={currentSeverity}
                       className="border border-rule bg-paper px-3 py-2 text-[14px] text-ink focus:border-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
@@ -110,10 +127,33 @@ export default async function WorkThresholdsPage({ params }: PageProps) {
                       ))}
                     </select>
                   </label>
+                  <label htmlFor={autoApproveFieldId} className="flex flex-col gap-1 text-sm">
+                    <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                      auto-approve when confidence ≥ (blank = off)
+                    </span>
+                    <input
+                      id={autoApproveFieldId}
+                      name="autoApproveMinConfidence"
+                      type="number"
+                      step="0.05"
+                      min="0"
+                      max="1"
+                      defaultValue={currentAutoApprove ?? ""}
+                      placeholder="(off)"
+                      className="border border-rule bg-paper px-3 py-2 text-[14px] text-ink focus:border-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+                    />
+                  </label>
                   <ApHeritageButton variant="secondary" type="submit">
                     save
                   </ApHeritageButton>
                 </form>
+                <p className="mt-3 text-[12px] text-ink-soft">
+                  Default keeps every item PENDING for your review. Set
+                  an auto-approve threshold to let high-confidence items
+                  flow through without a manual click — agentplain still
+                  never sends; your own system performs any downstream
+                  action.
+                </p>
               </ApPaperCard>
             </li>
           );

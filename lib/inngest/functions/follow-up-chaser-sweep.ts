@@ -54,6 +54,7 @@ import {
   type FollowUpChaserConfig,
 } from '@/lib/skills/config';
 import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
+import { isWorkspacePaused } from '@/lib/billing/workspace-paused-gate';
 import type { Vertical } from '@prisma/client';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
@@ -144,6 +145,15 @@ export async function runFollowUpChaserSweep(
   };
 
   for (const ws of candidates) {
+    // Gate 0 (wave-3): paused-for-billing. PAUSED/PAST_DUE workspaces
+    // skip every sweep so a dunning customer pays nothing for nudges.
+    const pause = await isWorkspacePaused({ workspaceId: ws.id }).catch(
+      () => ({ isPaused: false }),
+    );
+    if (pause.isPaused) {
+      result.workspacesSkippedUnconfigured += 1;
+      continue;
+    }
     // Gate 1: discipline activation.
     const disabledIds = ws.disabledDisciplines
       .map((d) => asDisciplineId(d))

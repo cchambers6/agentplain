@@ -4,6 +4,7 @@ import { withSystemContext } from "@/lib/db";
 import { ApWorkspaceStrip } from "@/components/ui/ap";
 import { signOutAction } from "../../actions";
 import { WorkspaceNavLink } from "./WorkspaceNavLink";
+import { isWorkspacePaused } from "@/lib/billing/workspace-paused-gate";
 
 interface WorkspaceLayoutProps {
   children: React.ReactNode;
@@ -39,6 +40,15 @@ export default async function WorkspaceLayout({
     // Shouldn't happen — requireWorkspaceMember already redirects on miss.
     return null;
   }
+
+  // Wave-3 phase 5 — read subscription status once so every workspace
+  // page surfaces a "Plaino is paused — update billing to resume" banner
+  // when PAUSED / PAST_DUE. The runtime gate at the Inngest layer
+  // already prevents fleet activity in that state; this banner is the
+  // customer-visible reason.
+  const pauseState = await isWorkspacePaused({ workspaceId: id }).catch(
+    () => ({ isPaused: false, status: null, reason: '' }),
+  );
 
   const base = `/app/workspace/${id}`;
 
@@ -86,6 +96,31 @@ export default async function WorkspaceLayout({
           </WorkspaceNavLink>
         ))}
       />
+      {pauseState.isPaused ? (
+        <div className="container-wide mt-4">
+          <div
+            role="status"
+            aria-live="polite"
+            className="border border-flag bg-paper p-4 text-[14px] text-ink"
+          >
+            <p className="font-medium">
+              Plaino is paused — update billing to resume.
+            </p>
+            <p className="mt-2 text-ink-soft">
+              Your subscription is {pauseState.status === 'PAUSED' ? 'paused' : 'past due'};
+              Plaino is not running drafts, briefings, or sync work until billing
+              is current. Update your payment method in{' '}
+              <Link
+                href={`${base}/settings/billing`}
+                className="underline underline-offset-4 hover:text-ink"
+              >
+                Settings · Billing
+              </Link>
+              {' '}to bring the fleet back online.
+            </p>
+          </div>
+        </div>
+      ) : null}
       {/* tabIndex=-1 so the skip-to-content anchor moves focus here without
           adding a permanent tab stop. <section> not <main> because
           ApAppShell already wraps children in a single <main>. */}

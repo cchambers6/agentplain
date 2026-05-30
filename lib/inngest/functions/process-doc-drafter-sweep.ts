@@ -50,6 +50,7 @@ import { runProcessDocDrafterForWorkspace } from '@/lib/skills/process-doc-draft
 import { ProcessDocMultiplexFetcher } from '@/lib/skills/process-doc-drafter-general/multiplex-fetcher';
 import type { ProcessDocFetcher } from '@/lib/skills/process-doc-drafter-general/types';
 import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
+import { isWorkspacePaused } from '@/lib/billing/workspace-paused-gate';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
 import {
@@ -120,6 +121,14 @@ export async function runProcessDocDrafterSweep(
   };
 
   for (const ws of candidates) {
+    // Wave-3 phase 5 — paused-for-billing gate.
+    const pause = await isWorkspacePaused({ workspaceId: ws.id }).catch(
+      () => ({ isPaused: false }),
+    );
+    if (pause.isPaused) {
+      result.workspacesSkippedUnconfigured += 1;
+      continue;
+    }
     const disabledIds = ws.disabledDisciplines
       .map((d) => asDisciplineId(d))
       .filter((d): d is NonNullable<ReturnType<typeof asDisciplineId>> => d !== null);

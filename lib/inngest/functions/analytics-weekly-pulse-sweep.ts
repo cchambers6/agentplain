@@ -23,6 +23,7 @@ import { withSystemContext } from '@/lib/db/rls';
 import { asDisciplineId } from '@/lib/disciplines';
 import { runAnalyticsPulseForWorkspace } from '@/lib/skills/analytics-weekly-pulse-general';
 import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
+import { isWorkspacePaused } from '@/lib/billing/workspace-paused-gate';
 import type { Vertical } from '@prisma/client';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
@@ -47,6 +48,7 @@ export interface AnalyticsPulseSweepResult {
   workspacesWithPulse: number;
   workspacesSkippedDisciplineDisabled: number;
   workspacesSkippedNotInstalled: number;
+  workspacesSkippedPausedForBilling: number;
   failures: Array<{ workspaceId: string; reason: string }>;
 }
 
@@ -82,10 +84,20 @@ export async function runAnalyticsPulseSweep(
     workspacesWithPulse: 0,
     workspacesSkippedDisciplineDisabled: 0,
     workspacesSkippedNotInstalled: 0,
+    workspacesSkippedPausedForBilling: 0,
     failures: [],
   };
 
   for (const ws of candidates) {
+    // Wave-3 phase 5 — paused-for-billing gate. Subscription PAUSED /
+    // PAST_DUE workspaces skip the LLM call entirely.
+    const pause = await isWorkspacePaused({ workspaceId: ws.id }).catch(
+      () => ({ isPaused: false }),
+    );
+    if (pause.isPaused) {
+      result.workspacesSkippedPausedForBilling += 1;
+      continue;
+    }
     const disabled = ws.disabledDisciplines
       .map((d) => asDisciplineId(d))
       .filter((d): d is NonNullable<ReturnType<typeof asDisciplineId>> => d !== null);

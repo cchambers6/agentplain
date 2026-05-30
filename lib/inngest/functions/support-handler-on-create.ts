@@ -45,6 +45,7 @@ import { getLogger } from '@/lib/observability';
 import { runSupportHandlerForRequest } from '@/lib/skills/support-handler';
 import { withSystemContext } from '@/lib/db/rls';
 import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
+import { isWorkspacePaused } from '@/lib/billing/workspace-paused-gate';
 
 export const SUPPORT_HANDLER_ON_CREATE_FUNCTION_ID =
   'agentplain-support-handler-on-create';
@@ -92,6 +93,25 @@ export const supportHandlerOnCreateFn = inngest.createFunction(
             support_request_id: data.supportRequestId,
             workspace_id: data.workspaceId,
           });
+
+          // Wave-3 phase 5 — paused-for-billing gate. A workspace with
+          // a PAUSED / PAST_DUE subscription skips the draft entirely so
+          // no LLM call runs + no row lands in /approvals. The
+          // operator-email path (the human ack) stays live regardless.
+          const pause = await isWorkspacePaused({
+            workspaceId: data.workspaceId,
+          }).catch(() => ({ isPaused: false, status: null, reason: '' }));
+          if (pause.isPaused) {
+            logger.info('support-handler skipped — workspace paused for billing', {
+              support_request_id: data.supportRequestId,
+              workspace_id: data.workspaceId,
+              subscription_status: pause.status,
+            });
+            return {
+              skipped: true,
+              reason: 'paused-for-billing' as const,
+            };
+          }
 
           // Wave-3 phase 3 — marketplace install gate. A workspace that
           // explicitly uninstalled `support-handler` from /marketplace

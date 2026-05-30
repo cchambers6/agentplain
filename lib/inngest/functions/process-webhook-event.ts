@@ -53,6 +53,7 @@ import type { DraftPersister, MessageFetcher } from '@/lib/skills/types';
 import { getWorkspacePreference } from '@/lib/preferences';
 import { retrieveCustomerContext } from '@/lib/customer-files';
 import { PrismaMemoryStore } from '@/lib/plaino/memory';
+import { isWorkspacePaused } from '@/lib/billing/workspace-paused-gate';
 import {
   decideRetry,
   readyForProcessingFilter,
@@ -136,6 +137,43 @@ export async function processUnprocessedWebhookEvents(
       continue;
     }
     try {
+      // Wave-3 phase 5 — PAUSED/PAST_DUE feature gate. The billing
+      // surface promised "agents pause until billing is current"; this
+      // is the runtime enforcement seam. Read the subscription status
+      // before any LLM call so a paused workspace pays nothing and no
+      // approval row lands in /approvals.
+      const pauseState = await isWorkspacePaused({ workspaceId: workspace.id });
+      if (pauseState.isPaused) {
+        await withSystemContext((tx) =>
+          tx.webhookEvent.update({
+            where: { id: event.id },
+            data: {
+              processed: true,
+              processedAt: new Date(),
+              error: null,
+              attemptCount: { increment: 1 },
+              nextAttemptAt: null,
+            },
+          }),
+        );
+        await withSystemContext((tx) =>
+          tx.auditLog.create({
+            data: {
+              workspaceId: workspace.id,
+              action: 'skills.loop.paused_for_billing',
+              targetTable: 'WebhookEvent',
+              targetId: event.id,
+              payload: {
+                subscriptionStatus: pauseState.status,
+                reason: pauseState.reason,
+              },
+            },
+          }),
+        );
+        result.succeeded += 1;
+        continue;
+      }
+
       const adapter = buildAdapterForProvider(credential.provider, workspace.id);
 
       // Read durable state per fire (no in-memory cache between events —

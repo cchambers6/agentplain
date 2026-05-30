@@ -23,6 +23,7 @@ import { PrismaLeadTriageApprovalSink } from '@/lib/skills/lead-triage-realestat
 import { FubLeadFetcher } from '@/lib/integrations/follow-up-boss-mcp';
 import { ProdFollowUpBossMcpServer } from '@/lib/integrations/follow-up-boss-mcp';
 import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
+import { isWorkspacePaused } from '@/lib/billing/workspace-paused-gate';
 import type { Vertical } from '@prisma/client';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
@@ -47,6 +48,7 @@ export interface FubSyncSweepResult {
   workspacesSkippedDisciplineDisabled: number;
   workspacesSkippedNotInstalled: number;
   workspacesSkippedNotConnected: number;
+  workspacesSkippedPausedForBilling: number;
   leadsTriaged: number;
   notesWritten: number;
   failures: Array<{ workspaceId: string; reason: string }>;
@@ -84,12 +86,20 @@ export async function runFubSyncSweep(
     workspacesSkippedDisciplineDisabled: 0,
     workspacesSkippedNotInstalled: 0,
     workspacesSkippedNotConnected: 0,
+    workspacesSkippedPausedForBilling: 0,
     leadsTriaged: 0,
     notesWritten: 0,
     failures: [],
   };
 
   for (const ws of candidates) {
+    const pause = await isWorkspacePaused({ workspaceId: ws.id }).catch(
+      () => ({ isPaused: false }),
+    );
+    if (pause.isPaused) {
+      result.workspacesSkippedPausedForBilling += 1;
+      continue;
+    }
     if (!ws.hasFubCredential) {
       result.workspacesSkippedNotConnected += 1;
       continue;

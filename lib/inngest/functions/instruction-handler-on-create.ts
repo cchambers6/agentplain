@@ -30,6 +30,7 @@ import {
 } from '../with-error-reporting';
 import { getLogger } from '@/lib/observability';
 import { withSystemContext } from '@/lib/db/rls';
+import { isWorkspacePaused } from '@/lib/billing/workspace-paused-gate';
 import {
   PrismaInstructionQueueStore,
   PrismaMemoryStore,
@@ -75,6 +76,26 @@ export const instructionHandlerOnCreateFn = inngest.createFunction(
             workspace_id: data.workspaceId,
             target_discipline: data.targetDiscipline,
           });
+
+          // Wave-3 phase 5 — paused-for-billing gate. Workspaces with
+          // PAUSED / PAST_DUE subscription skip the LLM call entirely;
+          // the draft never runs. The PLAINO_INSTRUCTION row stays
+          // PENDING in /approvals — the operator can decide whether
+          // to keep it or dismiss when billing is current again.
+          const pause = await isWorkspacePaused({
+            workspaceId: data.workspaceId,
+          }).catch(() => ({ isPaused: false, status: null, reason: '' }));
+          if (pause.isPaused) {
+            logger.info('instruction-handler skipped — workspace paused for billing', {
+              approval_queue_item_id: data.approvalQueueItemId,
+              workspace_id: data.workspaceId,
+              subscription_status: pause.status,
+            });
+            return {
+              skipped: true,
+              reason: 'paused-for-billing' as const,
+            };
+          }
 
           const store = new PrismaInstructionQueueStore(data.workspaceId);
           // The memory store runs in a system context too — the

@@ -419,6 +419,7 @@ model Workspace {
   chatMessages             ChatMessage[]
   memoryEntries            WorkspaceMemoryEntry[]
   llmUsageRecords          LlmUsageRecord[]
+  briefings                WorkspaceBriefing[]
 
   @@index([slug])
   @@index([vertical])
@@ -1052,6 +1053,11 @@ model WorkspacePreference {
   /// wiring (skip vs. fire) deepens in later waves — this column is the
   /// truth source those later layers read.
   disabledDisciplines String[]  @default([])
+  /// Wave-2 briefings generator mute toggle. NULL = enabled (the
+  /// default). Non-null = the customer turned them off; the generator
+  /// cron skips and the briefings page renders a "muted — turn back
+  /// on" empty state. Per-workspace switch, not per-discipline.
+  briefingsMutedAt    DateTime?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -1255,6 +1261,40 @@ model WorkspaceMemoryEntry {
   /// a sort step.
   @@index([workspaceId, kind, pinned, createdAt])
   @@index([workspaceId, pinned, updatedAt])
+}
+
+/// Wave-2 briefings generator. The page at
+/// /app/workspace/[id]/briefings has promised "Briefings land here at
+/// 9am ET each workday" since the read-only Notion provider shipped
+/// (audit §8 #5, 2026-05-28) — but no generator existed and the page
+/// always rendered empty. The wave-2 generator cron writes into this
+/// table; the page reads from it and decrypts the body.
+///
+/// `body` is encrypted at rest with the v1 envelope
+/// (`lib/security/encryption` — `v1:iv:tag:ct`) because briefings
+/// quote real customer threads. `summary` is a non-PII aggregate
+/// (counts + categories) the page can render for previews without
+/// decrypting.
+model WorkspaceBriefing {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @db.Uuid
+  /// ISO Y-M-D (UTC) the briefing covers. One row per workspace per
+  /// day; the @@unique guarantees idempotent cron retries.
+  forDate     String    @db.VarChar(10)
+  /// AES-256-GCM v1-envelope ciphertext. NEVER plaintext at rest.
+  body        String
+  /// Aggregate counts + top categories. Shape defined in
+  /// `lib/skills/briefing-generator/types.ts#BriefingSummary`.
+  summary     Json      @default("{}")
+  /// READY / FAILED / EMPTY (no activity in window). Future statuses
+  /// may include MUTED for the customer-facing mute path.
+  status      String    @default("READY") @db.VarChar(16)
+  generatedAt DateTime  @default(now())
+  emailedAt   DateTime?
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, forDate])
+  @@index([workspaceId, generatedAt])
 }
 
 // Per-LLM-call token + cost accounting. One row per successful

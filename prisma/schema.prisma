@@ -254,6 +254,13 @@ enum IntegrationProvider {
   DOCUSIGN
   QUICKBOOKS
   SLACK
+  // Wave-3 realty CRM. Follow Up Boss is the most-shared realty CRM
+  // among small independent brokerages and exposes a self-serve API key
+  // (HTTP Basic auth — `accessTokenEncrypted` holds the key; refresh
+  // token + expiresAt are unused; `expiresAt` is set to a sentinel
+  // far-future date to satisfy the schema's non-null constraint).
+  // The MCP server lives at `lib/integrations/follow-up-boss-mcp/`.
+  FOLLOW_UP_BOSS
 }
 
 // Credential lifecycle states. ACTIVE = tokens valid and refresh-eligible.

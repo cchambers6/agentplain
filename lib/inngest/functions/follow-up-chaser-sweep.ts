@@ -53,6 +53,8 @@ import {
   readFollowUpChaserConfig,
   type FollowUpChaserConfig,
 } from '@/lib/skills/config';
+import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
+import type { Vertical } from '@prisma/client';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
 import {
@@ -81,12 +83,18 @@ export interface FollowUpChaserSweepResult {
   workspacesWithNudges: number;
   workspacesSkippedUnconfigured: number;
   workspacesSkippedDisciplineDisabled: number;
+  /** Wave-2 marketplace gate — workspace explicitly uninstalled the
+   *  skill from /marketplace. */
+  workspacesSkippedNotInstalled: number;
   nudgesWritten: number;
   failures: Array<{ workspaceId: string; reason: string }>;
 }
 
 interface WorkspaceCandidate {
   id: string;
+  /** Workspace vertical — needed for the wave-2 marketplace install
+   *  check (`isSkillInstalledForWorkspace`). */
+  vertical: Vertical;
   hasGoogle: boolean;
   hasM365: boolean;
   disabledDisciplines: string[];
@@ -105,6 +113,11 @@ export interface RunFollowUpChaserSweepArgs {
    *  fake; production leaves this undefined and the live reader hits
    *  SkillConfig via the system context. */
   readConfig?: (workspaceId: string) => Promise<FollowUpChaserConfig>;
+  /** Override the marketplace install check. Tests pass a deterministic
+   *  fake; production leaves undefined and the live reader hits
+   *  WorkspaceSkillInstallation via the system context. Default: live
+   *  marketplace reader. */
+  isInstalled?: (workspaceId: string, vertical: Vertical) => Promise<boolean>;
 }
 
 /**
@@ -125,6 +138,7 @@ export async function runFollowUpChaserSweep(
     workspacesWithNudges: 0,
     workspacesSkippedUnconfigured: 0,
     workspacesSkippedDisciplineDisabled: 0,
+    workspacesSkippedNotInstalled: 0,
     nudgesWritten: 0,
     failures: [],
   };
@@ -142,6 +156,20 @@ export async function runFollowUpChaserSweep(
     // already filters on this; re-check defensively.
     if (!ws.hasGoogle && !ws.hasM365) {
       result.workspacesSkippedUnconfigured += 1;
+      continue;
+    }
+    // Gate 3 (wave-2): marketplace install check. A workspace that
+    // explicitly uninstalled this skill from /marketplace gets
+    // skipped — no draft, no LLM cost, no /approvals row.
+    const installed = await (args.isInstalled
+      ? args.isInstalled(ws.id, ws.vertical)
+      : isSkillInstalledForWorkspace({
+          workspaceId: ws.id,
+          workspaceVertical: ws.vertical,
+          skillSlug: 'follow-up-chaser-general',
+        }).catch(() => true));
+    if (!installed) {
+      result.workspacesSkippedNotInstalled += 1;
       continue;
     }
 
@@ -224,6 +252,7 @@ async function defaultListCandidates(): Promise<WorkspaceCandidate[]> {
       },
       select: {
         id: true,
+        vertical: true,
         integrationCredentials: {
           where: {
             status: 'ACTIVE',
@@ -239,6 +268,7 @@ async function defaultListCandidates(): Promise<WorkspaceCandidate[]> {
     });
     return workspaces.map((ws) => ({
       id: ws.id,
+      vertical: ws.vertical,
       hasGoogle: ws.integrationCredentials.some((c) => c.provider === 'GOOGLE'),
       hasM365: ws.integrationCredentials.some((c) => c.provider === 'M365'),
       disabledDisciplines: ws.preference?.disabledDisciplines ?? [],

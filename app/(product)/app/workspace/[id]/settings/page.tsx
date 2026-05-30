@@ -71,6 +71,12 @@ export default async function SettingsPage({ params }: PageProps) {
         "Per-skill knobs — wait days for follow-ups, priority keywords for triage, default meeting length for the scheduler.",
     },
     {
+      href: `/app/workspace/${workspaceId}/marketplace`,
+      label: "marketplace",
+      description:
+        "Install or uninstall any skill in the catalog. Live skills install by default; schema-only carry a honest badge.",
+    },
+    {
       href: `/app/workspace/${workspaceId}/settings/billing`,
       label: "billing",
       description: "Plan, seats, invoices, payment method.",

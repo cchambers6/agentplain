@@ -81,6 +81,7 @@ describe('runSchedulerSweep — workspaces with no calendar credential are skipp
       listCandidates: async () => [
         {
           id: WORKSPACE_NEITHER,
+          vertical: 'REAL_ESTATE',
           hasGoogle: false,
           hasM365: false,
           disabledDisciplines: [],
@@ -101,6 +102,7 @@ describe('runSchedulerSweep — workspaces with the discipline disabled are skip
       listCandidates: async () => [
         {
           id: WORKSPACE_DISABLED,
+          vertical: 'REAL_ESTATE',
           hasGoogle: true,
           hasM365: false,
           // Disable the discipline the scheduler is tagged under.
@@ -121,6 +123,7 @@ describe('runSchedulerSweep — race-condition NOT_CONFIGURED is a clean skip', 
       listCandidates: async () => [
         {
           id: WORKSPACE_GOOGLE,
+          vertical: 'REAL_ESTATE',
           hasGoogle: true,
           hasM365: false,
           disabledDisciplines: [],

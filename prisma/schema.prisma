@@ -347,6 +347,7 @@ model User {
   decidedItems         WorkApprovalQueueItem[] @relation("DecidedBy")
   configuredThresholds WorkThresholdConfig[]   @relation("ConfiguredBy")
   configuredSkills     SkillConfig[]           @relation("SkillConfigBy")
+  installedSkills      WorkspaceSkillInstallation[] @relation("SkillInstalledBy")
   auditEntriesActor    AuditLog[]              @relation("AuditActor")
   auditEntriesActAs    AuditLog[]              @relation("AuditActingAs")
   magicLinkTokens      MagicLinkToken[]
@@ -422,6 +423,7 @@ model Workspace {
   llmUsageRecords          LlmUsageRecord[]
   briefings                WorkspaceBriefing[]
   skillConfigs             SkillConfig[]
+  skillInstallations       WorkspaceSkillInstallation[]
 
   @@index([slug])
   @@index([vertical])
@@ -1263,6 +1265,34 @@ model WorkspaceMemoryEntry {
   /// a sort step.
   @@index([workspaceId, kind, pinned, createdAt])
   @@index([workspaceId, pinned, updatedAt])
+}
+
+/// Wave-2 skill marketplace. One row per workspace × skill that the
+/// customer has touched. NO ROW = "default-installed when the catalog
+/// says runtime=live; not installed otherwise" (see
+/// `lib/skills/marketplace.ts`). A row with `disabledAt IS NULL`
+/// means the customer explicitly installed the skill (or, for
+/// default-installed skills, never touched it). `disabledAt` non-null
+/// means the customer uninstalled at that timestamp.
+///
+/// The runtime callers (sweep candidate listers + the webhook chain)
+/// read this table at fire time and skip skills that resolve to
+/// "not installed". Per `feedback_cold_start_safe_agents` this is a
+/// per-fire durable read, never cached.
+model WorkspaceSkillInstallation {
+  id                String    @id @default(uuid()) @db.Uuid
+  workspaceId       String    @db.Uuid
+  /// Matches `lib/skills/<slug>/` and `SKILL_CATALOG.slug`.
+  skillSlug         String    @db.VarChar(64)
+  installedAt       DateTime  @default(now())
+  installedByUserId String?   @db.Uuid
+  /// NULL = currently installed. Non-null = uninstalled at that ts.
+  disabledAt        DateTime?
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  installedBy       User?     @relation("SkillInstalledBy", fields: [installedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([workspaceId, skillSlug])
+  @@index([workspaceId, disabledAt])
 }
 
 /// Wave-2 per-skill config. One row per workspace × skill. The

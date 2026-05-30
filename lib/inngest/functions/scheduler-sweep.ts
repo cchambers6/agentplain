@@ -50,7 +50,7 @@
  *     reviews them.
  */
 
-import type { Workspace } from '@prisma/client';
+import type { Vertical, Workspace } from '@prisma/client';
 import { withSystemContext } from '@/lib/db/rls';
 import { asDisciplineId } from '@/lib/disciplines';
 import { SKILL_DISCIPLINE } from '@/lib/disciplines/skill-mapping';
@@ -62,6 +62,7 @@ import {
   readChiefOfStaffConfig,
   type ChiefOfStaffConfig,
 } from '@/lib/skills/config';
+import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
 import {
@@ -96,6 +97,8 @@ export interface SchedulerSweepResult {
   /** Workspaces skipped because the operator turned the scheduler's
    *  discipline OFF on the Discipline panel. */
   workspacesSkippedDisciplineDisabled: number;
+  /** Wave-2 marketplace gate — workspace uninstalled the skill. */
+  workspacesSkippedNotInstalled: number;
   /** Total proposals (meetings + reply-drafts + to-dos) written. */
   proposalsWritten: number;
   /** Per-workspace failures — one row dies, the sweep keeps going. */
@@ -104,6 +107,7 @@ export interface SchedulerSweepResult {
 
 interface WorkspaceCandidate {
   id: string;
+  vertical: Vertical;
   hasGoogle: boolean;
   hasM365: boolean;
   disabledDisciplines: string[];
@@ -124,6 +128,8 @@ export interface RunSchedulerSweepArgs {
    *  fake; production leaves this undefined and the live reader hits
    *  SkillConfig via the system context. */
   readConfig?: (workspaceId: string) => Promise<ChiefOfStaffConfig>;
+  /** Override the marketplace install check. Default = live reader. */
+  isInstalled?: (workspaceId: string, vertical: Vertical) => Promise<boolean>;
 }
 
 /**
@@ -145,6 +151,7 @@ export async function runSchedulerSweep(
     workspacesWithProposals: 0,
     workspacesSkippedUnconfigured: 0,
     workspacesSkippedDisciplineDisabled: 0,
+    workspacesSkippedNotInstalled: 0,
     proposalsWritten: 0,
     failures: [],
   };
@@ -165,6 +172,20 @@ export async function runSchedulerSweep(
     // case of a race between candidate listing and execution.
     if (!ws.hasGoogle && !ws.hasM365) {
       result.workspacesSkippedUnconfigured += 1;
+      continue;
+    }
+    // Gate 3 (wave-2): marketplace install check. A workspace that
+    // explicitly uninstalled the chief-of-staff scheduler gets
+    // skipped — no proposal rows, no LLM cost.
+    const installed = await (args.isInstalled
+      ? args.isInstalled(ws.id, ws.vertical)
+      : isSkillInstalledForWorkspace({
+          workspaceId: ws.id,
+          workspaceVertical: ws.vertical,
+          skillSlug: 'chief-of-staff-scheduler',
+        }).catch(() => true));
+    if (!installed) {
+      result.workspacesSkippedNotInstalled += 1;
       continue;
     }
 
@@ -263,6 +284,7 @@ async function defaultListCandidates(): Promise<WorkspaceCandidate[]> {
       },
       select: {
         id: true,
+        vertical: true,
         integrationCredentials: {
           where: {
             status: 'ACTIVE',
@@ -278,6 +300,7 @@ async function defaultListCandidates(): Promise<WorkspaceCandidate[]> {
     });
     return workspaces.map((ws) => ({
       id: ws.id,
+      vertical: ws.vertical,
       hasGoogle: ws.integrationCredentials.some((c) => c.provider === 'GOOGLE'),
       hasM365: ws.integrationCredentials.some((c) => c.provider === 'M365'),
       disabledDisciplines: ws.preference?.disabledDisciplines ?? [],

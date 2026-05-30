@@ -61,6 +61,7 @@ describe('runProcessDocDrafterSweep — workspaces with no email credential are 
       listCandidates: async () => [
         {
           id: WORKSPACE_NEITHER,
+          vertical: 'REAL_ESTATE',
           hasGoogle: false,
           hasM365: false,
           disabledDisciplines: [],
@@ -81,6 +82,7 @@ describe('runProcessDocDrafterSweep — workspaces with the discipline disabled 
       listCandidates: async () => [
         {
           id: WORKSPACE_DISABLED,
+          vertical: 'REAL_ESTATE',
           hasGoogle: true,
           hasM365: false,
           disabledDisciplines: [
@@ -102,6 +104,7 @@ describe('runProcessDocDrafterSweep — race-condition NOT_CONFIGURED is a clean
       listCandidates: async () => [
         {
           id: WORKSPACE_GOOGLE,
+          vertical: 'REAL_ESTATE',
           hasGoogle: true,
           hasM365: false,
           disabledDisciplines: [],

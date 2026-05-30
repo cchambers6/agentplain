@@ -45,11 +45,13 @@ import type { WebhookEvent, Workspace } from '@prisma/client';
 import { asDisciplineId } from '@/lib/disciplines';
 import { SKILL_DISCIPLINE } from '@/lib/disciplines/skill-mapping';
 import { runLeadTriageForEvent } from './lead-triage-realestate/run-for-event';
+import { isSkillInstalledForWorkspace } from './marketplace';
 import type { MessageFetcher } from './types';
 
 export type RouterDispatchOutcome =
   | { status: 'dispatched'; skillSlug: string; result: unknown }
   | { status: 'skipped-discipline-disabled'; skillSlug: string }
+  | { status: 'skipped-not-installed'; skillSlug: string }
   | { status: 'skipped-no-match'; skillSlug: string }
   | { status: 'errored'; skillSlug: string; reason: string };
 
@@ -135,6 +137,22 @@ export async function runVerticalRouter(
     if (disciplineId && disabled.has(disciplineId)) {
       outcomes.push({
         status: 'skipped-discipline-disabled',
+        skillSlug: reg.skillSlug,
+      });
+      skipped += 1;
+      continue;
+    }
+    // Wave-2 marketplace gate. `.catch(() => true)` keeps the chain
+    // alive on a DB blip — better to dispatch and let the operator
+    // dismiss than silently drop work.
+    const installed = await isSkillInstalledForWorkspace({
+      workspaceId: args.workspace.id,
+      workspaceVertical: args.workspace.vertical,
+      skillSlug: reg.skillSlug,
+    }).catch(() => true);
+    if (!installed) {
+      outcomes.push({
+        status: 'skipped-not-installed',
         skillSlug: reg.skillSlug,
       });
       skipped += 1;

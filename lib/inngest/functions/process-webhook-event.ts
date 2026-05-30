@@ -164,6 +164,11 @@ export async function processUnprocessedWebhookEvents(
         workspacePreferences,
         customerContextResolver,
         memory: memoryStore,
+        // Pass the discipline-disable list so the runner can skip
+        // discipline-tagged terminal outputs (office-admin, schedule,
+        // draft, compliance) without firing the LLM. Closes the wave-1
+        // audit gap "biggest runtime path currently ungated."
+        disabledDisciplineIds: workspacePreferences?.disabledDisciplines ?? [],
       });
 
       const artifacts = await persistSkillRunArtifacts({

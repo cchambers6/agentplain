@@ -170,8 +170,7 @@ export async function provisionTrialSubscriptionSafe(
   }
 }
 
-const STATUS_MAP: Record<
-  ProviderSubscriptionStatus,
+type AgentplainSubscriptionStatus =
   | "TRIALING"
   | "ACTIVE"
   | "PAST_DUE"
@@ -179,7 +178,9 @@ const STATUS_MAP: Record<
   | "INCOMPLETE_EXPIRED"
   | "CANCELED"
   | "UNPAID"
-> = {
+  | "PAUSED";
+
+const STATUS_MAP: Record<ProviderSubscriptionStatus, AgentplainSubscriptionStatus> = {
   trialing: "TRIALING",
   active: "ACTIVE",
   past_due: "PAST_DUE",
@@ -187,17 +188,11 @@ const STATUS_MAP: Record<
   incomplete_expired: "INCOMPLETE_EXPIRED",
   canceled: "CANCELED",
   unpaid: "UNPAID",
+  paused: "PAUSED",
 };
 
 export function subscriptionStatusFromProvider(
   status: ProviderSubscriptionStatus,
-):
-  | "TRIALING"
-  | "ACTIVE"
-  | "PAST_DUE"
-  | "INCOMPLETE"
-  | "INCOMPLETE_EXPIRED"
-  | "CANCELED"
-  | "UNPAID" {
+): AgentplainSubscriptionStatus {
   return STATUS_MAP[status];
 }

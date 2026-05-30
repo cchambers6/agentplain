@@ -102,6 +102,16 @@ export const env = {
   // scripts/stripe/setup-products.ts). No per-tier Price-id env vars.
   stripeSecretKey: () => required("STRIPE_SECRET_KEY"),
   stripeWebhookSecret: () => required("STRIPE_WEBHOOK_SECRET"),
+  // Wave-2 CC-at-trial signup pivot. When true (the default in prod) the
+  // signup server action routes the customer to a Stripe Checkout session
+  // for card capture immediately after the workspace transaction commits.
+  // When explicitly disabled (`STRIPE_CHECKOUT_ENABLED=false`), signup
+  // falls back to the legacy `provisionTrialSubscriptionSafe` path —
+  // useful for dev/preview without Stripe creds and for the test-mode
+  // `BILLING_PROVIDER=test` flow. Audit §6 (2026-05-28) — fixes the
+  // "no card required" lie on the signup form + trial-warning email.
+  stripeCheckoutEnabled: (): boolean =>
+    (optional("STRIPE_CHECKOUT_ENABLED") ?? "true").toLowerCase() !== "false",
   // Stripe Billing Meter for token-usage emission. Two things must line
   // up before the cron actually POSTs anything:
   //   1. STRIPE_USAGE_METER_ENABLED=true (master switch).

@@ -43,6 +43,56 @@ function inboxMsg(overrides: Partial<TriageMessage> = {}): TriageMessage {
   };
 }
 
+describe('inbox-triage-general — wave-2 customer priority keywords', () => {
+  it('extraUrgentCues from per-skill config force priority to urgent', async () => {
+    const fetcher = new JsonTriageFetcher({
+      workspaceId: WORKSPACE_ID,
+      snapshot: snapshot({
+        inbox: [
+          inboxMsg({
+            id: 'msg-priority',
+            subject: 'Closing today on 123 Maple',
+            bodyText: 'wire details below',
+          }),
+        ],
+      }),
+    });
+    const res = await runSkill({
+      workspaceId: WORKSPACE_ID,
+      fetcher,
+      now: NOW,
+      extraUrgentCues: ['closing today', 'wire failed'],
+    });
+    assert.ok(res.ok);
+    assert.equal(res.value.proposals.length, 1);
+    const [p] = res.value.proposals;
+    assert.equal(p.priority, 'urgent');
+    assert.match(p.reasoning, /Customer priority keyword/);
+  });
+
+  it('empty extraUrgentCues = identical to no cues (defaults preserved)', async () => {
+    const fetcher = new JsonTriageFetcher({
+      workspaceId: WORKSPACE_ID,
+      snapshot: snapshot({
+        inbox: [
+          inboxMsg({
+            subject: 'thanks for the order',
+            bodyText: 'just confirming pickup',
+          }),
+        ],
+      }),
+    });
+    const res = await runSkill({
+      workspaceId: WORKSPACE_ID,
+      fetcher,
+      now: NOW,
+      extraUrgentCues: [],
+    });
+    assert.ok(res.ok);
+    assert.equal(res.value.proposals[0].priority, 'customer-active');
+  });
+});
+
 describe('inbox-triage-general — urgent', () => {
   it('classifies "urgent" cue as urgent with no auto-drafted ack', async () => {
     const fetcher = new JsonTriageFetcher({

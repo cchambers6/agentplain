@@ -43,6 +43,7 @@ import {
 } from '@/lib/skills/persist-artifacts';
 import { runInboxTriageForEvent } from '@/lib/skills/inbox-triage-general/run-for-event';
 import { runVerticalRouter } from '@/lib/skills/vertical-router';
+import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
 import { asDisciplineId } from '@/lib/disciplines';
 import { SKILL_DISCIPLINE } from '@/lib/disciplines/skill-mapping';
 import type { DraftPersister, MessageFetcher } from '@/lib/skills/types';
@@ -244,7 +245,17 @@ export async function processUnprocessedWebhookEvents(
 
       let triageScanned = 0;
       let triageSunk = 0;
-      if (!triageDisabled) {
+      // Wave-2 marketplace gate: respect the customer's
+      // install / uninstall choice for the inbox-triage skill. The
+      // `.catch(() => true)` keeps the chain alive if the gate read
+      // fails — better to draft and let the operator dismiss than to
+      // silently drop work because the install table query hiccuped.
+      const triageInstalled = await isSkillInstalledForWorkspace({
+        workspaceId: workspace.id,
+        workspaceVertical: workspace.vertical,
+        skillSlug: 'inbox-triage-general',
+      }).catch(() => true);
+      if (!triageDisabled && triageInstalled) {
         try {
           const triageRes = await runInboxTriageForEvent({
             workspaceId: workspace.id,

@@ -160,4 +160,14 @@ describe("subscriptionStatusFromProvider — mapping table", () => {
       "INCOMPLETE_EXPIRED",
     );
   });
+  // Wave-2 CC-at-trial: Stripe emits status="paused" when a trial ends
+  // with no payment method on a subscription configured with
+  // trial_settings.end_behavior.missing_payment_method="pause". Pre-
+  // wave-2 the dispatcher's STATUS_MAP returned undefined and the
+  // upsert threw — Stripe retried for 72h, all failed, customer kept
+  // using the fleet for free. Mapping is one-to-one to the new
+  // SubscriptionStatus.PAUSED enum value.
+  it("maps paused → PAUSED (wave-2 CC-at-trial enum fix)", () => {
+    assert.equal(subscriptionStatusFromProvider("paused"), "PAUSED");
+  });
 });

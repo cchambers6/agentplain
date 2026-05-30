@@ -60,6 +60,14 @@ export interface SignUpInput {
    *  vertical's default tier from the content registry — preserves the
    *  earlier behavior for callers that haven't been updated yet. */
   verticalTier?: WorkspaceVerticalTier;
+  /** Wave-2 CC-at-trial: when true, signUpBrokerOwner returns AFTER the
+   *  workspace transaction commits WITHOUT calling the legacy
+   *  `provisionTrialSubscriptionSafe`. The signup server action then
+   *  drives Stripe Checkout for card capture and the
+   *  `customer.subscription.created` webhook creates the Subscription
+   *  row. When false/omitted, the legacy in-flow provisioning runs and
+   *  the API contract matches every existing caller. */
+  skipBillingProvisioning?: boolean;
 }
 
 export interface SignUpResult {
@@ -175,15 +183,23 @@ export async function signUpBrokerOwner(input: SignUpInput): Promise<SignUpResul
   // per feedback_max_friction_reduction_for_trials signup must not
   // block on a Stripe outage — the helper swallows failures into an
   // audit row that the trial-expiration cron / billing page surface.
-  await provisionTrialSubscriptionSafe(
-    {
-      workspaceId: created.workspace.id,
-      workspaceName: created.workspace.name,
-      email,
-      verticalTier,
-    },
-    { id: created.workspace.id },
-  );
+  //
+  // Wave-2 CC-at-trial: when the caller opts in to `skipBillingProvisioning`,
+  // it owns the Stripe Customer + Checkout creation downstream (via
+  // `lib/billing/checkout.ts#createTrialCheckoutForSignup`). The pre-
+  // pivot callers (CLI scripts, tests that don't exercise Checkout)
+  // keep the legacy behavior.
+  if (!input.skipBillingProvisioning) {
+    await provisionTrialSubscriptionSafe(
+      {
+        workspaceId: created.workspace.id,
+        workspaceName: created.workspace.name,
+        email,
+        verticalTier,
+      },
+      { id: created.workspace.id },
+    );
+  }
 
   return created;
 }

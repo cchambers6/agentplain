@@ -42,12 +42,14 @@
  *     week, when there's slack to review and adopt SOPs.
  */
 
+import type { Vertical } from '@prisma/client';
 import { withSystemContext } from '@/lib/db/rls';
 import { asDisciplineId } from '@/lib/disciplines';
 import { SKILL_DISCIPLINE } from '@/lib/disciplines/skill-mapping';
 import { runProcessDocDrafterForWorkspace } from '@/lib/skills/process-doc-drafter-general/run-for-workspace';
 import { ProcessDocMultiplexFetcher } from '@/lib/skills/process-doc-drafter-general/multiplex-fetcher';
 import type { ProcessDocFetcher } from '@/lib/skills/process-doc-drafter-general/types';
+import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
 import {
@@ -76,12 +78,15 @@ export interface ProcessDocDrafterSweepResult {
   workspacesWithProposals: number;
   workspacesSkippedUnconfigured: number;
   workspacesSkippedDisciplineDisabled: number;
+  /** Wave-2 marketplace gate — workspace uninstalled the skill. */
+  workspacesSkippedNotInstalled: number;
   proposalsWritten: number;
   failures: Array<{ workspaceId: string; reason: string }>;
 }
 
 interface WorkspaceCandidate {
   id: string;
+  vertical: Vertical;
   hasGoogle: boolean;
   hasM365: boolean;
   disabledDisciplines: string[];
@@ -92,6 +97,8 @@ export interface RunProcessDocDrafterSweepArgs {
   buildFetcher?: (workspaceId: string) => ProcessDocFetcher;
   now?: Date;
   lookbackDays?: number;
+  /** Override the marketplace install check. Default = live reader. */
+  isInstalled?: (workspaceId: string, vertical: Vertical) => Promise<boolean>;
 }
 
 export async function runProcessDocDrafterSweep(
@@ -107,6 +114,7 @@ export async function runProcessDocDrafterSweep(
     workspacesWithProposals: 0,
     workspacesSkippedUnconfigured: 0,
     workspacesSkippedDisciplineDisabled: 0,
+    workspacesSkippedNotInstalled: 0,
     proposalsWritten: 0,
     failures: [],
   };
@@ -121,6 +129,19 @@ export async function runProcessDocDrafterSweep(
     }
     if (!ws.hasGoogle && !ws.hasM365) {
       result.workspacesSkippedUnconfigured += 1;
+      continue;
+    }
+    // Wave-2 marketplace gate: a workspace that explicitly uninstalled
+    // the process-doc drafter from /marketplace gets skipped.
+    const installed = await (args.isInstalled
+      ? args.isInstalled(ws.id, ws.vertical)
+      : isSkillInstalledForWorkspace({
+          workspaceId: ws.id,
+          workspaceVertical: ws.vertical,
+          skillSlug: 'process-doc-drafter-general',
+        }).catch(() => true));
+    if (!installed) {
+      result.workspacesSkippedNotInstalled += 1;
       continue;
     }
 
@@ -185,6 +206,7 @@ async function defaultListCandidates(): Promise<WorkspaceCandidate[]> {
       },
       select: {
         id: true,
+        vertical: true,
         integrationCredentials: {
           where: {
             status: 'ACTIVE',
@@ -200,6 +222,7 @@ async function defaultListCandidates(): Promise<WorkspaceCandidate[]> {
     });
     return workspaces.map((ws) => ({
       id: ws.id,
+      vertical: ws.vertical,
       hasGoogle: ws.integrationCredentials.some((c) => c.provider === 'GOOGLE'),
       hasM365: ws.integrationCredentials.some((c) => c.provider === 'M365'),
       disabledDisciplines: ws.preference?.disabledDisciplines ?? [],

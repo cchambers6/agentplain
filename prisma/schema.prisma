@@ -76,9 +76,15 @@ enum WorkspaceClosureStatus {
 }
 
 // Per-seat subscription lifecycle. Mirrors Stripe's subscription.status
-// taxonomy 1:1 so webhook payloads upsert without translation. PAUSED is
-// intentionally omitted — Phase 2 doesn't expose pause-collection on
-// agentplain's surface (project_stripe_both_surfaces lines 78–80).
+// taxonomy 1:1 so webhook payloads upsert without translation. PAUSED
+// accepts the value Stripe emits when a trial ends without a payment
+// method on a subscription created with
+// trial_settings.end_behavior.missing_payment_method="pause" — before
+// the wave-2 CC-at-trial pivot every signup hit this path, the webhook
+// upsert threw on the unknown enum, and the route returned 500 (audit
+// §6, 2026-05-28). CC-at-trial avoids the path going forward; the
+// enum value stays for Phase-1 high-touch rows that may still pause and
+// for future Stripe pause-collection workflows.
 enum SubscriptionStatus {
   TRIALING
   ACTIVE
@@ -87,6 +93,7 @@ enum SubscriptionStatus {
   INCOMPLETE_EXPIRED
   CANCELED
   UNPAID
+  PAUSED
 }
 
 // Seat-band axis for the per-seat ladder. Five self-serve bands; the 100+
@@ -339,6 +346,8 @@ model User {
   memberships          Membership[]
   decidedItems         WorkApprovalQueueItem[] @relation("DecidedBy")
   configuredThresholds WorkThresholdConfig[]   @relation("ConfiguredBy")
+  configuredSkills     SkillConfig[]           @relation("SkillConfigBy")
+  installedSkills      WorkspaceSkillInstallation[] @relation("SkillInstalledBy")
   auditEntriesActor    AuditLog[]              @relation("AuditActor")
   auditEntriesActAs    AuditLog[]              @relation("AuditActingAs")
   magicLinkTokens      MagicLinkToken[]
@@ -412,6 +421,9 @@ model Workspace {
   chatMessages             ChatMessage[]
   memoryEntries            WorkspaceMemoryEntry[]
   llmUsageRecords          LlmUsageRecord[]
+  briefings                WorkspaceBriefing[]
+  skillConfigs             SkillConfig[]
+  skillInstallations       WorkspaceSkillInstallation[]
 
   @@index([slug])
   @@index([vertical])
@@ -1045,6 +1057,11 @@ model WorkspacePreference {
   /// wiring (skip vs. fire) deepens in later waves — this column is the
   /// truth source those later layers read.
   disabledDisciplines String[]  @default([])
+  /// Wave-2 briefings generator mute toggle. NULL = enabled (the
+  /// default). Non-null = the customer turned them off; the generator
+  /// cron skips and the briefings page renders a "muted — turn back
+  /// on" empty state. Per-workspace switch, not per-discipline.
+  briefingsMutedAt    DateTime?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -1248,6 +1265,96 @@ model WorkspaceMemoryEntry {
   /// a sort step.
   @@index([workspaceId, kind, pinned, createdAt])
   @@index([workspaceId, pinned, updatedAt])
+}
+
+/// Wave-2 skill marketplace. One row per workspace × skill that the
+/// customer has touched. NO ROW = "default-installed when the catalog
+/// says runtime=live; not installed otherwise" (see
+/// `lib/skills/marketplace.ts`). A row with `disabledAt IS NULL`
+/// means the customer explicitly installed the skill (or, for
+/// default-installed skills, never touched it). `disabledAt` non-null
+/// means the customer uninstalled at that timestamp.
+///
+/// The runtime callers (sweep candidate listers + the webhook chain)
+/// read this table at fire time and skip skills that resolve to
+/// "not installed". Per `feedback_cold_start_safe_agents` this is a
+/// per-fire durable read, never cached.
+model WorkspaceSkillInstallation {
+  id                String    @id @default(uuid()) @db.Uuid
+  workspaceId       String    @db.Uuid
+  /// Matches `lib/skills/<slug>/` and `SKILL_CATALOG.slug`.
+  skillSlug         String    @db.VarChar(64)
+  installedAt       DateTime  @default(now())
+  installedByUserId String?   @db.Uuid
+  /// NULL = currently installed. Non-null = uninstalled at that ts.
+  disabledAt        DateTime?
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  installedBy       User?     @relation("SkillInstalledBy", fields: [installedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([workspaceId, skillSlug])
+  @@index([workspaceId, disabledAt])
+}
+
+/// Wave-2 per-skill config. One row per workspace × skill. The
+/// customer adjusts knobs from the settings UI (wait days for
+/// follow-up-chaser, priority keywords for inbox-triage, default
+/// meeting length for the scheduler), and the skill's runtime caller
+/// reads + applies the config on every fire.
+///
+/// `configJson` is encrypted at rest with the v1 envelope
+/// (`lib/security/encryption` — `v1:iv:tag:ct`) because customers
+/// will inevitably put PII in a config (sender allowlists, paralegal
+/// email cc lists). Shapes live in `lib/skills/config.ts` as typed
+/// interfaces; persisted as JSON inside the envelope.
+model SkillConfig {
+  id                 String    @id @default(uuid()) @db.Uuid
+  workspaceId        String    @db.Uuid
+  /// Matches `lib/skills/<slug>/`. Free-form so adding a skill is
+  /// not a migration.
+  skillSlug          String    @db.VarChar(64)
+  /// AES-256-GCM v1-envelope ciphertext. NEVER plaintext at rest.
+  configJson         String
+  configuredByUserId String?   @db.Uuid
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  workspace          Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  configuredBy       User?     @relation("SkillConfigBy", fields: [configuredByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([workspaceId, skillSlug])
+}
+
+/// Wave-2 briefings generator. The page at
+/// /app/workspace/[id]/briefings has promised "Briefings land here at
+/// 9am ET each workday" since the read-only Notion provider shipped
+/// (audit §8 #5, 2026-05-28) — but no generator existed and the page
+/// always rendered empty. The wave-2 generator cron writes into this
+/// table; the page reads from it and decrypts the body.
+///
+/// `body` is encrypted at rest with the v1 envelope
+/// (`lib/security/encryption` — `v1:iv:tag:ct`) because briefings
+/// quote real customer threads. `summary` is a non-PII aggregate
+/// (counts + categories) the page can render for previews without
+/// decrypting.
+model WorkspaceBriefing {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @db.Uuid
+  /// ISO Y-M-D (UTC) the briefing covers. One row per workspace per
+  /// day; the @@unique guarantees idempotent cron retries.
+  forDate     String    @db.VarChar(10)
+  /// AES-256-GCM v1-envelope ciphertext. NEVER plaintext at rest.
+  body        String
+  /// Aggregate counts + top categories. Shape defined in
+  /// `lib/skills/briefing-generator/types.ts#BriefingSummary`.
+  summary     Json      @default("{}")
+  /// READY / FAILED / EMPTY (no activity in window). Future statuses
+  /// may include MUTED for the customer-facing mute path.
+  status      String    @default("READY") @db.VarChar(16)
+  generatedAt DateTime  @default(now())
+  emailedAt   DateTime?
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, forDate])
+  @@index([workspaceId, generatedAt])
 }
 
 // Per-LLM-call token + cost accounting. One row per successful

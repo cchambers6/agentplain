@@ -47,6 +47,9 @@ interface FakeTx {
       id: string;
       verticalTier?: string;
     } | null>;
+    findUnique: (args: { where: { id: string } }) => Promise<{
+      id: string;
+    } | null>;
     update: (args: {
       where: { id: string };
       data: Record<string, unknown>;
@@ -89,6 +92,7 @@ const buildFakeTx = (opts: {
     id: string;
     verticalTier?: string;
   } | null;
+  workspaceById?: { id: string } | null;
   existingSubscription?: {
     id: string;
     workspaceId?: string;
@@ -103,6 +107,7 @@ const buildFakeTx = (opts: {
     workspaceUpdates: [],
     workspace: {
       findFirst: async () => opts.workspaceMatch ?? null,
+      findUnique: async () => opts.workspaceById ?? null,
       update: async ({ where, data }) => {
         fake.workspaceUpdates.push({ id: where.id, data });
       },
@@ -373,4 +378,198 @@ describe("dispatchEvent — unhandled events", () => {
     assert.equal(fake.audits.length, 1);
     assert.equal(fake.audits[0].action, "billing.event.received");
   });
+});
+
+// ---------------------------------------------------------------------
+// Wave-2 CC-at-trial — paused subscription + checkout.session lifecycle
+// ---------------------------------------------------------------------
+
+describe("dispatchEvent — customer.subscription.paused (wave-2 enum fix)", () => {
+  it("upserts the row as PAUSED without throwing", async () => {
+    const fake = buildFakeTx({
+      workspaceMatch: { id: "ws_p", verticalTier: "REGULAR" },
+    });
+    const event: StripeWebhookEvent = {
+      eventId: "evt_paused_1",
+      eventType: "customer.subscription.paused",
+      data: {
+        object: {
+          id: "sub_p_1",
+          customer: "cus_p_1",
+          status: "paused",
+          items: {
+            data: [
+              {
+                quantity: 1,
+                price: { lookup_key: "agentplain_regular_seats_1_monthly" },
+              },
+            ],
+          },
+        },
+      },
+    };
+    await dispatchEvent(event, fake as unknown as DbTransactionClient);
+    assert.equal(fake.subscriptions.length, 1);
+    assert.equal(fake.subscriptions[0].status, "PAUSED");
+    assert.equal(fake.billingEvents[0].type, "customer.subscription.paused");
+    assert.equal(
+      fake.audits.find((a) => a.action.startsWith("billing.subscription."))
+        ?.workspaceId,
+      "ws_p",
+    );
+  });
+});
+
+describe("dispatchEvent — checkout.session.completed (wave-2 signup)", () => {
+  it("records BillingEvent + AuditLog when workspace resolves via client_reference_id", async () => {
+    const fake = buildFakeTx({
+      workspaceById: { id: "ws_signup_1" },
+    });
+    const event: StripeWebhookEvent = {
+      eventId: "evt_cs_completed_1",
+      eventType: "checkout.session.completed",
+      data: {
+        object: {
+          id: "cs_test_xyz",
+          status: "complete",
+          customer: "cus_signup_1",
+          subscription: "sub_signup_1",
+          client_reference_id: "ws_signup_1",
+        },
+      },
+    };
+    await dispatchEvent(event, fake as unknown as DbTransactionClient);
+    assert.equal(fake.billingEvents.length, 1);
+    assert.equal(fake.billingEvents[0].workspaceId, "ws_signup_1");
+    const audit = fake.audits.find(
+      (a) => a.action === "billing.signup_checkout_completed",
+    );
+    assert.ok(audit, "checkout-completed audit row must be written");
+    assert.equal(audit?.workspaceId, "ws_signup_1");
+  });
+
+  it("records BillingEvent without audit when workspace cannot be resolved", async () => {
+    const fake = buildFakeTx({
+      workspaceById: null,
+      workspaceMatch: null,
+    });
+    const event: StripeWebhookEvent = {
+      eventId: "evt_cs_orphan",
+      eventType: "checkout.session.completed",
+      data: {
+        object: {
+          id: "cs_test_orphan",
+          status: "complete",
+          customer: "cus_orphan_1",
+          client_reference_id: "ws_does_not_exist",
+        },
+      },
+    };
+    await dispatchEvent(event, fake as unknown as DbTransactionClient);
+    assert.equal(fake.billingEvents.length, 1);
+    assert.equal(
+      fake.audits.find((a) =>
+        a.action.startsWith("billing.signup_checkout"),
+      ),
+      undefined,
+    );
+  });
+
+  it("checkout.session.expired audits the abandoned-signup signal", async () => {
+    const fake = buildFakeTx({
+      workspaceById: { id: "ws_aban_1" },
+    });
+    const event: StripeWebhookEvent = {
+      eventId: "evt_cs_expired",
+      eventType: "checkout.session.expired",
+      data: {
+        object: {
+          id: "cs_test_expired",
+          status: "expired",
+          client_reference_id: "ws_aban_1",
+        },
+      },
+    };
+    await dispatchEvent(event, fake as unknown as DbTransactionClient);
+    assert.equal(
+      fake.audits.find((a) => a.action === "billing.signup_checkout_expired")
+        ?.workspaceId,
+      "ws_aban_1",
+    );
+  });
+});
+
+// ---------------------------------------------------------------------
+// Wave-2 dispatcher-doesn't-throw regression guard.
+//
+// The audit's headline finding: the trial-end webhook used to throw 500
+// because `paused` wasn't in the enum, Stripe retried for 72h, customer
+// kept using the fleet for free. This test pins the dispatcher's contract
+// — every event type the audit names must complete without throwing
+// against a stock fake tx. Add new types here as new handlers ship.
+// ---------------------------------------------------------------------
+
+describe("dispatchEvent — wave-2 contract: every audit-named event type is non-throwing", () => {
+  const types = [
+    "customer.subscription.created",
+    "customer.subscription.updated",
+    "customer.subscription.trial_will_end",
+    "customer.subscription.paused",
+    "customer.subscription.resumed",
+    "customer.subscription.deleted",
+    "invoice.created",
+    "invoice.finalized",
+    "invoice.paid",
+    "invoice.payment_succeeded",
+    "invoice.payment_failed",
+    "invoice.voided",
+    "checkout.session.completed",
+    "checkout.session.async_payment_succeeded",
+    "checkout.session.async_payment_failed",
+    "checkout.session.expired",
+    "setup_intent.succeeded",
+  ];
+
+  for (const type of types) {
+    it(`${type} → completes without throw`, async () => {
+      const fake = buildFakeTx({
+        workspaceMatch: { id: "ws_ok", verticalTier: "REGULAR" },
+        workspaceById: { id: "ws_ok" },
+      });
+      const event: StripeWebhookEvent = {
+        eventId: `evt_${type.replace(/\./g, "_")}`,
+        eventType: type,
+        data: {
+          object: {
+            id: type.startsWith("invoice.")
+              ? "in_test_x"
+              : type.startsWith("checkout.")
+                ? "cs_test_x"
+                : "sub_test_x",
+            customer: "cus_test_x",
+            client_reference_id: type.startsWith("checkout.")
+              ? "ws_ok"
+              : undefined,
+            status: type === "customer.subscription.paused" ? "paused" : "trialing",
+            items: {
+              data: [
+                {
+                  quantity: 1,
+                  price: {
+                    lookup_key: "agentplain_regular_seats_1_monthly",
+                  },
+                },
+              ],
+            },
+          },
+        },
+      };
+      await dispatchEvent(event, fake as unknown as DbTransactionClient);
+      assert.equal(
+        fake.billingEvents.length,
+        1,
+        `${type} must record a BillingEvent`,
+      );
+    });
+  }
 });

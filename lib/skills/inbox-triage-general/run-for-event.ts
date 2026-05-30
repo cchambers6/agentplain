@@ -42,6 +42,11 @@
 import type { WebhookEvent } from '@prisma/client';
 import { skillError, skillOk, type SkillResult } from '../types';
 import type { MessageFetcher } from '../types';
+import {
+  DEFAULT_INBOX_TRIAGE_CONFIG,
+  readInboxTriageConfig,
+  type InboxTriageConfig,
+} from '@/lib/skills/config';
 import { ParsedMessageTriageFetcher } from './parsed-message-fetcher';
 import { PrismaTriageApprovalSink } from './prisma-approval-sink';
 import { runSkill } from './skill';
@@ -66,6 +71,15 @@ export interface RunInboxTriageForEventInput {
    *  Defaults to 0.4 (matches the inbox-triage noise floor) so noise
    *  doesn't flood the operator's queue. */
   sinkThreshold?: number;
+  /** Wave-2 per-skill config override. When provided, the caller passed
+   *  the customer's config explicitly (test pattern + the future
+   *  config-cached-in-cron pattern). When omitted, this caller reads
+   *  it from `SkillConfig` via `readInboxTriageConfig`. */
+  config?: InboxTriageConfig;
+  /** When true, skip the per-skill config DB read entirely and use
+   *  defaults. The unit test seam — exercises the runner without
+   *  spinning up Prisma. */
+  skipConfigRead?: boolean;
 }
 
 export interface RunInboxTriageForEventOutput {
@@ -116,12 +130,24 @@ export async function runInboxTriageForEvent(
     workspaceId: input.workspaceId,
     messages: messagesRes.value,
   });
+  // Wave-2 per-skill config: read customer-defined priority keywords
+  // at fire time. Empty list = no customer cues; defaults stay
+  // identical. Per `feedback_cold_start_safe_agents.md` this is a
+  // durable read every fire, never cached across events. The
+  // `config` override + `skipConfigRead` flag let unit tests bypass
+  // the DB read.
+  const skillConfig: InboxTriageConfig =
+    input.config ??
+    (input.skipConfigRead
+      ? DEFAULT_INBOX_TRIAGE_CONFIG
+      : await readInboxTriageConfig(input.workspaceId));
   const result = await runSkill({
     workspaceId: input.workspaceId,
     fetcher: triageFetcher,
     sink: sink ?? undefined,
     now: input.now,
     sinkThreshold: input.sinkThreshold ?? DEFAULT_SINK_THRESHOLD,
+    extraUrgentCues: skillConfig.priorityKeywords,
   });
   if (!result.ok) return result;
   return skillOk({

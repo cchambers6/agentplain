@@ -144,6 +144,12 @@ export interface TriageInput {
   /** Threshold under which the sink skips persistence (used to keep
    *  noise out of the operator's queue). Defaults to 0. */
   sinkThreshold?: number;
+  /** Wave-2 per-skill config — extra cue phrases that force priority
+   *  to `urgent`. Sourced from `WorkspacePreference` via
+   *  `lib/skills/config#readInboxTriageConfig`. Merged into the
+   *  built-in URGENT_CUES list at fire time. Empty/undefined = no
+   *  customer cues. */
+  extraUrgentCues?: string[];
 }
 
 export interface TriageOutput {

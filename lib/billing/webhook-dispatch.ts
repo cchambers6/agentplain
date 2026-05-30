@@ -49,6 +49,13 @@ export async function dispatchEvent(
     case "customer.subscription.created":
     case "customer.subscription.updated":
     case "customer.subscription.trial_will_end":
+    // Stripe emits `customer.subscription.paused` when a trial ends
+    // without a payment method on a subscription configured with
+    // trial_settings.end_behavior.missing_payment_method="pause". Pre-
+    // wave-2 this killed the dispatcher because the enum lacked PAUSED;
+    // now the upsert succeeds and the row reflects the pause cleanly.
+    case "customer.subscription.paused":
+    case "customer.subscription.resumed":
       await syncSubscription(event, tx);
       break;
     case "customer.subscription.deleted":
@@ -61,6 +68,12 @@ export async function dispatchEvent(
     case "invoice.payment_failed":
     case "invoice.voided":
       await mirrorInvoice(event, tx);
+      break;
+    case "checkout.session.completed":
+    case "checkout.session.async_payment_succeeded":
+    case "checkout.session.async_payment_failed":
+    case "checkout.session.expired":
+      await recordCheckoutSession(event, tx);
       break;
     default:
       // Audit-only for events we don't yet handle. Future handlers
@@ -240,6 +253,121 @@ async function syncSubscription(
       } satisfies Prisma.InputJsonValue,
     },
   });
+}
+
+// =====================================================================
+// Checkout-session events (wave-2 CC-at-trial)
+// =====================================================================
+//
+// The wave-2 signup flow routes the customer through Stripe Checkout
+// AFTER the workspace transaction commits. The workspace row already
+// carries `stripeCustomerId` by the time Stripe sends webhooks (the
+// `createTrialCheckoutForSignup` helper persists it before opening the
+// session), so the actual Subscription upsert is driven by the
+// `customer.subscription.created` handler above. This handler exists
+// to:
+//   1. Record the Checkout-session lifecycle in BillingEvent for audit
+//   2. Emit an AuditLog row when a session completes (signal that
+//      card-at-trial captured successfully) or expires (signal that the
+//      customer abandoned — surfaces in operator triage)
+//   3. Make sure the dispatcher does NOT throw on these event types —
+//      the pre-wave-2 default branch handled the recording, but adding
+//      an explicit case lets us reach into the session payload for the
+//      workspace id (via `client_reference_id`) without parsing the
+//      generic envelope.
+
+interface CheckoutSessionPayload {
+  id?: string;
+  status?: string;
+  customer?: string | { id?: string };
+  subscription?: string | { id?: string };
+  client_reference_id?: string | null;
+  metadata?: Record<string, string>;
+}
+
+const asCheckoutSession = (data: unknown): CheckoutSessionPayload => {
+  if (!data || typeof data !== "object" || !("object" in data)) return {};
+  return (
+    (data as { object?: CheckoutSessionPayload }).object ?? {}
+  ) as CheckoutSessionPayload;
+};
+
+async function recordCheckoutSession(
+  event: StripeWebhookEvent,
+  tx: DbTransactionClient,
+): Promise<void> {
+  const session = asCheckoutSession(event.data);
+  const workspaceIdFromRef =
+    typeof session.client_reference_id === "string"
+      ? session.client_reference_id
+      : null;
+  const stripeCustomerId =
+    typeof session.customer === "string"
+      ? session.customer
+      : session.customer?.id ?? null;
+  const stripeSubscriptionId =
+    typeof session.subscription === "string"
+      ? session.subscription
+      : session.subscription?.id ?? null;
+
+  // Resolve workspace via the client_reference_id we set at checkout
+  // creation. Fall back to stripeCustomerId for safety (a manual
+  // checkout created outside the signup flow won't have a ref but still
+  // carries a customer). Both resolution paths can come up empty when
+  // the session belongs to a Stripe Customer we never persisted — in
+  // that case we still record the BillingEvent so the audit trail
+  // exists, but skip the AuditLog row.
+  let workspaceId: string | null = null;
+  if (workspaceIdFromRef) {
+    const ws = await tx.workspace.findUnique({
+      where: { id: workspaceIdFromRef },
+      select: { id: true },
+    });
+    workspaceId = ws?.id ?? null;
+  }
+  if (!workspaceId && stripeCustomerId) {
+    const ws = await tx.workspace.findFirst({
+      where: { stripeCustomerId },
+      select: { id: true },
+    });
+    workspaceId = ws?.id ?? null;
+  }
+
+  let subscriptionRowId: string | null = null;
+  if (stripeSubscriptionId) {
+    const sub = await tx.subscription.findUnique({
+      where: { stripeSubscriptionId },
+      select: { id: true },
+    });
+    subscriptionRowId = sub?.id ?? null;
+  }
+
+  await recordBillingEvent(event, tx, {
+    workspaceId,
+    subscriptionId: subscriptionRowId,
+  });
+
+  if (workspaceId) {
+    await tx.auditLog.create({
+      data: {
+        workspaceId,
+        action:
+          event.eventType === "checkout.session.completed"
+            ? "billing.signup_checkout_completed"
+            : event.eventType === "checkout.session.expired"
+              ? "billing.signup_checkout_expired"
+              : "billing.checkout_session_event",
+        targetTable: "stripe_checkout_session",
+        targetId: session.id ?? event.eventId,
+        payload: {
+          eventType: event.eventType,
+          status: session.status ?? null,
+          stripeCustomerId: stripeCustomerId ?? null,
+          stripeSubscriptionId: stripeSubscriptionId ?? null,
+        } satisfies Prisma.InputJsonValue,
+      },
+    });
+  }
 }
 
 async function markSubscriptionDeleted(

@@ -35,6 +35,21 @@ export interface McpDependency {
   note: string;
 }
 
+/** Wave-2 runtime-honesty flag the marketplace UI reads. Values match
+ *  the audit-doc taxonomy:
+ *    - `live`         — there is a production caller (cron sweep,
+ *                       webhook chain, or event handler) that fires
+ *                       the skill on real workspace data today.
+ *    - `schema-only`  — the skill module exists and has tests, but
+ *                       NO production caller fires it. The UI badges
+ *                       the marketplace card so the customer doesn't
+ *                       install something that won't fire.
+ *    - `coming-soon`  — registered for the customer-facing catalog
+ *                       but the module is intentionally absent. (No
+ *                       entries today; reserved for future scaffolding.)
+ */
+export type SkillRuntimeStatus = 'live' | 'schema-only' | 'coming-soon';
+
 export interface SkillCatalogEntry {
   /** Stable slug — matches `lib/skills/<slug>/`. */
   slug: string;
@@ -57,6 +72,11 @@ export interface SkillCatalogEntry {
    *  default-enabled skill — every business needs verification-code
    *  routing. */
   defaultEnabled?: boolean;
+  /** Wave-2: honest runtime status surfaced in the marketplace UI.
+   *  Defaults to `'schema-only'` so adding a new entry without a
+   *  production caller doesn't lie. Adding a `'live'` entry means
+   *  there's a real caller you can point at. */
+  runtime?: SkillRuntimeStatus;
 }
 
 export const SKILL_CATALOG: SkillCatalogEntry[] = [
@@ -130,6 +150,7 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
       'feedback_integration_acceptance_is_functional.md (read + categorize + ' +
         'coordinate + schedule + draft, end-to-end against demo seed)',
     ],
+    runtime: 'live',
   },
   {
     slug: 'office-admin',
@@ -171,6 +192,7 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
       'prohibited_actions (CLAUDE.md)',
     ],
     defaultEnabled: true,
+    runtime: 'live',
   },
   {
     slug: 'inbox-triage-general',
@@ -222,6 +244,7 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
       'feedback_cold_start_safe_agents.md',
       'feedback_integration_acceptance_is_functional.md',
     ],
+    runtime: 'live',
   },
   {
     slug: 'follow-up-chaser-general',
@@ -271,6 +294,7 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
       'feedback_cold_start_safe_agents.md',
       'feedback_integration_acceptance_is_functional.md',
     ],
+    runtime: 'live',
   },
   {
     slug: 'process-doc-drafter-general',
@@ -325,6 +349,7 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
       'feedback_cold_start_safe_agents.md',
       'feedback_integration_acceptance_is_functional.md',
     ],
+    runtime: 'live',
   },
   {
     slug: 'support-handler',
@@ -384,6 +409,7 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
       'feedback_cold_start_safe_agents.md (stateless, reads durable state)',
     ],
     defaultEnabled: true,
+    runtime: 'live',
   },
   {
     slug: 'invoice-chasing-realestate',
@@ -469,6 +495,7 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
       'lib/verticals/real-estate/content.ts',
       'lib/skills/prompts/real-estate.ts (lead signals)',
     ],
+    runtime: 'live',
   },
   {
     slug: 'month-end-close-cpa',

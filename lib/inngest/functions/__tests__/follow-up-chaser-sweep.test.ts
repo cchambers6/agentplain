@@ -68,6 +68,7 @@ describe('runFollowUpChaserSweep — workspaces with no email credential are ski
       listCandidates: async () => [
         {
           id: WORKSPACE_NEITHER,
+          vertical: 'REAL_ESTATE',
           hasGoogle: false,
           hasM365: false,
           disabledDisciplines: [],
@@ -88,6 +89,7 @@ describe('runFollowUpChaserSweep — workspaces with the discipline disabled are
       listCandidates: async () => [
         {
           id: WORKSPACE_DISABLED,
+          vertical: 'REAL_ESTATE',
           hasGoogle: true,
           hasM365: false,
           disabledDisciplines: [SKILL_DISCIPLINE['follow-up-chaser-general']!],
@@ -107,6 +109,7 @@ describe('runFollowUpChaserSweep — race-condition NOT_CONFIGURED is a clean sk
       listCandidates: async () => [
         {
           id: WORKSPACE_GOOGLE,
+          vertical: 'REAL_ESTATE',
           hasGoogle: true,
           hasM365: false,
           disabledDisciplines: [],

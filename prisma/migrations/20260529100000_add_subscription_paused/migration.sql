@@ -1,0 +1,15 @@
+-- PAUSED status for Subscription. Stripe emits `subscription.updated` with
+-- status="paused" when a trial ends without a payment method AND the
+-- subscription was configured with trial_settings.end_behavior.missing_
+-- payment_method="pause". Before this column accepted the value, the
+-- webhook upsert threw and the route returned 500 — Stripe retried for
+-- 72h and the row never updated.
+--
+-- The wave-2 CC-at-trial pivot removes the no-card trial path going
+-- forward, so new subscriptions no longer reach PAUSED. The enum value
+-- still needs to exist because: (1) Phase-1 high-touch subscriptions
+-- created before the pivot may still pause; (2) Stripe documents PAUSED
+-- as a real subscription status — accepting it future-proofs the
+-- dispatcher. See docs/fleet-autonomy-audit-2026-05-28.md §6 and PR
+-- description "autonomy wave 2 — CC-at-trial".
+ALTER TYPE "SubscriptionStatus" ADD VALUE IF NOT EXISTS 'PAUSED';

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { ApHeritageButton, ApHeritageField } from "@/components/ui/ap";
 import {
@@ -66,6 +66,31 @@ export function SignUpForm({
     signUpAction,
     initial,
   );
+
+  // Wave-2 CC-at-trial: when the server action returns a checkoutUrl,
+  // the SignUpForm bounces the browser to Stripe-hosted Checkout for
+  // card capture. The magic-link email is already on the way, so the
+  // customer can still sign in if they cancel out of Checkout.
+  useEffect(() => {
+    if (state.ok && state.checkoutUrl) {
+      window.location.assign(state.checkoutUrl);
+    }
+  }, [state.ok, state.checkoutUrl]);
+
+  if (state.ok && state.checkoutUrl) {
+    return (
+      <div className="space-y-4 border border-rule bg-paper-deep p-4 text-[15px] leading-relaxed text-ink">
+        <p>{state.notice}</p>
+        <p className="text-[13px] text-ink-soft">
+          If you aren't redirected,{" "}
+          <a href={state.checkoutUrl} className="text-ink underline">
+            click here to add your card
+          </a>
+          .
+        </p>
+      </div>
+    );
+  }
 
   if (state.ok && state.notice) {
     return (
@@ -176,13 +201,18 @@ function TierPicker({
 }
 
 function TierSummary({ tier }: { tier: Exclude<Selection, "max"> }) {
+  // Wave-2 CC-at-trial honesty fix: pre-pivot the copy promised "no
+  // card required" — false the moment we shipped the trial-warning
+  // email saying "your card on file will be charged." Card capture
+  // happens in Stripe-hosted Checkout the moment the signup form is
+  // submitted, so the summary now names the trade plainly.
   return (
     <p className="border border-rule bg-paper-deep px-4 py-3 text-[13px] leading-relaxed text-ink-soft">
       <span className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
         {tierDisplayName(tier)}
       </span>{" "}
-      · {TIER_TAGLINE[tier]} First month is on us — no card required to
-      start.
+      · {TIER_TAGLINE[tier]} 30 days free. Card captured at signup so
+      your fleet keeps running when the trial ends. Cancel any time.
       {tier === "plus" ? (
         <>
           {" "}

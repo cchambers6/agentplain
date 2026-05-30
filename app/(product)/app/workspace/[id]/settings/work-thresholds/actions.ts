@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 import {
   withRls,
   type ComplianceSeverity,
@@ -44,6 +45,25 @@ export async function saveThresholdAction(form: FormData): Promise<void> {
     throw new Error("Invalid severity");
   }
 
+  // Wave-1 audit fix §9 #2: add an opt-in auto-approve confidence
+  // threshold per kind. Default = empty (= require review). The
+  // workspace explicitly sets a number to flip the gate; on read time
+  // lib/skills/approval-threshold.ts evaluates and decides PENDING vs
+  // AUTO_APPROVED. Never auto-approves without an explicit opt-in.
+  const autoApproveRaw = formStr(form, "autoApproveMinConfidence").trim();
+  let autoApproveWhen: Prisma.InputJsonValue | typeof Prisma.JsonNull;
+  if (autoApproveRaw === "") {
+    autoApproveWhen = Prisma.JsonNull;
+  } else {
+    const parsed = Number.parseFloat(autoApproveRaw);
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1) {
+      throw new Error(
+        "Auto-approve confidence must be a number between 0 and 1 (inclusive)",
+      );
+    }
+    autoApproveWhen = { minConfidence: parsed };
+  }
+
   const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
   const ctx = { userId: member.userId, workspaceId, isOperator: false };
 
@@ -54,10 +74,12 @@ export async function saveThresholdAction(form: FormData): Promise<void> {
         workspaceId,
         kind,
         requiresApprovalAboveSeverity: severity,
+        autoApproveWhen,
         configuredByUserId: member.userId,
       },
       update: {
         requiresApprovalAboveSeverity: severity,
+        autoApproveWhen,
         configuredByUserId: member.userId,
         configuredAt: new Date(),
       },
@@ -69,7 +91,12 @@ export async function saveThresholdAction(form: FormData): Promise<void> {
         workspaceId,
         action: "work_threshold.updated",
         targetTable: "WorkThresholdConfig",
-        payload: { kind, severity: severity ?? "NONE" },
+        payload: {
+          kind,
+          severity: severity ?? "NONE",
+          autoApproveMinConfidence:
+            autoApproveRaw === "" ? null : Number.parseFloat(autoApproveRaw),
+        },
       },
     });
   });

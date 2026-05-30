@@ -89,6 +89,7 @@ const KIND_LABEL: Record<WorkApprovalKind, string> = {
   PROCESS_DOC_DRAFT: "process doc draft",
   SUPPORT_HANDLER_REPLY_DRAFT: "support reply draft",
   PLAINO_INSTRUCTION: "Plaino instruction",
+  LEAD_TRIAGE: "lead triage",
 };
 
 export function renderApprovalPayload(
@@ -133,6 +134,8 @@ export function renderApprovalPayload(
       return renderSupportHandlerReplyDraft(p);
     case "PLAINO_INSTRUCTION":
       return renderPlainoInstruction(p);
+    case "LEAD_TRIAGE":
+      return renderLeadTriage(p);
     default: {
       const _exhaustive: never = kind;
       // Runtime safety: if a new enum value reaches production before the
@@ -693,6 +696,77 @@ function renderPlainoInstruction(
     metaLine,
     inboundSummary: draftReasoning,
     persisted: false,
+    editableBody: draftBody ?? undefined,
+  };
+}
+
+/**
+ * LEAD_TRIAGE — vertical router output for real-estate workspaces.
+ * Payload shape comes from PrismaLeadTriageApprovalSink. We render the
+ * category badge, the routing recommendation, the first-touch draft
+ * (when present), and the scores.
+ */
+function renderLeadTriage(
+  p: Record<string, unknown>,
+): RenderedApproval {
+  const leadName = pickString(p, ["leadName"]) ?? "Unknown lead";
+  const category = pickString(p, ["category"]) ?? "";
+  const draft = isRecord(p.firstTouchDraft)
+    ? (p.firstTouchDraft as Record<string, unknown>)
+    : null;
+  const draftBody = draft ? pickString(draft, ["body"]) : null;
+  const draftSubject = draft ? pickString(draft, ["subject"]) : null;
+  const draftConfidence = draft ? pickNumber(draft, ["confidence"]) : null;
+  const draftSkipped = pickString(p, ["draftSkippedReason"]);
+
+  const routing = isRecord(p.routing)
+    ? (p.routing as Record<string, unknown>)
+    : null;
+  const routingType = routing ? pickString(routing, ["type"]) : null;
+  const routingRationale = routing ? pickString(routing, ["rationale"]) : null;
+
+  const scores = isRecord(p.scores) ? (p.scores as Record<string, unknown>) : null;
+  const motivation = scores ? pickNumber(scores, ["motivation"]) : null;
+  const timeline = scores ? pickNumber(scores, ["timeline"]) : null;
+  const preapproval = scores ? pickNumber(scores, ["preapproval"]) : null;
+
+  const metaParts: string[] = [];
+  if (category) metaParts.push(`category: ${category}`);
+  if (routingType) metaParts.push(`routing: ${routingType}`);
+  if (typeof draftConfidence === "number") {
+    metaParts.push(`confidence: ${draftConfidence.toFixed(2)}`);
+  }
+
+  const lines: string[] = [];
+  if (draftSubject) lines.push(`Subject: ${draftSubject}`);
+  if (draftBody) {
+    lines.push("");
+    lines.push(...splitParagraphs(draftBody));
+  } else if (draftSkipped) {
+    lines.push(`First-touch draft skipped — ${draftSkipped}.`);
+  }
+  if (routingRationale) {
+    lines.push("");
+    lines.push(`Routing rationale: ${routingRationale}`);
+  }
+  if (
+    typeof motivation === "number" ||
+    typeof timeline === "number" ||
+    typeof preapproval === "number"
+  ) {
+    lines.push("");
+    const scoreLine: string[] = [];
+    if (typeof motivation === "number") scoreLine.push(`motivation ${motivation.toFixed(2)}`);
+    if (typeof timeline === "number") scoreLine.push(`timeline ${timeline.toFixed(2)}`);
+    if (typeof preapproval === "number") scoreLine.push(`preapproval ${preapproval.toFixed(2)}`);
+    lines.push(`Scores: ${scoreLine.join(" · ")}`);
+  }
+
+  return {
+    kindLabel: KIND_LABEL.LEAD_TRIAGE,
+    title: leadName,
+    body: lines.length > 0 ? lines : ["No further detail attached."],
+    metaLine: metaParts.length > 0 ? metaParts.join(" · ") : undefined,
     editableBody: draftBody ?? undefined,
   };
 }

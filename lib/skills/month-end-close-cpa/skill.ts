@@ -71,6 +71,19 @@ export async function runSkill(
 
   const engagementRes = await input.fetcher.fetchEngagement(fetchArgs);
   if (!engagementRes.ok) {
+    // Preserve NOT_CONFIGURED + NOT_APPLICABLE upstream codes — they
+    // name the gap honestly (QuickBooks not connected; client not on
+    // file) and the operator surface relies on the distinction.
+    if (
+      engagementRes.error.code === 'NOT_CONFIGURED' ||
+      engagementRes.error.code === 'NOT_APPLICABLE'
+    ) {
+      return skillError(
+        engagementRes.error.code,
+        engagementRes.error.message,
+        engagementRes.error.reference,
+      );
+    }
     return skillError(
       'UPSTREAM_GMAIL_ERROR',
       `engagement fetch failed: ${engagementRes.error.message}`,
@@ -81,6 +94,16 @@ export async function runSkill(
 
   const checklistRes = await input.fetcher.fetchChecklist(fetchArgs);
   if (!checklistRes.ok) {
+    if (
+      checklistRes.error.code === 'NOT_CONFIGURED' ||
+      checklistRes.error.code === 'NOT_APPLICABLE'
+    ) {
+      return skillError(
+        checklistRes.error.code,
+        checklistRes.error.message,
+        checklistRes.error.reference,
+      );
+    }
     return skillError(
       'UPSTREAM_GMAIL_ERROR',
       `checklist fetch failed: ${checklistRes.error.message}`,
@@ -91,6 +114,16 @@ export async function runSkill(
 
   const receivedRes = await input.fetcher.fetchReceivedDocs(fetchArgs);
   if (!receivedRes.ok) {
+    if (
+      receivedRes.error.code === 'NOT_CONFIGURED' ||
+      receivedRes.error.code === 'NOT_APPLICABLE'
+    ) {
+      return skillError(
+        receivedRes.error.code,
+        receivedRes.error.message,
+        receivedRes.error.reference,
+      );
+    }
     return skillError(
       'UPSTREAM_GMAIL_ERROR',
       `received-docs fetch failed: ${receivedRes.error.message}`,

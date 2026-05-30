@@ -41,6 +41,9 @@ import {
   renderCustomerContextBlock,
   type CustomerContextSnippet,
 } from '../customer-files/render';
+import type { IMemoryStore } from '@/lib/plaino/memory/types';
+import type { PreferenceScopeId } from '@/lib/plaino/types';
+import { buildFeedbackRulesBlock } from './feedback-rules';
 import { CategorizeSkill } from './categorize';
 import { CoordinateSkill } from './coordinate';
 import { DraftSkill } from './draft';
@@ -92,6 +95,28 @@ export interface RunChainArgs {
   customerContextResolver?: (
     query: string,
   ) => Promise<CustomerContextSnippet[]>;
+  /** Optional workspace memory store. When provided, the runner reads
+   *  FEEDBACK rules matching the runner's default scopes and injects
+   *  them into the prompt bundle so categorize/coordinate/schedule/draft
+   *  all honor what the customer told /talk to remember. When omitted,
+   *  the runner behaves exactly as before — the wave-1 audit's "no skill
+   *  reads memory" gap closes only when this is wired by the caller. */
+  memory?: IMemoryStore | null;
+  /** Override the FEEDBACK scopes read from memory. Defaults to the
+   *  generic runner scope set (DEFAULT_RUNNER_SCOPES in
+   *  ./feedback-rules.ts). The reader always includes `general` on top. */
+  feedbackScopes?: ReadonlyArray<PreferenceScopeId>;
+  /** Workspace's disabled-discipline list (the customer-facing
+   *  Discipline panel writes into WorkspacePreference.disabledDisciplines).
+   *  When a discipline is disabled, the runner skips the chain stages
+   *  whose output is tagged with that discipline — no LLM call, no
+   *  approval row, no fake activity. Operations gates office-admin
+   *  classification + scheduling proposal; customer-success gates the
+   *  customer-facing reply draft; legal gates the compliance scanner.
+   *
+   *  Defaults to empty — when omitted the chain runs end-to-end as
+   *  before. */
+  disabledDisciplineIds?: ReadonlyArray<string>;
   now?: Date;
   /** When true, write a JSONL log row to `agent-state/skill-runs/`.
    *  Default: true. */
@@ -127,10 +152,29 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
   let customerContextBlock = renderCustomerContextBlock(
     args.customerContext ?? [],
   );
+  // Read customer-set PREFERENCE rules from workspace memory and inline
+  // them so the fleet honors what /talk taught it. Best-effort — a
+  // memory read failure NEVER drops the loop. Empty rule set returns
+  // empty string (no header), per the honesty bar.
+  let feedbackRulesBlock = '';
+  if (args.memory) {
+    try {
+      feedbackRulesBlock = await buildFeedbackRulesBlock({
+        memory: args.memory,
+        workspaceId: args.workspace.id,
+        scopes: args.feedbackScopes,
+      });
+    } catch (err) {
+      console.warn(
+        `runSkillChain: feedback-rules read failed (continuing without): ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
   let prompts = composePromptBundle(basePrompts, {
     preferencesBlockForDraft,
     preferencesBlockForOther,
     customerContextBlock,
+    feedbackRulesBlock,
   });
   const startedAt = args.now ?? new Date();
   const steps: SkillStepRecord[] = [];
@@ -181,6 +225,7 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
         preferencesBlockForDraft,
         preferencesBlockForOther,
         customerContextBlock,
+        feedbackRulesBlock,
       });
     } catch (err) {
       console.warn(
@@ -195,6 +240,19 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
   // the admin queue without going through lead/scheduling/draft. When
   // the classifier returns `not-admin`, the vertical chain proceeds as
   // before.
+  //
+  // Discipline gate: office-admin is operations-discipline. When
+  // operations is disabled on the workspace, skip the LLM call AND the
+  // classification step entirely — no LLM spend, no admin row.
+  const disabledDisciplines = new Set(args.disabledDisciplineIds ?? []);
+  if (disabledDisciplines.has('operations')) {
+    steps.push({
+      step: 'office-admin-classify',
+      ok: true,
+      summary: 'skipped — operations discipline disabled on workspace',
+      durationMs: 0,
+    });
+  } else {
   const tAdmin = Date.now();
   const adminRes = await classifyOfficeAdmin({
     message: newestMessage,
@@ -237,6 +295,7 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
   // adminRes.ok=false is a soft-fail: log it but continue with the
   // vertical chain. Better to miss an admin classification than to drop
   // the whole loop.
+  } // end !disabled operations gate
 
   // ── 2. Categorize ───────────────────────────────────────────────────
   const categorizeSkill = new CategorizeSkill(llm);
@@ -305,7 +364,17 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
   });
 
   // ── 4. Schedule (scheduling-needed only) ────────────────────────────
-  if (intent === 'scheduling-needed') {
+  // Discipline gate: scheduling output is operations-discipline. When
+  // operations is disabled, skip the LLM call AND the slot-proposal so
+  // no scheduling row lands in /approvals.
+  if (intent === 'scheduling-needed' && disabledDisciplines.has('operations')) {
+    steps.push({
+      step: 'schedule',
+      ok: true,
+      summary: 'skipped — operations discipline disabled on workspace',
+      durationMs: 0,
+    });
+  } else if (intent === 'scheduling-needed') {
     const scheduleSkill = new ScheduleSkill(llm);
     const tSched = Date.now();
     const schedRes = await scheduleSkill.run({
@@ -327,6 +396,18 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
   }
 
   // ── 5. Draft ────────────────────────────────────────────────────────
+  // Discipline gate: the chain's reply draft is customer-comms — gated
+  // by the customer-success discipline (which covers customer-facing
+  // outbound). When disabled, skip the LLM call AND the draft itself so
+  // no BUYER_INQUIRY_REPLY_DRAFT row lands in /approvals.
+  if (disabledDisciplines.has('customer-success')) {
+    steps.push({
+      step: 'draft',
+      ok: true,
+      summary: 'skipped — customer-success discipline disabled on workspace',
+      durationMs: 0,
+    });
+  } else {
   const draftSkill = new DraftSkill(llm);
   const tDraft = Date.now();
   const draftRes = await draftSkill.run({
@@ -347,6 +428,7 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
     errorCode: draftRes.ok ? undefined : draftRes.error.code,
   });
   if (draftRes.ok) outcome.draft = draftRes.value;
+  } // end !disabled customer-success gate
 
   // ── 5.5 Compliance sentinel (literal-match scan over draft) ────────
   // Runs only when a corpus is registered for the vertical AND that
@@ -355,12 +437,14 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
   // (no LLM). Per `project_no_outbound_architecture.md`: sentinel ADVISES;
   // it does not block. Flags ride alongside the draft into /approvals.
   //
-  // Verticals whose corpus is currently counsel-reference only (mortgage,
-  // cpa, law, ria, insurance, title-escrow, recruiting, home-services,
+  // Discipline gate: sentinel is legal-discipline. When disabled, skip
+  // — the workspace told us they don't want legal flags. Verticals
+  // whose corpus is currently counsel-reference only (mortgage, cpa,
+  // law, ria, insurance, title-escrow, recruiting, home-services,
   // property-management — as of 2026-05-22) do NOT emit a compliance-
   // check step: nothing meaningful ran, so the sentinel card stays
   // honestly rooting.
-  if (outcome.draft) {
+  if (outcome.draft && !disabledDisciplines.has('legal')) {
     const corpus = loadCorpusFor(prompts.verticalSlug);
     if (corpus) {
       const hasLiteralMatchRule = corpus.rules.some(

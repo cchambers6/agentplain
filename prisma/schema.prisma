@@ -168,6 +168,13 @@ enum WorkApprovalKind {
   // back into the same row's payload, and re-surfaces for operator
   // approval. Draft-only by contract — see lib/plaino/dispatcher.ts.
   PLAINO_INSTRUCTION
+  // Vertical webhook router output. The real-estate lead-triage skill
+  // categorizes inbound leads (hot/warm/cold/nurture), proposes routing
+  // (specific agent / drip campaign / manual), and drafts a first-touch
+  // reply — all surfaced in one card under this kind. Draft-only by
+  // contract — the broker's CRM picks up routing; their email sends.
+  // See lib/skills/lead-triage-realestate + lib/skills/vertical-router.ts.
+  LEAD_TRIAGE
 }
 
 enum WorkApprovalStatus {

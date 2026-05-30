@@ -31,6 +31,11 @@ import { encryptPayloadForWrite } from '../security/payload-crypto';
 import { getVerticalContent } from '../verticals';
 import type { AgentLoopWork } from '../verticals/types';
 import { categoryToApprovalKind, type OfficeAdminApprovalPayload } from './office-admin';
+import {
+  applyApprovalThreshold,
+  PENDING_DECISION,
+  type ApprovalThresholdDecision,
+} from './approval-threshold';
 import type { SkillRunRecord, SkillStepRecord, SkillRunOutcome } from './types';
 
 /**
@@ -146,8 +151,16 @@ async function writeArtifacts(
   let approvalId: string | null = null;
   let approvalsWritten = 0;
   if (approval) {
+    // Wave-1 audit fix §9 #2 — workspace's WorkThresholdConfig now
+    // decides PENDING vs AUTO_APPROVED. Default = PENDING (safe).
+    const decision = await applyApprovalThreshold({
+      workspaceId,
+      kind: approval.kind,
+      confidence: extractConfidence(record.outcome),
+      tx,
+    });
     const created = await tx.workApprovalQueueItem.create({
-      data: approval,
+      data: { ...approval, ...decision },
       select: { id: true },
     });
     approvalId = created.id;
@@ -160,8 +173,17 @@ async function writeArtifacts(
   // and the operator sees the flag alongside the draft in /approvals.
   const complianceApproval = buildComplianceApproval({ workspaceId, record });
   if (complianceApproval) {
+    // The compliance gate respects WorkThresholdConfig's existing
+    // `requiresApprovalAboveSeverity` column — that's the field the
+    // settings page has been writing all along; this is the read.
+    const decision = await applyApprovalThreshold({
+      workspaceId,
+      kind: 'COMPLIANCE_FLAG',
+      severity: extractTopComplianceSeverity(record.outcome),
+      tx,
+    });
     await tx.workApprovalQueueItem.create({
-      data: complianceApproval,
+      data: { ...complianceApproval, ...decision },
       select: { id: true },
     });
     approvalsWritten += 1;
@@ -315,6 +337,76 @@ function extractStepSummary(
   const match = steps.find((s) => s.step === step);
   return match ? match.summary : null;
 }
+
+/** Pick the confidence the workspace threshold should evaluate against.
+ *  Office-admin rows carry their own confidence; vertical-chain drafts
+ *  carry the DraftReply confidence. Returns undefined when no honest
+ *  number exists — the gate then defaults to PENDING. */
+function extractConfidence(outcome: SkillRunOutcome): number | undefined {
+  if (outcome.officeAdminPayload) return outcome.officeAdminPayload.confidence;
+  if (outcome.draft) return outcome.draft.confidence;
+  return undefined;
+}
+
+/** The compliance gate evaluates against the HIGHEST-severity flag in
+ *  the batch — if any flag in the batch crosses the threshold, the
+ *  whole row stays PENDING. Returns undefined when no flags exist. */
+function extractTopComplianceSeverity(
+  outcome: SkillRunOutcome,
+): import('@prisma/client').ComplianceSeverity | undefined {
+  const flags = outcome.complianceFlags;
+  if (!flags || flags.length === 0) return undefined;
+  const ranks: Record<string, number> = {
+    INFO: 1,
+    LOW: 2,
+    MEDIUM: 3,
+    HIGH: 4,
+    BLOCKER: 5,
+  };
+  let topSev: import('@prisma/client').ComplianceSeverity | undefined;
+  let topRank = -1;
+  for (const f of flags) {
+    const sev = severityFromCategory(f.category);
+    if (!sev) continue;
+    const r = ranks[sev];
+    if (r > topRank) {
+      topRank = r;
+      topSev = sev;
+    }
+  }
+  return topSev;
+}
+
+function severityFromCategory(
+  category: string | null | undefined,
+): import('@prisma/client').ComplianceSeverity | undefined {
+  // The sentinel's ComplianceFlag.category is free-form — we map only
+  // the conventional buckets to severity. Unknown categories return
+  // undefined; the gate then defaults to PENDING (safe).
+  switch (category) {
+    case 'info':
+      return 'INFO';
+    case 'low':
+    case 'minor':
+      return 'LOW';
+    case 'medium':
+    case 'standard':
+      return 'MEDIUM';
+    case 'high':
+    case 'critical':
+      return 'HIGH';
+    case 'blocker':
+    case 'block':
+      return 'BLOCKER';
+    default:
+      return undefined;
+  }
+}
+
+// Re-export the threshold decision type so callers (test sinks, audits)
+// can type-narrow against the shape persist-artifacts produces.
+export type { ApprovalThresholdDecision };
+export { PENDING_DECISION };
 
 /**
  * Map a step name to the agent slug we show in the UI. The chain skills

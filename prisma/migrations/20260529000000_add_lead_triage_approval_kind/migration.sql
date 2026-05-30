@@ -1,0 +1,13 @@
+-- LEAD_TRIAGE approval kind. When the wave-1 vertical webhook router
+-- dispatches the real-estate lead-triage skill on an inbound message, it
+-- writes one approval queue row per triaged lead with this kind so the
+-- /approvals page can render category (hot/warm/cold/nurture), routing
+-- recommendation, and first-touch draft together in one card.
+--
+-- Draft-only by contract — agentplain never sends. The operator reviews
+-- the routing decision + first-touch draft, then routes through the
+-- broker's own CRM / email path. See
+--   - lib/skills/lead-triage-realestate/prisma-approval-sink.ts
+--   - lib/skills/vertical-router.ts
+--   - project_no_outbound_architecture.md
+ALTER TYPE "WorkApprovalKind" ADD VALUE IF NOT EXISTS 'LEAD_TRIAGE';

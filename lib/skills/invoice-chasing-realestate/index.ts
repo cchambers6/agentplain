@@ -10,6 +10,10 @@
 
 export { runSkill } from './skill';
 export { JsonInvoiceFetcher } from './json-fetcher';
+export {
+  QuickBooksInvoiceFetcher,
+  QUICKBOOKS_NOT_CONNECTED_MESSAGE,
+} from './quickbooks-fetcher';
 export type {
   ContactRecord,
   FollowUpTier,

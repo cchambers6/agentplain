@@ -10,6 +10,19 @@
 
 export { runSkill, scoreLead } from './skill';
 export { JsonLeadFetcher } from './json-fetcher';
+export {
+  ParsedMessageLeadFetcher,
+  toLeadRecord,
+} from './parsed-message-fetcher';
+export {
+  PrismaLeadTriageApprovalSink,
+  buildLeadTriageApprovalRow,
+  LEAD_TRIAGE_AGENT_SLUG,
+  LEAD_TRIAGE_REF_TABLE,
+  type LeadTriageApprovalSink,
+  type LeadTriageSinkArgs,
+} from './prisma-approval-sink';
+export { runLeadTriageForEvent } from './run-for-event';
 export type {
   AgentRoster,
   DripCampaign,

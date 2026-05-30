@@ -42,11 +42,13 @@ import {
   summarizeOutcome,
 } from '@/lib/skills/persist-artifacts';
 import { runInboxTriageForEvent } from '@/lib/skills/inbox-triage-general/run-for-event';
+import { runVerticalRouter } from '@/lib/skills/vertical-router';
 import { asDisciplineId } from '@/lib/disciplines';
 import { SKILL_DISCIPLINE } from '@/lib/disciplines/skill-mapping';
 import type { DraftPersister, MessageFetcher } from '@/lib/skills/types';
 import { getWorkspacePreference } from '@/lib/preferences';
 import { retrieveCustomerContext } from '@/lib/customer-files';
+import { PrismaMemoryStore } from '@/lib/plaino/memory';
 import {
   decideRetry,
   readyForProcessingFilter,
@@ -146,6 +148,14 @@ export async function processUnprocessedWebhookEvents(
       const customerContextResolver = async (query: string) =>
         retrieveCustomerContext({ workspaceId: workspace.id, query });
 
+      // Wire workspace memory into the runner so customer-set FEEDBACK
+      // rules (written via /talk classifier in PR #120) flow into the
+      // generic chain's prompt assembly. PrismaMemoryStore enforces RLS
+      // via the cron's SYSTEM_OPERATOR_CONTEXT — same operator-tier read
+      // already used by getWorkspacePreference + customerContextResolver.
+      const memoryStore = new PrismaMemoryStore(workspace.id, {
+        ctx: SYSTEM_OPERATOR_CONTEXT,
+      });
       const { record, outcome } = await runSkillChain({
         workspace,
         event,
@@ -153,6 +163,12 @@ export async function processUnprocessedWebhookEvents(
         persister: adapter,
         workspacePreferences,
         customerContextResolver,
+        memory: memoryStore,
+        // Pass the discipline-disable list so the runner can skip
+        // discipline-tagged terminal outputs (office-admin, schedule,
+        // draft, compliance) without firing the LLM. Closes the wave-1
+        // audit gap "biggest runtime path currently ungated."
+        disabledDisciplineIds: workspacePreferences?.disabledDisciplines ?? [],
       });
 
       const artifacts = await persistSkillRunArtifacts({
@@ -180,6 +196,52 @@ export async function processUnprocessedWebhookEvents(
       const triageDisabled = triageDisciplineId
         ? triageDisabledIds.includes(triageDisciplineId)
         : false;
+      // Vertical webhook router — fires any vertical-specific skills
+      // registered for the workspace's vertical (wave-1: real-estate
+      // lead-triage; wave-2 adds more as ParsedMessage→input adapters
+      // ship for the other 10 verticals). Skipping a discipline-
+      // disabled skill is honest: the operator turned it off; the row
+      // simply doesn't appear in /approvals.
+      //
+      // Errors from the router are non-fatal — we record but continue
+      // so a hiccup in one vertical skill doesn't drop the whole loop.
+      let verticalRouterDispatched = 0;
+      let verticalRouterSkipped = 0;
+      try {
+        const routerRes = await runVerticalRouter({
+          workspace,
+          event,
+          fetcher: adapter,
+          disabledDisciplineIds: workspacePreferences?.disabledDisciplines ?? [],
+        });
+        verticalRouterDispatched = routerRes.dispatched;
+        verticalRouterSkipped = routerRes.skipped;
+        for (const outcome of routerRes.outcomes) {
+          if (outcome.status === 'errored') {
+            reportInngestItemFailure(new Error(outcome.reason), {
+              functionId: PROCESS_WEBHOOK_EVENT_FUNCTION_ID,
+              extraTags: {
+                webhook_event_id: event.id,
+                workspace_id: workspace.id,
+                provider: credential.provider,
+                phase: 'vertical-router',
+                skill_slug: outcome.skillSlug,
+              },
+            });
+          }
+        }
+      } catch (routerErr) {
+        reportInngestItemFailure(routerErr, {
+          functionId: PROCESS_WEBHOOK_EVENT_FUNCTION_ID,
+          extraTags: {
+            webhook_event_id: event.id,
+            workspace_id: workspace.id,
+            provider: credential.provider,
+            phase: 'vertical-router',
+          },
+        });
+      }
+
       let triageScanned = 0;
       let triageSunk = 0;
       if (!triageDisabled) {
@@ -247,6 +309,11 @@ export async function processUnprocessedWebhookEvents(
                 disabled: triageDisabled,
                 messagesScanned: triageScanned,
                 proposalsSunk: triageSunk,
+              },
+              verticalRouter: {
+                vertical: workspace.vertical,
+                dispatched: verticalRouterDispatched,
+                skipped: verticalRouterSkipped,
               },
             },
           },

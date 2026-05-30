@@ -368,57 +368,57 @@ enum WorkspaceMemoryKind {
 }
 
 model User {
-  id                   String                  @id @default(uuid()) @db.Uuid
-  email                String                  @unique @db.Citext
+  id                   String                       @id @default(uuid()) @db.Uuid
+  email                String                       @unique @db.Citext
   name                 String?
-  isOperator           Boolean                 @default(false)
-  createdAt            DateTime                @default(now())
-  updatedAt            DateTime                @updatedAt
+  isOperator           Boolean                      @default(false)
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
   memberships          Membership[]
-  decidedItems         WorkApprovalQueueItem[] @relation("DecidedBy")
-  configuredThresholds WorkThresholdConfig[]   @relation("ConfiguredBy")
-  configuredSkills     SkillConfig[]           @relation("SkillConfigBy")
+  decidedItems         WorkApprovalQueueItem[]      @relation("DecidedBy")
+  configuredThresholds WorkThresholdConfig[]        @relation("ConfiguredBy")
+  configuredSkills     SkillConfig[]                @relation("SkillConfigBy")
   installedSkills      WorkspaceSkillInstallation[] @relation("SkillInstalledBy")
-  auditEntriesActor    AuditLog[]              @relation("AuditActor")
-  auditEntriesActAs    AuditLog[]              @relation("AuditActingAs")
+  auditEntriesActor    AuditLog[]                   @relation("AuditActor")
+  auditEntriesActAs    AuditLog[]                   @relation("AuditActingAs")
   magicLinkTokens      MagicLinkToken[]
-  triagedInquiries     Inquiry[]               @relation("InquiryTriagedBy")
+  triagedInquiries     Inquiry[]                    @relation("InquiryTriagedBy")
   passkeys             WebAuthnCredential[]
-  supportRequests      SupportRequest[]        @relation("SupportRequestFrom")
+  supportRequests      SupportRequest[]             @relation("SupportRequestFrom")
 
   @@index([email])
 }
 
 model Workspace {
-  id                       String                  @id @default(uuid()) @db.Uuid
+  id                       String                       @id @default(uuid()) @db.Uuid
   name                     String
-  slug                     String                  @unique
+  slug                     String                       @unique
   // Phase 1 audience tier (legacy). See WorkspaceTier comment.
-  tier                     WorkspaceTier           @default(HIGH_TOUCH)
+  tier                     WorkspaceTier                @default(HIGH_TOUCH)
   // Canonical per-seat tier (product_spec.md §13.1). Drives pricing, gating,
   // and the marketing/[vertical] CTAs. Required on every workspace; defaults
   // REGULAR so existing Phase 1 realty workspaces backfill cleanly.
-  verticalTier             WorkspaceVerticalTier   @default(REGULAR)
+  verticalTier             WorkspaceVerticalTier        @default(REGULAR)
   // Vertical the workspace operates in. Required, defaults REAL_ESTATE for
   // Phase 1 backfill. Spec §13.2 lines 444–453.
-  vertical                 Vertical                @default(REAL_ESTATE)
-  stateCode                String                  @default("GA") @db.VarChar(2)
-  billingMode              WorkspaceBillingMode    @default(MANUAL_INVOICE)
-  stripeCustomerId         String?                 @unique
-  stripeSubscriptionId     String?                 @unique
+  vertical                 Vertical                     @default(REAL_ESTATE)
+  stateCode                String                       @default("GA") @db.VarChar(2)
+  billingMode              WorkspaceBillingMode         @default(MANUAL_INVOICE)
+  stripeCustomerId         String?                      @unique
+  stripeSubscriptionId     String?                      @unique
   tierPriceUsdMonthly      Int? // hundredths of a dollar; populated for manual invoicing
-  settings                 Json                    @default("{}")
+  settings                 Json                         @default("{}")
   // Customer-initiated closure state. Flipped by
   // `lib/customer-data/closure.ts#initiateWorkspaceClosure` (BROKER_OWNER-
   // gated, typed-confirmation guarded). The hourly
   // `workspace-teardown-sweep` Inngest function reads
   // (closureStatus, scheduledHardPurgeAt) to decide which CLOSING workspaces
   // have aged out of the grace window and should hard-purge.
-  closureStatus            WorkspaceClosureStatus  @default(ACTIVE)
+  closureStatus            WorkspaceClosureStatus       @default(ACTIVE)
   closingInitiatedAt       DateTime?
   /// The User who initiated closure. SetNull so the workspace row survives
   /// the user being removed (audit + billing remain queryable).
-  closingInitiatedByUserId String?                 @db.Uuid
+  closingInitiatedByUserId String?                      @db.Uuid
   /// UTC instant the hard purge becomes eligible. Set by
   /// `initiateWorkspaceClosure`; reset to NULL on cancel.
   scheduledHardPurgeAt     DateTime?
@@ -428,8 +428,8 @@ model Workspace {
   /// Captured for the operator/CS triage signal — never resurfaced to
   /// other customers.
   closureReason            String?
-  createdAt                DateTime                @default(now())
-  updatedAt                DateTime                @updatedAt
+  createdAt                DateTime                     @default(now())
+  updatedAt                DateTime                     @updatedAt
   memberships              Membership[]
   workApprovalItems        WorkApprovalQueueItem[]
   thresholds               WorkThresholdConfig[]

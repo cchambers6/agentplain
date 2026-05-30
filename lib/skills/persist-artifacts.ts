@@ -378,7 +378,7 @@ function extractTopComplianceSeverity(
 }
 
 function severityFromCategory(
-  category: string,
+  category: string | null | undefined,
 ): import('@prisma/client').ComplianceSeverity | undefined {
   // The sentinel's ComplianceFlag.category is free-form — we map only
   // the conventional buckets to severity. Unknown categories return

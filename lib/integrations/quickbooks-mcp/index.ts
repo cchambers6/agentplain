@@ -20,6 +20,25 @@ export function buildQuickbooksMcpServer(args: { workspaceId: string }): Quickbo
 }
 
 export { QUICKBOOKS_TOOLS, QUICKBOOKS_NAMESPACE };
-export type { QuickbooksMcpServer } from './types';
+export type {
+  CreateInvoiceInput,
+  CreateInvoiceOutput,
+  CustomerSummary,
+  ExpenseSummary,
+  GetInvoiceInput,
+  GetInvoiceOutput,
+  GetProfitAndLossInput,
+  GetProfitAndLossOutput,
+  InvoiceSummary,
+  ListCustomersInput,
+  ListCustomersOutput,
+  ListExpensesInput,
+  ListExpensesOutput,
+  ListInvoicesInput,
+  ListInvoicesOutput,
+  QuickbooksMcpServer,
+  RecordPaymentInput,
+  RecordPaymentOutput,
+} from './types';
 export { ProdQuickbooksMcpServer } from './server';
 export { TestQuickbooksMcpServer } from './test-server';

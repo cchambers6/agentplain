@@ -42,6 +42,7 @@ import {
   summarizeOutcome,
 } from '@/lib/skills/persist-artifacts';
 import { runInboxTriageForEvent } from '@/lib/skills/inbox-triage-general/run-for-event';
+import { runVerticalRouter } from '@/lib/skills/vertical-router';
 import { asDisciplineId } from '@/lib/disciplines';
 import { SKILL_DISCIPLINE } from '@/lib/disciplines/skill-mapping';
 import type { DraftPersister, MessageFetcher } from '@/lib/skills/types';
@@ -180,6 +181,52 @@ export async function processUnprocessedWebhookEvents(
       const triageDisabled = triageDisciplineId
         ? triageDisabledIds.includes(triageDisciplineId)
         : false;
+      // Vertical webhook router — fires any vertical-specific skills
+      // registered for the workspace's vertical (wave-1: real-estate
+      // lead-triage; wave-2 adds more as ParsedMessage→input adapters
+      // ship for the other 10 verticals). Skipping a discipline-
+      // disabled skill is honest: the operator turned it off; the row
+      // simply doesn't appear in /approvals.
+      //
+      // Errors from the router are non-fatal — we record but continue
+      // so a hiccup in one vertical skill doesn't drop the whole loop.
+      let verticalRouterDispatched = 0;
+      let verticalRouterSkipped = 0;
+      try {
+        const routerRes = await runVerticalRouter({
+          workspace,
+          event,
+          fetcher: adapter,
+          disabledDisciplineIds: workspacePreferences?.disabledDisciplines ?? [],
+        });
+        verticalRouterDispatched = routerRes.dispatched;
+        verticalRouterSkipped = routerRes.skipped;
+        for (const outcome of routerRes.outcomes) {
+          if (outcome.status === 'errored') {
+            reportInngestItemFailure(new Error(outcome.reason), {
+              functionId: PROCESS_WEBHOOK_EVENT_FUNCTION_ID,
+              extraTags: {
+                webhook_event_id: event.id,
+                workspace_id: workspace.id,
+                provider: credential.provider,
+                phase: 'vertical-router',
+                skill_slug: outcome.skillSlug,
+              },
+            });
+          }
+        }
+      } catch (routerErr) {
+        reportInngestItemFailure(routerErr, {
+          functionId: PROCESS_WEBHOOK_EVENT_FUNCTION_ID,
+          extraTags: {
+            webhook_event_id: event.id,
+            workspace_id: workspace.id,
+            provider: credential.provider,
+            phase: 'vertical-router',
+          },
+        });
+      }
+
       let triageScanned = 0;
       let triageSunk = 0;
       if (!triageDisabled) {
@@ -247,6 +294,11 @@ export async function processUnprocessedWebhookEvents(
                 disabled: triageDisabled,
                 messagesScanned: triageScanned,
                 proposalsSunk: triageSunk,
+              },
+              verticalRouter: {
+                vertical: workspace.vertical,
+                dispatched: verticalRouterDispatched,
+                skipped: verticalRouterSkipped,
               },
             },
           },

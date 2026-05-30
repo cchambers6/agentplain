@@ -438,11 +438,15 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
     mcpDependencies: [
       {
         provider: 'follow-up-boss',
-        status: 'stubbed-json',
+        status: 'in-flight',
         note:
-          'Follow Up Boss MCP not yet built. Skill accepts generic LeadRecord[] ' +
-          'JSON payloads today; the Follow Up Boss MCP will hydrate the same ' +
-          'shape from FUB lead events.',
+          'Follow Up Boss MCP not yet built. The wave-1 vertical router ' +
+          '(lib/skills/vertical-router.ts) wires the skill to fire on every ' +
+          'inbound email on a real-estate workspace, deriving LeadRecord[] ' +
+          'from ParsedMessage via lib/skills/lead-triage-realestate/parsed-' +
+          'message-fetcher.ts. Triaged leads route to `manual` until the FUB ' +
+          'MCP populates an agent roster — better than fake-routing to a ' +
+          'hardcoded agent.',
       },
       {
         provider: 'gmail',

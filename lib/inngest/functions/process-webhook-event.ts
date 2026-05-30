@@ -48,6 +48,7 @@ import { SKILL_DISCIPLINE } from '@/lib/disciplines/skill-mapping';
 import type { DraftPersister, MessageFetcher } from '@/lib/skills/types';
 import { getWorkspacePreference } from '@/lib/preferences';
 import { retrieveCustomerContext } from '@/lib/customer-files';
+import { PrismaMemoryStore } from '@/lib/plaino/memory';
 import {
   decideRetry,
   readyForProcessingFilter,
@@ -147,6 +148,14 @@ export async function processUnprocessedWebhookEvents(
       const customerContextResolver = async (query: string) =>
         retrieveCustomerContext({ workspaceId: workspace.id, query });
 
+      // Wire workspace memory into the runner so customer-set FEEDBACK
+      // rules (written via /talk classifier in PR #120) flow into the
+      // generic chain's prompt assembly. PrismaMemoryStore enforces RLS
+      // via the cron's SYSTEM_OPERATOR_CONTEXT — same operator-tier read
+      // already used by getWorkspacePreference + customerContextResolver.
+      const memoryStore = new PrismaMemoryStore(workspace.id, {
+        ctx: SYSTEM_OPERATOR_CONTEXT,
+      });
       const { record, outcome } = await runSkillChain({
         workspace,
         event,
@@ -154,6 +163,7 @@ export async function processUnprocessedWebhookEvents(
         persister: adapter,
         workspacePreferences,
         customerContextResolver,
+        memory: memoryStore,
       });
 
       const artifacts = await persistSkillRunArtifacts({

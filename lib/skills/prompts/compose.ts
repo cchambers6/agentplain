@@ -34,6 +34,14 @@ export interface ComposeArgs {
    *  runner retrieved for this fire. Inlined into draft + coordinate
    *  prompts. Empty/blank = no wrap. */
   customerContextBlock?: string;
+  /** Customer-set PREFERENCE rules (WorkspaceMemoryEntry kind=FEEDBACK
+   *  with `pref:<scope>` titles), pre-rendered by
+   *  `lib/skills/feedback-rules.ts`. Inlined into EVERY skill prompt so
+   *  whatever the customer told /talk to remember actually shapes
+   *  categorize / coordinate / schedule / draft. Empty/blank = no wrap,
+   *  no header — honest about the absence rather than emitting a
+   *  misleading "(no preferences set)" block. */
+  feedbackRulesBlock?: string;
 }
 
 export function composePromptBundle(
@@ -43,23 +51,40 @@ export function composePromptBundle(
   const prefDraft = (args.preferencesBlockForDraft ?? '').trim();
   const prefOther = (args.preferencesBlockForOther ?? '').trim();
   const ctx = (args.customerContextBlock ?? '').trim();
-  if (prefDraft.length === 0 && prefOther.length === 0 && ctx.length === 0) {
+  const rules = (args.feedbackRulesBlock ?? '').trim();
+  if (
+    prefDraft.length === 0 &&
+    prefOther.length === 0 &&
+    ctx.length === 0 &&
+    rules.length === 0
+  ) {
     return base;
   }
   return {
     verticalSlug: base.verticalSlug,
     verticalName: base.verticalName,
-    categorize: wrap(base.categorize, prefOther, ''),
-    draft: wrap(base.draft, prefDraft, ctx),
-    schedule: wrap(base.schedule, prefOther, ''),
-    coordinate: wrap(base.coordinate, prefOther, ctx),
+    categorize: wrap(base.categorize, prefOther, '', rules),
+    draft: wrap(base.draft, prefDraft, ctx, rules),
+    schedule: wrap(base.schedule, prefOther, '', rules),
+    coordinate: wrap(base.coordinate, prefOther, ctx, rules),
   };
 }
 
 /** Insert the workspace-context wrapper after the VERTICAL_SLUG header
  *  line so the marker-based test-provider routing stays intact. */
-function wrap(prompt: string, prefBlock: string, ctxBlock: string): string {
-  if (prefBlock.length === 0 && ctxBlock.length === 0) return prompt;
+function wrap(
+  prompt: string,
+  prefBlock: string,
+  ctxBlock: string,
+  rulesBlock: string,
+): string {
+  if (
+    prefBlock.length === 0 &&
+    ctxBlock.length === 0 &&
+    rulesBlock.length === 0
+  ) {
+    return prompt;
+  }
   const headerEnd = findHeaderEnd(prompt);
   const before = prompt.slice(0, headerEnd);
   const after = prompt.slice(headerEnd);
@@ -67,6 +92,10 @@ function wrap(prompt: string, prefBlock: string, ctxBlock: string): string {
   if (prefBlock.length > 0) {
     parts.push('');
     parts.push(prefBlock);
+  }
+  if (rulesBlock.length > 0) {
+    parts.push('');
+    parts.push(rulesBlock);
   }
   if (ctxBlock.length > 0) {
     parts.push('');

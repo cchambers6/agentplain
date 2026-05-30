@@ -41,6 +41,9 @@ import {
   renderCustomerContextBlock,
   type CustomerContextSnippet,
 } from '../customer-files/render';
+import type { IMemoryStore } from '@/lib/plaino/memory/types';
+import type { PreferenceScopeId } from '@/lib/plaino/types';
+import { buildFeedbackRulesBlock } from './feedback-rules';
 import { CategorizeSkill } from './categorize';
 import { CoordinateSkill } from './coordinate';
 import { DraftSkill } from './draft';
@@ -92,6 +95,17 @@ export interface RunChainArgs {
   customerContextResolver?: (
     query: string,
   ) => Promise<CustomerContextSnippet[]>;
+  /** Optional workspace memory store. When provided, the runner reads
+   *  FEEDBACK rules matching the runner's default scopes and injects
+   *  them into the prompt bundle so categorize/coordinate/schedule/draft
+   *  all honor what the customer told /talk to remember. When omitted,
+   *  the runner behaves exactly as before — the wave-1 audit's "no skill
+   *  reads memory" gap closes only when this is wired by the caller. */
+  memory?: IMemoryStore | null;
+  /** Override the FEEDBACK scopes read from memory. Defaults to the
+   *  generic runner scope set (DEFAULT_RUNNER_SCOPES in
+   *  ./feedback-rules.ts). The reader always includes `general` on top. */
+  feedbackScopes?: ReadonlyArray<PreferenceScopeId>;
   now?: Date;
   /** When true, write a JSONL log row to `agent-state/skill-runs/`.
    *  Default: true. */
@@ -127,10 +141,29 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
   let customerContextBlock = renderCustomerContextBlock(
     args.customerContext ?? [],
   );
+  // Read customer-set PREFERENCE rules from workspace memory and inline
+  // them so the fleet honors what /talk taught it. Best-effort — a
+  // memory read failure NEVER drops the loop. Empty rule set returns
+  // empty string (no header), per the honesty bar.
+  let feedbackRulesBlock = '';
+  if (args.memory) {
+    try {
+      feedbackRulesBlock = await buildFeedbackRulesBlock({
+        memory: args.memory,
+        workspaceId: args.workspace.id,
+        scopes: args.feedbackScopes,
+      });
+    } catch (err) {
+      console.warn(
+        `runSkillChain: feedback-rules read failed (continuing without): ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
   let prompts = composePromptBundle(basePrompts, {
     preferencesBlockForDraft,
     preferencesBlockForOther,
     customerContextBlock,
+    feedbackRulesBlock,
   });
   const startedAt = args.now ?? new Date();
   const steps: SkillStepRecord[] = [];
@@ -181,6 +214,7 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
         preferencesBlockForDraft,
         preferencesBlockForOther,
         customerContextBlock,
+        feedbackRulesBlock,
       });
     } catch (err) {
       console.warn(

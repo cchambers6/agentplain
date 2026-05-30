@@ -19,10 +19,20 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { withRls, type RlsContext } from '../db/rls';
 import { decrypt, encrypt } from '../security/encryption';
+import { encryptPayloadForWrite } from '../security/payload-crypto';
 import {
   type IChatStore,
   type PersistedChatMessage,
 } from './types';
+
+/** Agent slug attributed to PLAINO_INSTRUCTION approval queue items.
+ *  Identifies the dispatcher as the producer so the operator can see
+ *  "from /talk" in the queue listing. */
+export const PLAINO_INSTRUCTION_AGENT_SLUG = 'plaino-dispatcher' as const;
+
+/** Ref-table on the PLAINO_INSTRUCTION row. The queue item points at
+ *  the ChatMessage so the operator can click back to the source turn. */
+export const PLAINO_INSTRUCTION_REF_TABLE = 'ChatMessage' as const;
 
 export interface PrismaChatStoreOptions {
   /** RLS context used for every operation. Defaults to a workspace-
@@ -189,6 +199,69 @@ export class PrismaChatStore implements IChatStore {
             fromUserId: args.fromUserId,
             subject: args.subject,
             body: args.body,
+          },
+          select: { id: true },
+        });
+        return created.id;
+      },
+      this.rlsOptions(),
+    );
+  }
+
+  /**
+   * Create a PLAINO_INSTRUCTION WorkApprovalQueueItem for the INSTRUCT
+   * hand-off. Lives on the chat store because it shares the workspace-
+   * isolation envelope (same pattern as createSupportRequest for
+   * REGISTER). Returns the new approval queue item id.
+   *
+   * The `payload` is encrypted at rest with the v1 envelope via
+   * `encryptPayloadForWrite` — identical pattern to the existing
+   * support-handler + chief-of-staff approval sinks (see
+   * lib/skills/support-handler/prisma-approval-sink.ts).
+   *
+   * Initial status:
+   *   - row status:     PENDING (visible in operator queue immediately)
+   *   - payload.status: 'drafting' (the instruction-handler will flip
+   *                     this to 'awaiting_review' when the draft lands)
+   *
+   * Per project_no_outbound_architecture: nothing here sends. The
+   * downstream instruction-handler reads + drafts + persists. Operator
+   * approves; customer's existing tools perform any send.
+   */
+  async createInstructionApproval(args: {
+    workspaceId: string;
+    fromUserId: string;
+    sourceChatMessageId: string;
+    instructionText: string;
+    targetDiscipline: string;
+    reasoning: string;
+  }): Promise<string> {
+    this.assertWorkspace(args.workspaceId);
+    const payload = encryptPayloadForWrite({
+      kind: 'plaino-instruction',
+      status: 'drafting',
+      instructionText: args.instructionText,
+      sourceChatMessageId: args.sourceChatMessageId,
+      sourceUserId: args.fromUserId,
+      targetDiscipline: args.targetDiscipline,
+      reasoning: args.reasoning,
+      noOutbound:
+        "Drafted only. Plaino does not send. The operator approves; the " +
+        "customer's existing tools perform any execution.",
+    });
+    return withRls(
+      this.ctx(),
+      async (tx) => {
+        const created = await tx.workApprovalQueueItem.create({
+          data: {
+            workspaceId: args.workspaceId,
+            agentSlug: PLAINO_INSTRUCTION_AGENT_SLUG,
+            kind: 'PLAINO_INSTRUCTION',
+            refTable: PLAINO_INSTRUCTION_REF_TABLE,
+            refId: args.sourceChatMessageId,
+            status: 'PENDING',
+            discipline: args.targetDiscipline,
+            payload,
           },
           select: { id: true },
         });

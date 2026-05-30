@@ -30,6 +30,15 @@ export class RecordingChatStore implements IChatStore {
     subject: string;
     body: string;
   }> = [];
+  readonly createdInstructionApprovals: Array<{
+    id: string;
+    workspaceId: string;
+    fromUserId: string;
+    sourceChatMessageId: string;
+    instructionText: string;
+    targetDiscipline: string;
+    reasoning: string;
+  }> = [];
 
   constructor(
     private readonly workspaceId: string,
@@ -89,6 +98,20 @@ export class RecordingChatStore implements IChatStore {
     this.assertWorkspace(args.workspaceId);
     const id = randomUUID();
     this.createdSupportRequests.push({ id, ...args });
+    return id;
+  }
+
+  async createInstructionApproval(args: {
+    workspaceId: string;
+    fromUserId: string;
+    sourceChatMessageId: string;
+    instructionText: string;
+    targetDiscipline: string;
+    reasoning: string;
+  }): Promise<string> {
+    this.assertWorkspace(args.workspaceId);
+    const id = randomUUID();
+    this.createdInstructionApprovals.push({ id, ...args });
     return id;
   }
 

@@ -37,6 +37,7 @@
  * call reads workspace state fresh.
  */
 
+import { DISCIPLINE_IDS } from '../disciplines';
 import { getLlmProvider } from '../llm';
 import {
   llmOk,
@@ -50,6 +51,7 @@ import {
   DEFAULT_ANSWER_FLOOR,
   DEFAULT_TOP_K,
   HISTORY_CAP,
+  isPreferenceScopeId,
   type PersistedChatMessage,
   type PlainoClassification,
   type PlainoDispatchKind,
@@ -66,8 +68,13 @@ import {
   type MemoryEntry,
   type ProposedMemoryEntry,
 } from './memory';
+import {
+  buildPreferenceMemoryBody,
+  PREFERENCE_MEMORY_TITLE_PREFIX,
+} from './preference-memory';
 
 const SUPPORT_REQUEST_CREATED_EVENT = 'agentplain/support-request.created';
+const INSTRUCTION_CREATED_EVENT = 'agentplain/instruction.created';
 
 const NO_OUTBOUND_NOTE =
   "No message sent outside the workspace. The customer's reply is " +
@@ -192,20 +199,72 @@ export async function runPlainoTurn(
       );
     }
   }
-  if (decision.kind === 'REGISTER' && claimsActionCompleted(decision.reply)) {
+  if (
+    (decision.kind === 'REGISTER' || decision.kind === 'INSTRUCT') &&
+    claimsActionCompleted(decision.reply)
+  ) {
     const fallback = await persistPlaceholderReply({
       input,
       customerMessage,
-      reason: 'REGISTER reply claimed completion',
+      reason: `${decision.kind} reply claimed completion`,
     });
     return skillError(
       'PARSE_ERROR',
-      `dispatcher's REGISTER reply claimed work was completed; persisted placeholder reply ${fallback.id}`,
+      `dispatcher's ${decision.kind} reply claimed work was completed; persisted placeholder reply ${fallback.id}`,
     );
+  }
+  if (decision.kind === 'INSTRUCT') {
+    if (
+      !decision.targetDiscipline ||
+      !(DISCIPLINE_IDS as readonly string[]).includes(decision.targetDiscipline)
+    ) {
+      const fallback = await persistPlaceholderReply({
+        input,
+        customerMessage,
+        reason: `INSTRUCT with invalid targetDiscipline ${String(decision.targetDiscipline)}`,
+      });
+      return skillError(
+        'PARSE_ERROR',
+        `dispatcher chose INSTRUCT with invalid targetDiscipline=${String(
+          decision.targetDiscipline,
+        )}; persisted placeholder reply ${fallback.id}`,
+      );
+    }
+  }
+  if (decision.kind === 'PREFERENCE') {
+    if (!decision.preferenceRule || decision.preferenceRule.trim().length === 0) {
+      const fallback = await persistPlaceholderReply({
+        input,
+        customerMessage,
+        reason: 'PREFERENCE without a preferenceRule',
+      });
+      return skillError(
+        'PARSE_ERROR',
+        `dispatcher chose PREFERENCE without preferenceRule; persisted placeholder reply ${fallback.id}`,
+      );
+    }
+    if (
+      !decision.preferenceScope ||
+      !isPreferenceScopeId(decision.preferenceScope)
+    ) {
+      const fallback = await persistPlaceholderReply({
+        input,
+        customerMessage,
+        reason: `PREFERENCE with invalid preferenceScope ${String(decision.preferenceScope)}`,
+      });
+      return skillError(
+        'PARSE_ERROR',
+        `dispatcher chose PREFERENCE with invalid preferenceScope=${String(
+          decision.preferenceScope,
+        )}; persisted placeholder reply ${fallback.id}`,
+      );
+    }
   }
 
   // 4. Branch on kind.
   let supportRequestId: string | null = null;
+  let instructionApprovalId: string | null = null;
+  let preferenceMemoryId: string | null = null;
   let citations: SupportContextSnippet[] = [];
   if (decision.kind === 'ANSWER') {
     citations = restrictCitations(decision.citedTitles, snippets);
@@ -216,6 +275,27 @@ export async function runPlainoTurn(
     // Inngest event the support-handler is already triggered by.
     const registered = await registerWithSupportHandler({ input, trimmedMessage });
     supportRequestId = registered.supportRequestId;
+  } else if (decision.kind === 'INSTRUCT') {
+    // Create the PLAINO_INSTRUCTION approval queue item NOW (status
+    // PENDING, payload.status='drafting') + fire the Inngest event the
+    // instruction-handler consumes. The handler reads the row, drafts,
+    // updates the row's payload back. Customer sees a "drafted into
+    // your approval queue" tile in the chat thread.
+    const instructed = await routeInstruction({
+      input,
+      decision,
+      customerMessageId: customerMessage.id,
+    });
+    instructionApprovalId = instructed.approvalQueueItemId;
+  } else if (decision.kind === 'PREFERENCE') {
+    // Write the rule as a FEEDBACK memory entry so the next skill fire
+    // can inject it. We do this synchronously (not fire-and-forget)
+    // because the customer's confirmation reply asserts it landed.
+    preferenceMemoryId = await persistPreferenceMemory({
+      input,
+      decision,
+      customerMessage,
+    });
   }
 
   // 5. Persist the Plaino reply with classification metadata.
@@ -229,6 +309,10 @@ export async function runPlainoTurn(
       reasoning: decision.reasoning,
       namedGap: decision.namedGap,
       supportRequestId,
+      instructionApprovalId,
+      targetDiscipline: decision.targetDiscipline,
+      preferenceMemoryId,
+      preferenceScope: decision.preferenceScope,
       citations: citations.map((c) => ({
         title: c.title,
         sourceUrl: c.sourceUrl,
@@ -242,6 +326,9 @@ export async function runPlainoTurn(
     kind: decision.kind,
     reasoning: decision.reasoning,
     namedGap: decision.namedGap,
+    targetDiscipline: decision.targetDiscipline,
+    preferenceRule: decision.preferenceRule,
+    preferenceScope: decision.preferenceScope,
   };
 
   // 6. Fire-and-forget memory write-back. The dispatcher does NOT
@@ -262,11 +349,148 @@ export async function runPlainoTurn(
     customerMessage,
     plainoMessage,
     supportRequestId,
+    instructionApprovalId,
+    preferenceMemoryId,
     citations,
     recalledMemory,
     memoryWritebackPromise,
     noOutboundNote: NO_OUTBOUND_NOTE,
   } satisfies PlainoTurnOutput);
+}
+
+// ── INSTRUCT routing ────────────────────────────────────────────────────
+
+interface RouteInstructionArgs {
+  input: PlainoTurnInput;
+  decision: DispatcherDecision;
+  customerMessageId: string;
+}
+
+interface RouteInstructionResult {
+  approvalQueueItemId: string | null;
+}
+
+/**
+ * Persist a PLAINO_INSTRUCTION approval queue item for the INSTRUCT
+ * turn + emit the Inngest event the instruction-handler consumes.
+ *
+ * The queue item carries the original customer instruction (encrypted
+ * at rest via the v1 envelope, like every other payload that holds
+ * customer content). The Inngest handler reads the row, drafts, writes
+ * the draft into the same row, and flips the queue item back to
+ * PENDING for operator review. See lib/inngest/functions/
+ * instruction-handler-on-create.ts.
+ *
+ * Best-effort: a failed event-emit returns the approvalQueueItemId
+ * the chat surface can still link to. The handler can be re-fired via
+ * the Inngest dashboard if the original emit got dropped.
+ */
+async function routeInstruction(
+  args: RouteInstructionArgs,
+): Promise<RouteInstructionResult> {
+  const approvalQueueItemId = await createInstructionApprovalRow(args);
+  if (!approvalQueueItemId) return { approvalQueueItemId: null };
+
+  const emitRes = await args.input.events.emit({
+    name: INSTRUCTION_CREATED_EVENT,
+    data: {
+      approvalQueueItemId,
+      workspaceId: args.input.workspaceId,
+      targetDiscipline: args.decision.targetDiscipline,
+      source: 'plaino-talk' as const,
+    },
+  });
+  if (!emitRes.ok) {
+    // Soft-fail: leave the queue item visible to the operator. The
+    // instruction-handler can be manually re-fired from /operator/inngest
+    // (see lib/inngest/dashboard).
+    return { approvalQueueItemId };
+  }
+  return { approvalQueueItemId };
+}
+
+/**
+ * Hand off to the chat store to create a PLAINO_INSTRUCTION approval
+ * queue item. The store owns the workspace-isolation envelope (same
+ * pattern as createSupportRequest for the REGISTER path), keeping the
+ * dispatcher portable across IChatStore implementations.
+ *
+ * Returns null when the store does not support instruction creation
+ * (recording test stores override; production implements it). A null
+ * here ALSO means the customer's chat reply still lands (they see the
+ * "I'll herd this through the team" message), but no queue item gets
+ * created — surfaced in the audit log via the supportRequestId-style
+ * metadata.
+ */
+async function createInstructionApprovalRow(
+  args: RouteInstructionArgs,
+): Promise<string | null> {
+  const store = args.input.store as unknown as {
+    createInstructionApproval?: (args: {
+      workspaceId: string;
+      fromUserId: string;
+      sourceChatMessageId: string;
+      instructionText: string;
+      targetDiscipline: string;
+      reasoning: string;
+    }) => Promise<string>;
+  };
+  if (typeof store.createInstructionApproval !== 'function') {
+    return null;
+  }
+  return store.createInstructionApproval({
+    workspaceId: args.input.workspaceId,
+    fromUserId: args.input.fromUserId,
+    sourceChatMessageId: args.customerMessageId,
+    instructionText: args.input.customerMessage,
+    // We validated above; non-null at this point. The `!` is honest
+    // here — the type system can't track the earlier validation gate.
+    targetDiscipline: args.decision.targetDiscipline!,
+    reasoning: args.decision.reasoning,
+  });
+}
+
+// ── PREFERENCE persistence ──────────────────────────────────────────────
+
+interface PersistPreferenceArgs {
+  input: PlainoTurnInput;
+  decision: DispatcherDecision;
+  customerMessage: PersistedChatMessage;
+}
+
+/**
+ * Write a FEEDBACK memory entry for the PREFERENCE turn. Synchronous
+ * (not fire-and-forget) because the customer's reply asserts the rule
+ * landed — a silent miss would create a trust gap.
+ *
+ * Returns the new memory entry id on success, null when the workspace
+ * has no memory store attached (legacy / test). On a write failure we
+ * also return null so the dispatcher's reply still lands; the audit
+ * log carries the failure cause via the dispatcher's debug surface.
+ */
+async function persistPreferenceMemory(
+  args: PersistPreferenceArgs,
+): Promise<string | null> {
+  if (!args.input.memory) return null;
+  if (!args.decision.preferenceRule || !args.decision.preferenceScope) {
+    return null;
+  }
+  try {
+    const entry = await args.input.memory.upsert({
+      workspaceId: args.input.workspaceId,
+      kind: 'FEEDBACK',
+      title: `${PREFERENCE_MEMORY_TITLE_PREFIX}${args.decision.preferenceScope}`,
+      body: buildPreferenceMemoryBody({
+        scope: args.decision.preferenceScope,
+        rule: args.decision.preferenceRule,
+      }),
+      sourceChatMessageId: args.customerMessage.id,
+      now: args.input.now,
+    });
+    return entry.id;
+  } catch {
+    return null;
+  }
 }
 
 // ── REGISTER hand-off ───────────────────────────────────────────────────
@@ -373,6 +597,9 @@ interface DispatcherDecision {
   reply: string;
   citedTitles: string[];
   namedGap: string | null;
+  targetDiscipline: string | null;
+  preferenceRule: string | null;
+  preferenceScope: string | null;
   reasoning: string;
 }
 
@@ -397,7 +624,13 @@ function parseDispatcherJson(
     return { ok: false, error: 'plaino dispatcher LLM JSON was not an object' };
   }
   const kind = json.kind;
-  if (kind !== 'ANSWER' && kind !== 'REGISTER' && kind !== 'DECLINE_HONESTLY') {
+  if (
+    kind !== 'ANSWER' &&
+    kind !== 'REGISTER' &&
+    kind !== 'INSTRUCT' &&
+    kind !== 'PREFERENCE' &&
+    kind !== 'DECLINE_HONESTLY'
+  ) {
     return {
       ok: false,
       error: `plaino dispatcher LLM JSON missing valid \`kind\` (got ${String(kind)})`,
@@ -416,9 +649,38 @@ function parseDispatcherJson(
     typeof namedGapRaw === 'string' && namedGapRaw.trim().length > 0
       ? namedGapRaw.trim()
       : null;
+  const targetDisciplineRaw = json.targetDiscipline;
+  const targetDiscipline =
+    typeof targetDisciplineRaw === 'string' &&
+    targetDisciplineRaw.trim().length > 0
+      ? targetDisciplineRaw.trim()
+      : null;
+  const preferenceRuleRaw = json.preferenceRule;
+  const preferenceRule =
+    typeof preferenceRuleRaw === 'string' && preferenceRuleRaw.trim().length > 0
+      ? preferenceRuleRaw.trim()
+      : null;
+  const preferenceScopeRaw = json.preferenceScope;
+  const preferenceScope =
+    typeof preferenceScopeRaw === 'string' &&
+    preferenceScopeRaw.trim().length > 0
+      ? preferenceScopeRaw.trim()
+      : null;
   const citedRaw = Array.isArray(json.citedTitles) ? json.citedTitles : [];
   const citedTitles = citedRaw.filter((c): c is string => typeof c === 'string');
-  return { ok: true, value: { kind, reply, citedTitles, namedGap, reasoning } };
+  return {
+    ok: true,
+    value: {
+      kind,
+      reply,
+      citedTitles,
+      namedGap,
+      targetDiscipline,
+      preferenceRule,
+      preferenceScope,
+      reasoning,
+    },
+  };
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {

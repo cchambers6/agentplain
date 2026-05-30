@@ -10,11 +10,46 @@
 export { runPlainoTurn } from './dispatcher';
 export { buildSystemPrompt, PLAINO_SYSTEM_PROMPT_VERSION } from './system-prompt';
 export {
+  checkDegradedMode,
+  DEGRADED_MODE_METADATA_KIND,
+  type DegradedMode,
+} from './degraded-mode';
+export {
+  buildPreferenceMemoryBody,
+  parsePreferenceMemoryBody,
+  preferenceScopeFromTitle,
+  PREFERENCE_MEMORY_TITLE_PREFIX,
+} from './preference-memory';
+export {
+  readFeedbackRules,
+  renderFeedbackRulesForPrompt,
+  type FeedbackRule,
+  type ReadFeedbackRulesArgs,
+} from './feedback-rules';
+export {
   buildCapabilitySnapshot,
   buildCapabilitySnapshotSync,
 } from './capabilities';
-export { PrismaChatStore } from './prisma-chat-store';
+export {
+  PrismaChatStore,
+  PLAINO_INSTRUCTION_AGENT_SLUG,
+  PLAINO_INSTRUCTION_REF_TABLE,
+} from './prisma-chat-store';
 export { RecordingChatStore } from './recording-chat-store';
+export {
+  runInstructionHandler,
+  buildInstructionHandlerSystemPrompt,
+  buildInstructionHandlerUserPrompt,
+  INSTRUCTION_HANDLER_PROMPT_VERSION,
+  type IInstructionQueueStore,
+  type InstructionDraft,
+  type InstructionQueueItem,
+  type RunInstructionHandlerArgs,
+} from './instruction-handler';
+export { PrismaInstructionQueueStore } from './prisma-instruction-queue-store';
+export { RecordingInstructionQueueStore } from './recording-instruction-queue-store';
+export const INSTRUCTION_CREATED_EVENT_NAME =
+  'agentplain/instruction.created' as const;
 export { InngestEventEmitter, RecordingEventEmitter } from './event-emitter';
 export {
   PrismaMemoryStore,
@@ -49,4 +84,7 @@ export {
   DEFAULT_ANSWER_FLOOR,
   DEFAULT_TOP_K,
   HISTORY_CAP,
+  isPreferenceScopeId,
+  PREFERENCE_SCOPE_IDS,
+  type PreferenceScopeId,
 } from './types';

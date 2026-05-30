@@ -222,7 +222,8 @@ describe("installSkill / uninstallSkill — round-trip + audit", () => {
       systemContext: store.systemContext as never,
     });
     assert.equal(store.rows.length, 1, "uninstall must upsert in place");
-    assert.ok(store.rows[0].disabledAt instanceof Date);
+    assert.ok(store.rows[0].disabledAt, "disabledAt should be set after uninstallSkill");
+    assert.ok((store.rows[0].disabledAt as Date) instanceof Date);
 
     await installSkill({
       workspaceId: "ws_x",
@@ -337,23 +338,29 @@ describe("isSkillInstalledForWorkspace — runtime gate", () => {
 });
 
 describe("runtime catalog — LIVE / schema-only distribution matches the audit", () => {
-  it("six skills are LIVE today (per audit §3)", () => {
+  it("LIVE skills match the post-wave-3 catalog", () => {
     const live = SKILL_CATALOG.filter((s) => s.runtime === "live").map(
       (s) => s.slug,
     );
-    // The audit names: chief-of-staff-scheduler, office-admin,
-    // inbox-triage-general, follow-up-chaser-general, process-doc-
-    // drafter-general, support-handler (six horizontals) + the
-    // wave-1 vertical lead-triage-realestate.
+    // Six pre-wave-3 horizontals + wave-1 vertical lead-triage-realestate
+    // + the four wave-3 discipline-wrap skills (analytics / research /
+    // marketing / legal). Each is registered as `live` because there is
+    // a production caller wired today — see lib/inngest/functions/* for
+    // analytics-pulse, content-calendar, compliance-watch crons + the
+    // instruction-handler dispatch for research-on-demand.
     assert.deepEqual(
       live.sort(),
       [
+        "analytics-weekly-pulse-general",
         "chief-of-staff-scheduler",
+        "compliance-watch-general",
+        "content-calendar-drafter-general",
         "follow-up-chaser-general",
         "inbox-triage-general",
         "lead-triage-realestate",
         "office-admin",
         "process-doc-drafter-general",
+        "research-on-demand-general",
         "support-handler",
       ].sort(),
     );

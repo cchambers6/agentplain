@@ -26,6 +26,12 @@ import { instructionHandlerOnCreateFn } from "@/lib/inngest/functions/instructio
 import { stripeUsageMeterSweepFn } from "@/lib/inngest/functions/stripe-usage-meter-sweep";
 import { briefingsGeneratorSweepFn } from "@/lib/inngest/functions/briefings-generator-sweep";
 import { workspaceTeardownSweepFn } from "@/lib/customer-data";
+// Wave-3 discipline-wrap closers — analytics / marketing / legal crons.
+// Research-on-demand rides the existing instruction-handler path (no
+// new cron); the dispatcher routes research-tagged turns into it.
+import { analyticsPulseSweepFn } from "@/lib/inngest/functions/analytics-weekly-pulse-sweep";
+import { contentCalendarSweepFn } from "@/lib/inngest/functions/content-calendar-drafter-sweep";
+import { complianceWatchSweepFn } from "@/lib/inngest/functions/compliance-watch-sweep";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,5 +51,8 @@ export const { GET, POST, PUT } = serve({
     stripeUsageMeterSweepFn,
     briefingsGeneratorSweepFn,
     workspaceTeardownSweepFn,
+    analyticsPulseSweepFn,
+    contentCalendarSweepFn,
+    complianceWatchSweepFn,
   ],
 });

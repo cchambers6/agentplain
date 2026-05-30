@@ -182,6 +182,30 @@ enum WorkApprovalKind {
   // contract — the broker's CRM picks up routing; their email sends.
   // See lib/skills/lead-triage-realestate + lib/skills/vertical-router.ts.
   LEAD_TRIAGE
+  // Wave-3 discipline-wrap kinds. Each maps one cron / event handler
+  // to a draft an operator reviews on /approvals. Closes the four
+  // NOT-DELIVERING disciplines from the 2026-05-28 fleet-autonomy
+  // audit (§10).
+  //   ANALYTICS_PULSE  — weekly Monday read of workspace activity,
+  //                      composed by lib/skills/analytics-weekly-pulse-
+  //                      general into a "Plaino's week in your workspace"
+  //                      brief surfaced under the analytics discipline.
+  //   RESEARCH_BRIEF   — drafted by lib/skills/research-on-demand-general
+  //                      when /talk classifies an instruction as research
+  //                      discipline. Substrate-grounded with explicit
+  //                      gaps when nothing matched.
+  //   CONTENT_CALENDAR — weekly Monday content suggestions composed by
+  //                      lib/skills/content-calendar-drafter-general
+  //                      under the marketing discipline.
+  //   COMPLIANCE_DIGEST — daily 8am sweep by lib/skills/compliance-
+  //                       watch-general flagging high-risk patterns
+  //                       (PII, regulatory keywords for the vertical,
+  //                       missing disclaimers) in last 24h of approval
+  //                       drafts. Legal discipline.
+  ANALYTICS_PULSE
+  RESEARCH_BRIEF
+  CONTENT_CALENDAR
+  COMPLIANCE_DIGEST
 }
 
 enum WorkApprovalStatus {

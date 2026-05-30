@@ -90,6 +90,11 @@ const KIND_LABEL: Record<WorkApprovalKind, string> = {
   SUPPORT_HANDLER_REPLY_DRAFT: "support reply draft",
   PLAINO_INSTRUCTION: "Plaino instruction",
   LEAD_TRIAGE: "lead triage",
+  // Wave-3 discipline-wrap kinds (2026-05-30).
+  ANALYTICS_PULSE: "weekly analytics pulse",
+  RESEARCH_BRIEF: "research brief",
+  CONTENT_CALENDAR: "weekly content calendar",
+  COMPLIANCE_DIGEST: "compliance digest",
 };
 
 export function renderApprovalPayload(
@@ -136,6 +141,14 @@ export function renderApprovalPayload(
       return renderPlainoInstruction(p);
     case "LEAD_TRIAGE":
       return renderLeadTriage(p);
+    case "ANALYTICS_PULSE":
+      return renderAnalyticsPulse(p);
+    case "RESEARCH_BRIEF":
+      return renderResearchBrief(p);
+    case "CONTENT_CALENDAR":
+      return renderContentCalendar(p);
+    case "COMPLIANCE_DIGEST":
+      return renderComplianceDigest(p);
     default: {
       const _exhaustive: never = kind;
       // Runtime safety: if a new enum value reaches production before the
@@ -954,4 +967,136 @@ function composeMeta({
   }
   if (tone) parts.push(`Tone: ${tone}`);
   return parts.length > 0 ? parts.join(" · ") : undefined;
+}
+
+// ── Wave-3 discipline-wrap renderers ─────────────────────────────────
+
+function renderAnalyticsPulse(p: Record<string, unknown>): RenderedApproval {
+  const body = pickString(p, ["body"]) ?? "(no pulse body attached)";
+  const forWeek = pickString(p, ["forWeekStarting"]);
+  const recommendations = pickStringArray(p, ["recommendations"]);
+  const counts = isRecord(p.counts) ? (p.counts as Record<string, unknown>) : null;
+  const lines = splitParagraphs(body);
+  if (recommendations.length > 0) {
+    lines.push("");
+    lines.push("Suggested next-week actions:");
+    for (const r of recommendations) {
+      lines.push(`• ${r}`);
+    }
+  }
+  const metaParts: string[] = [];
+  if (forWeek) metaParts.push(`week of ${forWeek}`);
+  if (counts) {
+    const c = counts;
+    const total = pickNumber(c, ["approvalsCreated"]);
+    if (typeof total === "number") metaParts.push(`${total} approvals proposed`);
+  }
+  return {
+    kindLabel: KIND_LABEL.ANALYTICS_PULSE,
+    title: forWeek ? `Pulse · week of ${forWeek}` : "Weekly pulse",
+    body: lines.length > 0 ? lines : ["No body attached."],
+    metaLine: metaParts.length > 0 ? metaParts.join(" · ") : undefined,
+  };
+}
+
+function renderResearchBrief(p: Record<string, unknown>): RenderedApproval {
+  // Research briefs are rendered into the PLAINO_INSTRUCTION row's
+  // draftBody by the instruction-handler — when the row is tagged
+  // explicitly as RESEARCH_BRIEF (future direct-write path) the
+  // payload may carry summary / keyFindings / gaps / citations as
+  // discrete fields. This renderer covers both shapes.
+  const summary = pickString(p, ["summary"]);
+  const draftBody = pickString(p, ["draftBody", "body"]);
+  const findings = pickStringArray(p, ["keyFindings", "findings"]);
+  const gaps = pickStringArray(p, ["gaps"]);
+  const sources = isRecord(p.citations)
+    ? []
+    : Array.isArray(p.citations)
+      ? p.citations.filter(isRecord).map((c) => pickString(c, ["title"]) ?? "")
+      : [];
+  const lines: string[] = [];
+  if (summary) lines.push(summary);
+  if (findings.length > 0) {
+    lines.push("");
+    lines.push("Key findings:");
+    for (const f of findings) lines.push(`• ${f}`);
+  }
+  if (gaps.length > 0) {
+    lines.push("");
+    lines.push("Gaps and open questions:");
+    for (const g of gaps) lines.push(`• ${g}`);
+  }
+  if (sources.length > 0) {
+    lines.push("");
+    lines.push("Sources:");
+    for (const s of sources) lines.push(`• ${s}`);
+  }
+  const fallback = draftBody ? splitParagraphs(draftBody) : null;
+  return {
+    kindLabel: KIND_LABEL.RESEARCH_BRIEF,
+    title: "Research brief",
+    body: lines.length > 0 ? lines : fallback ?? ["No brief body attached."],
+  };
+}
+
+function renderContentCalendar(p: Record<string, unknown>): RenderedApproval {
+  const preamble = pickString(p, ["preamble"]);
+  const forWeek = pickString(p, ["forWeekStarting"]);
+  const verticalSlug = pickString(p, ["verticalSlug"]);
+  const days = Array.isArray(p.days) ? p.days.filter(isRecord) : [];
+  const lines: string[] = [];
+  if (preamble) lines.push(preamble);
+  if (days.length > 0) {
+    lines.push("");
+    for (const d of days) {
+      const date = pickString(d, ["date"]);
+      const channel = pickString(d, ["channel"]);
+      const topic = pickString(d, ["topic"]);
+      const hook = pickString(d, ["hook"]);
+      const header = [date, channel ? `[${channel}]` : null, topic]
+        .filter((x): x is string => Boolean(x))
+        .join(" — ");
+      if (header) lines.push(header);
+      if (hook) lines.push(`  ${hook}`);
+    }
+  }
+  const metaParts: string[] = [];
+  if (forWeek) metaParts.push(`week of ${forWeek}`);
+  if (verticalSlug) metaParts.push(`vertical: ${verticalSlug}`);
+  return {
+    kindLabel: KIND_LABEL.CONTENT_CALENDAR,
+    title: forWeek ? `Content calendar · week of ${forWeek}` : "Content calendar",
+    body: lines.length > 0 ? lines : ["No calendar entries attached."],
+    metaLine: metaParts.length > 0 ? metaParts.join(" · ") : undefined,
+  };
+}
+
+function renderComplianceDigest(p: Record<string, unknown>): RenderedApproval {
+  const body = pickString(p, ["body"]) ?? "";
+  const forDate = pickString(p, ["forDate"]);
+  const approvalsScanned = pickNumber(p, ["approvalsScanned"]);
+  const matches = Array.isArray(p.matches) ? p.matches.filter(isRecord) : [];
+  const lines = splitParagraphs(body);
+  if (matches.length > 0) {
+    lines.push("");
+    lines.push("Matches:");
+    for (const m of matches.slice(0, 10)) {
+      const sev = pickString(m, ["ruleSeverity"]);
+      const label = pickString(m, ["ruleLabel"]);
+      const kind = pickString(m, ["approvalKind"]);
+      lines.push(`• [${sev ?? "?"}] ${label ?? "match"}${kind ? ` — ${kind}` : ""}`);
+    }
+  }
+  const metaParts: string[] = [];
+  if (forDate) metaParts.push(`for ${forDate}`);
+  if (typeof approvalsScanned === "number") {
+    metaParts.push(`${approvalsScanned} drafts scanned`);
+  }
+  metaParts.push(`${matches.length} match${matches.length === 1 ? "" : "es"}`);
+  return {
+    kindLabel: KIND_LABEL.COMPLIANCE_DIGEST,
+    title: forDate ? `Compliance digest · ${forDate}` : "Compliance digest",
+    body: lines.length > 0 ? lines : ["No match details attached."],
+    metaLine: metaParts.join(" · "),
+  };
 }

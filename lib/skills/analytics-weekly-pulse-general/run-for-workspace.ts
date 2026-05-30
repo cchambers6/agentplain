@@ -30,10 +30,11 @@ import type {
   PulseSkillOutput,
 } from './types';
 
-/** Scopes the pulse reads from FEEDBACK memory. Analytics is light — we
- *  honor `reporting` rules and the implicit `general` scope the reader
- *  always layers on top. */
-const PULSE_FEEDBACK_SCOPES = ['reporting'] as const;
+/** Scopes the pulse reads from FEEDBACK memory. Analytics-tagged rules
+ *  + the legacy `reporting` scope (back-compat for rules written under
+ *  the older taxonomy). The implicit `general` scope is layered on by
+ *  the reader. */
+const PULSE_FEEDBACK_SCOPES = ['analytics', 'reporting'] as const;
 
 export interface RunAnalyticsPulseForWorkspaceInput {
   workspaceId: string;

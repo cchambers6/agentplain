@@ -72,11 +72,16 @@ export const INSTRUCTION_HANDLER_PROMPT_VERSION =
  * plausibly care about. This keeps the prompt focused.
  */
 const DISCIPLINE_SCOPES: Record<string, ReadonlyArray<PreferenceScopeId>> = {
-  analytics: ['reporting'],
-  research: ['reporting'],
+  analytics: ['analytics', 'reporting'],
+  research: ['research', 'reporting'],
   legal: ['legal-flagging'],
-  marketing: ['email-draft', 'customer-comms'],
-  'sales-enablement': ['email-draft', 'customer-comms', 'inbox-triage'],
+  marketing: ['content', 'email-draft', 'customer-comms'],
+  'sales-enablement': [
+    'follow-up',
+    'email-draft',
+    'customer-comms',
+    'inbox-triage',
+  ],
   'customer-success': ['email-draft', 'customer-comms', 'inbox-triage'],
   finance: ['email-draft', 'inbox-triage'],
   operations: [

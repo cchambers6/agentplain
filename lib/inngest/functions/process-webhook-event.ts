@@ -43,7 +43,10 @@ import {
 } from '@/lib/skills/persist-artifacts';
 import { runInboxTriageForEvent } from '@/lib/skills/inbox-triage-general/run-for-event';
 import { runVerticalRouter } from '@/lib/skills/vertical-router';
-import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
+import {
+  isSkillInstalledForWorkspace,
+  resolveInstallationStatus,
+} from '@/lib/skills/marketplace';
 import { asDisciplineId } from '@/lib/disciplines';
 import { SKILL_DISCIPLINE } from '@/lib/disciplines/skill-mapping';
 import type { DraftPersister, MessageFetcher } from '@/lib/skills/types';
@@ -157,6 +160,20 @@ export async function processUnprocessedWebhookEvents(
       const memoryStore = new PrismaMemoryStore(workspace.id, {
         ctx: SYSTEM_OPERATOR_CONTEXT,
       });
+      // Wave-3 phase 3: compute the workspace's installed-skill set
+      // once per event so runSkillChain can gate office-admin etc.
+      // without doing the lookup itself. Errors fall back to "all
+      // installed" rather than dropping the loop on a transient DB blip.
+      const installedSkillSlugs = await resolveInstallationStatus({
+        workspaceId: workspace.id,
+        workspaceVertical: workspace.vertical,
+      })
+        .then(
+          (rows) =>
+            new Set(rows.filter((r) => r.installed).map((r) => r.slug)),
+        )
+        .catch(() => undefined);
+
       const { record, outcome } = await runSkillChain({
         workspace,
         event,
@@ -170,6 +187,8 @@ export async function processUnprocessedWebhookEvents(
         // draft, compliance) without firing the LLM. Closes the wave-1
         // audit gap "biggest runtime path currently ungated."
         disabledDisciplineIds: workspacePreferences?.disabledDisciplines ?? [],
+        // Wave-3 marketplace install gate.
+        installedSkillSlugs,
       });
 
       const artifacts = await persistSkillRunArtifacts({

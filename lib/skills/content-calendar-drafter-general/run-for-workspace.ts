@@ -19,7 +19,11 @@ import type {
   CalendarSkillOutput,
 } from './types';
 
-const CALENDAR_FEEDBACK_SCOPES = ['email-draft', 'customer-comms'] as const;
+const CALENDAR_FEEDBACK_SCOPES = [
+  'content',
+  'email-draft',
+  'customer-comms',
+] as const;
 
 export interface RunCalendarDrafterForWorkspaceInput {
   workspaceId: string;

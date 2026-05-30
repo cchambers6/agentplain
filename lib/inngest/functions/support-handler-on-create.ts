@@ -44,6 +44,7 @@ import {
 import { getLogger } from '@/lib/observability';
 import { runSupportHandlerForRequest } from '@/lib/skills/support-handler';
 import { withSystemContext } from '@/lib/db/rls';
+import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
 
 export const SUPPORT_HANDLER_ON_CREATE_FUNCTION_ID =
   'agentplain-support-handler-on-create';
@@ -91,6 +92,42 @@ export const supportHandlerOnCreateFn = inngest.createFunction(
             support_request_id: data.supportRequestId,
             workspace_id: data.workspaceId,
           });
+
+          // Wave-3 phase 3 — marketplace install gate. A workspace that
+          // explicitly uninstalled `support-handler` from /marketplace
+          // expects the on-create draft path to NOT fire. The original
+          // operator-email path stays live regardless (the customer still
+          // sees a human ack); only the draft skips. `.catch(() => true)`
+          // keeps the loop alive on a transient DB blip — better to draft
+          // and let the operator dismiss than silently drop work.
+          const workspace = await withSystemContext((tx) =>
+            tx.workspace.findUnique({
+              where: { id: data.workspaceId },
+              select: { vertical: true },
+            }),
+          );
+          if (!workspace) {
+            logger.info('support-handler skipped — workspace not found', {
+              support_request_id: data.supportRequestId,
+              workspace_id: data.workspaceId,
+            });
+            return { skipped: true, reason: 'workspace-not-found' as const };
+          }
+          const installed = await isSkillInstalledForWorkspace({
+            workspaceId: data.workspaceId,
+            workspaceVertical: workspace.vertical,
+            skillSlug: 'support-handler',
+          }).catch(() => true);
+          if (!installed) {
+            logger.info('support-handler skipped — uninstalled on workspace', {
+              support_request_id: data.supportRequestId,
+              workspace_id: data.workspaceId,
+            });
+            return {
+              skipped: true,
+              reason: 'skill-uninstalled' as const,
+            };
+          }
 
           const res = await runSupportHandlerForRequest({
             supportRequestId: data.supportRequestId,

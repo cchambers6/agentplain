@@ -223,13 +223,43 @@ async function syncSubscription(
 
   // Update Workspace pointers + flip billingMode the first time we see
   // a subscription, so the Phase 1 high-touch rows transition cleanly.
+  // Wave-4 — also stamp signupSetupCompletedAt (the abandoned-signup
+  // sweep gates on this column) and clear setupDeactivatedAt if the
+  // workspace was previously deactivated. The dedicated SETUP_RESUMED
+  // lifecycle event is written by `markSignupCompleted` post-commit so
+  // the gate-lift is observable in the lifecycle log.
+  const workspaceBeforeUpdate = await tx.workspace.findUnique({
+    where: { id: workspace.id },
+    select: {
+      signupSetupCompletedAt: true,
+      setupDeactivatedAt: true,
+    },
+  });
   await tx.workspace.update({
     where: { id: workspace.id },
     data: {
       stripeSubscriptionId,
       billingMode: "STRIPE_SUBSCRIPTION",
+      signupSetupCompletedAt:
+        workspaceBeforeUpdate?.signupSetupCompletedAt ?? new Date(),
+      // Clear the abandoned-signup gate when checkout finally completes.
+      setupDeactivatedAt: null,
     },
   });
+  if (workspaceBeforeUpdate?.setupDeactivatedAt) {
+    // The customer completed checkout AFTER the gate flipped on. Log
+    // SETUP_RESUMED so the lifecycle log carries the full picture.
+    await tx.workspaceLifecycleEvent.create({
+      data: {
+        workspaceId: workspace.id,
+        kind: "SETUP_RESUMED",
+        payload: {
+          stripeSubscriptionId,
+          via: "subscription.created webhook",
+        } satisfies Prisma.InputJsonValue,
+      },
+    });
+  }
 
   await recordBillingEvent(event, tx, {
     workspaceId: workspace.id,

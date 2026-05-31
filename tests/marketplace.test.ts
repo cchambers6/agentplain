@@ -338,16 +338,17 @@ describe("isSkillInstalledForWorkspace — runtime gate", () => {
 });
 
 describe("runtime catalog — LIVE / schema-only distribution matches the audit", () => {
-  it("LIVE skills match the post-wave-3 catalog", () => {
+  it("LIVE skills match the post-wave-4 catalog", () => {
     const live = SKILL_CATALOG.filter((s) => s.runtime === "live").map(
       (s) => s.slug,
     );
-    // Six pre-wave-3 horizontals + wave-1 vertical lead-triage-realestate
+    // Pre-wave-3 horizontals + wave-1 vertical lead-triage-realestate
     // + the four wave-3 discipline-wrap skills (analytics / research /
-    // marketing / legal). Each is registered as `live` because there is
-    // a production caller wired today — see lib/inngest/functions/* for
-    // analytics-pulse, content-calendar, compliance-watch crons + the
-    // instruction-handler dispatch for research-on-demand.
+    // marketing / legal) + the wave-4 finance-pulse-general (closes the
+    // 8th discipline). Each is registered as `live` because there is a
+    // production caller wired today — see lib/inngest/functions/* for
+    // analytics-pulse, content-calendar, compliance-watch, finance-pulse
+    // crons + the instruction-handler dispatch for research-on-demand.
     assert.deepEqual(
       live.sort(),
       [
@@ -355,6 +356,7 @@ describe("runtime catalog — LIVE / schema-only distribution matches the audit"
         "chief-of-staff-scheduler",
         "compliance-watch-general",
         "content-calendar-drafter-general",
+        "finance-pulse-general",
         "follow-up-chaser-general",
         "inbox-triage-general",
         "lead-triage-realestate",

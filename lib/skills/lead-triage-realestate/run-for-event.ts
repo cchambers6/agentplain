@@ -27,11 +27,19 @@
 import type { WebhookEvent } from '@prisma/client';
 import { skillError, skillOk, type SkillResult } from '../types';
 import type { MessageFetcher } from '../types';
+import { SYSTEM_OPERATOR_CONTEXT } from '@/lib/db';
+import { PrismaMemoryStore } from '@/lib/plaino/memory';
+import { getLlmProvider } from '@/lib/llm';
+import { buildFeedbackRulesBlock } from '../feedback-rules';
+import type { IMemoryStore } from '@/lib/plaino/memory/types';
+import type { LlmProvider } from '@/lib/llm/types';
 import { ParsedMessageLeadFetcher } from './parsed-message-fetcher';
 import { PrismaLeadTriageApprovalSink } from './prisma-approval-sink';
 import type { LeadTriageApprovalSink } from './prisma-approval-sink';
 import { runSkill } from './skill';
 import type { LeadTriageOutput } from './types';
+
+const LEAD_TRIAGE_SCOPES = ['lead-triage'] as const;
 
 export interface RunLeadTriageForEventInput {
   workspaceId: string;
@@ -48,6 +56,12 @@ export interface RunLeadTriageForEventInput {
    *  firstTouchDraft persistence path. Triage row still lands; just
    *  without a Gmail-side draft (wave-1 default = always null persister). */
   sinkThreshold?: number;
+  /** Wave-4 — override the memory store. Defaults to PrismaMemoryStore;
+   *  pass null to skip FEEDBACK-rule reads + LLM refinement. */
+  memory?: IMemoryStore | null;
+  /** Wave-4 — override the LLM provider. Defaults to getLlmProvider();
+   *  pass null to skip LLM refinement entirely (heuristic-only). */
+  llm?: LlmProvider | null;
 }
 
 export interface RunLeadTriageForEventOutput {
@@ -88,11 +102,45 @@ export async function runLeadTriageForEvent(
     workspaceId: input.workspaceId,
     messages: messagesRes.value,
   });
+
+  // Wave-4 — read FEEDBACK rules under the lead-triage scope. The skill
+  // only invokes the LLM when rules are non-empty (cost guard).
+  const memory =
+    input.memory === undefined
+      ? new PrismaMemoryStore(input.workspaceId, {
+          ctx: SYSTEM_OPERATOR_CONTEXT,
+        })
+      : input.memory;
+  let feedbackRulesBlock = '';
+  if (memory) {
+    try {
+      feedbackRulesBlock = await buildFeedbackRulesBlock({
+        memory,
+        workspaceId: input.workspaceId,
+        scopes: LEAD_TRIAGE_SCOPES,
+      });
+    } catch (err) {
+      console.warn(
+        `lead-triage: failed to read FEEDBACK rules — continuing heuristic-only. ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+  }
+  const llmForRefine =
+    input.llm === undefined
+      ? memory && feedbackRulesBlock.length > 0
+        ? getLlmProvider()
+        : null
+      : input.llm;
+
   const skillRes = await runSkill({
     workspaceId: input.workspaceId,
     fetcher: leadFetcher,
     persister: null,
     now: input.now,
+    llm: llmForRefine ?? undefined,
+    feedbackRulesBlock,
   });
   if (!skillRes.ok) return skillRes;
 

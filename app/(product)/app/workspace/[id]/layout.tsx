@@ -103,21 +103,49 @@ export default async function WorkspaceLayout({
             aria-live="polite"
             className="border border-flag bg-paper p-4 text-[14px] text-ink"
           >
-            <p className="font-medium">
-              Plaino is paused — update billing to resume.
-            </p>
-            <p className="mt-2 text-ink-soft">
-              Your subscription is {pauseState.status === 'PAUSED' ? 'paused' : 'past due'};
-              Plaino is not running drafts, briefings, or sync work until billing
-              is current. Update your payment method in{' '}
-              <Link
-                href={`${base}/settings/billing`}
-                className="underline underline-offset-4 hover:text-ink"
-              >
-                Settings · Billing
-              </Link>
-              {' '}to bring the fleet back online.
-            </p>
+            {pauseState.status === null ? (
+              // Wave-4 — abandoned-signup state. No Subscription row exists;
+              // the gate fired because setupDeactivatedAt is set. Different
+              // copy because the customer hasn't finished checkout in the
+              // first place — they're not behind on billing, they never
+              // started.
+              <>
+                <p className="font-medium">
+                  Complete setup to resume Plaino.
+                </p>
+                <p className="mt-2 text-ink-soft">
+                  Plaino is on standby — you signed up but did not finish
+                  Stripe Checkout, so the fleet is not running drafts,
+                  briefings, or sync work for {workspace.name}. Add your
+                  payment method in{' '}
+                  <Link
+                    href={`${base}/settings/billing`}
+                    className="underline underline-offset-4 hover:text-ink"
+                  >
+                    Settings · Billing
+                  </Link>
+                  {' '}to bring the fleet online.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-medium">
+                  Plaino is paused — update billing to resume.
+                </p>
+                <p className="mt-2 text-ink-soft">
+                  Your subscription is {pauseState.status === 'PAUSED' ? 'paused' : 'past due'};
+                  Plaino is not running drafts, briefings, or sync work until billing
+                  is current. Update your payment method in{' '}
+                  <Link
+                    href={`${base}/settings/billing`}
+                    className="underline underline-offset-4 hover:text-ink"
+                  >
+                    Settings · Billing
+                  </Link>
+                  {' '}to bring the fleet back online.
+                </p>
+              </>
+            )}
           </div>
         </div>
       ) : null}

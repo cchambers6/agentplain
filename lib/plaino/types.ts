@@ -118,6 +118,13 @@ export const PREFERENCE_SCOPE_IDS = [
   'content',
   'research',
   'analytics',
+  // Wave-4 phase 3 — when the four heuristic skills (chief-of-staff,
+  // inbox-triage, lead-triage, process-doc-drafter) flipped to LLM-
+  // augmented, the `lead-triage` scope landed as the dedicated bucket
+  // for "rules about how leads should be categorized / routed". The
+  // other three heuristic skills already had matching scopes
+  // (scheduling / inbox-triage / content respectively).
+  'lead-triage',
 ] as const;
 export type PreferenceScopeId = (typeof PREFERENCE_SCOPE_IDS)[number];
 

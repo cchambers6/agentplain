@@ -28,16 +28,22 @@ import type {
   CreateNoteInput,
   CreateNoteOutput,
   FollowUpBossMcpServer,
+  FubLeadListSummary,
   FubLeadSummary,
   FubPipelineSummary,
+  FubUserSummary,
   GetLeadInput,
   GetLeadOutput,
   GetPipelineStageInput,
   GetPipelineStageOutput,
+  ListLeadListsInput,
+  ListLeadListsOutput,
   ListLeadsInput,
   ListLeadsOutput,
   ListPipelinesInput,
   ListPipelinesOutput,
+  ListUsersInput,
+  ListUsersOutput,
 } from './types';
 
 export const FUB_API_BASE = 'https://api.followupboss.com/v1';
@@ -184,6 +190,39 @@ export class ProdFollowUpBossMcpServer implements FollowUpBossMcpServer {
     });
   }
 
+  async listUsers(input: ListUsersInput): Promise<McpResult<ListUsersOutput>> {
+    const limit = clampLimit(input.limit);
+    const activeOnly = input.activeOnly ?? true;
+    return this.withApi(async (api) => {
+      const params = new URLSearchParams({ limit: String(limit) });
+      const res = await api<RawListUsersResponse>(
+        'GET',
+        `/users?${params.toString()}`,
+      );
+      if (!res.ok) return res;
+      const users = (res.value.users ?? []).map(toUserSummary);
+      return mcpOk({
+        users: activeOnly ? users.filter((u) => u.active) : users,
+      });
+    });
+  }
+
+  async listLeadLists(
+    input: ListLeadListsInput,
+  ): Promise<McpResult<ListLeadListsOutput>> {
+    const limit = clampLimit(input.limit);
+    return this.withApi(async (api) => {
+      const params = new URLSearchParams({ limit: String(limit) });
+      const res = await api<RawListLeadListsResponse>(
+        'GET',
+        `/smartLists?${params.toString()}`,
+      );
+      if (!res.ok) return res;
+      const lists = (res.value.smartlists ?? []).map(toLeadListSummary);
+      return mcpOk({ lists });
+    });
+  }
+
   // ── internals ───────────────────────────────────────────────────────
 
   private async withApi<T>(
@@ -322,6 +361,50 @@ function toLeadSummary(p: RawPerson): FubLeadSummary {
     tags: readStringArray(p.tags),
     lastActivityAt: p.lastActivity ?? null,
     createdAt: p.created ?? null,
+  };
+}
+
+interface RawUser {
+  id?: number | string;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  role?: string | null;
+  isActive?: boolean | null;
+  groups?: string[];
+}
+
+interface RawListUsersResponse {
+  users?: RawUser[];
+}
+
+interface RawLeadList {
+  id?: number | string;
+  name?: string | null;
+  isPublic?: boolean | null;
+}
+
+interface RawListLeadListsResponse {
+  smartlists?: RawLeadList[];
+}
+
+function toUserSummary(u: RawUser): FubUserSummary {
+  return {
+    id: u.id !== undefined ? String(u.id) : '',
+    firstName: u.firstName ?? null,
+    lastName: u.lastName ?? null,
+    email: u.email ?? null,
+    role: u.role ?? null,
+    active: u.isActive !== false,
+    groups: readStringArray(u.groups),
+  };
+}
+
+function toLeadListSummary(l: RawLeadList): FubLeadListSummary {
+  return {
+    id: l.id !== undefined ? String(l.id) : '',
+    name: l.name ?? 'Unnamed list',
+    isPublic: l.isPublic !== false,
   };
 }
 

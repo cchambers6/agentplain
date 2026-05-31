@@ -42,6 +42,10 @@ describe("marketplace catalog", () => {
     // canva remain coming-soon.
     // Wave-3 adds: follow-up-boss (available, api-key) + kvcore
     // (coming-soon, partner-program enrollment pending).
+    // Wave-4 adds: sierra (available, api-key) + boldtrail / lofty /
+    // real-geeks (coming-soon, partner-program enrollment pending) so
+    // the realty-CRM tier is honest about the four-of-six it can serve
+    // today + the two waiting on partner agreements.
     assert.deepEqual(ids, [
       "gmail",
       "outlook",
@@ -57,8 +61,12 @@ describe("marketplace catalog", () => {
       "canva",
       "follow-up-boss",
       "kvcore",
+      "sierra",
+      "boldtrail",
+      "lofty",
+      "real-geeks",
     ]);
-    assert.equal(entries.length, 14, "marketplace surface size is the architectural contract");
+    assert.equal(entries.length, 18, "marketplace surface size is the architectural contract");
   });
 
   it("Gmail + the M365 integrations are available with the right provider keys", () => {
@@ -86,9 +94,14 @@ describe("marketplace catalog", () => {
 
   it("Coming Soon entries surface the remaining connectors with null providerKey", () => {
     const soon = listIntegrations().filter((e) => e.status === "coming-soon");
+    // Wave-4 adds three additional honest coming-soon realty CRMs:
+    // BoldTrail (partner enrollment pending), Lofty (formerly Chime),
+    // and Real Geeks. All require partner-program API access that
+    // agentplain has NOT yet completed — listed honestly to keep the
+    // catalog from over-promising.
     assert.deepEqual(
       soon.map((e) => e.id),
-      ["hubspot", "paypal", "canva", "kvcore"],
+      ["hubspot", "paypal", "canva", "kvcore", "boldtrail", "lofty", "real-geeks"],
     );
     for (const e of soon) {
       assert.equal(e.providerKey, null, `${e.id} has no DB rows yet`);

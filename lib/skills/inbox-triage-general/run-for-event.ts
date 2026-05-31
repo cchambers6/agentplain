@@ -47,6 +47,12 @@ import {
   readInboxTriageConfig,
   type InboxTriageConfig,
 } from '@/lib/skills/config';
+import { SYSTEM_OPERATOR_CONTEXT } from '@/lib/db';
+import { PrismaMemoryStore } from '@/lib/plaino/memory';
+import type { IMemoryStore } from '@/lib/plaino/memory/types';
+import type { LlmProvider } from '@/lib/llm/types';
+import { buildFeedbackRulesBlock } from '../feedback-rules';
+import { getLlmProvider } from '@/lib/llm';
 import { ParsedMessageTriageFetcher } from './parsed-message-fetcher';
 import { PrismaTriageApprovalSink } from './prisma-approval-sink';
 import { runSkill } from './skill';
@@ -80,6 +86,13 @@ export interface RunInboxTriageForEventInput {
    *  defaults. The unit test seam — exercises the runner without
    *  spinning up Prisma. */
   skipConfigRead?: boolean;
+  /** Wave-4 — override the memory store (used to read FEEDBACK rules).
+   *  Defaults to PrismaMemoryStore; pass null to skip the LLM
+   *  refinement entirely (heuristic-only). */
+  memory?: IMemoryStore | null;
+  /** Wave-4 — override the LLM provider. Defaults to getLlmProvider().
+   *  Pass null to skip the LLM refinement entirely (heuristic-only). */
+  llm?: LlmProvider | null;
 }
 
 export interface RunInboxTriageForEventOutput {
@@ -141,6 +154,40 @@ export async function runInboxTriageForEvent(
     (input.skipConfigRead
       ? DEFAULT_INBOX_TRIAGE_CONFIG
       : await readInboxTriageConfig(input.workspaceId));
+
+  // Wave-4 — read FEEDBACK rules under the inbox-triage scope so the
+  // LLM refinement seam can apply workspace-specific priority overrides.
+  // Memory + LLM are both injectable; passing null on either skips the
+  // refinement (used by tests that only want the heuristic).
+  const memory =
+    input.memory === undefined
+      ? new PrismaMemoryStore(input.workspaceId, {
+          ctx: SYSTEM_OPERATOR_CONTEXT,
+        })
+      : input.memory;
+  let feedbackRulesBlock = '';
+  if (memory) {
+    try {
+      feedbackRulesBlock = await buildFeedbackRulesBlock({
+        memory,
+        workspaceId: input.workspaceId,
+        scopes: ['inbox-triage'],
+      });
+    } catch (err) {
+      console.warn(
+        `inbox-triage: failed to read FEEDBACK rules — continuing heuristic-only. ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+  }
+  const llmForRefine =
+    input.llm === undefined
+      ? memory && feedbackRulesBlock.length > 0
+        ? getLlmProvider()
+        : null
+      : input.llm;
+
   const result = await runSkill({
     workspaceId: input.workspaceId,
     fetcher: triageFetcher,
@@ -148,6 +195,8 @@ export async function runInboxTriageForEvent(
     now: input.now,
     sinkThreshold: input.sinkThreshold ?? DEFAULT_SINK_THRESHOLD,
     extraUrgentCues: skillConfig.priorityKeywords,
+    llm: llmForRefine ?? undefined,
+    feedbackRulesBlock,
   });
   if (!result.ok) return result;
   return skillOk({

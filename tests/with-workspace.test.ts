@@ -46,6 +46,11 @@ describe("withWorkspace surface", () => {
         scheduledHardPurgeAt: null,
         closedAt: null,
         closureReason: null,
+        // Wave-4 — abandoned-signup sweep columns. NULL on healthy
+        // workspaces that have completed Stripe Checkout normally;
+        // populated by the cron when checkout abandonment is detected.
+        signupSetupCompletedAt: null,
+        setupDeactivatedAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       },

@@ -150,6 +150,16 @@ export interface TriageInput {
    *  built-in URGENT_CUES list at fire time. Empty/undefined = no
    *  customer cues. */
   extraUrgentCues?: string[];
+  /** Wave-4 — opt-in LLM provider for FEEDBACK-rule refinement. When
+   *  provided (alongside a non-empty `feedbackRulesBlock`), the skill
+   *  invokes `maybeRefineTriage` after the heuristic classifier to let
+   *  workspace-specific FEEDBACK rules override priorities. LLM errors
+   *  degrade gracefully — the heuristic output passes through. When
+   *  omitted, behavior is identical to wave-3. */
+  llm?: import('../../llm/types').LlmProvider;
+  /** Wave-4 — rendered FEEDBACK rules block (already in plain text).
+   *  Empty = no LLM refinement (heuristic-only). */
+  feedbackRulesBlock?: string;
 }
 
 export interface TriageOutput {

@@ -386,6 +386,8 @@ model User {
   configuredThresholds WorkThresholdConfig[]        @relation("ConfiguredBy")
   configuredSkills     SkillConfig[]                @relation("SkillConfigBy")
   installedSkills      WorkspaceSkillInstallation[] @relation("SkillInstalledBy")
+  pauseConfigs         WorkspacePauseConfig[]       @relation("PauseConfigBy")
+  scheduleWindows      SkillScheduleWindow[]        @relation("ScheduleWindowBy")
   auditEntriesActor    AuditLog[]                   @relation("AuditActor")
   auditEntriesActAs    AuditLog[]                   @relation("AuditActingAs")
   magicLinkTokens      MagicLinkToken[]
@@ -462,6 +464,8 @@ model Workspace {
   briefings                WorkspaceBriefing[]
   skillConfigs             SkillConfig[]
   skillInstallations       WorkspaceSkillInstallation[]
+  pauseConfigs             WorkspacePauseConfig[]
+  skillScheduleWindows     SkillScheduleWindow[]
 
   @@index([slug])
   @@index([vertical])
@@ -1359,6 +1363,79 @@ model SkillConfig {
   configuredBy       User?     @relation("SkillConfigBy", fields: [configuredByUserId], references: [id], onDelete: SetNull)
 
   @@unique([workspaceId, skillSlug])
+}
+
+/// Wave-5 customer-controlled fleet pause (vacation / PTO / firm
+/// closure / cutover window). The skill-fire gate consults active
+/// rows on every fire and short-circuits when NOW is inside the
+/// window — same shape the subscription-state gate uses, but
+/// customer-set rather than billing-driven.
+///
+/// `pausedDisciplineIds` is an empty array when the pause applies to
+/// every discipline (the common case for vacation). A non-empty
+/// array narrows the pause to the named disciplines so a firm can
+/// say "I'm out of office — pause customer-facing comms but keep
+/// finance fires going."
+///
+/// `reasonEncrypted` is AES-256-GCM v1-envelope ciphertext (per
+/// lib/security/encryption) because customers will inevitably put
+/// PII in the reason ("out for surgery", "Q4 board prep", etc.).
+/// NULL when the customer skipped the optional reason field.
+model WorkspacePauseConfig {
+  id                  String    @id @default(uuid()) @db.Uuid
+  workspaceId         String    @db.Uuid
+  /// UTC instant the pause window opens.
+  pausedFrom          DateTime
+  /// UTC instant the pause window closes (the gate auto-resumes the
+  /// fleet at this timestamp on the next fire).
+  pausedUntil         DateTime
+  /// Empty array = all disciplines paused. Non-empty = narrows to
+  /// the listed discipline ids (one of the 8 in lib/disciplines).
+  pausedDisciplineIds String[]  @default([])
+  /// AES-256-GCM v1-envelope ciphertext. NULL when reason was not
+  /// provided.
+  reasonEncrypted     String?
+  createdByUserId     String?   @db.Uuid
+  createdAt           DateTime  @default(now())
+  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy           User?     @relation("PauseConfigBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, pausedUntil])
+  @@index([pausedFrom, pausedUntil])
+}
+
+/// Wave-5 per-skill scheduling window. One row per (workspace, skill)
+/// pair. When present, the skill-fire gate only allows fires whose
+/// NOW (rendered into the workspace's TZ) falls inside the window.
+/// Absent = no window = fires anytime (the historical default).
+///
+/// `daysOfWeek` is 0..6 where 0 = Sunday (Date.getDay() native).
+/// `startHourLocal` / `endHourLocal` are 0..23. If `endHourLocal` <=
+/// `startHourLocal` the window is treated as inclusive of midnight
+/// (e.g. 22..6 = nights). `workspaceTimezone` is an IANA TZ ID; the
+/// gate uses Intl.DateTimeFormat to compute the local hour/day on
+/// each fire — no DST-stale caching.
+model SkillScheduleWindow {
+  id                 String    @id @default(uuid()) @db.Uuid
+  workspaceId        String    @db.Uuid
+  /// Matches `lib/skills/<slug>/` and `SKILL_CATALOG.slug`.
+  skillSlug          String    @db.VarChar(64)
+  /// 0..6 (0 = Sunday) — Date.getDay() native.
+  daysOfWeek         Int[]     @default([])
+  /// 0..23 local hour the window opens.
+  startHourLocal     Int
+  /// 0..23 local hour the window closes (exclusive).
+  endHourLocal       Int
+  /// IANA timezone id, e.g. "America/New_York".
+  workspaceTimezone  String    @db.VarChar(64)
+  configuredByUserId String?   @db.Uuid
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  workspace          Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  configuredBy       User?     @relation("ScheduleWindowBy", fields: [configuredByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([workspaceId, skillSlug])
+  @@index([workspaceId])
 }
 
 /// Wave-2 briefings generator. The page at

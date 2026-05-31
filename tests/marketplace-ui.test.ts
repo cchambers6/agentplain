@@ -42,6 +42,8 @@ describe("marketplace catalog", () => {
     // canva remain coming-soon.
     // Wave-3 adds: follow-up-boss (available, api-key) + kvcore
     // (coming-soon, partner-program enrollment pending).
+    // Wave-5 adds taxdome + karbon as available CPA-vertical API-key
+    // connectors.
     assert.deepEqual(ids, [
       "gmail",
       "outlook",
@@ -54,6 +56,8 @@ describe("marketplace catalog", () => {
       "google-drive",
       "slack",
       "paypal",
+      "taxdome",
+      "karbon",
       "canva",
       "follow-up-boss",
       "kvcore",
@@ -131,8 +135,19 @@ describe("marketplace catalog", () => {
   });
 
   it("every entry exposes scope display + a /api/integrations/<slug>-mcp template", () => {
+    // Wave-5 introduced API-key providers (TaxDome, Karbon) that do NOT
+    // request OAuth scopes — they authenticate with a static key from
+    // the firm's provider dashboard. Empty scopes are honest for those
+    // entries; the assertion narrows to "OAuth providers MUST declare
+    // scopes" rather than "every entry must declare scopes."
+    const API_KEY_PROVIDERS = new Set<string | null>(["TAXDOME", "KARBON"]);
     for (const entry of listIntegrations()) {
-      assert.ok(entry.scopes.length > 0, `${entry.id} declares at least one scope`);
+      if (!API_KEY_PROVIDERS.has(entry.providerKey)) {
+        assert.ok(
+          entry.scopes.length > 0,
+          `${entry.id} declares at least one scope`,
+        );
+      }
       assert.match(
         entry.mcpEndpointTemplate,
         new RegExp(`^/api/integrations/${entry.id}-mcp/\\{workspaceId\\}$`),

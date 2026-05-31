@@ -82,6 +82,18 @@ export default async function SettingsPage({ params }: PageProps) {
       description: "Plan, seats, invoices, payment method.",
     },
     {
+      href: `/app/workspace/${workspaceId}/settings/pause`,
+      label: "pause your fleet",
+      description:
+        "Schedule a vacation / PTO / cutover window. The fleet auto-resumes at the end.",
+    },
+    {
+      href: `/app/workspace/${workspaceId}/settings/schedule`,
+      label: "scheduling windows",
+      description:
+        "Constrain a skill to your business hours, weekdays only, or any window you choose.",
+    },
+    {
       href: `/app/workspace/${workspaceId}/settings/passkeys`,
       label: "sign-in & security",
       description: "Add a passkey for faster sign-in. Email links still work.",

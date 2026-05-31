@@ -91,11 +91,11 @@ export interface DecryptedCredential {
   workspaceId: string;
   /** Mirrors the Prisma `IntegrationProvider` enum. The push-subscription
    *  surface of `IntegrationProvider` (createSubscription/etc.) only ships
-   *  for GOOGLE + M365; DOCUSIGN/QUICKBOOKS/SLACK are served by their own
+   *  for GOOGLE + M365; the other providers are served by their own
    *  self-contained MCP servers that resolve + refresh credentials directly
    *  (see `lib/integrations/<vendor>-mcp/auth.ts`), so they never flow
    *  through `getProvider()`. This is the runtime credential view only. */
-  provider: 'GOOGLE' | 'M365' | 'DOCUSIGN' | 'QUICKBOOKS' | 'SLACK' | 'FOLLOW_UP_BOSS';
+  provider: 'GOOGLE' | 'M365' | 'DOCUSIGN' | 'QUICKBOOKS' | 'SLACK' | 'FOLLOW_UP_BOSS' | 'TAXDOME' | 'KARBON';
   accountId: string;
   accountEmail: string;
   accessToken: string;

@@ -1,62 +1,60 @@
 /**
- * lib/integrations/follow-up-boss-mcp/server.ts
+ * lib/integrations/sierra-mcp/server.ts
  *
- * Production Follow Up Boss MCP server. Wraps FUB's REST API behind the
- * `FollowUpBossMcpServer` interface so skills + sweeps never see a `fetch`
- * call directly. Plain `fetch` — no SDK (FUB does not publish one).
+ * Production Sierra Interactive MCP server. Wraps Sierra's REST API
+ * behind the `SierraMcpServer` interface so skills + sweeps never see a
+ * `fetch` call directly. Plain `fetch` — no SDK (Sierra does not
+ * publish one).
  *
  * Cold-start safe: every method re-resolves the credential via
- * `resolveFollowUpBossCredential`; no key is cached on the instance.
+ * `resolveSierraCredential`; no key is cached on the instance.
  *
- * Per `project_no_outbound_architecture.md`: `create_note` and `add_tag`
+ * Per `project_no_outbound_architecture.md`: `createNote` and `addTag`
  * are INTERNAL annotations on the broker's own CRM. No tool here sends
  * mail, SMS, or anything customer-facing.
  *
- * FUB REST docs: https://docs.followupboss.com/reference/
- * Auth: HTTP Basic — username = API key, password = empty string.
- * Base URL: https://api.followupboss.com/v1/
+ * Auth: `Authorization: Bearer <key>` (Sierra's documented header).
+ * Base URL: https://api.sierrainteractive.com/v1/
+ *
+ * NOTE on vendor docs: Sierra's REST API is documented behind a partner
+ * portal that publishes per-customer; the base URL + bearer-token auth
+ * are the documented public surface. Tool URIs below are conservative —
+ * each map to the verbs the lead-triage skill needs. Production
+ * acceptance verifies the actual responses against a live sandbox key
+ * before this flips to default-installed.
  */
 
 import { mcpError, mcpOk, type McpResult } from '@/lib/integrations/mcp-core';
-import {
-  resolveFollowUpBossCredential,
-  type ResolvedFollowUpBoss,
-} from './auth';
+import { resolveSierraCredential, type ResolvedSierra } from './auth';
 import type {
   AddTagInput,
   AddTagOutput,
   CreateNoteInput,
   CreateNoteOutput,
-  FollowUpBossMcpServer,
-  FubLeadListSummary,
-  FubLeadSummary,
-  FubPipelineSummary,
-  FubUserSummary,
   GetLeadInput,
   GetLeadOutput,
   GetPipelineStageInput,
   GetPipelineStageOutput,
-  ListLeadListsInput,
-  ListLeadListsOutput,
   ListLeadsInput,
   ListLeadsOutput,
   ListPipelinesInput,
   ListPipelinesOutput,
-  ListUsersInput,
-  ListUsersOutput,
+  SierraLeadSummary,
+  SierraMcpServer,
+  SierraPipelineSummary,
 } from './types';
 
-export const FUB_API_BASE = 'https://api.followupboss.com/v1';
+export const SIERRA_API_BASE = 'https://api.sierrainteractive.com/v1';
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
 
-export class ProdFollowUpBossMcpServer implements FollowUpBossMcpServer {
-  readonly name = 'follow-up-boss-rest' as const;
+export class ProdSierraMcpServer implements SierraMcpServer {
+  readonly name = 'sierra-rest' as const;
   readonly workspaceId: string;
 
   constructor(args: { workspaceId: string }) {
     if (!args.workspaceId) {
-      throw new Error('ProdFollowUpBossMcpServer: workspaceId is required');
+      throw new Error('ProdSierraMcpServer: workspaceId is required');
     }
     this.workspaceId = args.workspaceId;
   }
@@ -67,14 +65,14 @@ export class ProdFollowUpBossMcpServer implements FollowUpBossMcpServer {
       const params = new URLSearchParams();
       params.set('limit', String(limit));
       if (input.modifiedSince) {
-        params.set('updatedAfter', input.modifiedSince);
+        params.set('modifiedSince', input.modifiedSince);
       }
-      const res = await api<RawListPeopleResponse>(
+      const res = await api<RawListLeadsResponse>(
         'GET',
-        `/people?${params.toString()}`,
+        `/contacts?${params.toString()}`,
       );
       if (!res.ok) return res;
-      const leads = (res.value.people ?? []).map(toLeadSummary);
+      const leads = (res.value.contacts ?? []).map(toLeadSummary);
       return mcpOk({ leads });
     });
   }
@@ -84,9 +82,9 @@ export class ProdFollowUpBossMcpServer implements FollowUpBossMcpServer {
       return mcpError('INVALID_ARGUMENT', 'getLead requires leadId');
     }
     return this.withApi(async (api) => {
-      const res = await api<RawPerson>(
+      const res = await api<RawContact>(
         'GET',
-        `/people/${encodeURIComponent(input.leadId)}`,
+        `/contacts/${encodeURIComponent(input.leadId)}`,
       );
       if (!res.ok) return res;
       return mcpOk({ lead: toLeadSummary(res.value) });
@@ -100,18 +98,26 @@ export class ProdFollowUpBossMcpServer implements FollowUpBossMcpServer {
       return mcpError('INVALID_ARGUMENT', 'createNote requires leadId');
     }
     if (!input.body || input.body.trim().length === 0) {
-      return mcpError('INVALID_ARGUMENT', 'createNote requires a non-empty body');
+      return mcpError(
+        'INVALID_ARGUMENT',
+        'createNote requires a non-empty body',
+      );
     }
     return this.withApi(async (api) => {
-      const res = await api<RawNote>('POST', '/notes', {
-        personId: Number(input.leadId),
-        body: input.body,
-        isHtml: false,
-        ...(input.isPrivate ? { type: 'private' } : {}),
-      });
+      const res = await api<RawNote>(
+        'POST',
+        `/contacts/${encodeURIComponent(input.leadId)}/notes`,
+        {
+          body: input.body,
+          isPrivate: input.isPrivate ?? true,
+        },
+      );
       if (!res.ok) return res;
       if (!res.value.id) {
-        return mcpError('MALFORMED_RESPONSE', 'FUB note.create returned no id');
+        return mcpError(
+          'MALFORMED_RESPONSE',
+          'Sierra note.create returned no id',
+        );
       }
       return mcpOk({ noteId: String(res.value.id) });
     });
@@ -122,22 +128,24 @@ export class ProdFollowUpBossMcpServer implements FollowUpBossMcpServer {
       return mcpError('INVALID_ARGUMENT', 'addTag requires leadId');
     }
     if (!input.tags || input.tags.length === 0) {
-      return mcpError('INVALID_ARGUMENT', 'addTag requires at least one tag');
-    }
-    // FUB's tag-write surface: PUT /people/<id> with `tags: [...]`
-    // merges (the API replaces the tag set; we re-read first to avoid
-    // clobbering existing tags).
-    return this.withApi(async (api) => {
-      const personRes = await api<RawPerson>(
-        'GET',
-        `/people/${encodeURIComponent(input.leadId)}`,
+      return mcpError(
+        'INVALID_ARGUMENT',
+        'addTag requires at least one tag',
       );
-      if (!personRes.ok) return personRes;
-      const existing = readStringArray(personRes.value.tags);
+    }
+    // Read-merge-write to avoid clobbering existing tags. Sierra's tags
+    // endpoint replaces the full set on PUT.
+    return this.withApi(async (api) => {
+      const contactRes = await api<RawContact>(
+        'GET',
+        `/contacts/${encodeURIComponent(input.leadId)}`,
+      );
+      if (!contactRes.ok) return contactRes;
+      const existing = readStringArray(contactRes.value.tags);
       const merged = Array.from(new Set([...existing, ...input.tags]));
-      const putRes = await api<RawPerson>(
+      const putRes = await api<RawContact>(
         'PUT',
-        `/people/${encodeURIComponent(input.leadId)}`,
+        `/contacts/${encodeURIComponent(input.leadId)}/tags`,
         { tags: merged },
       );
       if (!putRes.ok) return putRes;
@@ -170,8 +178,6 @@ export class ProdFollowUpBossMcpServer implements FollowUpBossMcpServer {
         'getPipelineStage requires pipelineId and stageId',
       );
     }
-    // FUB does not expose a per-stage endpoint; we re-read the pipeline
-    // and pick out the requested stage from the embedded `stages` list.
     return this.withApi(async (api) => {
       const res = await api<RawPipeline>(
         'GET',
@@ -190,45 +196,12 @@ export class ProdFollowUpBossMcpServer implements FollowUpBossMcpServer {
     });
   }
 
-  async listUsers(input: ListUsersInput): Promise<McpResult<ListUsersOutput>> {
-    const limit = clampLimit(input.limit);
-    const activeOnly = input.activeOnly ?? true;
-    return this.withApi(async (api) => {
-      const params = new URLSearchParams({ limit: String(limit) });
-      const res = await api<RawListUsersResponse>(
-        'GET',
-        `/users?${params.toString()}`,
-      );
-      if (!res.ok) return res;
-      const users = (res.value.users ?? []).map(toUserSummary);
-      return mcpOk({
-        users: activeOnly ? users.filter((u) => u.active) : users,
-      });
-    });
-  }
-
-  async listLeadLists(
-    input: ListLeadListsInput,
-  ): Promise<McpResult<ListLeadListsOutput>> {
-    const limit = clampLimit(input.limit);
-    return this.withApi(async (api) => {
-      const params = new URLSearchParams({ limit: String(limit) });
-      const res = await api<RawListLeadListsResponse>(
-        'GET',
-        `/smartLists?${params.toString()}`,
-      );
-      if (!res.ok) return res;
-      const lists = (res.value.smartlists ?? []).map(toLeadListSummary);
-      return mcpOk({ lists });
-    });
-  }
-
   // ── internals ───────────────────────────────────────────────────────
 
   private async withApi<T>(
     fn: (api: ApiFn) => Promise<McpResult<T>>,
   ): Promise<McpResult<T>> {
-    const resolved = await resolveFollowUpBossCredential({
+    const resolved = await resolveSierraCredential({
       workspaceId: this.workspaceId,
     });
     if (!resolved.ok) return resolved;
@@ -242,17 +215,15 @@ type ApiFn = <T>(
   body?: unknown,
 ) => Promise<McpResult<T>>;
 
-function makeApiContext(resolved: ResolvedFollowUpBoss): ApiFn {
-  // FUB uses HTTP Basic: username = apiKey, password = empty. The base64
-  // encoding is "<key>:" — we do not include the password segment.
-  const basicAuth = `Basic ${Buffer.from(`${resolved.apiKey}:`).toString('base64')}`;
+function makeApiContext(resolved: ResolvedSierra): ApiFn {
+  const bearer = `Bearer ${resolved.apiKey}`;
   return async <T>(method: string, path: string, body?: unknown) => {
     let res: Response;
     try {
-      res = await fetch(`${FUB_API_BASE}${path}`, {
+      res = await fetch(`${SIERRA_API_BASE}${path}`, {
         method,
         headers: {
-          Authorization: basicAuth,
+          Authorization: bearer,
           Accept: 'application/json',
           ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
         },
@@ -261,7 +232,7 @@ function makeApiContext(resolved: ResolvedFollowUpBoss): ApiFn {
     } catch (err) {
       return mcpError(
         'NETWORK',
-        `Follow Up Boss network error: ${
+        `Sierra Interactive network error: ${
           err instanceof Error ? err.message : String(err)
         }`,
       );
@@ -274,7 +245,7 @@ function makeApiContext(resolved: ResolvedFollowUpBoss): ApiFn {
     } catch (err) {
       return mcpError(
         'MALFORMED_RESPONSE',
-        `Follow Up Boss JSON parse failed: ${
+        `Sierra Interactive JSON parse failed: ${
           err instanceof Error ? err.message : String(err)
         }`,
         { status: res.status },
@@ -292,8 +263,9 @@ function mapRestError(
     const body = JSON.parse(text) as {
       errorMessage?: string;
       message?: string;
+      error?: string;
     };
-    detail = body.errorMessage ?? body.message ?? detail;
+    detail = body.errorMessage ?? body.message ?? body.error ?? detail;
   } catch {
     if (text) detail = text.slice(0, 240);
   }
@@ -310,29 +282,29 @@ function mapRestError(
 
 // ── Raw → DTO mappers ─────────────────────────────────────────────────
 
-interface RawPerson {
-  id?: number;
+interface RawContact {
+  id?: number | string;
   firstName?: string | null;
   lastName?: string | null;
-  emails?: Array<{ value?: string }>;
-  phones?: Array<{ value?: string }>;
+  emails?: Array<{ address?: string }>;
+  phones?: Array<{ number?: string }>;
   source?: string | null;
   stage?: string | null;
   tags?: string[];
-  lastActivity?: string | null;
-  created?: string | null;
+  lastActivityAt?: string | null;
+  createdAt?: string | null;
 }
 
-interface RawListPeopleResponse {
-  people?: RawPerson[];
+interface RawListLeadsResponse {
+  contacts?: RawContact[];
 }
 
 interface RawNote {
-  id?: number;
+  id?: number | string;
 }
 
 interface RawPipeline {
-  id?: number;
+  id?: number | string;
   name?: string;
   stages?: Array<{
     id?: number | string;
@@ -345,70 +317,26 @@ interface RawListPipelinesResponse {
   pipelines?: RawPipeline[];
 }
 
-function toLeadSummary(p: RawPerson): FubLeadSummary {
+function toLeadSummary(c: RawContact): SierraLeadSummary {
   return {
-    id: p.id !== undefined ? String(p.id) : '',
-    firstName: p.firstName ?? null,
-    lastName: p.lastName ?? null,
-    emails: (p.emails ?? [])
-      .map((e) => e.value ?? '')
+    id: c.id !== undefined ? String(c.id) : '',
+    firstName: c.firstName ?? null,
+    lastName: c.lastName ?? null,
+    emails: (c.emails ?? [])
+      .map((e) => e.address ?? '')
       .filter((v) => v.length > 0),
-    phones: (p.phones ?? [])
-      .map((e) => e.value ?? '')
+    phones: (c.phones ?? [])
+      .map((p) => p.number ?? '')
       .filter((v) => v.length > 0),
-    source: p.source ?? null,
-    stage: p.stage ?? null,
-    tags: readStringArray(p.tags),
-    lastActivityAt: p.lastActivity ?? null,
-    createdAt: p.created ?? null,
+    source: c.source ?? null,
+    stage: c.stage ?? null,
+    tags: readStringArray(c.tags),
+    lastActivityAt: c.lastActivityAt ?? null,
+    createdAt: c.createdAt ?? null,
   };
 }
 
-interface RawUser {
-  id?: number | string;
-  firstName?: string | null;
-  lastName?: string | null;
-  email?: string | null;
-  role?: string | null;
-  isActive?: boolean | null;
-  groups?: string[];
-}
-
-interface RawListUsersResponse {
-  users?: RawUser[];
-}
-
-interface RawLeadList {
-  id?: number | string;
-  name?: string | null;
-  isPublic?: boolean | null;
-}
-
-interface RawListLeadListsResponse {
-  smartlists?: RawLeadList[];
-}
-
-function toUserSummary(u: RawUser): FubUserSummary {
-  return {
-    id: u.id !== undefined ? String(u.id) : '',
-    firstName: u.firstName ?? null,
-    lastName: u.lastName ?? null,
-    email: u.email ?? null,
-    role: u.role ?? null,
-    active: u.isActive !== false,
-    groups: readStringArray(u.groups),
-  };
-}
-
-function toLeadListSummary(l: RawLeadList): FubLeadListSummary {
-  return {
-    id: l.id !== undefined ? String(l.id) : '',
-    name: l.name ?? 'Unnamed list',
-    isPublic: l.isPublic !== false,
-  };
-}
-
-function toPipelineSummary(p: RawPipeline): FubPipelineSummary {
+function toPipelineSummary(p: RawPipeline): SierraPipelineSummary {
   return {
     id: p.id !== undefined ? String(p.id) : '',
     name: p.name ?? 'Pipeline',

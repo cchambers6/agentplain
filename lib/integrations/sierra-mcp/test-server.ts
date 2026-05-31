@@ -1,9 +1,9 @@
 /**
- * lib/integrations/follow-up-boss-mcp/test-server.ts
+ * lib/integrations/sierra-mcp/test-server.ts
  *
- * In-memory FUB MCP for tests. Mirrors the QuickBooks test-server pattern.
- * Tests seed leads + pipelines; assertions read back the captured
- * write-side calls.
+ * In-memory Sierra Interactive MCP for tests. Mirrors the FUB +
+ * QuickBooks test-server patterns. Tests seed leads + pipelines;
+ * assertions read back the captured write-side calls.
  */
 
 import { mcpError, mcpOk, type McpResult } from '@/lib/integrations/mcp-core';
@@ -12,59 +12,44 @@ import type {
   AddTagOutput,
   CreateNoteInput,
   CreateNoteOutput,
-  FollowUpBossMcpServer,
-  FubLeadListSummary,
-  FubLeadSummary,
-  FubPipelineSummary,
-  FubUserSummary,
   GetLeadInput,
   GetLeadOutput,
   GetPipelineStageInput,
   GetPipelineStageOutput,
-  ListLeadListsInput,
-  ListLeadListsOutput,
   ListLeadsInput,
   ListLeadsOutput,
   ListPipelinesInput,
   ListPipelinesOutput,
-  ListUsersInput,
-  ListUsersOutput,
+  SierraLeadSummary,
+  SierraMcpServer,
+  SierraPipelineSummary,
 } from './types';
 
-export interface TestFollowUpBossSeed {
-  leads?: FubLeadSummary[];
-  pipelines?: FubPipelineSummary[];
-  users?: FubUserSummary[];
-  leadLists?: FubLeadListSummary[];
+export interface TestSierraSeed {
+  leads?: SierraLeadSummary[];
+  pipelines?: SierraPipelineSummary[];
 }
 
-export interface RecordedFubCall {
+export interface RecordedSierraCall {
   tool:
     | 'listLeads'
     | 'getLead'
     | 'createNote'
     | 'addTag'
     | 'listPipelines'
-    | 'getPipelineStage'
-    | 'listUsers'
-    | 'listLeadLists';
+    | 'getPipelineStage';
   input: unknown;
 }
 
-export class RecordingFollowUpBossMcpServer implements FollowUpBossMcpServer {
+export class RecordingSierraMcpServer implements SierraMcpServer {
   readonly name = 'recording' as const;
   readonly workspaceId: string;
-  readonly calls: RecordedFubCall[] = [];
-  private readonly leads: Map<string, FubLeadSummary>;
-  private readonly pipelines: Map<string, FubPipelineSummary>;
-  private readonly users: FubUserSummary[];
-  private readonly leadLists: FubLeadListSummary[];
-  private nextNoteId = 1000;
+  readonly calls: RecordedSierraCall[] = [];
+  private readonly leads: Map<string, SierraLeadSummary>;
+  private readonly pipelines: Map<string, SierraPipelineSummary>;
+  private nextNoteId = 2000;
 
-  constructor(args: {
-    workspaceId: string;
-    seed?: TestFollowUpBossSeed;
-  }) {
+  constructor(args: { workspaceId: string; seed?: TestSierraSeed }) {
     this.workspaceId = args.workspaceId;
     this.leads = new Map(
       (args.seed?.leads ?? []).map((l) => [l.id, { ...l, tags: [...l.tags] }]),
@@ -72,18 +57,12 @@ export class RecordingFollowUpBossMcpServer implements FollowUpBossMcpServer {
     this.pipelines = new Map(
       (args.seed?.pipelines ?? []).map((p) => [p.id, p]),
     );
-    this.users = (args.seed?.users ?? []).map((u) => ({
-      ...u,
-      groups: [...u.groups],
-    }));
-    this.leadLists = [...(args.seed?.leadLists ?? [])];
   }
 
   async listLeads(input: ListLeadsInput): Promise<McpResult<ListLeadsOutput>> {
     this.calls.push({ tool: 'listLeads', input });
     const limit = input.limit ?? 25;
-    const leads = [...this.leads.values()].slice(0, limit);
-    return mcpOk({ leads });
+    return mcpOk({ leads: [...this.leads.values()].slice(0, limit) });
   }
 
   async getLead(input: GetLeadInput): Promise<McpResult<GetLeadOutput>> {
@@ -100,7 +79,7 @@ export class RecordingFollowUpBossMcpServer implements FollowUpBossMcpServer {
     if (!this.leads.has(input.leadId)) {
       return mcpError('NOT_FOUND', `No lead ${input.leadId}`);
     }
-    const noteId = `note-${this.nextNoteId++}`;
+    const noteId = `sierra-note-${this.nextNoteId++}`;
     return mcpOk({ noteId });
   }
 
@@ -118,7 +97,9 @@ export class RecordingFollowUpBossMcpServer implements FollowUpBossMcpServer {
   ): Promise<McpResult<ListPipelinesOutput>> {
     this.calls.push({ tool: 'listPipelines', input });
     const limit = input.limit ?? 25;
-    return mcpOk({ pipelines: [...this.pipelines.values()].slice(0, limit) });
+    return mcpOk({
+      pipelines: [...this.pipelines.values()].slice(0, limit),
+    });
   }
 
   async getPipelineStage(
@@ -135,23 +116,5 @@ export class RecordingFollowUpBossMcpServer implements FollowUpBossMcpServer {
       );
     }
     return mcpOk({ stage });
-  }
-
-  async listUsers(input: ListUsersInput): Promise<McpResult<ListUsersOutput>> {
-    this.calls.push({ tool: 'listUsers', input });
-    const limit = input.limit ?? 25;
-    const activeOnly = input.activeOnly ?? true;
-    const filtered = activeOnly
-      ? this.users.filter((u) => u.active)
-      : this.users;
-    return mcpOk({ users: filtered.slice(0, limit) });
-  }
-
-  async listLeadLists(
-    input: ListLeadListsInput,
-  ): Promise<McpResult<ListLeadListsOutput>> {
-    this.calls.push({ tool: 'listLeadLists', input });
-    const limit = input.limit ?? 25;
-    return mcpOk({ lists: this.leadLists.slice(0, limit) });
   }
 }

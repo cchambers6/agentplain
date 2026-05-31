@@ -37,6 +37,8 @@ export type MarketplaceProviderKey =
   | 'QUICKBOOKS'
   | 'SLACK'
   | 'FOLLOW_UP_BOSS'
+  | 'SIERRA_INTERACTIVE'
+  | 'BOLDTRAIL'
   | null;
 
 /** How a connector authenticates. `oauth` = the existing OAuth start /
@@ -374,6 +376,86 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     mcpEndpointTemplate: '/api/integrations/kvcore-mcp/{workspaceId}',
     scopes: ['contacts:read', 'contacts:write', 'notes:write'],
     oauthConfigKey: 'KVCORE_OAUTH',
+    status: 'coming-soon',
+    providerKey: null,
+    disciplines: ['sales-enablement', 'customer-success'],
+    verticalRelevance: ['real-estate'],
+  },
+  // ── Wave-4 realty CRMs ──────────────────────────────────────────────
+  // Sierra Interactive — public REST API with bearer-token auth. Fully
+  // wired end-to-end via the MCP server at `lib/integrations/sierra-mcp/`.
+  {
+    id: 'sierra',
+    name: 'Sierra Interactive',
+    category: 'CRM',
+    description:
+      'Plaino reads your Sierra Interactive contacts, triages each lead (hot / warm / cold / nurture), drafts a first-touch reply into /approvals, and writes the triage decision back to Sierra as a private note + tag.',
+    mcpEndpointTemplate: '/api/integrations/sierra-mcp/{workspaceId}',
+    scopes: [
+      'contacts:read',
+      'contacts:write',
+      'notes:write',
+      'pipelines:read',
+    ],
+    oauthConfigKey: 'SIERRA_API',
+    status: 'available',
+    providerKey: 'SIERRA_INTERACTIVE',
+    disciplines: ['sales-enablement', 'customer-success'],
+    verticalRelevance: ['real-estate'],
+    connectMode: 'api-key',
+  },
+  // BoldTrail (formerly Inside Real Estate's BoldTrail) — public API
+  // access requires a developer-partner agreement that agentplain has
+  // NOT completed. The MCP server scaffolding lives at
+  // `lib/integrations/boldtrail-mcp/` (six-tool surface mirroring
+  // Sierra + FUB), but the catalog stays HONEST: `coming-soon` until
+  // the partner enrollment lands. Customers can join the waitlist via
+  // /custom?type=integration-waitlist.
+  {
+    id: 'boldtrail',
+    name: 'BoldTrail',
+    category: 'CRM',
+    description:
+      'Plaino will read your BoldTrail leads and write back triage decisions once we complete BoldTrail\'s developer-partner enrollment. The MCP server scaffolding is in place; the credential path opens with the enrollment. Join the waitlist below.',
+    mcpEndpointTemplate: '/api/integrations/boldtrail-mcp/{workspaceId}',
+    scopes: [
+      'contacts:read',
+      'contacts:write',
+      'notes:write',
+      'pipelines:read',
+    ],
+    oauthConfigKey: 'BOLDTRAIL_API',
+    status: 'coming-soon',
+    providerKey: null,
+    disciplines: ['sales-enablement', 'customer-success'],
+    verticalRelevance: ['real-estate'],
+    connectMode: 'api-key',
+  },
+  // Lofty + Real Geeks — named in the audit as the next realty-CRM
+  // tier. Both require partner-program enrollment; left for wave 5.
+  {
+    id: 'lofty',
+    name: 'Lofty (formerly Chime)',
+    category: 'CRM',
+    description:
+      'Plaino will read your Lofty contacts and write back triage decisions once we complete the Lofty partner-program API enrollment. Join the waitlist below.',
+    mcpEndpointTemplate: '/api/integrations/lofty-mcp/{workspaceId}',
+    scopes: ['contacts:read', 'contacts:write', 'notes:write'],
+    oauthConfigKey: 'LOFTY_API',
+    status: 'coming-soon',
+    providerKey: null,
+    disciplines: ['sales-enablement', 'customer-success'],
+    verticalRelevance: ['real-estate'],
+  },
+  {
+    id: 'real-geeks',
+    name: 'Real Geeks',
+    category: 'CRM',
+    description:
+      'Plaino will read your Real Geeks leads and write back triage decisions once we complete the Real Geeks partner-program API enrollment. Join the waitlist below.',
+    mcpEndpointTemplate: '/api/integrations/real-geeks-mcp/{workspaceId}',
+    scopes: ['contacts:read', 'contacts:write', 'notes:write'],
+    oauthConfigKey: 'REAL_GEEKS_API',
     status: 'coming-soon',
     providerKey: null,
     disciplines: ['sales-enablement', 'customer-success'],

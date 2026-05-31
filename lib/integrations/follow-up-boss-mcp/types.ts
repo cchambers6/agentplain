@@ -49,6 +49,37 @@ export interface FubPipelineSummary {
   stages: Array<{ id: string; name: string; sortOrder: number }>;
 }
 
+/** Wave-4 — FUB account user (agent on the brokerage's roster). The
+ *  `list_users` tool surfaces these so the lead-triage skill can route
+ *  to a specific agent based on territory + specialty tags FUB carries
+ *  on each user. */
+export interface FubUserSummary {
+  /** FUB user id. */
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  /** FUB account role — "Owner", "Lender", "Agent", "Admin", etc. */
+  role: string | null;
+  /** Whether the user is currently active in FUB. */
+  active: boolean;
+  /** FUB exposes a per-user `groups` array — brokerages typically use
+   *  groups as specialty / territory tags ("luxury", "north fulton",
+   *  "first-time buyer"). The lead-triage skill reads these. */
+  groups: string[];
+}
+
+/** Wave-4 — FUB lead-list (drip-campaign equivalent on the FUB side).
+ *  Surfaced so the lead-triage skill can enrol cold / nurture leads in
+ *  the right list rather than routing to `manual`. */
+export interface FubLeadListSummary {
+  id: string;
+  name: string;
+  /** FUB exposes a per-list visibility flag — public lists are shared
+   *  across the team; private ones are owner-only. */
+  isPublic: boolean;
+}
+
 // ── Tool I/O shapes ───────────────────────────────────────────────────
 
 export interface ListLeadsInput {
@@ -104,6 +135,23 @@ export interface GetPipelineStageOutput {
   stage: { id: string; name: string; sortOrder: number };
 }
 
+export interface ListUsersInput {
+  limit?: number;
+  /** When true, only `active === true` users are returned. Defaults
+   *  true — the lead-triage roster shouldn't route to disabled users. */
+  activeOnly?: boolean;
+}
+export interface ListUsersOutput {
+  users: FubUserSummary[];
+}
+
+export interface ListLeadListsInput {
+  limit?: number;
+}
+export interface ListLeadListsOutput {
+  lists: FubLeadListSummary[];
+}
+
 // ── Server interface ──────────────────────────────────────────────────
 
 export interface FollowUpBossMcpServer {
@@ -120,4 +168,11 @@ export interface FollowUpBossMcpServer {
   getPipelineStage(
     input: GetPipelineStageInput,
   ): Promise<McpResult<GetPipelineStageOutput>>;
+  /** Wave-4 — populate the lead-triage agent roster from FUB. */
+  listUsers(input: ListUsersInput): Promise<McpResult<ListUsersOutput>>;
+  /** Wave-4 — surface FUB lead-lists so the lead-triage skill can
+   *  route cold / nurture leads to a real list instead of `manual`. */
+  listLeadLists(
+    input: ListLeadListsInput,
+  ): Promise<McpResult<ListLeadListsOutput>>;
 }

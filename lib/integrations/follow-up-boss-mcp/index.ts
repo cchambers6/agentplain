@@ -15,8 +15,10 @@ export {
 } from './auth';
 export type {
   FollowUpBossMcpServer,
+  FubLeadListSummary,
   FubLeadSummary,
   FubPipelineSummary,
+  FubUserSummary,
   ListLeadsInput,
   ListLeadsOutput,
   GetLeadInput,
@@ -29,4 +31,8 @@ export type {
   ListPipelinesOutput,
   GetPipelineStageInput,
   GetPipelineStageOutput,
+  ListUsersInput,
+  ListUsersOutput,
+  ListLeadListsInput,
+  ListLeadListsOutput,
 } from './types';

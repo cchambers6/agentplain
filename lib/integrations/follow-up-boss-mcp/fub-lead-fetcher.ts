@@ -82,28 +82,116 @@ export class FubLeadFetcher implements LeadFetcher {
   }
 
   /**
-   * FUB does NOT yet supply an agent roster through this adapter. The
-   * skill receives an empty list so its routing falls back to
-   * `'manual'` (the same honest behavior the ParsedMessage adapter
-   * uses today, per the wave-1 router rationale in
-   * lib/skills/vertical-router.ts). Wiring this up would require a
-   * separate FUB tool we have not yet built — the audit calls this
-   * out as a wave-4 follow-up.
+   * Wave-4 — populates the agent roster from FUB's `users` endpoint.
+   * Each active user becomes one `AgentRoster` row; the user's `groups`
+   * surface as `specialties`. Lead-triage uses specialty matching to
+   * route to the right agent based on the lead's inquiry.
+   *
+   * Returns an empty list on CREDENTIAL_NOT_FOUND so the workspace can
+   * triage leads even before FUB is connected — routing falls back to
+   * `manual`, matching the pre-wave-4 behavior.
    */
-  async fetchAgentRoster(_args: {
+  async fetchAgentRoster(args: {
     workspaceId: string;
   }): Promise<SkillResult<AgentRoster[]>> {
-    return skillOk([]);
+    if (args.workspaceId !== this.workspaceIdOption) {
+      return skillError(
+        'INVALID_INPUT',
+        `FubLeadFetcher: workspaceId mismatch (constructed for ${this.workspaceIdOption}, called with ${args.workspaceId})`,
+      );
+    }
+    const res = await this.mcp.listUsers({ activeOnly: true, limit: 100 });
+    if (!res.ok) {
+      if (res.error.code === 'CREDENTIAL_NOT_FOUND') {
+        return skillOk([]);
+      }
+      return skillError(
+        'UPSTREAM_GMAIL_ERROR',
+        `Follow Up Boss listUsers failed: ${res.error.message}`,
+        res.error.code,
+      );
+    }
+    const roster: AgentRoster[] = res.value.users
+      .filter(
+        (u) =>
+          u.role === null ||
+          u.role.toLowerCase().includes('agent') ||
+          u.role.toLowerCase().includes('owner') ||
+          u.role.toLowerCase().includes('broker'),
+      )
+      .map((u) => {
+        const name = composeFullName(u.firstName, u.lastName, u.email);
+        // Treat each FUB group as both a specialty AND the service
+        // area when no dedicated tag carries the area. Brokerages
+        // typically use groups for territory ("Buckhead", "North
+        // Fulton") + specialty ("luxury", "first-time buyer"); we
+        // pass the whole set through and let the skill match by
+        // substring inclusion.
+        return {
+          id: `fub-user-${u.id}`,
+          name,
+          specialties: u.groups.map((g) => g.toLowerCase()),
+          serviceArea: u.groups.join(', ') || 'unspecified',
+          acceptingLeads: true,
+        };
+      });
+    return skillOk(roster);
   }
 
   /**
-   * Drip campaigns are an FUB concept (Lead Flow). We do not yet read
-   * them — the skill's routing falls back to `manual` when this is
-   * empty. Wave-4 follow-up.
+   * Wave-4 — populates drip campaigns from FUB's `smartLists` (lead-list)
+   * endpoint. Each public list becomes one `DripCampaign` row. List
+   * names are matched heuristically to the LeadCategory audience the
+   * skill expects (nurture / cold / cma-followup / general).
    */
-  async fetchDripCampaigns(_args: {
+  async fetchDripCampaigns(args: {
     workspaceId: string;
   }): Promise<SkillResult<DripCampaign[]>> {
-    return skillOk([]);
+    if (args.workspaceId !== this.workspaceIdOption) {
+      return skillError(
+        'INVALID_INPUT',
+        `FubLeadFetcher: workspaceId mismatch (constructed for ${this.workspaceIdOption}, called with ${args.workspaceId})`,
+      );
+    }
+    const res = await this.mcp.listLeadLists({ limit: 100 });
+    if (!res.ok) {
+      if (res.error.code === 'CREDENTIAL_NOT_FOUND') {
+        return skillOk([]);
+      }
+      return skillError(
+        'UPSTREAM_GMAIL_ERROR',
+        `Follow Up Boss listLeadLists failed: ${res.error.message}`,
+        res.error.code,
+      );
+    }
+    const campaigns: DripCampaign[] = res.value.lists
+      .filter((l) => l.isPublic)
+      .map((l) => ({
+        id: `fub-list-${l.id}`,
+        name: l.name,
+        audience: inferAudience(l.name),
+      }));
+    return skillOk(campaigns);
   }
+}
+
+function composeFullName(
+  first: string | null,
+  last: string | null,
+  emailFallback: string | null,
+): string {
+  const trimmed = [first, last]
+    .map((s) => s?.trim() ?? '')
+    .filter(Boolean);
+  if (trimmed.length > 0) return trimmed.join(' ');
+  if (emailFallback) return emailFallback;
+  return 'FUB agent';
+}
+
+function inferAudience(name: string): DripCampaign['audience'] {
+  const lower = name.toLowerCase();
+  if (lower.includes('nurture') || lower.includes('long-term')) return 'nurture';
+  if (lower.includes('cold')) return 'cold';
+  if (lower.includes('cma') || lower.includes('seller')) return 'cma-followup';
+  return 'general';
 }

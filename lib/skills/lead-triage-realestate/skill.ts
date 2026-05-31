@@ -23,6 +23,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { skillError, skillOk, type DraftPersister, type SkillResult } from '../types';
+import { maybeRefineLeadTriage } from './llm-refine';
 import {
   categoryFor,
   type AgentRoster,
@@ -111,17 +112,34 @@ export async function runSkill(
     });
   }
 
+  // Wave-4 — opt-in LLM refinement seam. When the caller passes both an
+  // `llm` AND a non-empty `feedbackRulesBlock`, the LLM can override
+  // categories based on FEEDBACK rules under the `lead-triage` scope.
+  // Errors fall through to the pure heuristic output.
+  let refinedTriaged = triaged;
+  if (input.llm && (input.feedbackRulesBlock ?? '').trim().length > 0) {
+    const refined = await maybeRefineLeadTriage({
+      llm: input.llm,
+      feedbackRulesBlock: input.feedbackRulesBlock ?? '',
+      triaged,
+      agents,
+      campaigns,
+      workspaceId: input.workspaceId,
+    });
+    refinedTriaged = refined.triaged;
+  }
+
   const categoryCounts: Record<LeadCategory, number> = {
     hot: 0,
     warm: 0,
     cold: 0,
     nurture: 0,
   };
-  for (const t of triaged) categoryCounts[t.category] += 1;
+  for (const t of refinedTriaged) categoryCounts[t.category] += 1;
 
   return skillOk({
     processed: leads.length,
-    triaged,
+    triaged: refinedTriaged,
     categoryCounts,
   });
 }

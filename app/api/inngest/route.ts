@@ -35,6 +35,13 @@ import { complianceWatchSweepFn } from "@/lib/inngest/functions/compliance-watch
 // Wave-3 realty CRM sync — hourly Follow Up Boss → lead-triage → CRM
 // write-back of triage decision.
 import { followUpBossSyncSweepFn } from "@/lib/inngest/functions/follow-up-boss-sync-sweep";
+// Wave-4 discipline-wrap closer — flips finance from PARTIAL →
+// DELIVERING by giving every workspace a weekly finance pulse.
+import { financePulseSweepFn } from "@/lib/inngest/functions/finance-pulse-sweep";
+// Wave-4 — closes PR #123's honesty gap: workspaces that abandoned
+// Stripe Checkout now move through a nudge → deactivate → archive
+// lifecycle instead of running forever on the free side.
+import { stripeAbandonedSignupSweepFn } from "@/lib/inngest/functions/stripe-abandoned-signup-sweep";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -58,5 +65,7 @@ export const { GET, POST, PUT } = serve({
     contentCalendarSweepFn,
     complianceWatchSweepFn,
     followUpBossSyncSweepFn,
+    financePulseSweepFn,
+    stripeAbandonedSignupSweepFn,
   ],
 });

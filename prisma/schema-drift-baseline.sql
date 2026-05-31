@@ -74,6 +74,9 @@ ALTER TABLE "WorkThresholdConfig" DROP CONSTRAINT "WorkThresholdConfig_workspace
 ALTER TABLE "WorkspaceInvoice" DROP CONSTRAINT "WorkspaceInvoice_workspaceId_fkey";
 
 -- DropForeignKey
+ALTER TABLE "WorkspaceLifecycleEvent" DROP CONSTRAINT "WorkspaceLifecycleEvent_workspaceId_fkey";
+
+-- DropForeignKey
 ALTER TABLE "WorkspacePreference" DROP CONSTRAINT "WorkspacePreference_workspaceId_fkey";
 
 -- DropIndex
@@ -164,6 +167,9 @@ ALTER TABLE "WorkspaceBriefing" ALTER COLUMN "id" DROP DEFAULT;
 ALTER TABLE "WorkspaceInvoice" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AlterTable
+ALTER TABLE "WorkspaceLifecycleEvent" ALTER COLUMN "id" DROP DEFAULT;
+
+-- AlterTable
 ALTER TABLE "WorkspaceMemoryEntry" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AlterTable
@@ -180,6 +186,9 @@ ALTER TABLE "BillingEvent" ADD CONSTRAINT "BillingEvent_subscriptionId_fkey" FOR
 
 -- AddForeignKey
 ALTER TABLE "OnboardingState" ADD CONSTRAINT "OnboardingState_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "WorkspaceLifecycleEvent" ADD CONSTRAINT "WorkspaceLifecycleEvent_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Membership" ADD CONSTRAINT "Membership_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

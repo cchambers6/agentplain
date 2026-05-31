@@ -39,6 +39,10 @@ export const SKILL_DISCIPLINE: Record<string, DisciplineId> = {
   'research-on-demand-general': 'research',
   'content-calendar-drafter-general': 'marketing',
   'compliance-watch-general': 'legal',
+  // Wave-4 — closes the 8th discipline (finance) by giving every
+  // workspace a weekly finance pulse, not just the per-vertical
+  // invoice-chase / month-end-close skills.
+  'finance-pulse-general': 'finance',
   // Support-handler — drafts a first-touch reply to /help SupportRequests
   // and queues it for operator approval. Tagged customer-success so the
   // discipline-grouped approvals page groups these alongside the rest of

@@ -60,24 +60,46 @@ export interface WorkspacePauseState {
 }
 
 /**
- * Read the workspace's subscription status and decide whether skill
- * fires should be skipped for billing reasons. Callers use this BEFORE
- * any LLM call so a paused workspace pays nothing.
+ * Read the workspace's subscription status + the wave-4 abandoned-
+ * signup `setupDeactivatedAt` column, then decide whether skill fires
+ * should be skipped for billing reasons. Callers use this BEFORE any
+ * LLM call so a paused workspace pays nothing.
  *
  * Workspaces with no Subscription row at all are treated as "active for
- * skills" — they predate the per-seat subscription rollout and the
- * trial-warning cron handles their lifecycle.
+ * skills" UNLESS their `setupDeactivatedAt` is set (the wave-4
+ * abandoned-signup sweep flips this when 7d have elapsed without
+ * checkout). That closes the honesty gap PR #123 named — pre-wave-4 a
+ * workspace that abandoned Stripe Checkout slipped through the gate
+ * forever because it had no Subscription row at all.
  */
 export async function isWorkspacePaused(
   args: IsWorkspacePausedArgs,
 ): Promise<WorkspacePauseState> {
   const systemContext = args.systemContext ?? defaultWithSystemContext;
-  const sub = await systemContext((tx) =>
-    tx.subscription.findUnique({
-      where: { workspaceId: args.workspaceId },
-      select: { status: true },
-    }),
-  );
+  const { sub, workspace } = await systemContext(async (tx) => {
+    const [s, w] = await Promise.all([
+      tx.subscription.findUnique({
+        where: { workspaceId: args.workspaceId },
+        select: { status: true },
+      }),
+      tx.workspace.findUnique({
+        where: { id: args.workspaceId },
+        select: { setupDeactivatedAt: true },
+      }),
+    ]);
+    return { sub: s, workspace: w };
+  });
+
+  // Wave-4 — abandoned-signup workspaces gate FIRST. They typically have
+  // no Subscription row at all (or one stuck in INCOMPLETE), so the
+  // legacy null-sub branch below would have let them slip through.
+  if (workspace?.setupDeactivatedAt) {
+    return {
+      isPaused: true,
+      status: sub?.status ?? null,
+      reason: `workspace.setupDeactivatedAt=${workspace.setupDeactivatedAt.toISOString()} — abandoned signup; skill fires paused until customer completes Stripe Checkout`,
+    };
+  }
   if (!sub) {
     return {
       isPaused: false,

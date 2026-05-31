@@ -13,21 +13,29 @@ import type {
   CreateNoteInput,
   CreateNoteOutput,
   FollowUpBossMcpServer,
+  FubLeadListSummary,
   FubLeadSummary,
   FubPipelineSummary,
+  FubUserSummary,
   GetLeadInput,
   GetLeadOutput,
   GetPipelineStageInput,
   GetPipelineStageOutput,
+  ListLeadListsInput,
+  ListLeadListsOutput,
   ListLeadsInput,
   ListLeadsOutput,
   ListPipelinesInput,
   ListPipelinesOutput,
+  ListUsersInput,
+  ListUsersOutput,
 } from './types';
 
 export interface TestFollowUpBossSeed {
   leads?: FubLeadSummary[];
   pipelines?: FubPipelineSummary[];
+  users?: FubUserSummary[];
+  leadLists?: FubLeadListSummary[];
 }
 
 export interface RecordedFubCall {
@@ -37,7 +45,9 @@ export interface RecordedFubCall {
     | 'createNote'
     | 'addTag'
     | 'listPipelines'
-    | 'getPipelineStage';
+    | 'getPipelineStage'
+    | 'listUsers'
+    | 'listLeadLists';
   input: unknown;
 }
 
@@ -47,6 +57,8 @@ export class RecordingFollowUpBossMcpServer implements FollowUpBossMcpServer {
   readonly calls: RecordedFubCall[] = [];
   private readonly leads: Map<string, FubLeadSummary>;
   private readonly pipelines: Map<string, FubPipelineSummary>;
+  private readonly users: FubUserSummary[];
+  private readonly leadLists: FubLeadListSummary[];
   private nextNoteId = 1000;
 
   constructor(args: {
@@ -60,6 +72,11 @@ export class RecordingFollowUpBossMcpServer implements FollowUpBossMcpServer {
     this.pipelines = new Map(
       (args.seed?.pipelines ?? []).map((p) => [p.id, p]),
     );
+    this.users = (args.seed?.users ?? []).map((u) => ({
+      ...u,
+      groups: [...u.groups],
+    }));
+    this.leadLists = [...(args.seed?.leadLists ?? [])];
   }
 
   async listLeads(input: ListLeadsInput): Promise<McpResult<ListLeadsOutput>> {
@@ -118,5 +135,23 @@ export class RecordingFollowUpBossMcpServer implements FollowUpBossMcpServer {
       );
     }
     return mcpOk({ stage });
+  }
+
+  async listUsers(input: ListUsersInput): Promise<McpResult<ListUsersOutput>> {
+    this.calls.push({ tool: 'listUsers', input });
+    const limit = input.limit ?? 25;
+    const activeOnly = input.activeOnly ?? true;
+    const filtered = activeOnly
+      ? this.users.filter((u) => u.active)
+      : this.users;
+    return mcpOk({ users: filtered.slice(0, limit) });
+  }
+
+  async listLeadLists(
+    input: ListLeadListsInput,
+  ): Promise<McpResult<ListLeadListsOutput>> {
+    this.calls.push({ tool: 'listLeadLists', input });
+    const limit = input.limit ?? 25;
+    return mcpOk({ lists: this.leadLists.slice(0, limit) });
   }
 }

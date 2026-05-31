@@ -22,6 +22,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { skillError, skillOk, type SkillResult } from '../types';
+import { maybeRefineTriage } from './llm-refine';
 import {
   DEFAULT_NOISE_CONFIDENCE_FLOOR,
   TRIAGE_PRIORITY_ORDER,
@@ -134,9 +135,27 @@ export async function runSkill(
   if (!snapshotRes.ok) return snapshotRes;
   const snapshot = snapshotRes.value;
 
-  const proposals = snapshot.inbox.map((msg) =>
+  let proposals = snapshot.inbox.map((msg) =>
     buildProposal({ msg, noiseFloor, now, extraUrgentCues }),
   );
+
+  // Wave-4 — opt-in LLM refinement seam. When the caller passes both an
+  // `llm` AND a non-empty `feedbackRulesBlock`, the LLM is asked to
+  // revise priorities based on the workspace's FEEDBACK rules. Errors +
+  // missing inputs fall through to the pure heuristic output — proven
+  // by the wave-4 inbox-triage tests.
+  let refineNote = '';
+  if (input.llm && (input.feedbackRulesBlock ?? '').trim().length > 0) {
+    const refined = await maybeRefineTriage({
+      llm: input.llm,
+      feedbackRulesBlock: input.feedbackRulesBlock ?? '',
+      messages: snapshot.inbox,
+      proposals,
+      workspaceId: input.workspaceId,
+    });
+    proposals = refined.proposals;
+    refineNote = refined.note;
+  }
 
   // Sort by descending priority — same order operators read.
   proposals.sort((a, b) => priorityRank(a.priority) - priorityRank(b.priority));
@@ -158,7 +177,10 @@ export async function runSkill(
     inboxScanned: snapshot.inbox.length,
     proposals,
     sunk,
-    noOutboundNote: NO_OUTBOUND_NOTE,
+    noOutboundNote:
+      refineNote.length > 0
+        ? `${NO_OUTBOUND_NOTE} ${refineNote}`
+        : NO_OUTBOUND_NOTE,
   });
 }
 

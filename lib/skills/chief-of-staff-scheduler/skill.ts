@@ -24,6 +24,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { skillError, skillOk, type SkillResult } from '../types';
+import { maybeRefineCos } from './llm-refine';
 import {
   DEFAULT_BUSINESS_HOURS,
   DEFAULT_LOOKAHEAD_DAYS,
@@ -72,7 +73,7 @@ export async function runSkill(
   if (!snapshotRes.ok) return snapshotRes;
   const snapshot = snapshotRes.value;
 
-  const meetingProposals = buildMeetingProposals({
+  let meetingProposals = buildMeetingProposals({
     snapshot,
     now,
     lookaheadDays,
@@ -81,16 +82,47 @@ export async function runSkill(
     workDays,
     meetingMinutes,
   });
-  const replyDraftProposals = buildReplyDraftProposals({
+  let replyDraftProposals = buildReplyDraftProposals({
     snapshot,
     now,
     maxPerClass,
   });
-  const todoProposals = buildTodoProposals({
+  let todoProposals = buildTodoProposals({
     snapshot,
     now,
     maxPerClass,
   });
+
+  // Wave-4 — opt-in LLM refinement seam. When the caller passes both an
+  // `llm` AND a non-empty `feedbackRulesBlock`, the LLM can DROP or
+  // RE-WORD proposals based on the workspace's FEEDBACK rules. Errors
+  // fall through to the pure heuristic output.
+  let refineNote = '';
+  if (input.llm && (input.feedbackRulesBlock ?? '').trim().length > 0) {
+    const allProposals: ChiefOfStaffProposal[] = [
+      ...meetingProposals,
+      ...replyDraftProposals,
+      ...todoProposals,
+    ];
+    const refined = await maybeRefineCos({
+      llm: input.llm,
+      feedbackRulesBlock: input.feedbackRulesBlock ?? '',
+      proposals: allProposals,
+      workspaceId: input.workspaceId,
+    });
+    refineNote = refined.note;
+    // Split refined proposals back into their typed buckets so the
+    // existing return shape stays stable.
+    meetingProposals = refined.proposals.filter(
+      (p): p is MeetingProposal => p.kind === 'meeting',
+    );
+    replyDraftProposals = refined.proposals.filter(
+      (p): p is ReplyDraftProposal => p.kind === 'reply-draft',
+    );
+    todoProposals = refined.proposals.filter(
+      (p): p is TodoProposal => p.kind === 'todo',
+    );
+  }
 
   let sunk = 0;
   if (input.sink) {
@@ -118,7 +150,10 @@ export async function runSkill(
     replyDraftProposals,
     todoProposals,
     sunk,
-    noOutboundNote: NO_OUTBOUND_NOTE,
+    noOutboundNote:
+      refineNote.length > 0
+        ? `${NO_OUTBOUND_NOTE} ${refineNote}`
+        : NO_OUTBOUND_NOTE,
   });
 }
 

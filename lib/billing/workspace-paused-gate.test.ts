@@ -25,11 +25,21 @@ interface FakeSubRow {
   status: SubscriptionStatus | null;
 }
 
-function stubContext(row: FakeSubRow | null): SystemContextRunner {
+interface FakeWorkspaceRow {
+  setupDeactivatedAt: Date | null;
+}
+
+function stubContext(
+  row: FakeSubRow | null,
+  workspaceRow: FakeWorkspaceRow | null = { setupDeactivatedAt: null },
+): SystemContextRunner {
   return async <T>(fn: (tx: never) => Promise<T>): Promise<T> => {
     const tx = {
       subscription: {
         findUnique: async () => row,
+      },
+      workspace: {
+        findUnique: async () => workspaceRow,
       },
     } as unknown as never;
     return fn(tx);
@@ -88,5 +98,39 @@ describe('isWorkspacePaused', () => {
       'PAST_DUE',
       'PAUSED',
     ]);
+  });
+
+  // Wave-4 — abandoned-signup gate. Workspaces typically have no
+  // Subscription row at all when this fires (Checkout never completed).
+  it('returns isPaused=true when workspace.setupDeactivatedAt is set (no Subscription)', async () => {
+    const res = await isWorkspacePaused({
+      workspaceId: 'ws-abandoned',
+      systemContext: stubContext(null, {
+        setupDeactivatedAt: new Date('2026-06-08T00:00:00.000Z'),
+      }),
+    });
+    assert.equal(res.isPaused, true);
+    assert.equal(res.status, null);
+    assert.match(res.reason, /abandoned signup/i);
+  });
+
+  it('returns isPaused=true when setupDeactivatedAt is set AND Subscription is INCOMPLETE (defensive)', async () => {
+    const res = await isWorkspacePaused({
+      workspaceId: 'ws-abandoned',
+      systemContext: stubContext(
+        { status: 'INCOMPLETE' },
+        { setupDeactivatedAt: new Date('2026-06-08T00:00:00.000Z') },
+      ),
+    });
+    assert.equal(res.isPaused, true);
+    assert.match(res.reason, /abandoned signup/i);
+  });
+
+  it('returns isPaused=false when setupDeactivatedAt is null AND Subscription is ACTIVE', async () => {
+    const res = await isWorkspacePaused({
+      workspaceId: 'ws-healthy',
+      systemContext: stubContext({ status: 'ACTIVE' }, { setupDeactivatedAt: null }),
+    });
+    assert.equal(res.isPaused, false);
   });
 });

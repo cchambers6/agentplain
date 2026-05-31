@@ -459,6 +459,20 @@ model Workspace {
   /// Captured for the operator/CS triage signal — never resurfaced to
   /// other customers.
   closureReason            String?
+  /// Wave-4 — abandoned-signup sweep state. NULL = the customer has
+  /// NOT completed Stripe Checkout (no card on file, no usable
+  /// Subscription row). Set when the first `customer.subscription.created`
+  /// webhook fires for the workspace's stripeCustomerId. The
+  /// `stripe-abandoned-signup-sweep` Inngest cron reads this column
+  /// to find workspaces that signed up but never finished checkout.
+  signupSetupCompletedAt   DateTime?
+  /// Wave-4 — when set, the workspace is "soft-deactivated" because
+  /// the customer abandoned Stripe Checkout for >= 7 days. Skills + crons
+  /// skip the workspace (`lib/billing/workspace-paused-gate.ts` honors
+  /// this); the workspace UI shows a "Complete setup to resume Plaino"
+  /// banner. Cleared when the customer completes checkout (the
+  /// abandoned-signup sweep's resume path lifts the gate).
+  setupDeactivatedAt       DateTime?
   createdAt                DateTime                     @default(now())
   updatedAt                DateTime                     @updatedAt
   memberships              Membership[]
@@ -488,10 +502,12 @@ model Workspace {
   skillInstallations       WorkspaceSkillInstallation[]
   pauseConfigs             WorkspacePauseConfig[]
   skillScheduleWindows     SkillScheduleWindow[]
+  lifecycleEvents          WorkspaceLifecycleEvent[]
 
   @@index([slug])
   @@index([vertical])
   @@index([closureStatus, scheduledHardPurgeAt])
+  @@index([signupSetupCompletedAt, setupDeactivatedAt])
 }
 
 // Phase 2 per-seat subscription. One row per workspace at most.
@@ -557,6 +573,55 @@ model OnboardingState {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+// Wave-4 — append-only lifecycle event log for the workspace billing /
+// signup-completion journey. Closes the honesty gap PR #123 named: a
+// workspace that signs up + gets a magic link but abandons Stripe
+// Checkout exists with no usable Subscription. The
+// `stripe-abandoned-signup-sweep` cron writes events here as it nudges,
+// soft-deactivates, and archives those workspaces.
+//
+// Kinds:
+//   SETUP_NUDGE_SENT  — first nudge ("finish setting up Plaino") email
+//                       drafted; recorded with the message id in payload.
+//   SETUP_DEACTIVATED — 7 days post-signup with no checkout; the gate
+//                       flips on (skills + crons skip; the UI banner
+//                       reads "Complete setup to resume Plaino").
+//   SETUP_ARCHIVED    — 30 days post-signup with no resolution; the
+//                       existing workspace-teardown sweep takes over via
+//                       closureStatus=CLOSING + scheduledHardPurgeAt.
+//   SETUP_RESUMED     — the customer completed checkout after a nudge /
+//                       deactivation; the gate lifts and the workspace
+//                       is restored.
+//
+// `noteEncrypted` is the v1 AES-256-GCM envelope so any contextual
+// metadata (e.g. a Stripe Checkout Session id, a Stripe Customer id)
+// is encrypted at rest. `payload` is non-sensitive JSON for indexing.
+enum WorkspaceLifecycleEventKind {
+  SETUP_NUDGE_SENT
+  SETUP_DEACTIVATED
+  SETUP_ARCHIVED
+  SETUP_RESUMED
+}
+
+model WorkspaceLifecycleEvent {
+  id            String                      @id @default(uuid()) @db.Uuid
+  workspaceId   String                      @db.Uuid
+  kind          WorkspaceLifecycleEventKind
+  occurredAt    DateTime                    @default(now())
+  /// AES-256-GCM v1 ciphertext for any free-form contextual note
+  /// (Stripe Session id, error reason, operator comment). NULL when
+  /// no note was captured.
+  noteEncrypted String?
+  /// Non-sensitive JSON metadata — kept queryable for the operator
+  /// triage console (e.g. `{ "daysSinceSignup": 7 }`). Never carries
+  /// emails, tokens, or anything that would belong in noteEncrypted.
+  payload       Json                        @default("{}")
+  workspace     Workspace                   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, occurredAt])
+  @@index([kind, occurredAt])
 }
 
 model Membership {

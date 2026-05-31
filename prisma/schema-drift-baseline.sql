@@ -101,6 +101,9 @@ ALTER TABLE "ChatThread" ALTER COLUMN "id" DROP DEFAULT;
 ALTER TABLE "ComplianceFlag" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AlterTable
+ALTER TABLE "DisciplineHead" ALTER COLUMN "id" DROP DEFAULT;
+
+-- AlterTable
 ALTER TABLE "Embedding" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AlterTable
@@ -134,10 +137,19 @@ ALTER TABLE "PreferenceSignal" ALTER COLUMN "id" DROP DEFAULT;
 ALTER TABLE "SkillConfig" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AlterTable
+ALTER TABLE "SkillRun" ALTER COLUMN "id" DROP DEFAULT;
+
+-- AlterTable
 ALTER TABLE "Subscription" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AlterTable
 ALTER TABLE "SupportRequest" ALTER COLUMN "id" DROP DEFAULT;
+
+-- AlterTable
+ALTER TABLE "Team" ALTER COLUMN "id" DROP DEFAULT;
+
+-- AlterTable
+ALTER TABLE "TeamMembership" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AlterTable
 ALTER TABLE "User" ALTER COLUMN "id" DROP DEFAULT;
@@ -261,4 +273,3 @@ ALTER TABLE "PreferenceSignal" ADD CONSTRAINT "PreferenceSignal_workspaceId_fkey
 
 -- RenameIndex
 ALTER INDEX "HandoffLogEntry_subject_idx" RENAME TO "HandoffLogEntry_workspaceId_relatedSubjectTable_relatedSubj_idx";
-

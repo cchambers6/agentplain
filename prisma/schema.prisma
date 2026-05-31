@@ -12,9 +12,21 @@ datasource db {
   directUrl = env("DATABASE_URL_DIRECT")
 }
 
+// Role taxonomy. The original two values (BROKER_OWNER, AGENT) shipped in
+// Phase 1 when every workspace was a single owner. Wave 6 adds the
+// generalized tier set (OWNER, ADMIN, MEMBER, VIEWER) so multi-seat
+// workspaces can model real team structure. BROKER_OWNER and OWNER are
+// equivalent at the policy layer (`lib/auth/roles.ts#asRoleTier`); AGENT
+// and MEMBER are equivalent. New code SHOULD write OWNER / MEMBER; legacy
+// rows continue to read as the same tier so no backfill migration is
+// needed.
 enum Role {
   BROKER_OWNER
   AGENT
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
 }
 
 enum MembershipStatus {
@@ -397,25 +409,33 @@ enum WorkspaceMemoryKind {
 }
 
 model User {
-  id                   String                       @id @default(uuid()) @db.Uuid
-  email                String                       @unique @db.Citext
-  name                 String?
-  isOperator           Boolean                      @default(false)
-  createdAt            DateTime                     @default(now())
-  updatedAt            DateTime                     @updatedAt
-  memberships          Membership[]
-  decidedItems         WorkApprovalQueueItem[]      @relation("DecidedBy")
-  configuredThresholds WorkThresholdConfig[]        @relation("ConfiguredBy")
-  configuredSkills     SkillConfig[]                @relation("SkillConfigBy")
-  installedSkills      WorkspaceSkillInstallation[] @relation("SkillInstalledBy")
-  pauseConfigs         WorkspacePauseConfig[]       @relation("PauseConfigBy")
-  scheduleWindows      SkillScheduleWindow[]        @relation("ScheduleWindowBy")
-  auditEntriesActor    AuditLog[]                   @relation("AuditActor")
-  auditEntriesActAs    AuditLog[]                   @relation("AuditActingAs")
-  magicLinkTokens      MagicLinkToken[]
-  triagedInquiries     Inquiry[]                    @relation("InquiryTriagedBy")
-  passkeys             WebAuthnCredential[]
-  supportRequests      SupportRequest[]             @relation("SupportRequestFrom")
+  id                        String                       @id @default(uuid()) @db.Uuid
+  email                     String                       @unique @db.Citext
+  name                      String?
+  isOperator                Boolean                      @default(false)
+  createdAt                 DateTime                     @default(now())
+  updatedAt                 DateTime                     @updatedAt
+  memberships               Membership[]
+  decidedItems              WorkApprovalQueueItem[]      @relation("DecidedBy")
+  configuredThresholds      WorkThresholdConfig[]        @relation("ConfiguredBy")
+  configuredSkills          SkillConfig[]                @relation("SkillConfigBy")
+  installedSkills           WorkspaceSkillInstallation[] @relation("SkillInstalledBy")
+  pauseConfigs              WorkspacePauseConfig[]       @relation("PauseConfigBy")
+  scheduleWindows           SkillScheduleWindow[]        @relation("ScheduleWindowBy")
+  auditEntriesActor         AuditLog[]                   @relation("AuditActor")
+  auditEntriesActAs         AuditLog[]                   @relation("AuditActingAs")
+  magicLinkTokens           MagicLinkToken[]
+  triagedInquiries          Inquiry[]                    @relation("InquiryTriagedBy")
+  passkeys                  WebAuthnCredential[]
+  supportRequests           SupportRequest[]             @relation("SupportRequestFrom")
+  /// Wave-6: memberships this user has issued (audit lineage). SetNull so
+  /// the inviter going away does not orphan the invited row.
+  invitedMemberships        Membership[]                 @relation("MembershipInvitedBy")
+  createdTeams              Team[]                       @relation("TeamCreatedBy")
+  teamMemberships           TeamMembership[]
+  disciplineHeadAssignments DisciplineHead[]             @relation("DisciplineHeadUser")
+  disciplineHeadAssignedBy  DisciplineHead[]             @relation("DisciplineHeadAssignedBy")
+  requiredApprovalItems     WorkApprovalQueueItem[]      @relation("WorkApprovalRequiredApprover")
 
   @@index([email])
 }
@@ -503,6 +523,15 @@ model Workspace {
   pauseConfigs             WorkspacePauseConfig[]
   skillScheduleWindows     SkillScheduleWindow[]
   lifecycleEvents          WorkspaceLifecycleEvent[]
+  /// Wave-6 — sub-workspace groupings used by RBAC + roster. Teams are
+  /// RLS-isolated per workspace.
+  teams                    Team[]
+  /// Wave-6 — per-discipline approver routing. Empty = "any qualified
+  /// member can approve discipline items" (single-owner workspace default).
+  disciplineHeads          DisciplineHead[]
+  /// Wave-6 — every cron / Inngest entry seam writes a SkillRun row so
+  /// scorecards report skipped + failed fires honestly, not just drafts.
+  skillRuns                SkillRun[]
 
   @@index([slug])
   @@index([vertical])
@@ -625,18 +654,29 @@ model WorkspaceLifecycleEvent {
 }
 
 model Membership {
-  id          String           @id @default(uuid()) @db.Uuid
-  userId      String           @db.Uuid
-  workspaceId String           @db.Uuid
-  role        Role
-  status      MembershipStatus @default(ACTIVE)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id              String           @id @default(uuid()) @db.Uuid
+  userId          String           @db.Uuid
+  workspaceId     String           @db.Uuid
+  role            Role
+  status          MembershipStatus @default(ACTIVE)
+  /// Wave-6: who invited this user (NULL for the original founder row
+  /// of every Phase-1 workspace). SetNull so the membership row survives
+  /// inviter removal — audit context is preserved either way.
+  invitedByUserId String?          @db.Uuid
+  /// Wave-6: when the membership was revoked. status=DEACTIVATED was the
+  /// only signal pre-wave-6; this column adds a queryable timestamp so the
+  /// audit + roster views can show "removed N days ago".
+  removedAt       DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy       User?            @relation("MembershipInvitedBy", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+  teamMemberships TeamMembership[]
 
   @@unique([userId, workspaceId])
   @@index([workspaceId, role])
+  @@index([workspaceId, status])
 }
 
 // Customer-defined work-execution gating. One config row per workspace+kind.
@@ -658,30 +698,41 @@ model WorkThresholdConfig {
 // Work-execution decisions only (NEVER capability proposals). Polymorphic via (refTable, refId).
 // Per project_skill_authority_vs_work_authority, customer-controlled, customer-visible.
 model WorkApprovalQueueItem {
-  id              String             @id @default(uuid()) @db.Uuid
-  workspaceId     String             @db.Uuid
-  agentSlug       String
-  kind            WorkApprovalKind
-  refTable        String
-  refId           String
-  payload         Json
-  status          WorkApprovalStatus @default(PENDING)
-  proposedAt      DateTime           @default(now())
-  decidedAt       DateTime?
-  decidedByUserId String?            @db.Uuid
-  decisionReason  String?
+  id                     String             @id @default(uuid()) @db.Uuid
+  workspaceId            String             @db.Uuid
+  agentSlug              String
+  kind                   WorkApprovalKind
+  refTable               String
+  refId                  String
+  payload                Json
+  status                 WorkApprovalStatus @default(PENDING)
+  proposedAt             DateTime           @default(now())
+  decidedAt              DateTime?
+  decidedByUserId        String?            @db.Uuid
+  decisionReason         String?
   /// Discipline this item belongs to — one of the 8 from `lib/disciplines`.
   /// NULL on legacy rows written before the discipline axis landed; the
   /// UI buckets NULL items into "All recent" (the fallback section).
   /// New inserts populate this where the producing skill / agent has a
   /// known discipline tag.
-  discipline      String?
-  workspace       Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  decidedBy       User?              @relation("DecidedBy", fields: [decidedByUserId], references: [id], onDelete: SetNull)
+  discipline             String?
+  /// Wave-6 — when a DisciplineHead is assigned for this item's
+  /// discipline, the routing layer stamps that user's id here so only
+  /// they can approve. NULL means "any qualified member can approve"
+  /// (single-owner workspace default + workspaces with no head assigned).
+  /// The runtime escalation cron that falls back to the owner after N
+  /// days is queued for wave 7; today an unattended head means the item
+  /// sits until reassigned.
+  requiredApproverUserId String?            @db.Uuid
+  workspace              Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  decidedBy              User?              @relation("DecidedBy", fields: [decidedByUserId], references: [id], onDelete: SetNull)
+  requiredApprover       User?              @relation("WorkApprovalRequiredApprover", fields: [requiredApproverUserId], references: [id], onDelete: SetNull)
+  skillRuns              SkillRun[]         @relation("SkillRunQueueItem")
 
   @@index([workspaceId, status])
   @@index([workspaceId, kind, status])
   @@index([workspaceId, discipline, status])
+  @@index([requiredApproverUserId, status])
 }
 
 // Append-only inter-agent handoff log; powers per-listing/per-lead activity feeds.
@@ -1594,4 +1645,127 @@ model LlmUsageRecord {
   /// Daily Stripe cron sweep — only unreported rows. Postgres partial
   /// index keeps the cron's scan tiny once backlog drains.
   @@index([workspaceId, stripeReportedAt], map: "LlmUsageRecord_workspace_meter_idx")
+}
+
+// Wave-6 — sub-workspace grouping. A workspace can have many teams; each
+// member may belong to multiple teams (TeamMembership is the join table).
+// RLS isolates per workspace. Teams DO NOT today gate skill access — that
+// remains workspace-wide. The team axis is the foundation for future
+// per-team discipline scoping; today it powers roster grouping + the
+// future "this team can approve discipline X" rule (wave 7).
+model Team {
+  id              String           @id @default(uuid()) @db.Uuid
+  workspaceId     String           @db.Uuid
+  name            String
+  description     String?
+  createdAt       DateTime         @default(now())
+  createdByUserId String?          @db.Uuid
+  /// Soft delete. Read paths filter `archivedAt IS NULL` unless explicitly
+  /// asked for the archive.
+  archivedAt      DateTime?
+  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy       User?            @relation("TeamCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  memberships     TeamMembership[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, archivedAt])
+}
+
+model TeamMembership {
+  id           String     @id @default(uuid()) @db.Uuid
+  teamId       String     @db.Uuid
+  userId       String     @db.Uuid
+  /// Membership on the workspace — kept as a hard FK so removing a
+  /// workspace-membership cascades the team-membership rows. (User-only
+  /// FK would leave dangling team rows after a workspace removal.)
+  membershipId String     @db.Uuid
+  joinedAt     DateTime   @default(now())
+  team         Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([userId])
+  @@index([membershipId])
+}
+
+// Wave-6 — per-discipline approver routing. When a workspace assigns a
+// head for `legal`, every new WorkApprovalQueueItem with discipline=legal
+// gets `requiredApproverUserId` stamped to that user's id; only they can
+// approve. The runtime escalation cron (fall back to owner after N idle
+// days) is queued for wave 7; today an unattended head means the item
+// sits until reassigned.
+model DisciplineHead {
+  id               String    @id @default(uuid()) @db.Uuid
+  workspaceId      String    @db.Uuid
+  discipline       String
+  userId           String    @db.Uuid
+  assignedAt       DateTime  @default(now())
+  assignedByUserId String?   @db.Uuid
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user             User      @relation("DisciplineHeadUser", fields: [userId], references: [id], onDelete: Cascade)
+  assignedBy       User?     @relation("DisciplineHeadAssignedBy", fields: [assignedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([workspaceId, discipline])
+  @@index([userId])
+}
+
+// Wave-6 — SkillRun audit. Every cron / Inngest entry seam writes a row
+// before any expensive work; the outcome column is updated at end. The
+// per-discipline scorecards (wave-5) used to read approval-queue rows
+// only, which made skipped + failed fires invisible. Wave-6 migrates the
+// scorecards to read from SkillRun so the customer-facing numbers report
+// honestly.
+enum SkillRunOutcome {
+  /// A draft was produced + persisted to the approval queue.
+  DRAFTED
+  /// The skill completed without producing a draft. This is the
+  /// "no-op success" case — the input did not warrant a draft.
+  SUCCEEDED_NO_DRAFT
+  /// The workspace is paused (Stripe / setup / explicit pause). The fire
+  /// was gated upstream and never entered the per-skill body.
+  SKIPPED_PAUSED
+  /// The skill is not installed in this workspace.
+  SKIPPED_UNINSTALLED
+  /// The skill is installed but outside its configured schedule window
+  /// (wave-5 SkillScheduleWindow).
+  SKIPPED_WINDOW
+  /// The discipline this skill belongs to is disabled in the workspace's
+  /// discipline activation map.
+  SKIPPED_DISCIPLINE_DISABLED
+  /// Dry-run flag was set — the skill body executed but is short-circuited
+  /// without writing artifacts.
+  SKIPPED_DRY_RUN
+  /// The skill body threw or returned a structured error. `errorMessage`
+  /// is the cap-truncated error.
+  FAILED
+}
+
+model SkillRun {
+  id           String                 @id @default(uuid()) @db.Uuid
+  workspaceId  String                 @db.Uuid
+  /// Slug from the marketplace registry. NOT a foreign key — skill rows
+  /// don't live in the DB. The runtime is the source of truth.
+  skillSlug    String
+  /// Discipline tag from the registry (one of the 8) — duplicated here so
+  /// the per-discipline scorecard query is a single-table scan.
+  discipline   String?
+  firedAt      DateTime               @default(now())
+  completedAt  DateTime?
+  outcome      SkillRunOutcome
+  durationMs   Int?
+  /// Short error message (cap-truncated at write time) for failed runs.
+  /// Never the full stack — that's logged elsewhere; this column is for
+  /// the customer-facing "why isn't my fleet running" tile.
+  errorMessage String?
+  /// When `outcome=DRAFTED`, links to the approval queue row this run
+  /// produced. SetNull so the run row survives queue-item deletion.
+  queueItemId  String?                @db.Uuid
+  workspace    Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  queueItem    WorkApprovalQueueItem? @relation("SkillRunQueueItem", fields: [queueItemId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, firedAt(sort: Desc)])
+  @@index([workspaceId, skillSlug, firedAt(sort: Desc)])
+  @@index([workspaceId, discipline, firedAt(sort: Desc)])
+  @@index([workspaceId, outcome, firedAt(sort: Desc)])
 }

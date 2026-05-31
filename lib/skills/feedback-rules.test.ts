@@ -132,3 +132,57 @@ describe('DEFAULT_RUNNER_SCOPES — pinned shape', () => {
     ]);
   });
 });
+
+describe('finance scope (wave-5) — surfaces into finance-discipline skills', () => {
+  it('a pref:finance rule rides through buildFeedbackRulesBlock when finance is requested', async () => {
+    const memory = new RecordingMemoryStore(WORKSPACE_ID);
+    await memory.upsert({
+      workspaceId: WORKSPACE_ID,
+      kind: 'FEEDBACK',
+      title: 'pref:finance',
+      body: buildPreferenceMemoryBody({
+        scope: 'finance',
+        rule: 'Always classify expenses over $5,000 as capital expenditure',
+      }),
+      sourceChatMessageId: null,
+    });
+    // finance-discipline skills (finance-pulse, month-end-close,
+    // invoice-chasing) pass scopes: ['finance'] when they call the
+    // feedback-rules reader.
+    const block = await buildFeedbackRulesBlock({
+      memory,
+      workspaceId: WORKSPACE_ID,
+      scopes: ['finance'],
+    });
+    assert.match(block, /\[scope=finance\]/);
+    assert.match(
+      block,
+      /Always classify expenses over \$5,000 as capital expenditure/,
+    );
+  });
+
+  it('a pref:finance rule is EXCLUDED from the default runner scopes (does not bias email loop)', async () => {
+    const memory = new RecordingMemoryStore(WORKSPACE_ID);
+    await memory.upsert({
+      workspaceId: WORKSPACE_ID,
+      kind: 'FEEDBACK',
+      title: 'pref:finance',
+      body: buildPreferenceMemoryBody({
+        scope: 'finance',
+        rule: 'Always classify expenses over $5,000 as capital expenditure',
+      }),
+      sourceChatMessageId: null,
+    });
+    const block = await buildFeedbackRulesBlock({
+      memory,
+      workspaceId: WORKSPACE_ID,
+    });
+    // Default runner scopes do not include `finance`, so the rule
+    // should not appear in a chain-runner-driven prompt assembly.
+    assert.equal(
+      block.includes('capital expenditure'),
+      false,
+      'finance-scope rule should not leak into the default runner scope set',
+    );
+  });
+});

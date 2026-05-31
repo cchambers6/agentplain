@@ -36,6 +36,11 @@
 import { randomUUID } from 'node:crypto';
 import { skillError, skillOk, type DraftPersister, type SkillResult } from '../types';
 import {
+  type EnrichmentResult,
+  renderEnrichmentLine,
+  renderMissingConnectorLine,
+} from './enrichment';
+import {
   DEFAULT_LATE_AFTER_DAYS,
   DEFAULT_REMINDER_IN_DAYS,
   statusFor,
@@ -51,6 +56,12 @@ import {
   type ProposedReminder,
   type ReceivedDoc,
 } from './types';
+
+const EMPTY_ENRICHMENT: EnrichmentResult = {
+  taxdomePendingReceived: null,
+  karbonBlockedJobs: null,
+  karbonActiveWorkflows: null,
+};
 
 const DEFAULT_PERSIST_THRESHOLD = 0.5;
 const MS_PER_DAY = 86_400_000;
@@ -152,6 +163,33 @@ export async function runSkill(
   const bucketCounts: Record<DocStatus, number> = { received: 0, pending: 0, late: 0 };
   for (const i of items) bucketCounts[i.status] += 1;
 
+  // ── CPA-MCP enrichment (best-effort) ─────────────────────────────────
+  // Read TaxDome + Karbon when the caller wired an enrichment source.
+  // A failure here NEVER drops the close — fall back to all-null
+  // enrichment so the chase email + status update still go out.
+  let enrichment: EnrichmentResult = EMPTY_ENRICHMENT;
+  let missingConnectorsNote: string | null = null;
+  if (input.enrichmentSource) {
+    try {
+      enrichment = await input.enrichmentSource.read({
+        workspaceId: input.workspaceId,
+        taxdomeClientId: input.taxdomeClientId ?? null,
+        karbonClientId: input.karbonClientId ?? null,
+      });
+    } catch (err) {
+      console.warn(
+        `month-end-close-cpa: enrichment read failed (continuing without): ${err instanceof Error ? err.message : String(err)}`,
+      );
+      enrichment = EMPTY_ENRICHMENT;
+    }
+    // Only render the missing-connector line when the workspace tried
+    // to enrich — otherwise we'd fabricate a "Connect TaxDome + Karbon"
+    // nag on every close, even for workspaces with no CPA connectors
+    // wired by design.
+    missingConnectorsNote = renderMissingConnectorLine(enrichment);
+  }
+  const enrichmentLine = renderEnrichmentLine(enrichment);
+
   // ── Build chase emails (batched per recipient) ───────────────────────
   const itemsToChase = items.filter(
     (i) => (i.status === 'pending' || i.status === 'late') && needsChase(i, checklist),
@@ -161,6 +199,7 @@ export async function runSkill(
     items: itemsToChase,
     checklist,
     now,
+    enrichmentLine,
   });
 
   // ── Persist chase drafts ─────────────────────────────────────────────
@@ -183,7 +222,7 @@ export async function runSkill(
   }));
 
   // ── Build client status update ───────────────────────────────────────
-  const statusUpdate = buildStatusUpdate({ engagement, items, now });
+  const statusUpdate = buildStatusUpdate({ engagement, items, now, enrichmentLine });
   if (input.persister && statusUpdate.confidence >= persistThreshold) {
     await persistStatusUpdate(input.persister, {
       workspaceId: input.workspaceId,
@@ -212,6 +251,8 @@ export async function runSkill(
     reminders,
     statusUpdate,
     closeReady,
+    enrichment,
+    missingConnectorsNote,
   });
 }
 
@@ -269,6 +310,7 @@ function buildChaseEmails(args: {
   items: ChecklistItemStatus[];
   checklist: ChecklistItem[];
   now: Date;
+  enrichmentLine: string | null;
 }): ChaseEmailDraft[] {
   const { engagement, items } = args;
   if (items.length === 0) return [];
@@ -287,12 +329,15 @@ function buildChaseEmails(args: {
     },
   ];
 
-  return groups.map((group) => renderChaseDraft({ engagement, group }));
+  return groups.map((group) =>
+    renderChaseDraft({ engagement, group, enrichmentLine: args.enrichmentLine }),
+  );
 }
 
 function renderChaseDraft(args: {
   engagement: ClientEngagement;
   group: ChaseGroup;
+  enrichmentLine: string | null;
 }): ChaseEmailDraft {
   const { engagement, group } = args;
   const periodLabel = formatPeriod(engagement.periodMonth);
@@ -307,7 +352,7 @@ function renderChaseDraft(args: {
     return `  - ${i.label}${past}`;
   });
 
-  const body = [
+  const bodyLines = [
     greeting,
     '',
     `We are working through your ${periodLabel} month-end close and the items below ` +
@@ -321,6 +366,14 @@ function renderChaseDraft(args: {
       ? 'A couple of these are past the target receipt date — sending today would help ' +
         'us avoid pushing the close back.'
       : 'No rush, but the sooner these land the smoother the close.',
+  ];
+  if (args.enrichmentLine) {
+    bodyLines.push('');
+    bodyLines.push(
+      `On our side, ${args.enrichmentLine} We are working through those alongside this chase.`,
+    );
+  }
+  bodyLines.push(
     '',
     'If you have already sent any of these, please disregard — sometimes the doc ' +
       'portal lag means we are chasing something that is on its way. Reply with ' +
@@ -332,7 +385,8 @@ function renderChaseDraft(args: {
     '',
     'Thank you,',
     '{{operator: signature}}',
-  ].join('\n');
+  );
+  const body = bodyLines.join('\n');
 
   // Confidence:
   //  - Late items raise the urgency but lower confidence (the CSM should
@@ -361,6 +415,7 @@ function buildStatusUpdate(args: {
   engagement: ClientEngagement;
   items: ChecklistItemStatus[];
   now: Date;
+  enrichmentLine: string | null;
 }): ClientStatusUpdate {
   const { engagement, items } = args;
   const periodLabel = formatPeriod(engagement.periodMonth);
@@ -414,6 +469,11 @@ function buildStatusUpdate(args: {
         `the partner review takes about {{operator: turnaround days}} business days ` +
         `before final reports go out.`,
     );
+  }
+
+  if (args.enrichmentLine) {
+    blocks.push('');
+    blocks.push(`In the meantime on our side: ${args.enrichmentLine}`);
   }
 
   blocks.push('');

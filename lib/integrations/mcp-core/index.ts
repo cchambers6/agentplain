@@ -42,3 +42,8 @@ export {
   type RefreshFn,
   type ResolveArgs,
 } from './credential';
+
+export {
+  resolveApiKeyCredential,
+  type ResolveApiKeyArgs,
+} from './api-key-credential';

@@ -261,6 +261,13 @@ enum IntegrationProvider {
   // far-future date to satisfy the schema's non-null constraint).
   // The MCP server lives at `lib/integrations/follow-up-boss-mcp/`.
   FOLLOW_UP_BOSS
+  // CPA-vertical API-key integrations (wave 5). Both store the key in
+  // `accessTokenEncrypted`, leave `refreshTokenEncrypted` NULL, and pin
+  // `expiresAt` far in the future — they never refresh. Non-secret
+  // routing (TaxDome portal subdomain, Karbon AccessKey) lives in
+  // `providerMetadata`.
+  TAXDOME
+  KARBON
 }
 
 // Credential lifecycle states. ACTIVE = tokens valid and refresh-eligible.

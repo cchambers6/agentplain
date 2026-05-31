@@ -206,6 +206,17 @@ enum WorkApprovalKind {
   RESEARCH_BRIEF
   CONTENT_CALENDAR
   COMPLIANCE_DIGEST
+  // Wave-4 — closes the 8th discipline (finance) end-to-end.
+  //   FINANCE_PULSE — weekly Monday read of the workspace's finance posture:
+  //                   how many invoice-chase / month-end-close drafts the
+  //                   fleet produced + decided, and (when QuickBooks is
+  //                   connected) AR aging + open-invoice + expense counts
+  //                   pulled through the QuickBooks MCP. Composed by
+  //                   `lib/skills/finance-pulse-general`. Honest degraded
+  //                   mode when QB is not connected — the pulse still fires
+  //                   but the body names the "connect QuickBooks for richer
+  //                   pulse" gap instead of fabricating numbers.
+  FINANCE_PULSE
 }
 
 enum WorkApprovalStatus {

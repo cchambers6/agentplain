@@ -535,6 +535,54 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
     runtime: 'live',
   },
   {
+    slug: 'finance-pulse-general',
+    name: 'Finance — weekly pulse',
+    vertical: 'all',
+    description:
+      'Plaino reads your finance posture once a week — invoice-chase drafts ' +
+      'produced, month-end-close drafts produced, finance approvals decided, ' +
+      'and (when QuickBooks is connected) AR aging plus open-invoice counts ' +
+      'pulled through the QuickBooks MCP. Drafts ONE pulse into /approvals ' +
+      'on Mondays. When QuickBooks is not connected, the pulse still fires ' +
+      'but names the gap explicitly rather than fabricating AR numbers. ' +
+      'Per project_no_outbound_architecture.md, nothing leaves the workspace.',
+    kind: 'draft',
+    mcpDependencies: [
+      {
+        provider: 'quickbooks',
+        status: 'built',
+        note:
+          'AR aging + open-invoice + expense counts ride the existing QuickBooks ' +
+          'MCP (lib/integrations/quickbooks-mcp). When QB is not connected the ' +
+          'snapshot reports `connected: false` with an honest reason; the pulse ' +
+          'still fires + names the gap rather than fabricating numbers.',
+      },
+      {
+        provider: 'work-approval-queue',
+        status: 'built',
+        note:
+          'PrismaFinancePulseApprovalSink persists each pulse as a WorkApprovalQueueItem ' +
+          '(kind=FINANCE_PULSE, discipline=finance).',
+      },
+      {
+        provider: 'anthropic-llm',
+        status: 'built',
+        note:
+          'Pulse prose composes through the provider-neutral LlmProvider. Templated ' +
+          'fallback emits on quiet weeks / malformed JSON so the row still lands honestly.',
+      },
+    ],
+    groundedIn: [
+      'project_no_outbound_architecture.md',
+      'feedback_no_silent_vendor_lock.md',
+      'feedback_runner_portability.md',
+      'feedback_cold_start_safe_agents.md',
+      'feedback_no_guesses_no_estimates.md (no fabricated AR when QB is dark)',
+      'docs/fleet-autonomy-audit-2026-05-28.md §10 (finance: PARTIAL pre-wave-4)',
+    ],
+    runtime: 'live',
+  },
+  {
     slug: 'compliance-watch-general',
     name: 'Legal — compliance watch',
     vertical: 'all',

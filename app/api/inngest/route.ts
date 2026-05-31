@@ -35,6 +35,9 @@ import { complianceWatchSweepFn } from "@/lib/inngest/functions/compliance-watch
 // Wave-3 realty CRM sync — hourly Follow Up Boss → lead-triage → CRM
 // write-back of triage decision.
 import { followUpBossSyncSweepFn } from "@/lib/inngest/functions/follow-up-boss-sync-sweep";
+// Wave-4 discipline-wrap closer — flips finance from PARTIAL →
+// DELIVERING by giving every workspace a weekly finance pulse.
+import { financePulseSweepFn } from "@/lib/inngest/functions/finance-pulse-sweep";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -58,5 +61,6 @@ export const { GET, POST, PUT } = serve({
     contentCalendarSweepFn,
     complianceWatchSweepFn,
     followUpBossSyncSweepFn,
+    financePulseSweepFn,
   ],
 });

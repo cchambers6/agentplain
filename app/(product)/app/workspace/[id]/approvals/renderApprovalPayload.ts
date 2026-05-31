@@ -95,6 +95,8 @@ const KIND_LABEL: Record<WorkApprovalKind, string> = {
   RESEARCH_BRIEF: "research brief",
   CONTENT_CALENDAR: "weekly content calendar",
   COMPLIANCE_DIGEST: "compliance digest",
+  // Wave-4 — finance discipline closer (2026-05-29).
+  FINANCE_PULSE: "weekly finance pulse",
 };
 
 export function renderApprovalPayload(
@@ -149,6 +151,8 @@ export function renderApprovalPayload(
       return renderContentCalendar(p);
     case "COMPLIANCE_DIGEST":
       return renderComplianceDigest(p);
+    case "FINANCE_PULSE":
+      return renderFinancePulse(p);
     default: {
       const _exhaustive: never = kind;
       // Runtime safety: if a new enum value reaches production before the
@@ -1098,5 +1102,53 @@ function renderComplianceDigest(p: Record<string, unknown>): RenderedApproval {
     title: forDate ? `Compliance digest · ${forDate}` : "Compliance digest",
     body: lines.length > 0 ? lines : ["No match details attached."],
     metaLine: metaParts.join(" · "),
+  };
+}
+
+function renderFinancePulse(p: Record<string, unknown>): RenderedApproval {
+  const body = pickString(p, ["body"]) ?? "(no pulse body attached)";
+  const forWeek = pickString(p, ["forWeekStarting"]);
+  const recommendations = pickStringArray(p, ["recommendations"]);
+  const internal = isRecord(p.internal) ? (p.internal as Record<string, unknown>) : null;
+  const quickbooks = isRecord(p.quickbooks)
+    ? (p.quickbooks as Record<string, unknown>)
+    : null;
+  const llmComposed = p.llmComposed === true;
+  const lines = splitParagraphs(body);
+  if (recommendations.length > 0) {
+    lines.push("");
+    lines.push("Suggested next-week actions:");
+    for (const r of recommendations) {
+      lines.push(`• ${r}`);
+    }
+  }
+  const metaParts: string[] = [];
+  if (forWeek) metaParts.push(`week of ${forWeek}`);
+  if (internal) {
+    const ic = pickNumber(internal, ["invoiceChaseDrafts"]);
+    const me = pickNumber(internal, ["monthEndCloseDrafts"]);
+    if (typeof ic === "number") metaParts.push(`${ic} invoice chases`);
+    if (typeof me === "number") metaParts.push(`${me} month-end-close drafts`);
+  }
+  if (quickbooks) {
+    if (quickbooks.connected === true && isRecord(quickbooks.summary)) {
+      const s = quickbooks.summary as Record<string, unknown>;
+      const open = pickNumber(s, ["openInvoices"]);
+      const overdue = pickNumber(s, ["overdueInvoices"]);
+      if (typeof open === "number") {
+        metaParts.push(
+          `QuickBooks: ${open} open${typeof overdue === "number" ? `, ${overdue} overdue` : ""}`,
+        );
+      }
+    } else if (quickbooks.connected === false) {
+      metaParts.push("QuickBooks: not connected");
+    }
+  }
+  if (!llmComposed) metaParts.push("templated (LLM skipped or fallback)");
+  return {
+    kindLabel: KIND_LABEL.FINANCE_PULSE,
+    title: forWeek ? `Finance pulse · week of ${forWeek}` : "Finance pulse",
+    body: lines.length > 0 ? lines : ["No body attached."],
+    metaLine: metaParts.length > 0 ? metaParts.join(" · ") : undefined,
   };
 }

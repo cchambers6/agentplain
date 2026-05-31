@@ -52,6 +52,14 @@ export function isProviderConfigured(provider: MarketplaceProviderKey): boolean 
       );
     case "SLACK":
       return Boolean(env.slackOAuthClientId() && env.slackOAuthClientSecret());
+    case "HUBSPOT":
+      return Boolean(env.hubspotOAuthClientId() && env.hubspotOAuthClientSecret());
+    case "SALESFORCE":
+      return Boolean(
+        env.salesforceOAuthClientId() && env.salesforceOAuthClientSecret(),
+      );
+    case "NOTION":
+      return Boolean(env.notionOAuthClientId() && env.notionOAuthClientSecret());
     case null:
     default:
       return false;

@@ -42,6 +42,12 @@ import { financePulseSweepFn } from "@/lib/inngest/functions/finance-pulse-sweep
 // Stripe Checkout now move through a nudge → deactivate → archive
 // lifecycle instead of running forever on the free side.
 import { stripeAbandonedSignupSweepFn } from "@/lib/inngest/functions/stripe-abandoned-signup-sweep";
+// Wave-7 — universal MCPs. Notion ingests pages into the substrate.
+// HubSpot + Salesforce sync inbound leads into lead-triage and write
+// triage decisions back as notes/tasks.
+import { notionIngestSweepFn } from "@/lib/inngest/functions/notion-ingest-sweep";
+import { hubspotSyncSweepFn } from "@/lib/inngest/functions/hubspot-sync-sweep";
+import { salesforceSyncSweepFn } from "@/lib/inngest/functions/salesforce-sync-sweep";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,5 +73,8 @@ export const { GET, POST, PUT } = serve({
     followUpBossSyncSweepFn,
     financePulseSweepFn,
     stripeAbandonedSignupSweepFn,
+    notionIngestSweepFn,
+    hubspotSyncSweepFn,
+    salesforceSyncSweepFn,
   ],
 });

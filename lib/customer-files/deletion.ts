@@ -77,10 +77,22 @@ export function customerFileSourceNamesForProvider(
       // metadata.source='fixture' get cleaned up alongside the OAuth
       // disconnect during dogfood resets.
       return ['google-drive', 'fixture'];
+    case 'NOTION':
+      // Wave-7 — `NotionFileSource.name === 'notion'`. Disconnecting
+      // Notion must purge the workspace's ingested Notion pages from
+      // the knowledge substrate (privacy bar from the wave-7 brief).
+      return ['notion'];
     case 'M365':
     case 'DOCUSIGN':
     case 'QUICKBOOKS':
     case 'SLACK':
+    case 'FOLLOW_UP_BOSS':
+    case 'SIERRA_INTERACTIVE':
+    case 'BOLDTRAIL':
+    case 'TAXDOME':
+    case 'KARBON':
+    case 'HUBSPOT':
+    case 'SALESFORCE':
     case null:
     default:
       return [];

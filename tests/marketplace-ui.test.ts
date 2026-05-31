@@ -48,6 +48,8 @@ describe("marketplace catalog", () => {
     // today + the two waiting on partner agreements.
     // Wave-5 adds taxdome + karbon as available CPA-vertical API-key
     // connectors.
+    // Wave-7 flips hubspot to available + appends salesforce and notion
+    // as the three universal MCPs. All three use OAuth.
     assert.deepEqual(ids, [
       "gmail",
       "outlook",
@@ -69,8 +71,10 @@ describe("marketplace catalog", () => {
       "boldtrail",
       "lofty",
       "real-geeks",
+      "salesforce",
+      "notion",
     ]);
-    assert.equal(entries.length, 20, "marketplace surface size is the architectural contract");
+    assert.equal(entries.length, 22, "marketplace surface size is the architectural contract");
   });
 
   it("Gmail + the M365 integrations are available with the right provider keys", () => {
@@ -103,9 +107,10 @@ describe("marketplace catalog", () => {
     // and Real Geeks. All require partner-program API access that
     // agentplain has NOT yet completed — listed honestly to keep the
     // catalog from over-promising.
+    // Wave-7 removes hubspot from coming-soon (it is now wired).
     assert.deepEqual(
       soon.map((e) => e.id),
-      ["hubspot", "paypal", "canva", "kvcore", "boldtrail", "lofty", "real-geeks"],
+      ["paypal", "canva", "kvcore", "boldtrail", "lofty", "real-geeks"],
     );
     for (const e of soon) {
       assert.equal(e.providerKey, null, `${e.id} has no DB rows yet`);
@@ -243,12 +248,13 @@ describe("OAuth start URL builders", () => {
   });
 
   it("an integration with no OAuth builder raises rather than building a URL", () => {
-    // hubspot is still coming-soon and has no buildAuthorizeUrl branch.
+    // Wave-7 wired hubspot/salesforce/notion. paypal/canva remain
+    // coming-soon with no buildAuthorizeUrl branch.
     assert.throws(
       () =>
         buildAuthorizeUrl({
-          integrationId: "hubspot",
-          scopes: ["crm.objects.contacts.read"],
+          integrationId: "paypal",
+          scopes: ["openid", "transactions.read"],
           state: "x",
           origin: "https://app.agentplain.test",
           googleClientId: "g",
@@ -365,7 +371,9 @@ describe("marketplace tile prop mapping", () => {
   });
 
   it("coming-soon entries always map to status=coming-soon, even if a row exists", () => {
-    const entry = getMarketplaceEntry("hubspot")!;
+    // Wave-7 wired hubspot — using `paypal` here as the still-coming-soon
+    // entry whose derivation must stay coming-soon under all conditions.
+    const entry = getMarketplaceEntry("paypal")!;
     // No DB rows ever exist for coming-soon entries (providerKey is null),
     // but the derivation must still hold if a future migration backfilled.
     const connectedByProvider = new Map<string, unknown>();

@@ -105,7 +105,10 @@ export interface DecryptedCredential {
     | 'SIERRA_INTERACTIVE'
     | 'BOLDTRAIL'
     | 'TAXDOME'
-    | 'KARBON';
+    | 'KARBON'
+    | 'HUBSPOT'
+    | 'SALESFORCE'
+    | 'NOTION';
   accountId: string;
   accountEmail: string;
   accessToken: string;

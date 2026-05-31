@@ -227,6 +227,37 @@ export const env = {
   slackOAuthClientId: () => optional("SLACK_OAUTH_CLIENT_ID"),
   slackOAuthClientSecret: () => optional("SLACK_OAUTH_CLIENT_SECRET"),
 
+  // ── HubSpot OAuth — authorization-code grant ────────────────────────────
+  // Wave 7 universal CRM. HubSpot uses long-lived refresh tokens (NOT
+  // rotated on refresh). The hub id (portal id) is captured from
+  // /oauth/v1/access-tokens/{token} at connect time and persisted on
+  // `IntegrationCredential.accountId` + `providerMetadata.hubId`.
+  hubspotOAuthClientId: () => optional("HUBSPOT_OAUTH_CLIENT_ID"),
+  hubspotOAuthClientSecret: () => optional("HUBSPOT_OAUTH_CLIENT_SECRET"),
+
+  // ── Salesforce OAuth — authorization-code grant ─────────────────────────
+  // Wave 7 universal CRM. Salesforce returns an `instance_url` on the
+  // token response (e.g. https://yourorg.my.salesforce.com); we persist
+  // it on `providerMetadata.instanceUrl` so the MCP server hits the
+  // right org host. Refresh tokens are long-lived.
+  // Per the honest-concession bar: customers using their own Connected
+  // App for production sharing/distribution need partner-program
+  // enrollment; sandbox + customer-installed dev apps work without it.
+  salesforceOAuthClientId: () => optional("SALESFORCE_OAUTH_CLIENT_ID"),
+  salesforceOAuthClientSecret: () => optional("SALESFORCE_OAUTH_CLIENT_SECRET"),
+  /** Login host. Defaults to production login.salesforce.com; tests +
+   *  sandbox use test.salesforce.com. */
+  salesforceLoginHost: () =>
+    optional("SALESFORCE_LOGIN_HOST") ?? "https://login.salesforce.com",
+
+  // ── Notion OAuth ────────────────────────────────────────────────────────
+  // Wave 7 universal knowledge surface. Notion uses public-OAuth where
+  // the customer authorizes a workspace; access token is workspace-scoped
+  // and DOES NOT EXPIRE (no refresh path), so we store with a sentinel
+  // far-future expiresAt and null refresh token.
+  notionOAuthClientId: () => optional("NOTION_OAUTH_CLIENT_ID"),
+  notionOAuthClientSecret: () => optional("NOTION_OAUTH_CLIENT_SECRET"),
+
   // Custom-inquiry destination. Submissions from `/custom`'s contact form
   // are emailed to this address. Defaults to the public hello@ inbox so
   // dev/preview submissions don't silently disappear when the var is unset.

@@ -94,6 +94,12 @@ export default async function SettingsPage({ params }: PageProps) {
         "Constrain a skill to your business hours, weekdays only, or any window you choose.",
     },
     {
+      href: `/app/workspace/${workspaceId}/settings/discipline-heads`,
+      label: "discipline heads",
+      description:
+        "Nominate one person to approve everything in a given discipline — legal, finance, marketing. Each discipline can have a different head, or none.",
+    },
+    {
       href: `/app/workspace/${workspaceId}/settings/passkeys`,
       label: "sign-in & security",
       description: "Add a passkey for faster sign-in. Email links still work.",

@@ -118,6 +118,12 @@ export const PREFERENCE_SCOPE_IDS = [
   'content',
   'research',
   'analytics',
+  // Finance discipline scope (wave 5). Lets customers write rules that
+  // finance-pulse-general + month-end-close-cpa + invoice-chasing-realestate
+  // all read at fire time — e.g. "always classify expenses over $5,000 as
+  // capital expenditure" or "treat owner-distribution receipts as
+  // priority-review". The skills read `general` + `finance` together.
+  'finance',
 ] as const;
 export type PreferenceScopeId = (typeof PREFERENCE_SCOPE_IDS)[number];
 

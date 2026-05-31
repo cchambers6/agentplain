@@ -19,6 +19,7 @@ import {
   entryAppliesToVertical,
 } from "@/lib/integrations/marketplace";
 import { isIntegrationConfigured } from "@/lib/integrations/config-status";
+import { buildSkillScorecard, type SkillScorecard } from "@/lib/skills/skill-scorecard";
 import { getVerticalContent } from "@/lib/verticals";
 
 interface PageProps {
@@ -77,6 +78,27 @@ export default async function DisciplineDetailPage({ params }: PageProps) {
       (s.vertical === "all" || s.vertical === verticalSlug) &&
       SKILL_DISCIPLINE[s.slug] === validId,
   );
+
+  // Build per-skill scorecards in parallel. Each card consults
+  // WorkApprovalQueueItem + WorkspaceSkillInstallation +
+  // WorkspaceMemoryEntry under RLS.
+  const scorecards: SkillScorecard[] = await withRls(ctx, async (tx) =>
+    Promise.all(
+      skillsForDiscipline.map((s) =>
+        buildSkillScorecard({
+          tx,
+          workspaceId,
+          skillSlug: s.slug,
+          disciplineId: validId,
+        }),
+      ),
+    ),
+  );
+  // Pair each card with its catalog entry (name + runtime status).
+  const scorecardEntries = skillsForDiscipline.map((s, i) => ({
+    catalog: s,
+    card: scorecards[i],
+  }));
 
   return (
     <div>
@@ -197,6 +219,98 @@ export default async function DisciplineDetailPage({ params }: PageProps) {
                 </div>
               </ApHairlineRow>
             ))}
+          </ApHairlineList>
+        )}
+      </section>
+
+      <section className="mt-10" aria-labelledby="scorecard-heading">
+        <h2
+          id="scorecard-heading"
+          className="font-mono text-[11px] tracking-eyebrow uppercase text-mute"
+        >
+          scorecard — skills in {discipline.name.toLowerCase()}
+        </h2>
+        {scorecardEntries.length === 0 ? (
+          <ApRootedEmptyState
+            motif="horizon"
+            reality={`No skills live in this discipline for your vertical yet.`}
+            change={`Once a discipline-tagged skill ships, its draft + acceptance + last-fire numbers will land here.`}
+          />
+        ) : (
+          <ApHairlineList className="mt-3" aria-label="Skill scorecards">
+            {scorecardEntries.map(({ catalog, card }) => {
+              const lastFireLabel =
+                card.lastFireIso === null
+                  ? "never"
+                  : new Date(card.lastFireIso).toLocaleString();
+              const acceptanceLabel =
+                card.acceptanceRate7d === null
+                  ? "—"
+                  : `${Math.round(card.acceptanceRate7d * 100)}%`;
+              const installLabel =
+                card.installState === "installed"
+                  ? "installed"
+                  : card.installState === "uninstalled"
+                    ? "uninstalled"
+                    : "not installed";
+              const isRooted =
+                card.installState !== "installed" || card.draftsLast7d === 0;
+              return (
+                <ApHairlineRow
+                  key={`scorecard-${catalog.slug}`}
+                  right={
+                    <span className="font-mono text-[11px] uppercase text-mute">
+                      {installLabel}
+                    </span>
+                  }
+                >
+                  <div>
+                    <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                      {catalog.slug}
+                    </p>
+                    <p className="mt-1 font-display text-lg text-ink">
+                      {catalog.name}
+                    </p>
+                    {isRooted ? (
+                      <p className="mt-2 text-[13px] leading-relaxed text-mute">
+                        {card.installState !== "installed"
+                          ? `Not running on your workspace yet — install from /marketplace to bring it into the fleet.`
+                          : `Installed — nothing fired in the last 7 days yet.`}
+                      </p>
+                    ) : (
+                      <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-[13px] text-ink-soft md:grid-cols-4">
+                        <div>
+                          <dt className="font-mono text-[10px] uppercase text-mute">
+                            drafts · 7d
+                          </dt>
+                          <dd className="text-ink">{card.draftsLast7d}</dd>
+                        </div>
+                        <div>
+                          <dt className="font-mono text-[10px] uppercase text-mute">
+                            accepted · 7d
+                          </dt>
+                          <dd className="text-ink">{acceptanceLabel}</dd>
+                        </div>
+                        <div>
+                          <dt className="font-mono text-[10px] uppercase text-mute">
+                            last fire
+                          </dt>
+                          <dd className="text-ink">{lastFireLabel}</dd>
+                        </div>
+                        <div>
+                          <dt className="font-mono text-[10px] uppercase text-mute">
+                            rules applied
+                          </dt>
+                          <dd className="text-ink">
+                            {card.feedbackRuleCount}
+                          </dd>
+                        </div>
+                      </dl>
+                    )}
+                  </div>
+                </ApHairlineRow>
+              );
+            })}
           </ApHairlineList>
         )}
       </section>

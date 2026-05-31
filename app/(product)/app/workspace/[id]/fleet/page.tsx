@@ -8,6 +8,7 @@ import { getVerticalContent } from "@/lib/verticals";
 import type { AgentRosterEntry } from "@/lib/verticals/types";
 import { ActivityStream, type ActivityStreamRow } from "./ActivityStream";
 import { FleetMap } from "./FleetMap";
+import { SkillFiresFeed, type SkillFireRow } from "./SkillFiresFeed";
 import { TalkToFleet } from "./TalkToFleet";
 import { TodoBoard, type ApprovalBoardCard } from "./TodoBoard";
 
@@ -49,6 +50,7 @@ export default async function FleetPage({ params }: PageProps) {
     ratifiedRecently,
     recentOwnerRequests,
     handoffGrouped,
+    recentSkillFires,
   ] = await Promise.all([
     withRls(ctx, (tx) =>
       tx.workspace.findUniqueOrThrow({
@@ -105,6 +107,24 @@ export default async function FleetPage({ params }: PageProps) {
       }
       return byAgent;
     }),
+    // Skill-fires feed — last 20 approval-queue rows across all
+    // disciplines, surfaced as a "what fired" panel separate from
+    // the activity stream (which speaks the handoff-log shape).
+    withRls(ctx, (tx) =>
+      tx.workApprovalQueueItem.findMany({
+        where: { workspaceId },
+        orderBy: { proposedAt: "desc" },
+        take: 20,
+        select: {
+          id: true,
+          agentSlug: true,
+          discipline: true,
+          proposedAt: true,
+          status: true,
+          kind: true,
+        },
+      }),
+    ),
   ]);
 
   const verticalSlug = verticalSlugFromEnum(workspace.vertical);
@@ -208,6 +228,20 @@ export default async function FleetPage({ params }: PageProps) {
         readyForYou={readyForYou}
         ratifiedRecently={ratifiedBoard}
         partner={partner}
+      />
+
+      <SkillFiresFeed
+        workspaceId={workspaceId}
+        rows={recentSkillFires.map(
+          (r): SkillFireRow => ({
+            id: r.id,
+            skillSlug: r.agentSlug,
+            discipline: r.discipline,
+            proposedAtIso: r.proposedAt.toISOString(),
+            status: r.status,
+            kind: r.kind,
+          }),
+        )}
       />
 
       <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">

@@ -55,6 +55,7 @@ import {
 } from '@/lib/skills/config';
 import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
 import { isWorkspacePaused } from '@/lib/billing/workspace-paused-gate';
+import { gateSkillFire, type FireGateOutcome } from '@/lib/skills/fire-gate';
 import type { Vertical } from '@prisma/client';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
@@ -87,6 +88,10 @@ export interface FollowUpChaserSweepResult {
   /** Wave-2 marketplace gate — workspace explicitly uninstalled the
    *  skill from /marketplace. */
   workspacesSkippedNotInstalled: number;
+  /** Wave-5 customer-control gate — workspace is paused (vacation/PTO/
+   *  cutover) OR the per-skill scheduling window excludes the
+   *  current moment. */
+  workspacesSkippedFireGate: number;
   nudgesWritten: number;
   failures: Array<{ workspaceId: string; reason: string }>;
 }
@@ -119,6 +124,10 @@ export interface RunFollowUpChaserSweepArgs {
    *  WorkspaceSkillInstallation via the system context. Default: live
    *  marketplace reader. */
   isInstalled?: (workspaceId: string, vertical: Vertical) => Promise<boolean>;
+  /** Wave-5 customer-control gate override. Tests pass a deterministic
+   *  result; production leaves undefined and the live reader hits
+   *  WorkspacePauseConfig + SkillScheduleWindow via the system context. */
+  gateFire?: (workspaceId: string) => Promise<FireGateOutcome>;
 }
 
 /**
@@ -140,6 +149,7 @@ export async function runFollowUpChaserSweep(
     workspacesSkippedUnconfigured: 0,
     workspacesSkippedDisciplineDisabled: 0,
     workspacesSkippedNotInstalled: 0,
+    workspacesSkippedFireGate: 0,
     nudgesWritten: 0,
     failures: [],
   };
@@ -180,6 +190,25 @@ export async function runFollowUpChaserSweep(
         }).catch(() => true));
     if (!installed) {
       result.workspacesSkippedNotInstalled += 1;
+      continue;
+    }
+
+    // Gate 4 (wave-5): vacation/PTO + scheduling-window check. The
+    // gate skips fires honestly — no LLM cost, no /approvals row. The
+    // skipped count surfaces on the per-discipline scorecard.
+    const gateResult = await (args.gateFire
+      ? args.gateFire(ws.id)
+      : withSystemContext((tx) =>
+          gateSkillFire({
+            tx,
+            workspaceId: ws.id,
+            skillSlug: 'follow-up-chaser-general',
+            disciplineId: FOLLOW_UP_DISCIPLINE_ID,
+            now,
+          }),
+        ).catch((): FireGateOutcome => ({ allowed: true })));
+    if (!gateResult.allowed) {
+      result.workspacesSkippedFireGate += 1;
       continue;
     }
 

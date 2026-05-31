@@ -37,6 +37,8 @@ export type MarketplaceProviderKey =
   | 'QUICKBOOKS'
   | 'SLACK'
   | 'FOLLOW_UP_BOSS'
+  | 'TAXDOME'
+  | 'KARBON'
   | null;
 
 /** How a connector authenticates. `oauth` = the existing OAuth start /
@@ -318,6 +320,42 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     providerKey: null,
     disciplines: ['finance'],
     verticalRelevance: 'all',
+  },
+  {
+    id: 'taxdome',
+    name: 'TaxDome',
+    category: 'Documents',
+    description:
+      'Your service partner reads the docs your clients upload — surfaces what is pending review, and brings client-document state into your month-end close drafts.',
+    mcpEndpointTemplate: '/api/integrations/taxdome-mcp/{workspaceId}',
+    // API-key flow — the customer pastes the key from Account → API
+    // Keys in TaxDome. We do not request OAuth scopes.
+    scopes: [],
+    oauthConfigKey: 'TAXDOME_API_KEY',
+    status: 'available',
+    providerKey: 'TAXDOME',
+    disciplines: ['finance', 'operations'],
+    // CPA + small bookkeeping firms; hidden for realty workspaces by
+    // default. The vertical slug here matches the SLUG_TO_ENUM key.
+    // CPA + future bookkeeping vertical (`cpa` is the current slug;
+    // when a `bookkeeping` slug lands the tile auto-applies).
+    verticalRelevance: ['cpa'],
+  },
+  {
+    id: 'karbon',
+    name: 'Karbon',
+    category: 'Documents',
+    description:
+      'Your service partner reads workflows, jobs, and recurring tasks so you can see what is in flight and what is blocked — and so close drafts reflect what is actually happening.',
+    mcpEndpointTemplate: '/api/integrations/karbon-mcp/{workspaceId}',
+    scopes: [],
+    oauthConfigKey: 'KARBON_API_KEY',
+    status: 'available',
+    providerKey: 'KARBON',
+    disciplines: ['finance', 'operations'],
+    // CPA + future bookkeeping vertical (`cpa` is the current slug;
+    // when a `bookkeeping` slug lands the tile auto-applies).
+    verticalRelevance: ['cpa'],
   },
   {
     id: 'canva',

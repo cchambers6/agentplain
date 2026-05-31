@@ -37,7 +37,7 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
     isOperator: false,
   };
 
-  const [pendingApprovals, openFlags, recentHandoffs, workspace, onboarding] =
+  const [pendingApprovals, openFlags, recentHandoffs, workspace, onboarding, activePause] =
     await Promise.all([
       withRls(ctx, (tx) =>
         tx.workApprovalQueueItem.count({
@@ -62,6 +62,22 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
       ),
       withRls(ctx, (tx) =>
         tx.onboardingState.findUnique({ where: { workspaceId } }),
+      ),
+      // Wave-5 active-pause banner. Pull the first currently-active
+      // pause (if any) so the overview can render "Plaino is paused"
+      // above the headline. We surface only `pausedUntil` +
+      // discipline scope — the encrypted reason stays out of the
+      // overview to keep the banner non-PII.
+      withRls(ctx, (tx) =>
+        tx.workspacePauseConfig.findFirst({
+          where: {
+            workspaceId,
+            pausedFrom: { lte: new Date() },
+            pausedUntil: { gt: new Date() },
+          },
+          select: { pausedUntil: true, pausedDisciplineIds: true },
+          orderBy: { pausedUntil: "desc" },
+        }),
       ),
     ]);
 
@@ -100,6 +116,30 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
 
   return (
     <div className="space-y-10">
+      {activePause ? (
+        <aside
+          role="status"
+          className="rounded-md border border-rule bg-paper-deep p-4 text-[14px] text-ink"
+        >
+          <p>
+            <span className="font-mono text-[11px] uppercase text-mute">
+              fleet paused
+            </span>{" "}
+            {partner} is paused
+            {activePause.pausedDisciplineIds.length > 0
+              ? ` for: ${activePause.pausedDisciplineIds.join(", ")}`
+              : ""}{" "}
+            — resuming {new Date(activePause.pausedUntil).toLocaleString()}.{" "}
+            <Link
+              href={`/app/workspace/${workspaceId}/settings/pause`}
+              className="underline-offset-4 hover:underline"
+            >
+              manage →
+            </Link>
+          </p>
+        </aside>
+      ) : null}
+
       <header className="border-b border-rule pb-8">
         <ApEyebrow>
           {timeOfDayLabel()}, {firstName}

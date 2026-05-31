@@ -83,6 +83,52 @@ describe('runFollowUpChaserSweep — workspaces with no email credential are ski
   });
 });
 
+describe('runFollowUpChaserSweep — wave-5 fire-gate denies a workspace (vacation/window)', () => {
+  it('skips the workspace cleanly and increments workspacesSkippedFireGate', async () => {
+    const result = await runFollowUpChaserSweep({
+      listCandidates: async () => [
+        {
+          id: WORKSPACE_GOOGLE,
+          vertical: 'REAL_ESTATE',
+          hasGoogle: true,
+          hasM365: false,
+          disabledDisciplines: [],
+        },
+      ],
+      buildFetcher: () => new EmptyFollowUpFetcher(),
+      isInstalled: async () => true,
+      gateFire: async () => ({
+        allowed: false,
+        reason: 'workspace-paused',
+        detail: 'Workspace paused through 2026-06-01T00:00:00.000Z.',
+      }),
+    });
+    assert.equal(result.workspacesConsidered, 1);
+    assert.equal(result.workspacesSkippedFireGate, 1);
+    assert.equal(result.workspacesWithNudges, 0);
+    assert.equal(result.nudgesWritten, 0);
+    assert.equal(result.failures.length, 0);
+  });
+
+  it('allowed gate result does NOT increment the skip counter (sanity)', async () => {
+    const result = await runFollowUpChaserSweep({
+      listCandidates: async () => [
+        {
+          id: WORKSPACE_GOOGLE,
+          vertical: 'REAL_ESTATE',
+          hasGoogle: true,
+          hasM365: false,
+          disabledDisciplines: [],
+        },
+      ],
+      buildFetcher: () => new EmptyFollowUpFetcher(),
+      isInstalled: async () => true,
+      gateFire: async () => ({ allowed: true }),
+    });
+    assert.equal(result.workspacesSkippedFireGate, 0);
+  });
+});
+
 describe('runFollowUpChaserSweep — workspaces with the discipline disabled are skipped', () => {
   it('honors WorkspacePreference.disabledDisciplines', async () => {
     const result = await runFollowUpChaserSweep({

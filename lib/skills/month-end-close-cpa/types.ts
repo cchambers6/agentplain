@@ -217,6 +217,17 @@ export interface MonthEndCloseOutput {
   statusUpdate: ClientStatusUpdate;
   /** True when every required item is received AND partner has signed off. */
   closeReady: boolean;
+  /** Enrichment counts pulled from CPA-workflow MCPs (TaxDome +
+   *  Karbon). null entries mean the workspace has not connected that
+   *  vendor (or a credential error prevented the read). Skill renders
+   *  these counts into the chase email + status update when the
+   *  values are non-null > 0. Per the wave-5 honesty bar: missing
+   *  connectors get named explicitly in `missingConnectorsNote`. */
+  enrichment: import('./enrichment').EnrichmentResult;
+  /** One-line note naming which CPA connectors would deepen the next
+   *  close if connected. null when both TaxDome + Karbon already are
+   *  connected. */
+  missingConnectorsNote: string | null;
 }
 
 export interface MonthEndCloseInput {
@@ -236,6 +247,19 @@ export interface MonthEndCloseInput {
   lateAfterDays?: number;
   /** Days from `now` to schedule the second-touch reminder. Default 3. */
   reminderInDays?: number;
+  /** Optional CPA-MCP enrichment source. When provided, the skill calls
+   *  it AFTER the fetcher returns and inlines TaxDome+Karbon-derived
+   *  counts into the chase email + status update. When omitted, the
+   *  draft stays at fetcher-only depth and `enrichment` on the output
+   *  carries all-null counts. */
+  enrichmentSource?: import('./enrichment').EnrichmentSource | null;
+  /** Karbon client id paired with the QuickBooks clientId for the
+   *  TaxDome/Karbon enrichment lookup. When omitted, the enrichment
+   *  reader runs at the firm level (no per-client filter). */
+  karbonClientId?: string | null;
+  /** TaxDome client id paired with the QuickBooks clientId for the
+   *  enrichment lookup. Same fallback as `karbonClientId` when omitted. */
+  taxdomeClientId?: string | null;
 }
 
 // ── Status helpers ──────────────────────────────────────────────────────

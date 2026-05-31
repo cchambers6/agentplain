@@ -123,6 +123,11 @@ export interface ProcessDocInput {
   lookbackDays?: number;
   /** Sink-confidence threshold. */
   sinkThreshold?: number;
+  /** Wave-4 — opt-in LLM provider for FEEDBACK-rule refinement. */
+  llm?: import('../../llm/types').LlmProvider;
+  /** Wave-4 — rendered FEEDBACK rules block (already in plain text).
+   *  Empty = no LLM refinement (heuristic-only). */
+  feedbackRulesBlock?: string;
 }
 
 export interface ProcessDocOutput {

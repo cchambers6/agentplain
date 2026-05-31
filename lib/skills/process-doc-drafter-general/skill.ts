@@ -19,6 +19,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { skillError, skillOk, type SkillResult } from '../types';
+import { maybeRefineProcessDoc } from './llm-refine';
 import {
   DEFAULT_MAX_PROPOSALS_PER_RUN,
   DEFAULT_MIN_OCCURRENCES,
@@ -58,7 +59,7 @@ export async function runSkill(
     snapshot.existingProcessDocs.map((d) => normalizeTitle(d.title)),
   );
 
-  const proposals: ProcessDocProposal[] = [];
+  let proposals: ProcessDocProposal[] = [];
   // Sort clusters by occurrence count desc — most frequent patterns first.
   const sortedKeys = [...clusters.keys()].sort(
     (a, b) => (clusters.get(b)!.length - clusters.get(a)!.length),
@@ -85,6 +86,22 @@ export async function runSkill(
     proposals.push(proposal);
   }
 
+  // Wave-4 — opt-in LLM refinement seam. When BOTH `llm` and
+  // `feedbackRulesBlock` are provided, the LLM can DROP proposals or
+  // RE-TITLE them per FEEDBACK rules. Errors fall through to the pure
+  // heuristic output.
+  let refineNote = '';
+  if (input.llm && (input.feedbackRulesBlock ?? '').trim().length > 0) {
+    const refined = await maybeRefineProcessDoc({
+      llm: input.llm,
+      feedbackRulesBlock: input.feedbackRulesBlock ?? '',
+      proposals,
+      workspaceId: input.workspaceId,
+    });
+    proposals = refined.proposals;
+    refineNote = refined.note;
+  }
+
   let sunk = 0;
   if (input.sink) {
     for (const proposal of proposals) {
@@ -103,7 +120,10 @@ export async function runSkill(
     patternsFound: [...clusters.values()].filter((arr) => arr.length >= minOccurrences).length,
     proposals,
     sunk,
-    noOutboundNote: NO_OUTBOUND_NOTE,
+    noOutboundNote:
+      refineNote.length > 0
+        ? `${NO_OUTBOUND_NOTE} ${refineNote}`
+        : NO_OUTBOUND_NOTE,
   });
 }
 

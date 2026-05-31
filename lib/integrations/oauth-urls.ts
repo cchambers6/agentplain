@@ -11,6 +11,9 @@
  */
 
 import { GoogleOAuth } from "./google/oauth";
+import { buildHubspotAuthorizeUrl } from "./hubspot/oauth";
+import { buildSalesforceAuthorizeUrl } from "./salesforce/oauth";
+import { buildNotionAuthorizeUrl } from "./notion/oauth";
 
 export interface BuildAuthorizeUrlArgs {
   integrationId: string;
@@ -25,6 +28,10 @@ export interface BuildAuthorizeUrlArgs {
   docusignBaseUri?: string;
   quickbooksClientId?: string;
   slackClientId?: string;
+  hubspotClientId?: string;
+  salesforceClientId?: string;
+  salesforceLoginHost?: string;
+  notionClientId?: string;
 }
 
 export function buildAuthorizeUrl(args: BuildAuthorizeUrlArgs): string {
@@ -138,6 +145,57 @@ export function buildAuthorizeUrl(args: BuildAuthorizeUrlArgs): string {
       clientId: args.microsoftClientId,
       redirectUri,
       scopes: args.scopes,
+      state: args.state,
+    });
+  }
+  if (args.integrationId === "hubspot") {
+    if (!args.hubspotClientId) {
+      throw new Error(
+        "HubSpot OAuth not configured. Set HUBSPOT_OAUTH_CLIENT_ID and HUBSPOT_OAUTH_CLIENT_SECRET.",
+      );
+    }
+    const redirectUri = new URL(
+      "/api/integrations/hubspot/oauth/callback",
+      args.origin,
+    ).toString();
+    return buildHubspotAuthorizeUrl({
+      clientId: args.hubspotClientId,
+      redirectUri,
+      scopes: args.scopes,
+      state: args.state,
+    });
+  }
+  if (args.integrationId === "salesforce") {
+    if (!args.salesforceClientId) {
+      throw new Error(
+        "Salesforce OAuth not configured. Set SALESFORCE_OAUTH_CLIENT_ID and SALESFORCE_OAUTH_CLIENT_SECRET.",
+      );
+    }
+    const redirectUri = new URL(
+      "/api/integrations/salesforce/oauth/callback",
+      args.origin,
+    ).toString();
+    return buildSalesforceAuthorizeUrl({
+      loginHost: args.salesforceLoginHost ?? "https://login.salesforce.com",
+      clientId: args.salesforceClientId,
+      redirectUri,
+      scopes: args.scopes,
+      state: args.state,
+    });
+  }
+  if (args.integrationId === "notion") {
+    if (!args.notionClientId) {
+      throw new Error(
+        "Notion OAuth not configured. Set NOTION_OAUTH_CLIENT_ID and NOTION_OAUTH_CLIENT_SECRET.",
+      );
+    }
+    const redirectUri = new URL(
+      "/api/integrations/notion/oauth/callback",
+      args.origin,
+    ).toString();
+    return buildNotionAuthorizeUrl({
+      clientId: args.notionClientId,
+      redirectUri,
       state: args.state,
     });
   }

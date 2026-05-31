@@ -41,6 +41,9 @@ export type MarketplaceProviderKey =
   | 'BOLDTRAIL'
   | 'TAXDOME'
   | 'KARBON'
+  | 'HUBSPOT'
+  | 'SALESFORCE'
+  | 'NOTION'
   | null;
 
 /** How a connector authenticates. `oauth` = the existing OAuth start /
@@ -238,12 +241,23 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     name: 'HubSpot',
     category: 'CRM',
     description:
-      'Your service partner keeps contacts, deals, and tasks clean — and surfaces what needs your attention.',
+      'Your service partner reads your contacts, deals, and companies, drafts updates into /approvals, and writes triage decisions back to HubSpot as notes — you decide what to send from your own email.',
     mcpEndpointTemplate: '/api/integrations/hubspot-mcp/{workspaceId}',
-    scopes: ['crm.objects.contacts.read', 'crm.objects.deals.read', 'tickets'],
+    // HubSpot fine-grained scopes. `oauth` is required as the base scope;
+    // the per-object scopes unlock CRM v3 reads + writes. We do NOT
+    // request mail/messaging scopes per the no-outbound rule.
+    scopes: [
+      'oauth',
+      'crm.objects.contacts.read',
+      'crm.objects.contacts.write',
+      'crm.objects.deals.read',
+      'crm.objects.deals.write',
+      'crm.objects.companies.read',
+      'crm.objects.companies.write',
+    ],
     oauthConfigKey: 'HUBSPOT_OAUTH',
-    status: 'coming-soon',
-    providerKey: null,
+    status: 'available',
+    providerKey: 'HUBSPOT',
     disciplines: ['sales-enablement', 'marketing', 'customer-success'],
     verticalRelevance: 'all',
   },
@@ -498,6 +512,58 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     providerKey: null,
     disciplines: ['sales-enablement', 'customer-success'],
     verticalRelevance: ['real-estate'],
+  },
+  // ── Wave-7 universal MCPs ───────────────────────────────────────────
+  // Salesforce + Notion join HubSpot (above) as the three customer-
+  // installable, universal MCPs. They serve every vertical and unlock
+  // the SMB market beyond realty/CPA. All three use OAuth 2.0.
+  //
+  // HONEST CONCESSION (Salesforce): customer-installed dev apps work
+  // without partner-program enrollment. Production SHARING/distribution
+  // through Salesforce AppExchange does require Connected App security
+  // review; until that lands, each customer installs their own Connected
+  // App and pastes its client id/secret. The wiring + degraded mode
+  // tolerate that path.
+  {
+    id: 'salesforce',
+    name: 'Salesforce',
+    category: 'CRM',
+    description:
+      'Your service partner reads your leads, opportunities, and accounts, drafts updates into /approvals, and writes tasks back to Salesforce — you decide what to send from your own email.',
+    mcpEndpointTemplate: '/api/integrations/salesforce-mcp/{workspaceId}',
+    // Salesforce OAuth scopes. `api` covers the standard data API;
+    // `refresh_token` issues a long-lived refresh token; `offline_access`
+    // is alias-equivalent on newer Salesforce orgs. We do NOT request
+    // `full` to keep the grant minimal.
+    scopes: ['api', 'refresh_token'],
+    oauthConfigKey: 'SALESFORCE_OAUTH',
+    status: 'available',
+    providerKey: 'SALESFORCE',
+    disciplines: ['sales-enablement', 'customer-success', 'marketing'],
+    verticalRelevance: 'all',
+  },
+  {
+    id: 'notion',
+    name: 'Notion',
+    category: 'Documents',
+    description:
+      'Your service partner reads your Notion pages and databases, ingests them into your workspace knowledge base, and surfaces what is relevant when you ask — and drafts new pages back when there is work to file.',
+    mcpEndpointTemplate: '/api/integrations/notion-mcp/{workspaceId}',
+    // Notion does not use granular OAuth scopes — capability is set by
+    // the integration type configured on the Notion side (internal vs
+    // public) + which pages the user shares. The scopes array is kept
+    // decorative for the catalog UI.
+    scopes: [
+      'workspace:read',
+      'page:read',
+      'page:write',
+      'database:read',
+    ],
+    oauthConfigKey: 'NOTION_OAUTH',
+    status: 'available',
+    providerKey: 'NOTION',
+    disciplines: ['operations', 'research', 'marketing'],
+    verticalRelevance: 'all',
   },
 ];
 

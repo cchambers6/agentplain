@@ -163,6 +163,10 @@ export async function GET(req: NextRequest, ctx: RouteContext): Promise<NextResp
       docusignBaseUri: env.docusignOAuthBaseUri(),
       quickbooksClientId: env.quickbooksOAuthClientId(),
       slackClientId: env.slackOAuthClientId(),
+      hubspotClientId: env.hubspotOAuthClientId(),
+      salesforceClientId: env.salesforceOAuthClientId(),
+      salesforceLoginHost: env.salesforceLoginHost(),
+      notionClientId: env.notionOAuthClientId(),
     });
   } catch {
     // Same calm landing as the pre-check above — never strand the user on a

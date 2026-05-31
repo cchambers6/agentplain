@@ -302,6 +302,21 @@ enum IntegrationProvider {
   // `providerMetadata`.
   TAXDOME
   KARBON
+  // Wave-7 universal MCPs. Customer-installable, available across every
+  // vertical (the wave-1 to wave-6 integrations were vertical-locked).
+  // HubSpot: OAuth2 + long-lived refresh tokens; hub id on
+  //   providerMetadata.hubId; MCP at `lib/integrations/hubspot-mcp/`.
+  // Salesforce: OAuth2 + instance URL discovery; instance host on
+  //   providerMetadata.instanceUrl; MCP at `lib/integrations/salesforce-mcp/`.
+  //   Customer-installed dev apps work without partner enrollment; production
+  //   sharing requires Connected App enrollment.
+  // Notion: workspace-scoped OAuth; access token never expires (no refresh);
+  //   bot id + workspace name on providerMetadata; MCP at
+  //   `lib/integrations/notion-mcp/`. Connect fires a background substrate-
+  //   ingest job that populates pgvector for research-on-demand.
+  HUBSPOT
+  SALESFORCE
+  NOTION
 }
 
 // Credential lifecycle states. ACTIVE = tokens valid and refresh-eligible.

@@ -15,6 +15,27 @@ import {
 import { isIntegrationConfigured } from "@/lib/integrations/config-status";
 import { DisconnectButton } from "./DisconnectButton";
 import { TestConnectionButton } from "./TestConnectionButton";
+import { ApiKeyConnectForm } from "./ApiKeyConnectForm";
+
+/** Wave-4 — map of `entry.id` → the POST endpoint that validates +
+ *  persists an API-key credential. Each entry here MUST exist as a
+ *  Next route under `app/api/integrations/<id>/connect/route.ts`. */
+const API_KEY_CONNECT_URL: Record<string, string> = {
+  "follow-up-boss": "/api/integrations/follow-up-boss/connect",
+  sierra: "/api/integrations/sierra/connect",
+  boldtrail: "/api/integrations/boldtrail/connect",
+};
+
+/** Help text shown under each connector's API-key form. The value tells
+ *  the operator where in the provider's UI to find their key. */
+const API_KEY_HELP_TEXT: Record<string, string> = {
+  "follow-up-boss":
+    "Paste your key from Follow Up Boss → My Profile → API Key. Your service partner validates it with FUB before saving.",
+  sierra:
+    "Paste your key from Sierra Interactive → Settings → API Access. Your service partner validates it with Sierra before saving.",
+  boldtrail:
+    "Paste your key from BoldTrail → Settings → API. Your service partner validates it with BoldTrail before saving.",
+};
 
 interface PageProps {
   params: Promise<{ id: string; integrationId: string }>;
@@ -112,7 +133,7 @@ export default async function IntegrationSettingsPage({
         </div>
       )}
 
-      {!isComingSoon && !isConnected && isConfigured && (
+      {!isComingSoon && !isConnected && isConfigured && entry.connectMode !== "api-key" && (
         <div className="mt-8">
           <ApRootedEmptyState
             motif="lone-tree"
@@ -130,6 +151,24 @@ export default async function IntegrationSettingsPage({
           />
         </div>
       )}
+
+      {!isComingSoon && !isConnected && isConfigured && entry.connectMode === "api-key" &&
+        API_KEY_CONNECT_URL[entry.id] && (
+          <div className="mt-8">
+            <ApRootedEmptyState
+              motif="lone-tree"
+              reality={`Not connected yet.`}
+              change={`Paste your ${entry.name} API key below to connect. Your service partner validates it with ${entry.name} before saving anything to your workspace.`}
+            />
+            <ApiKeyConnectForm
+              workspaceId={workspaceId}
+              integrationName={entry.name}
+              connectUrl={API_KEY_CONNECT_URL[entry.id]}
+              successRedirectUrl={`/app/workspace/${workspaceId}/integrations/${entry.id}`}
+              helpText={API_KEY_HELP_TEXT[entry.id]}
+            />
+          </div>
+        )}
 
       {!isComingSoon && !isConnected && !isConfigured && (
         <div className="mt-8">

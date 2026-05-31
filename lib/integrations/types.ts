@@ -95,7 +95,17 @@ export interface DecryptedCredential {
    *  self-contained MCP servers that resolve + refresh credentials directly
    *  (see `lib/integrations/<vendor>-mcp/auth.ts`), so they never flow
    *  through `getProvider()`. This is the runtime credential view only. */
-  provider: 'GOOGLE' | 'M365' | 'DOCUSIGN' | 'QUICKBOOKS' | 'SLACK' | 'FOLLOW_UP_BOSS' | 'TAXDOME' | 'KARBON';
+  provider:
+    | 'GOOGLE'
+    | 'M365'
+    | 'DOCUSIGN'
+    | 'QUICKBOOKS'
+    | 'SLACK'
+    | 'FOLLOW_UP_BOSS'
+    | 'SIERRA_INTERACTIVE'
+    | 'BOLDTRAIL'
+    | 'TAXDOME'
+    | 'KARBON';
   accountId: string;
   accountEmail: string;
   accessToken: string;

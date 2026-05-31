@@ -272,6 +272,17 @@ enum IntegrationProvider {
   // far-future date to satisfy the schema's non-null constraint).
   // The MCP server lives at `lib/integrations/follow-up-boss-mcp/`.
   FOLLOW_UP_BOSS
+  // Wave-4 realty CRMs. Both Sierra Interactive and BoldTrail expose a
+  // per-account API key the brokerage owner pastes in once — no OAuth
+  // partner enrollment required. Same accessTokenEncrypted-as-API-key
+  // pattern as FOLLOW_UP_BOSS; refresh token + expiresAt unused.
+  // Sierra MCP at `lib/integrations/sierra-mcp/`; BoldTrail at
+  // `lib/integrations/boldtrail-mcp/`. Each exposes the same 6-tool
+  // surface (list_leads, get_lead, create_note, add_tag, list_pipelines,
+  // get_pipeline_stage) so the lead-triage skill consumes them through
+  // one provider-neutral port.
+  SIERRA_INTERACTIVE
+  BOLDTRAIL
   // CPA-vertical API-key integrations (wave 5). Both store the key in
   // `accessTokenEncrypted`, leave `refreshTokenEncrypted` NULL, and pin
   // `expiresAt` far in the future — they never refresh. Non-secret

@@ -1,0 +1,11 @@
+-- Wave-3 realty CRM integration. Follow Up Boss is the most-shared realty
+-- CRM among small independent brokerages (the wave-2 deferred list per
+-- PR #123). The MCP server at lib/integrations/follow-up-boss-mcp/ uses
+-- HTTP Basic auth with an API key the customer pastes into the connect
+-- form — the key is encrypted at rest in the existing
+-- IntegrationCredential.accessTokenEncrypted column.
+--
+-- kvCORE is NOT added — its public API requires partner enrollment that
+-- agentplain hasn't completed; the marketplace lists kvCORE as
+-- `coming-soon` so the catalog stays honest.
+ALTER TYPE "IntegrationProvider" ADD VALUE IF NOT EXISTS 'FOLLOW_UP_BOSS';

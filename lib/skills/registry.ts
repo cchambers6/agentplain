@@ -412,6 +412,168 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
     runtime: 'live',
   },
   {
+    slug: 'analytics-weekly-pulse-general',
+    name: 'Analytics — weekly pulse',
+    vertical: 'all',
+    description:
+      'Plaino reads your workspace activity from the last seven days — approvals ' +
+      'proposed and decided, draft acceptance rate by skill, /talk turns, learned ' +
+      'notes — and drafts one calm weekly pulse into /approvals on Mondays. The ' +
+      'pulse names what worked, where the fleet was underused, and one concrete ' +
+      'thing to lean into next week. Counts only — never quotes a customer-facing ' +
+      'draft body. Per project_no_outbound_architecture.md, nothing leaves the workspace.',
+    kind: 'draft',
+    mcpDependencies: [
+      {
+        provider: 'work-approval-queue',
+        status: 'built',
+        note:
+          'PrismaPulseApprovalSink persists each pulse as a WorkApprovalQueueItem ' +
+          '(kind=ANALYTICS_PULSE, discipline=analytics).',
+      },
+      {
+        provider: 'anthropic-llm',
+        status: 'built',
+        note:
+          'Pulse prose composes through the provider-neutral LlmProvider. ' +
+          'Templated fallback emits when the LLM call fails or returns malformed JSON.',
+      },
+    ],
+    groundedIn: [
+      'project_no_outbound_architecture.md',
+      'feedback_no_silent_vendor_lock.md',
+      'feedback_runner_portability.md',
+      'feedback_cold_start_safe_agents.md',
+      'docs/fleet-autonomy-audit-2026-05-28.md §10 (analytics: NOT-DELIVERING)',
+    ],
+    runtime: 'live',
+  },
+  {
+    slug: 'research-on-demand-general',
+    name: 'Research — on-demand brief',
+    vertical: 'all',
+    description:
+      'Plaino picks up research-tagged instructions from /talk, queries your ' +
+      'workspace\'s own knowledge substrate for relevant context, and drafts a ' +
+      'structured brief — summary, key findings, gaps, sources. The brief is ' +
+      'GROUNDED ON YOUR KNOWLEDGE BASE ONLY; web search is not wired today and ' +
+      'every brief NAMES that limitation so the scope stays honest. When the ' +
+      'substrate returns nothing relevant, the brief says so plainly rather than ' +
+      'fabricating. Per project_no_outbound_architecture.md the brief lands in ' +
+      'the approval queue — never sent.',
+    kind: 'draft',
+    mcpDependencies: [
+      {
+        provider: 'knowledge-substrate',
+        status: 'built',
+        note:
+          'Substrate access rides retrieveCustomerContext (the MCP-fronted boundary) ' +
+          'via CustomerFilesResearchSubstrate. Two impls of IResearchSubstratePort ' +
+          '(production + recording) per the two-implementation rule.',
+      },
+      {
+        provider: 'work-approval-queue',
+        status: 'built',
+        note:
+          'The brief is rendered into the existing PLAINO_INSTRUCTION row the ' +
+          'dispatcher created — no new approval-queue kind needed; the discipline ' +
+          'tag is "research" so the approvals page facets it correctly.',
+      },
+      {
+        provider: 'web-search',
+        status: 'stubbed-json',
+        note:
+          'No public web-search adapter is wired today. Every brief includes a ' +
+          '"web search not wired" gap so the customer sees the honest scope.',
+      },
+    ],
+    groundedIn: [
+      'project_no_outbound_architecture.md',
+      'feedback_no_silent_vendor_lock.md',
+      'feedback_no_guesses_no_estimates.md',
+      'feedback_runner_portability.md',
+      'project_mcp_first_integration_architecture.md',
+      'docs/fleet-autonomy-audit-2026-05-28.md §10 (research: NOT-DELIVERING)',
+    ],
+    runtime: 'live',
+  },
+  {
+    slug: 'content-calendar-drafter-general',
+    name: 'Marketing — weekly content calendar',
+    vertical: 'all',
+    description:
+      'Plaino drafts a 5-day content calendar for the upcoming week — one ' +
+      'evergreen topic per business day with channel hint + short hook. ' +
+      'Grounded on your vertical + the workspace\'s recent activity + any ' +
+      'FEEDBACK rules you\'ve set under email-draft / customer-comms. The ' +
+      'calendar is a draft for you to edit + own; agentplain NEVER posts to ' +
+      'social or sends an email blast. Per project_no_outbound_architecture.md.',
+    kind: 'draft',
+    mcpDependencies: [
+      {
+        provider: 'work-approval-queue',
+        status: 'built',
+        note:
+          'PrismaCalendarApprovalSink persists each calendar as a WorkApprovalQueueItem ' +
+          '(kind=CONTENT_CALENDAR, discipline=marketing).',
+      },
+      {
+        provider: 'anthropic-llm',
+        status: 'built',
+        note:
+          'Calendar composes through the provider-neutral LlmProvider. Templated ' +
+          'fallback emits 5 placeholder rows with operator merge fields when the LLM ' +
+          'returns malformed JSON.',
+      },
+    ],
+    groundedIn: [
+      'project_no_outbound_architecture.md',
+      'feedback_no_silent_vendor_lock.md',
+      'feedback_runner_portability.md',
+      'docs/fleet-autonomy-audit-2026-05-28.md §10 (marketing: NOT-DELIVERING)',
+    ],
+    runtime: 'live',
+  },
+  {
+    slug: 'compliance-watch-general',
+    name: 'Legal — compliance watch',
+    vertical: 'all',
+    description:
+      'Plaino sweeps the last 24 hours of approval drafts every morning, ' +
+      'running each draft body through your vertical\'s sentinel corpus AND a ' +
+      'built-in PII pattern set (SSN, card-number, API-key blobs). When the ' +
+      'sweep finds matches, it drafts ONE digest into /approvals naming what ' +
+      'was flagged and which drafts to review before approving. When nothing ' +
+      'is flagged, no row lands — the legal discipline only surfaces on real ' +
+      'findings. Sentinel ADVISES; nothing is blocked or edited automatically. ' +
+      'Per project_no_outbound_architecture.md.',
+    kind: 'triage',
+    mcpDependencies: [
+      {
+        provider: 'sentinel-corpus',
+        status: 'built',
+        note:
+          'Reads the existing per-vertical sentinel corpus via loadCorpusFor + ' +
+          'scanCorpus — no new corpus rules ship in this skill, just a new caller.',
+      },
+      {
+        provider: 'work-approval-queue',
+        status: 'built',
+        note:
+          'Reads + writes WorkApprovalQueueItem rows. Reads the trailing 24h of ' +
+          'drafts (decrypting payload bodies via the existing v1 envelope) and ' +
+          'writes one COMPLIANCE_DIGEST row when matches are found.',
+      },
+    ],
+    groundedIn: [
+      'project_no_outbound_architecture.md',
+      'feedback_no_silent_vendor_lock.md',
+      'feedback_runner_portability.md',
+      'docs/fleet-autonomy-audit-2026-05-28.md §10 (legal: NOT-DELIVERING ex-realty)',
+    ],
+    runtime: 'live',
+  },
+  {
     slug: 'invoice-chasing-realestate',
     name: 'Commission invoice chasing — real estate',
     vertical: 'real-estate',

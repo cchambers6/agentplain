@@ -43,13 +43,17 @@ import {
 } from '@/lib/skills/persist-artifacts';
 import { runInboxTriageForEvent } from '@/lib/skills/inbox-triage-general/run-for-event';
 import { runVerticalRouter } from '@/lib/skills/vertical-router';
-import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
+import {
+  isSkillInstalledForWorkspace,
+  resolveInstallationStatus,
+} from '@/lib/skills/marketplace';
 import { asDisciplineId } from '@/lib/disciplines';
 import { SKILL_DISCIPLINE } from '@/lib/disciplines/skill-mapping';
 import type { DraftPersister, MessageFetcher } from '@/lib/skills/types';
 import { getWorkspacePreference } from '@/lib/preferences';
 import { retrieveCustomerContext } from '@/lib/customer-files';
 import { PrismaMemoryStore } from '@/lib/plaino/memory';
+import { isWorkspacePaused } from '@/lib/billing/workspace-paused-gate';
 import {
   decideRetry,
   readyForProcessingFilter,
@@ -133,6 +137,43 @@ export async function processUnprocessedWebhookEvents(
       continue;
     }
     try {
+      // Wave-3 phase 5 — PAUSED/PAST_DUE feature gate. The billing
+      // surface promised "agents pause until billing is current"; this
+      // is the runtime enforcement seam. Read the subscription status
+      // before any LLM call so a paused workspace pays nothing and no
+      // approval row lands in /approvals.
+      const pauseState = await isWorkspacePaused({ workspaceId: workspace.id });
+      if (pauseState.isPaused) {
+        await withSystemContext((tx) =>
+          tx.webhookEvent.update({
+            where: { id: event.id },
+            data: {
+              processed: true,
+              processedAt: new Date(),
+              error: null,
+              attemptCount: { increment: 1 },
+              nextAttemptAt: null,
+            },
+          }),
+        );
+        await withSystemContext((tx) =>
+          tx.auditLog.create({
+            data: {
+              workspaceId: workspace.id,
+              action: 'skills.loop.paused_for_billing',
+              targetTable: 'WebhookEvent',
+              targetId: event.id,
+              payload: {
+                subscriptionStatus: pauseState.status,
+                reason: pauseState.reason,
+              },
+            },
+          }),
+        );
+        result.succeeded += 1;
+        continue;
+      }
+
       const adapter = buildAdapterForProvider(credential.provider, workspace.id);
 
       // Read durable state per fire (no in-memory cache between events —
@@ -157,6 +198,20 @@ export async function processUnprocessedWebhookEvents(
       const memoryStore = new PrismaMemoryStore(workspace.id, {
         ctx: SYSTEM_OPERATOR_CONTEXT,
       });
+      // Wave-3 phase 3: compute the workspace's installed-skill set
+      // once per event so runSkillChain can gate office-admin etc.
+      // without doing the lookup itself. Errors fall back to "all
+      // installed" rather than dropping the loop on a transient DB blip.
+      const installedSkillSlugs = await resolveInstallationStatus({
+        workspaceId: workspace.id,
+        workspaceVertical: workspace.vertical,
+      })
+        .then(
+          (rows) =>
+            new Set(rows.filter((r) => r.installed).map((r) => r.slug)),
+        )
+        .catch(() => undefined);
+
       const { record, outcome } = await runSkillChain({
         workspace,
         event,
@@ -170,6 +225,8 @@ export async function processUnprocessedWebhookEvents(
         // draft, compliance) without firing the LLM. Closes the wave-1
         // audit gap "biggest runtime path currently ungated."
         disabledDisciplineIds: workspacePreferences?.disabledDisciplines ?? [],
+        // Wave-3 marketplace install gate.
+        installedSkillSlugs,
       });
 
       const artifacts = await persistSkillRunArtifacts({

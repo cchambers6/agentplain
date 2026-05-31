@@ -182,6 +182,30 @@ enum WorkApprovalKind {
   // contract — the broker's CRM picks up routing; their email sends.
   // See lib/skills/lead-triage-realestate + lib/skills/vertical-router.ts.
   LEAD_TRIAGE
+  // Wave-3 discipline-wrap kinds. Each maps one cron / event handler
+  // to a draft an operator reviews on /approvals. Closes the four
+  // NOT-DELIVERING disciplines from the 2026-05-28 fleet-autonomy
+  // audit (§10).
+  //   ANALYTICS_PULSE  — weekly Monday read of workspace activity,
+  //                      composed by lib/skills/analytics-weekly-pulse-
+  //                      general into a "Plaino's week in your workspace"
+  //                      brief surfaced under the analytics discipline.
+  //   RESEARCH_BRIEF   — drafted by lib/skills/research-on-demand-general
+  //                      when /talk classifies an instruction as research
+  //                      discipline. Substrate-grounded with explicit
+  //                      gaps when nothing matched.
+  //   CONTENT_CALENDAR — weekly Monday content suggestions composed by
+  //                      lib/skills/content-calendar-drafter-general
+  //                      under the marketing discipline.
+  //   COMPLIANCE_DIGEST — daily 8am sweep by lib/skills/compliance-
+  //                       watch-general flagging high-risk patterns
+  //                       (PII, regulatory keywords for the vertical,
+  //                       missing disclaimers) in last 24h of approval
+  //                       drafts. Legal discipline.
+  ANALYTICS_PULSE
+  RESEARCH_BRIEF
+  CONTENT_CALENDAR
+  COMPLIANCE_DIGEST
 }
 
 enum WorkApprovalStatus {
@@ -230,6 +254,13 @@ enum IntegrationProvider {
   DOCUSIGN
   QUICKBOOKS
   SLACK
+  // Wave-3 realty CRM. Follow Up Boss is the most-shared realty CRM
+  // among small independent brokerages and exposes a self-serve API key
+  // (HTTP Basic auth — `accessTokenEncrypted` holds the key; refresh
+  // token + expiresAt are unused; `expiresAt` is set to a sentinel
+  // far-future date to satisfy the schema's non-null constraint).
+  // The MCP server lives at `lib/integrations/follow-up-boss-mcp/`.
+  FOLLOW_UP_BOSS
 }
 
 // Credential lifecycle states. ACTIVE = tokens valid and refresh-eligible.
@@ -337,57 +368,57 @@ enum WorkspaceMemoryKind {
 }
 
 model User {
-  id                   String                  @id @default(uuid()) @db.Uuid
-  email                String                  @unique @db.Citext
+  id                   String                       @id @default(uuid()) @db.Uuid
+  email                String                       @unique @db.Citext
   name                 String?
-  isOperator           Boolean                 @default(false)
-  createdAt            DateTime                @default(now())
-  updatedAt            DateTime                @updatedAt
+  isOperator           Boolean                      @default(false)
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
   memberships          Membership[]
-  decidedItems         WorkApprovalQueueItem[] @relation("DecidedBy")
-  configuredThresholds WorkThresholdConfig[]   @relation("ConfiguredBy")
-  configuredSkills     SkillConfig[]           @relation("SkillConfigBy")
+  decidedItems         WorkApprovalQueueItem[]      @relation("DecidedBy")
+  configuredThresholds WorkThresholdConfig[]        @relation("ConfiguredBy")
+  configuredSkills     SkillConfig[]                @relation("SkillConfigBy")
   installedSkills      WorkspaceSkillInstallation[] @relation("SkillInstalledBy")
-  auditEntriesActor    AuditLog[]              @relation("AuditActor")
-  auditEntriesActAs    AuditLog[]              @relation("AuditActingAs")
+  auditEntriesActor    AuditLog[]                   @relation("AuditActor")
+  auditEntriesActAs    AuditLog[]                   @relation("AuditActingAs")
   magicLinkTokens      MagicLinkToken[]
-  triagedInquiries     Inquiry[]               @relation("InquiryTriagedBy")
+  triagedInquiries     Inquiry[]                    @relation("InquiryTriagedBy")
   passkeys             WebAuthnCredential[]
-  supportRequests      SupportRequest[]        @relation("SupportRequestFrom")
+  supportRequests      SupportRequest[]             @relation("SupportRequestFrom")
 
   @@index([email])
 }
 
 model Workspace {
-  id                       String                  @id @default(uuid()) @db.Uuid
+  id                       String                       @id @default(uuid()) @db.Uuid
   name                     String
-  slug                     String                  @unique
+  slug                     String                       @unique
   // Phase 1 audience tier (legacy). See WorkspaceTier comment.
-  tier                     WorkspaceTier           @default(HIGH_TOUCH)
+  tier                     WorkspaceTier                @default(HIGH_TOUCH)
   // Canonical per-seat tier (product_spec.md §13.1). Drives pricing, gating,
   // and the marketing/[vertical] CTAs. Required on every workspace; defaults
   // REGULAR so existing Phase 1 realty workspaces backfill cleanly.
-  verticalTier             WorkspaceVerticalTier   @default(REGULAR)
+  verticalTier             WorkspaceVerticalTier        @default(REGULAR)
   // Vertical the workspace operates in. Required, defaults REAL_ESTATE for
   // Phase 1 backfill. Spec §13.2 lines 444–453.
-  vertical                 Vertical                @default(REAL_ESTATE)
-  stateCode                String                  @default("GA") @db.VarChar(2)
-  billingMode              WorkspaceBillingMode    @default(MANUAL_INVOICE)
-  stripeCustomerId         String?                 @unique
-  stripeSubscriptionId     String?                 @unique
+  vertical                 Vertical                     @default(REAL_ESTATE)
+  stateCode                String                       @default("GA") @db.VarChar(2)
+  billingMode              WorkspaceBillingMode         @default(MANUAL_INVOICE)
+  stripeCustomerId         String?                      @unique
+  stripeSubscriptionId     String?                      @unique
   tierPriceUsdMonthly      Int? // hundredths of a dollar; populated for manual invoicing
-  settings                 Json                    @default("{}")
+  settings                 Json                         @default("{}")
   // Customer-initiated closure state. Flipped by
   // `lib/customer-data/closure.ts#initiateWorkspaceClosure` (BROKER_OWNER-
   // gated, typed-confirmation guarded). The hourly
   // `workspace-teardown-sweep` Inngest function reads
   // (closureStatus, scheduledHardPurgeAt) to decide which CLOSING workspaces
   // have aged out of the grace window and should hard-purge.
-  closureStatus            WorkspaceClosureStatus  @default(ACTIVE)
+  closureStatus            WorkspaceClosureStatus       @default(ACTIVE)
   closingInitiatedAt       DateTime?
   /// The User who initiated closure. SetNull so the workspace row survives
   /// the user being removed (audit + billing remain queryable).
-  closingInitiatedByUserId String?                 @db.Uuid
+  closingInitiatedByUserId String?                      @db.Uuid
   /// UTC instant the hard purge becomes eligible. Set by
   /// `initiateWorkspaceClosure`; reset to NULL on cancel.
   scheduledHardPurgeAt     DateTime?
@@ -397,8 +428,8 @@ model Workspace {
   /// Captured for the operator/CS triage signal — never resurfaced to
   /// other customers.
   closureReason            String?
-  createdAt                DateTime                @default(now())
-  updatedAt                DateTime                @updatedAt
+  createdAt                DateTime                     @default(now())
+  updatedAt                DateTime                     @updatedAt
   memberships              Membership[]
   workApprovalItems        WorkApprovalQueueItem[]
   thresholds               WorkThresholdConfig[]

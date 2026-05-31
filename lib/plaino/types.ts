@@ -110,6 +110,14 @@ export const PREFERENCE_SCOPE_IDS = [
   'customer-comms',
   'internal-comms',
   'reporting',
+  // Wave-3 phase 4 — new scope ids the discipline-wrap skills declare.
+  // Each maps one skill to its workspace-side preference rules. The
+  // dispatcher's classifier accepts these as targetScope values; legacy
+  // scopes still resolve to their original skills.
+  'follow-up',
+  'content',
+  'research',
+  'analytics',
 ] as const;
 export type PreferenceScopeId = (typeof PREFERENCE_SCOPE_IDS)[number];
 

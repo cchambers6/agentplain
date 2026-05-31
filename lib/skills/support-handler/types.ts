@@ -139,6 +139,11 @@ export interface SupportHandlerInput {
   /** When provided, the skill records the proposal through this sink in
    *  addition to returning it. */
   sink?: ApprovalSink | null;
+  /** Wave-3 phase 4 — pre-rendered FEEDBACK rules block (already
+   *  filtered by the run-for-* wrapper to the customer-comms /
+   *  email-draft scopes). Empty string when none apply; the prompt
+   *  builder omits the CUSTOMER PREFERENCES header in that case. */
+  feedbackRulesBlock?: string;
   /** Fixed clock for tests. Defaults to new Date(). */
   now?: Date;
 }

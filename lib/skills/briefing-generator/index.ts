@@ -22,10 +22,13 @@
 // renders an honest "nothing yesterday; here's the next loop" message.
 
 import type { Prisma } from '@prisma/client';
-import { withSystemContext as defaultWithSystemContext } from '@/lib/db';
+import { SYSTEM_OPERATOR_CONTEXT, withSystemContext as defaultWithSystemContext } from '@/lib/db';
 import { getLlmProvider } from '@/lib/llm';
 import type { LlmProvider } from '@/lib/llm/types';
 import { encrypt } from '@/lib/security/encryption';
+import { PrismaMemoryStore } from '@/lib/plaino/memory';
+import type { IMemoryStore } from '@/lib/plaino/memory/types';
+import { buildFeedbackRulesBlock } from '../feedback-rules';
 import {
   buildActivitySnapshot,
   type SystemContextRunner,
@@ -36,6 +39,8 @@ import type {
   GenerateBriefingResult,
 } from './types';
 
+const BRIEFING_FEEDBACK_SCOPES = ['reporting', 'analytics'] as const;
+
 export interface GenerateBriefingForWorkspaceInput {
   workspaceId: string;
   /** Newest end of the briefing window. Defaults to "now". */
@@ -44,6 +49,9 @@ export interface GenerateBriefingForWorkspaceInput {
   llm?: LlmProvider;
   /** Override for tests; live caller uses `withSystemContext`. */
   systemContext?: SystemContextRunner;
+  /** Wave-3 phase 4 — workspace memory for FEEDBACK rules. Defaults to
+   *  a fresh `PrismaMemoryStore`. Pass `null` to skip the read. */
+  memory?: IMemoryStore | null;
 }
 
 export interface GenerateBriefingForWorkspaceResult {
@@ -121,7 +129,30 @@ export async function generateBriefingForWorkspace(
     systemContext,
   });
 
-  const composed = await composeBriefing(snapshot, llm);
+  // Read FEEDBACK rules under the reporting / analytics scopes so the
+  // brief honors what the customer told /talk to remember (e.g. "don't
+  // surface follow-up nudges in the briefing — I read them on the
+  // approval page directly"). Best-effort.
+  const memory =
+    input.memory === undefined
+      ? new PrismaMemoryStore(input.workspaceId, {
+          ctx: SYSTEM_OPERATOR_CONTEXT,
+        })
+      : input.memory;
+  let feedbackRulesBlock = '';
+  if (memory) {
+    try {
+      feedbackRulesBlock = await buildFeedbackRulesBlock({
+        memory,
+        workspaceId: input.workspaceId,
+        scopes: BRIEFING_FEEDBACK_SCOPES,
+      });
+    } catch {
+      // best-effort
+    }
+  }
+
+  const composed = await composeBriefing(snapshot, llm, feedbackRulesBlock);
 
   // Persist the new row. Wrapped in another systemContext call so
   // the read/compose/write windows stay short — Stripe RLS pattern.
@@ -203,6 +234,7 @@ interface ComposedBriefing {
 async function composeBriefing(
   snapshot: BriefingActivitySnapshot,
   llm: LlmProvider,
+  feedbackRulesBlock: string = '',
 ): Promise<ComposedBriefing> {
   const isEmpty =
     snapshot.summary.approvalsInWindow === 0 &&
@@ -221,7 +253,10 @@ async function composeBriefing(
     };
   }
 
-  const userPrompt = renderSnapshotForLlm(snapshot);
+  const userPrompt =
+    feedbackRulesBlock.trim().length > 0
+      ? `${renderSnapshotForLlm(snapshot)}\n\n${feedbackRulesBlock}`
+      : renderSnapshotForLlm(snapshot);
 
   const completion = await llm.complete({
     system: SYSTEM_PROMPT,

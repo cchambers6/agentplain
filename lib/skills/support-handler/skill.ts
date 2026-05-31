@@ -101,6 +101,7 @@ export async function runSkill(
       snippets: snippets.slice(0, topK),
       tier,
       llm: input.llm,
+      feedbackRulesBlock: input.feedbackRulesBlock,
     });
     if (!drafted.ok) return drafted;
     proposal = drafted.value;
@@ -147,6 +148,10 @@ interface DraftWithLlmArgs {
   snippets: SupportContextSnippet[];
   tier: 'high' | 'medium';
   llm: import('../../llm/types').LlmProvider | undefined;
+  /** Wave-3 phase 4 — pre-rendered FEEDBACK rules block (empty string
+   *  when no rules apply). Inlined into the user message under
+   *  CUSTOMER PREFERENCES (apply these). */
+  feedbackRulesBlock?: string;
 }
 
 async function draftReplyWithLlm(
@@ -154,7 +159,11 @@ async function draftReplyWithLlm(
 ): Promise<SkillResult<SupportDraftProposal>> {
   const provider = args.llm ?? getLlmProvider();
   const system = buildSystemPrompt(args.request);
-  const userMessage = buildUserMessage(args.request, args.snippets);
+  const userMessage = buildUserMessage(
+    args.request,
+    args.snippets,
+    args.feedbackRulesBlock ?? '',
+  );
 
   const completion = await provider.complete({
     system,
@@ -368,6 +377,7 @@ function buildSystemPrompt(req: SupportRequestSnapshot): string {
 function buildUserMessage(
   req: SupportRequestSnapshot,
   snippets: SupportContextSnippet[],
+  feedbackRulesBlock: string = '',
 ): string {
   const fromLine = req.fromName
     ? `${req.fromName} <${req.fromEmail}>`
@@ -388,7 +398,7 @@ function buildUserMessage(
       snippetLines.push(s.bodyExcerpt);
     }
   }
-  return [
+  const parts = [
     `WORKSPACE: ${req.workspaceName}`,
     `FROM: ${fromLine}`,
     `RECEIVED_AT: ${req.receivedAt.toISOString()}`,
@@ -400,7 +410,14 @@ function buildUserMessage(
     req.body,
     '',
     snippetLines.join('\n'),
-  ].join('\n');
+  ];
+  // Wave-3 phase 4 — inline the customer's FEEDBACK rules under a
+  // clear header. Empty block = no header rendered (honesty bar).
+  if (feedbackRulesBlock.trim().length > 0) {
+    parts.push('');
+    parts.push(feedbackRulesBlock);
+  }
+  return parts.join('\n');
 }
 
 // ── Test helpers ─────────────────────────────────────────────────────────

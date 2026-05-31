@@ -24,18 +24,26 @@
  *     functions use to drain workspace-scoped tables.
  */
 
-import { withSystemContext } from '../../db/rls';
+import { SYSTEM_OPERATOR_CONTEXT, withSystemContext } from '../../db';
+import { PrismaMemoryStore } from '../../plaino/memory';
+import type { IMemoryStore } from '../../plaino/memory/types';
 import { runSkill } from './skill';
 import { PrismaApprovalSink } from './prisma-approval-sink';
 import { CustomerFilesKnowledgeSubstrate } from './knowledge-substrate';
 import { servicePartnerForWorkspace } from '../../onboarding/service-partner';
 import { skillError, skillOk, type SkillResult } from '../types';
+import { buildFeedbackRulesBlock } from '../feedback-rules';
 import type {
   ApprovalSink,
   IKnowledgeSubstratePort,
   SupportHandlerOutput,
   SupportRequestSnapshot,
 } from './types';
+
+const SUPPORT_FEEDBACK_SCOPES = [
+  'customer-comms',
+  'email-draft',
+] as const;
 
 export interface RunForRequestInput {
   supportRequestId: string;
@@ -50,6 +58,10 @@ export interface RunForRequestInput {
   /** Override the LLM provider — tests pass a TestLlmProvider seeded
    *  with a deterministic JSON response. */
   llm?: import('../../llm/types').LlmProvider;
+  /** Wave-3 phase 4 — workspace memory store for the FEEDBACK rules
+   *  read. Defaults to `PrismaMemoryStore`. Pass `null` to skip the
+   *  read (tests that don't care about rule injection). */
+  memory?: IMemoryStore | null;
   /** Fixed clock for tests. */
   now?: Date;
 }
@@ -63,6 +75,25 @@ export async function runSupportHandlerForRequest(
   const substrate = input.substrate ?? new CustomerFilesKnowledgeSubstrate();
   const sink =
     input.sink === undefined ? new PrismaApprovalSink() : input.sink;
+  const memory =
+    input.memory === undefined
+      ? new PrismaMemoryStore(snapshot.value.workspaceId, {
+          ctx: SYSTEM_OPERATOR_CONTEXT,
+        })
+      : input.memory;
+
+  let feedbackRulesBlock = '';
+  if (memory) {
+    try {
+      feedbackRulesBlock = await buildFeedbackRulesBlock({
+        memory,
+        workspaceId: snapshot.value.workspaceId,
+        scopes: SUPPORT_FEEDBACK_SCOPES,
+      });
+    } catch {
+      // best-effort — never block the draft on a memory read failure.
+    }
+  }
 
   return runSkill({
     workspaceId: snapshot.value.workspaceId,
@@ -70,6 +101,7 @@ export async function runSupportHandlerForRequest(
     substrate,
     sink,
     llm: input.llm,
+    feedbackRulesBlock,
     now: input.now,
   });
 }

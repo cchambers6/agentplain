@@ -39,6 +39,7 @@ import {
   type GenerateBriefingForWorkspaceResult,
 } from '@/lib/skills/briefing-generator';
 import { notifyBriefingReady } from '@/lib/skills/briefing-generator/email';
+import { isWorkspacePaused } from '@/lib/billing/workspace-paused-gate';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
 import {
@@ -102,6 +103,17 @@ export async function runBriefingsSweep(
 
   for (const ws of candidates) {
     if (ws.briefingsMutedAt) {
+      result.workspacesMuted += 1;
+      continue;
+    }
+    // Wave-3 phase 5 — paused-for-billing gate. PAUSED/PAST_DUE
+    // workspaces don't get a briefing — same posture as the other
+    // sweeps. We bucket the skip under workspacesMuted because that's
+    // the customer-facing concept the briefing surface already names.
+    const pause = await isWorkspacePaused({ workspaceId: ws.id }).catch(
+      () => ({ isPaused: false }),
+    );
+    if (pause.isPaused) {
       result.workspacesMuted += 1;
       continue;
     }

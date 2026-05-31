@@ -42,6 +42,14 @@ import {
 } from '../llm/types';
 import { skillError, skillOk, type SkillResult } from '../skills/types';
 import {
+  runSkill as runResearchSkill,
+  CustomerFilesResearchSubstrate,
+} from '../skills/research-on-demand-general';
+import type {
+  IResearchSubstratePort,
+  ResearchBrief,
+} from '../skills/research-on-demand-general';
+import {
   readFeedbackRules,
   renderFeedbackRulesForPrompt,
   type FeedbackRule,
@@ -64,11 +72,16 @@ export const INSTRUCTION_HANDLER_PROMPT_VERSION =
  * plausibly care about. This keeps the prompt focused.
  */
 const DISCIPLINE_SCOPES: Record<string, ReadonlyArray<PreferenceScopeId>> = {
-  analytics: ['reporting'],
-  research: ['reporting'],
+  analytics: ['analytics', 'reporting'],
+  research: ['research', 'reporting'],
   legal: ['legal-flagging'],
-  marketing: ['email-draft', 'customer-comms'],
-  'sales-enablement': ['email-draft', 'customer-comms', 'inbox-triage'],
+  marketing: ['content', 'email-draft', 'customer-comms'],
+  'sales-enablement': [
+    'follow-up',
+    'email-draft',
+    'customer-comms',
+    'inbox-triage',
+  ],
   'customer-success': ['email-draft', 'customer-comms', 'inbox-triage'],
   finance: ['email-draft', 'inbox-triage'],
   operations: [
@@ -129,6 +142,12 @@ export interface RunInstructionHandlerArgs {
   memory?: IMemoryStore;
   llm?: LlmProvider;
   now?: Date;
+  /** Substrate port for the wave-3 research-on-demand-general skill.
+   *  Production defaults to `CustomerFilesResearchSubstrate`; tests can
+   *  inject `RecordingResearchSubstrate`. When omitted AND the
+   *  instruction's targetDiscipline is 'research', the handler binds
+   *  the production substrate so the brief grounds on real data. */
+  researchSubstrate?: IResearchSubstratePort;
 }
 
 /**
@@ -177,6 +196,45 @@ export async function runInstructionHandler(
 
   const provider: LlmProvider =
     args.llm ?? (await import('../llm').then((m) => m.getLlmProvider()));
+
+  // Research discipline gets the wave-3 substrate-grounded brief
+  // instead of the generic drafter. The brief is rendered into the
+  // same draftBody field the operator already reads, so the approval
+  // queue surface needs no change — the row is just better grounded.
+  if (discipline.id === 'research') {
+    const substrate =
+      args.researchSubstrate ?? new CustomerFilesResearchSubstrate();
+    const research = await runResearchSkill({
+      workspaceId: item.workspaceId,
+      instructionText: item.instructionText,
+      dispatcherReasoning: item.reasoning,
+      substrate,
+      feedbackRulesBlock: renderFeedbackRulesForPrompt(honoredRules),
+      llm: provider,
+    });
+    if (!research.ok) {
+      return skillError(
+        'UPSTREAM_LLM_ERROR',
+        `research-on-demand failed for item ${item.approvalQueueItemId}: ${research.error.message}`,
+        research.error.code,
+      );
+    }
+    const draft: InstructionDraft = {
+      approvalQueueItemId: item.approvalQueueItemId,
+      draftBody: renderResearchBriefAsBody(research.value.brief),
+      honoredRules,
+      reasoning: research.value.isPlaceholder
+        ? 'Substrate empty — emitted placeholder brief; named the web-search + empty-substrate gaps honestly.'
+        : `Grounded on ${research.value.substrateSnippets.length} substrate snippet(s); named the no-web-search gap.`,
+    };
+    await args.store.attachDraft({
+      approvalQueueItemId: item.approvalQueueItemId,
+      workspaceId: item.workspaceId,
+      draft,
+      now: args.now,
+    });
+    return skillOk(draft);
+  }
 
   const system = buildInstructionHandlerSystemPrompt({
     discipline,
@@ -305,6 +363,52 @@ const handlerOutputSchema = z.object({
 interface HandlerOutput {
   draftBody: string;
   reasoning: string;
+}
+
+/**
+ * Render a structured research brief into the single draftBody string
+ * the approval-queue UI already renders. Format:
+ *
+ *   Summary
+ *
+ *   Key findings
+ *   - …
+ *
+ *   Gaps / open questions
+ *   - …
+ *
+ *   Sources
+ *   - …
+ *
+ * Operator-facing — calm, plain text. No emoji, no markdown headers
+ * because the queue surface renders payload bodies as plain text.
+ */
+function renderResearchBriefAsBody(brief: ResearchBrief): string {
+  const lines: string[] = [];
+  lines.push(brief.summary.trim());
+  if (brief.keyFindings.length > 0) {
+    lines.push('');
+    lines.push('Key findings:');
+    for (const f of brief.keyFindings) {
+      lines.push(`- ${f}`);
+    }
+  }
+  if (brief.gaps.length > 0) {
+    lines.push('');
+    lines.push('Gaps and open questions:');
+    for (const g of brief.gaps) {
+      lines.push(`- ${g}`);
+    }
+  }
+  if (brief.citations.length > 0) {
+    lines.push('');
+    lines.push('Sources:');
+    for (const c of brief.citations) {
+      const tail = c.sourceUrl ? ` (${c.sourceUrl})` : '';
+      lines.push(`- ${c.title} — similarity ${c.similarity.toFixed(2)}${tail}`);
+    }
+  }
+  return lines.join('\n');
 }
 
 function parseInstructionHandlerJson(

@@ -37,9 +37,11 @@ describe("marketplace catalog", () => {
   it("lists every available connector plus the remaining Coming Soon ones", () => {
     const entries = listIntegrations();
     const ids = entries.map((e) => e.id);
-    // gmail, outlook, teams, onedrive, excel, quickbooks, docusign,
-    // google-drive, slack are available; hubspot, paypal, canva remain
-    // coming-soon.
+    // Pre-wave-3: gmail, outlook, teams, onedrive, excel, quickbooks,
+    // docusign, google-drive, slack are available; hubspot, paypal,
+    // canva remain coming-soon.
+    // Wave-3 adds: follow-up-boss (available, api-key) + kvcore
+    // (coming-soon, partner-program enrollment pending).
     assert.deepEqual(ids, [
       "gmail",
       "outlook",
@@ -53,8 +55,10 @@ describe("marketplace catalog", () => {
       "slack",
       "paypal",
       "canva",
+      "follow-up-boss",
+      "kvcore",
     ]);
-    assert.equal(entries.length, 12, "marketplace surface size is the architectural contract");
+    assert.equal(entries.length, 14, "marketplace surface size is the architectural contract");
   });
 
   it("Gmail + the M365 integrations are available with the right provider keys", () => {
@@ -84,7 +88,7 @@ describe("marketplace catalog", () => {
     const soon = listIntegrations().filter((e) => e.status === "coming-soon");
     assert.deepEqual(
       soon.map((e) => e.id),
-      ["hubspot", "paypal", "canva"],
+      ["hubspot", "paypal", "canva", "kvcore"],
     );
     for (const e of soon) {
       assert.equal(e.providerKey, null, `${e.id} has no DB rows yet`);

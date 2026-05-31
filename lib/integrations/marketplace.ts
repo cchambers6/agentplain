@@ -36,7 +36,15 @@ export type MarketplaceProviderKey =
   | 'DOCUSIGN'
   | 'QUICKBOOKS'
   | 'SLACK'
+  | 'FOLLOW_UP_BOSS'
   | null;
+
+/** How a connector authenticates. `oauth` = the existing OAuth start /
+ *  callback flow at `/api/integrations/<slug>/oauth/*`. `api-key` = the
+ *  workspace pastes a per-account API key into a connect form; we
+ *  validate by calling the provider's "/me" endpoint then persist the
+ *  key encrypted in IntegrationCredential.accessTokenEncrypted. */
+export type MarketplaceConnectMode = 'oauth' | 'api-key';
 
 /**
  * Per-vertical relevance. A connector tile is only shown to a workspace
@@ -91,6 +99,11 @@ export interface MarketplaceEntry {
    *  is not `'all'`). Lets a CPA workspace stop seeing realty-only AMS
    *  tiles by default. */
   verticalRelevance: VerticalRelevance;
+  /** How this connector authenticates. Defaults to `'oauth'` for back-
+   *  compat (the existing connectors all use OAuth). Wave-3 adds the
+   *  `'api-key'` variant for connectors whose providers issue a long-
+   *  lived API key (Follow Up Boss). */
+  connectMode?: MarketplaceConnectMode;
 }
 
 export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
@@ -319,6 +332,52 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     providerKey: null,
     disciplines: ['marketing'],
     verticalRelevance: 'all',
+  },
+  // ── Wave-3 realty CRMs ──────────────────────────────────────────────
+  // Follow Up Boss is the most-shared realty CRM among small independent
+  // brokerages and exposes a self-serve API key (no OAuth partner
+  // enrollment required) — wired end-to-end via the FUB MCP server at
+  // `lib/integrations/follow-up-boss-mcp/`.
+  {
+    id: 'follow-up-boss',
+    name: 'Follow Up Boss',
+    category: 'CRM',
+    description:
+      'Plaino reads your Follow Up Boss leads, triages each one (hot / warm / cold / nurture), drafts a first-touch reply into /approvals, and writes the triage decision back to FUB as a note + tag — you decide what to send from your own email.',
+    mcpEndpointTemplate: '/api/integrations/follow-up-boss-mcp/{workspaceId}',
+    // FUB authenticates with a per-account API key, not OAuth — the
+    // `scopes` field is decorative here (kept for the catalog UI to
+    // show "what we read / write" verbatim).
+    scopes: [
+      'people:read',
+      'people:write',
+      'notes:write',
+      'pipelines:read',
+    ],
+    oauthConfigKey: 'FOLLOW_UP_BOSS_API',
+    status: 'available',
+    providerKey: 'FOLLOW_UP_BOSS',
+    disciplines: ['sales-enablement', 'customer-success'],
+    verticalRelevance: ['real-estate'],
+    connectMode: 'api-key',
+  },
+  // kvCORE — the second-most-named realty CRM, but its API requires
+  // partner-program enrollment that agentplain has NOT completed.
+  // Listed as `coming-soon` so the catalog stays honest; customers
+  // can join the waitlist via the existing /custom inquiry flow.
+  {
+    id: 'kvcore',
+    name: 'kvCORE',
+    category: 'CRM',
+    description:
+      'Plaino will read your kvCORE leads and write back triage decisions once we complete the kvCORE partner-program API enrollment. Join the waitlist below.',
+    mcpEndpointTemplate: '/api/integrations/kvcore-mcp/{workspaceId}',
+    scopes: ['contacts:read', 'contacts:write', 'notes:write'],
+    oauthConfigKey: 'KVCORE_OAUTH',
+    status: 'coming-soon',
+    providerKey: null,
+    disciplines: ['sales-enablement', 'customer-success'],
+    verticalRelevance: ['real-estate'],
   },
 ];
 

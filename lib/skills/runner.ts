@@ -117,6 +117,19 @@ export interface RunChainArgs {
    *  Defaults to empty — when omitted the chain runs end-to-end as
    *  before. */
   disabledDisciplineIds?: ReadonlyArray<string>;
+  /** Wave-3 marketplace install gate. The caller passes the set of
+   *  skill slugs the workspace has installed (a live skill not in this
+   *  set is treated as opted-out). When this is undefined the runner
+   *  defaults to "all live skills installed" for back-compat with
+   *  callers that haven't been migrated yet.
+   *
+   *  Office-admin and support-handler are the chain-time skills that
+   *  consult this set today; vertical-router consults the set
+   *  independently before each dispatch (see process-webhook-event.ts).
+   *
+   *  Per `feedback_cold_start_safe_agents.md` the caller passes this
+   *  fresh from a durable read — no in-memory cache. */
+  installedSkillSlugs?: ReadonlySet<string>;
   now?: Date;
   /** When true, write a JSONL log row to `agent-state/skill-runs/`.
    *  Default: true. */
@@ -245,11 +258,26 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
   // operations is disabled on the workspace, skip the LLM call AND the
   // classification step entirely — no LLM spend, no admin row.
   const disabledDisciplines = new Set(args.disabledDisciplineIds ?? []);
+  // Marketplace install gate (wave-3 phase 3). When the caller passes
+  // `installedSkillSlugs`, treat any live skill NOT in the set as
+  // opted-out. When the arg is undefined, fall back to "installed" so
+  // legacy callers and tests that don't supply the set behave as before.
+  const isOfficeAdminInstalled =
+    args.installedSkillSlugs === undefined
+      ? true
+      : args.installedSkillSlugs.has('office-admin');
   if (disabledDisciplines.has('operations')) {
     steps.push({
       step: 'office-admin-classify',
       ok: true,
       summary: 'skipped — operations discipline disabled on workspace',
+      durationMs: 0,
+    });
+  } else if (!isOfficeAdminInstalled) {
+    steps.push({
+      step: 'office-admin-classify',
+      ok: true,
+      summary: 'skipped — office-admin skill uninstalled on workspace',
       durationMs: 0,
     });
   } else {

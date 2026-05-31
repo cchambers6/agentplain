@@ -63,6 +63,7 @@ import {
   type ChiefOfStaffConfig,
 } from '@/lib/skills/config';
 import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
+import { isWorkspacePaused } from '@/lib/billing/workspace-paused-gate';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
 import {
@@ -157,6 +158,14 @@ export async function runSchedulerSweep(
   };
 
   for (const ws of candidates) {
+    // Gate 0 (wave-3): paused-for-billing.
+    const pause = await isWorkspacePaused({ workspaceId: ws.id }).catch(
+      () => ({ isPaused: false }),
+    );
+    if (pause.isPaused) {
+      result.workspacesSkippedUnconfigured += 1;
+      continue;
+    }
     // Gate 1: discipline activation. If the operator turned the
     // scheduler's discipline OFF on the Discipline panel, skip.
     const disabledIds = ws.disabledDisciplines

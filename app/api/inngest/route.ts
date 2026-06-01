@@ -54,6 +54,12 @@ import { salesforceSyncSweepFn } from "@/lib/inngest/functions/salesforce-sync-s
 import { b2bCeoDailyFn } from "@/lib/inngest/functions/b2b-ceo-daily";
 import { b2bSalesRepPreCallBriefFn } from "@/lib/inngest/functions/b2b-sales-rep-pre-call-brief";
 import { b2bSalesRepReplySweepFn } from "@/lib/inngest/functions/b2b-sales-rep-reply-sweep";
+// Wave-9 — self-serve onboarding wizard. The wizard's "set your voice"
+// step dispatches agentplain/onboarding.first-fire.requested; this
+// function fans out to each picked skill's run-for-workspace so the
+// customer sees the first SkillRun row land in the watch panel within
+// minutes of finishing onboarding.
+import { onboardingFirstFireFn } from "@/lib/inngest/functions/onboarding-first-fire";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -85,5 +91,6 @@ export const { GET, POST, PUT } = serve({
     b2bCeoDailyFn,
     b2bSalesRepPreCallBriefFn,
     b2bSalesRepReplySweepFn,
+    onboardingFirstFireFn,
   ],
 });

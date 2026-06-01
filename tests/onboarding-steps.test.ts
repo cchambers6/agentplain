@@ -1,19 +1,36 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  INPUT_STEPS,
   STEP_ORDER,
   STEP_META,
   isStepId,
   nextStepAfter,
 } from "@/lib/onboarding/steps";
 
-describe("onboarding state machine", () => {
-  it("has four canonical steps in order", () => {
+// Wave-9 expanded the state machine from 4 to 6 steps (5 input + done
+// sentinel). The deeper behavior coverage lives in
+// `lib/onboarding/steps.test.ts`; this top-level test pins the contract
+// the wizard renders and the customer surfaces depend on.
+describe("onboarding state machine — wave-9 6-step contract", () => {
+  it("has six canonical steps in order", () => {
     assert.deepEqual(STEP_ORDER, [
       "confirm_details",
       "connect_integration",
+      "pick_skills",
       "set_preferences",
+      "first_fire_watch",
       "done",
+    ]);
+  });
+
+  it("INPUT_STEPS drops the done sentinel", () => {
+    assert.deepEqual(INPUT_STEPS, [
+      "confirm_details",
+      "connect_integration",
+      "pick_skills",
+      "set_preferences",
+      "first_fire_watch",
     ]);
   });
 
@@ -29,7 +46,9 @@ describe("onboarding state machine", () => {
   it("isStepId rejects non-canonical strings", () => {
     assert.equal(isStepId("confirm_details"), true);
     assert.equal(isStepId("connect_integration"), true);
+    assert.equal(isStepId("pick_skills"), true);
     assert.equal(isStepId("set_preferences"), true);
+    assert.equal(isStepId("first_fire_watch"), true);
     assert.equal(isStepId("done"), true);
     assert.equal(isStepId("garbage"), false);
     assert.equal(isStepId(""), false);
@@ -38,10 +57,12 @@ describe("onboarding state machine", () => {
     assert.equal(isStepId(42), false);
   });
 
-  it("nextStepAfter advances linearly through the three input steps", () => {
+  it("nextStepAfter advances linearly through the five input steps", () => {
     assert.equal(nextStepAfter("confirm_details"), "connect_integration");
-    assert.equal(nextStepAfter("connect_integration"), "set_preferences");
-    assert.equal(nextStepAfter("set_preferences"), "done");
+    assert.equal(nextStepAfter("connect_integration"), "pick_skills");
+    assert.equal(nextStepAfter("pick_skills"), "set_preferences");
+    assert.equal(nextStepAfter("set_preferences"), "first_fire_watch");
+    assert.equal(nextStepAfter("first_fire_watch"), "done");
   });
 
   it("nextStepAfter(done) stays at done", () => {

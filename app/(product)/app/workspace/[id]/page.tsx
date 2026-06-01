@@ -605,7 +605,7 @@ function buildNextActions({
       key: "onboarding",
       label: "Finish onboarding",
       detail:
-        "Confirm workspace details, connect a tool, set drafting preferences. ~10 minutes.",
+        "Confirm details, connect an inbox, pick what to watch, set your voice. Five steps; the first fire lands inside the wizard.",
       href: `/app/workspace/${workspaceId}/onboarding`,
       urgency: "high",
     });

@@ -608,15 +608,33 @@ model BillingEvent {
 // completedSteps is an array of step ids (e.g. ["confirm_details",
 // "connect_integration"]); currentStep is the next step id to render.
 // product_spec.md §3.2 BO-5 (initial setup), §8.1 (onboarding-to-first-value).
+//
+// Wave-9 self-serve onboarding wizard adds:
+//   - `pickedSkillSlugs`         — JSON array of skill catalog slugs the
+//                                  customer ticked in the new "pick what to
+//                                  track" step. Source of truth for what
+//                                  the first-fire trigger executes.
+//   - `firstFireRequestedAt`     — when the `agentplain/onboarding.first-
+//                                  fire.requested` Inngest event was
+//                                  dispatched. The polling watch panel on
+//                                  the wizard's last step reads SkillRun
+//                                  rows whose `firedAt >= firstFireRequestedAt`.
+//   - `firstFireCompletedAt`     — stamped when at least one SkillRun for
+//                                  this workspace lands after the request.
+//                                  Used by the watch panel to switch from
+//                                  "fetching" to "first fire landed."
 model OnboardingState {
-  id             String    @id @default(uuid()) @db.Uuid
-  workspaceId    String    @unique @db.Uuid
-  currentStep    String    @default("confirm_details")
-  completedSteps Json      @default("[]")
-  completedAt    DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id                   String    @id @default(uuid()) @db.Uuid
+  workspaceId          String    @unique @db.Uuid
+  currentStep          String    @default("confirm_details")
+  completedSteps       Json      @default("[]")
+  pickedSkillSlugs     Json      @default("[]")
+  firstFireRequestedAt DateTime?
+  firstFireCompletedAt DateTime?
+  completedAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
 // Wave-4 — append-only lifecycle event log for the workspace billing /

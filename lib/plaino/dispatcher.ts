@@ -39,6 +39,7 @@
 
 import { DISCIPLINE_IDS } from '../disciplines';
 import { getLlmProvider } from '../llm';
+import { MODEL_HAIKU } from '../llm/model-tiers';
 import {
   llmOk,
   type LlmCompletionRequest,
@@ -147,6 +148,7 @@ export async function runPlainoTurn(
   });
   const completion = await provider.complete({
     system,
+    model: MODEL_HAIKU,
     messages: [{ role: 'user', content: userMessage }],
     responseFormat: 'json',
     temperature: 0.2,

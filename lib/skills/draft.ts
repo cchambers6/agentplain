@@ -19,6 +19,7 @@
 
 import { randomUUID } from 'node:crypto';
 import type { LlmProvider } from '../llm/types';
+import { MODEL_OPUS } from '../llm/model-tiers';
 import type { VerticalPromptBundle } from './prompts/index';
 import {
   DraftPersister,
@@ -59,6 +60,7 @@ export class DraftSkill implements ISkill<DraftSkillInput, DraftReply> {
     const userPrompt = renderUserPrompt(input);
     const res = await this.llm.complete({
       system: input.prompts.draft,
+      model: MODEL_OPUS,
       // Draft's system prompt is the biggest in the chain — it carries
       // the vertical's tone guide + workspace preferences (including the
       // learned-from-corrections bullets) + the inlined customer-context

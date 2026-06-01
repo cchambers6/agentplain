@@ -17,6 +17,7 @@
  */
 
 import type { LlmProvider } from '../llm/types';
+import { MODEL_SONNET } from '../llm/model-tiers';
 import type { VerticalPromptBundle } from './prompts/index';
 import {
   ISkill,
@@ -62,6 +63,7 @@ export class CoordinateSkill implements ISkill<CoordinateSkillInput, ThreadConte
     const userPrompt = renderUserPrompt(input.message, slice);
     const res = await this.llm.complete({
       system: input.prompts.coordinate,
+      model: MODEL_SONNET,
       // Coordinate's system prompt embeds the vertical's thread-summary
       // rules + the workspace's customer-context block (stable within
       // the 5-min cache TTL). Per-fire dynamic content (thread + newest

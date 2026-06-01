@@ -14,6 +14,7 @@
  */
 
 import type { LlmProvider } from '@/lib/llm/types';
+import { MODEL_OPUS } from '@/lib/llm/model-tiers';
 import type {
   AgentRoster,
   DripCampaign,
@@ -82,6 +83,7 @@ export async function maybeRefineLeadTriage(
   const userPrompt = renderUserPrompt(input);
   const completion = await input.llm.complete({
     system: REFINE_SYSTEM_PROMPT,
+    model: MODEL_OPUS,
     cacheSystem: true,
     messages: [{ role: 'user', content: userPrompt }],
     maxTokens: 600,

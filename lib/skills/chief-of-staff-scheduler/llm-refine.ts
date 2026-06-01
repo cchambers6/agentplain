@@ -16,6 +16,7 @@
  */
 
 import type { LlmProvider } from '@/lib/llm/types';
+import { MODEL_SONNET } from '@/lib/llm/model-tiers';
 import type { ChiefOfStaffProposal } from './types';
 
 const REFINE_SYSTEM_PROMPT = [
@@ -67,6 +68,7 @@ export async function maybeRefineCos(
   const userPrompt = renderUserPrompt(input);
   const completion = await input.llm.complete({
     system: REFINE_SYSTEM_PROMPT,
+    model: MODEL_SONNET,
     cacheSystem: true,
     messages: [{ role: 'user', content: userPrompt }],
     maxTokens: 600,

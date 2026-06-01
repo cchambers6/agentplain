@@ -20,6 +20,7 @@
  */
 
 import type { LlmProvider } from '../../llm/types';
+import { MODEL_SONNET } from '../../llm/model-tiers';
 import {
   proposedMemoryEntrySchema,
   type ProposedMemoryEntry,
@@ -136,6 +137,7 @@ export async function extractMemoryFromConversation(
   const userBlock = buildExtractUserMessage(args.turns);
   const completion = await args.llm.complete({
     system: EXTRACT_SYSTEM_PROMPT,
+    model: MODEL_SONNET,
     messages: [{ role: 'user', content: userBlock }],
     responseFormat: 'json',
     temperature: 0.1,

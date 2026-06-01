@@ -24,6 +24,7 @@
 import type { Prisma } from '@prisma/client';
 import { SYSTEM_OPERATOR_CONTEXT, withSystemContext as defaultWithSystemContext } from '@/lib/db';
 import { getLlmProvider } from '@/lib/llm';
+import { MODEL_OPUS } from '@/lib/llm/model-tiers';
 import type { LlmProvider } from '@/lib/llm/types';
 import { encrypt } from '@/lib/security/encryption';
 import { PrismaMemoryStore } from '@/lib/plaino/memory';
@@ -260,6 +261,7 @@ async function composeBriefing(
 
   const completion = await llm.complete({
     system: SYSTEM_PROMPT,
+    model: MODEL_OPUS,
     cacheSystem: true,
     messages: [{ role: 'user', content: userPrompt }],
     maxTokens: 800,

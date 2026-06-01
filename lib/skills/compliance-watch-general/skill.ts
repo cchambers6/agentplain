@@ -9,6 +9,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { getLlmProvider } from '@/lib/llm';
+import { MODEL_OPUS } from '@/lib/llm/model-tiers';
 import { skillError, skillOk, type SkillResult } from '../types';
 import type {
   ComplianceSkillInput,
@@ -66,6 +67,7 @@ export async function runSkill(
 
   const completion = await llm.complete({
     system: SYSTEM_PROMPT,
+    model: MODEL_OPUS,
     cacheSystem: true,
     messages: [
       { role: 'user', content: renderUserPrompt(snapshot, input.feedbackRulesBlock ?? '') },

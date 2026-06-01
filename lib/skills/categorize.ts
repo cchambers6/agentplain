@@ -17,6 +17,7 @@
  */
 
 import type { LlmProvider } from '../llm/types';
+import { MODEL_HAIKU } from '../llm/model-tiers';
 import type { VerticalPromptBundle } from './prompts/index';
 import {
   Categorization,
@@ -46,6 +47,7 @@ export class CategorizeSkill implements ISkill<CategorizeSkillInput, Categorizat
     const userPrompt = renderUserPrompt(input.message);
     const res = await this.llm.complete({
       system: input.prompts.categorize,
+      model: MODEL_HAIKU,
       // Per `lib/llm/types.ts`: the categorize system prompt is stable
       // across every fire of the loop for a given workspace+vertical
       // within the 5-min Anthropic cache TTL — vertical-specific rules

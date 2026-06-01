@@ -40,6 +40,7 @@ import {
   type LlmCompletionRequest,
   type LlmProvider,
 } from '../llm/types';
+import { MODEL_OPUS } from '../llm/model-tiers';
 import { skillError, skillOk, type SkillResult } from '../skills/types';
 import {
   runSkill as runResearchSkill,
@@ -243,6 +244,7 @@ export async function runInstructionHandler(
   const user = buildInstructionHandlerUserPrompt({ item });
   const completion = await provider.complete({
     system,
+    model: MODEL_OPUS,
     messages: [{ role: 'user', content: user }],
     responseFormat: 'json',
     temperature: 0.3,

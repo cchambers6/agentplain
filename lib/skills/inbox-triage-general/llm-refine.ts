@@ -31,6 +31,7 @@
  */
 
 import type { LlmProvider } from '@/lib/llm/types';
+import { MODEL_SONNET } from '@/lib/llm/model-tiers';
 import type {
   TriageMessage,
   TriagePriority,
@@ -104,6 +105,7 @@ export async function maybeRefineTriage(
   const userPrompt = renderUserPrompt(input);
   const completion = await input.llm.complete({
     system: REFINE_SYSTEM_PROMPT,
+    model: MODEL_SONNET,
     cacheSystem: true,
     messages: [{ role: 'user', content: userPrompt }],
     maxTokens: 600,

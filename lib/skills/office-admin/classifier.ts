@@ -19,6 +19,7 @@
  */
 
 import type { LlmProvider } from '../../llm/types';
+import { MODEL_HAIKU } from '../../llm/model-tiers';
 import {
   skillError,
   skillOk,
@@ -64,6 +65,7 @@ export async function classifyOfficeAdmin(
   const userPrompt = renderClassifierUserPrompt(message, screen.signals);
   const res = await llm.complete({
     system: OFFICE_ADMIN_SYSTEM_PROMPT,
+    model: MODEL_HAIKU,
     // The office-admin classifier prompt is a workspace-agnostic
     // constant — the same string across every workspace, every vertical,
     // every fire. The highest cache-hit-rate surface in the chain.

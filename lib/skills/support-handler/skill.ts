@@ -34,6 +34,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { getLlmProvider } from '../../llm';
+import { MODEL_OPUS } from '../../llm/model-tiers';
 import { skillError, skillOk, type SkillResult } from '../types';
 import {
   DEFAULT_HIGH_CONFIDENCE_FLOOR,
@@ -167,6 +168,7 @@ async function draftReplyWithLlm(
 
   const completion = await provider.complete({
     system,
+    model: MODEL_OPUS,
     messages: [{ role: 'user', content: userMessage }],
     responseFormat: 'json',
     temperature: 0.2,

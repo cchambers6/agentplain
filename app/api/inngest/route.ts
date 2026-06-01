@@ -48,6 +48,12 @@ import { stripeAbandonedSignupSweepFn } from "@/lib/inngest/functions/stripe-aba
 import { notionIngestSweepFn } from "@/lib/inngest/functions/notion-ingest-sweep";
 import { hubspotSyncSweepFn } from "@/lib/inngest/functions/hubspot-sync-sweep";
 import { salesforceSyncSweepFn } from "@/lib/inngest/functions/salesforce-sync-sweep";
+// Wave-8 — b2b-* agents moved from flatsbo so their token usage bills
+// to agentplain (where the work belongs). Stubs for now; CronDefinition
+// runner port is the follow-up. See lib/inngest/functions/b2b-*.ts.
+import { b2bCeoDailyFn } from "@/lib/inngest/functions/b2b-ceo-daily";
+import { b2bSalesRepPreCallBriefFn } from "@/lib/inngest/functions/b2b-sales-rep-pre-call-brief";
+import { b2bSalesRepReplySweepFn } from "@/lib/inngest/functions/b2b-sales-rep-reply-sweep";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -76,5 +82,8 @@ export const { GET, POST, PUT } = serve({
     notionIngestSweepFn,
     hubspotSyncSweepFn,
     salesforceSyncSweepFn,
+    b2bCeoDailyFn,
+    b2bSalesRepPreCallBriefFn,
+    b2bSalesRepReplySweepFn,
   ],
 });

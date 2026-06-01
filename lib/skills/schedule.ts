@@ -20,6 +20,7 @@
  */
 
 import type { LlmProvider } from '../llm/types';
+import { MODEL_SONNET } from '../llm/model-tiers';
 import type { VerticalPromptBundle } from './prompts/index';
 import {
   DEFAULT_SCHEDULING_PREFERENCES,
@@ -50,6 +51,7 @@ export class ScheduleSkill implements ISkill<ScheduleSkillInput, SchedulingPropo
     const userPrompt = renderUserPrompt(input.message, prefs);
     const res = await this.llm.complete({
       system: input.prompts.schedule,
+      model: MODEL_SONNET,
       // Schedule's system prompt is the largest stable surface — vertical
       // scheduling rules + workspace business-hour preferences. Cache it
       // so back-to-back scheduling-needed fires (a common batch) hit the

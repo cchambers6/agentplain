@@ -37,6 +37,11 @@ import { getCurrentSession } from "@/lib/auth";
 import { withRls, withSystemContext } from "@/lib/db";
 import { readPickedSlugs, resolvePickableSkills } from "@/lib/onboarding/picked-skills";
 import { SKILL_CATALOG } from "@/lib/skills/registry";
+import { decryptPayloadForRead } from "@/lib/security/payload-crypto";
+import {
+  extractDraftPreview,
+  type DraftPreview,
+} from "@/lib/onboarding/draft-preview";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,6 +52,12 @@ interface SkillStatus {
   status: "pending" | "drafted" | "skipped" | "failed";
   reason?: string;
   queueItemHref?: string;
+  /** Wave-10 phase-3b: customer-readable preview of the actual draft
+   *  body. Populated only when the caller passes `?includeDraft=1`,
+   *  status is `drafted`, the SkillRun row has a `queueItemId`, and
+   *  the payload decrypts to a known shape. Renders inline in the
+   *  wizard's watch panel. */
+  draftPreview?: DraftPreview;
 }
 
 const TERMINAL_OUTCOMES = new Set<string>([
@@ -181,12 +192,47 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     if (!latestBySlug.has(r.skillSlug)) latestBySlug.set(r.skillSlug, r);
   }
 
+  // Wave-10 phase-3b — when `?includeDraft=1`, batch-fetch every
+  // queueItem payload for slugs whose latest run drafted (one query,
+  // not per-slug). RLS-scoped: workspace boundary enforced on read.
+  const includeDraft = req.nextUrl.searchParams.get("includeDraft") === "1";
+  const draftedItemIds: string[] = [];
+  if (includeDraft) {
+    for (const row of latestBySlug.values()) {
+      if (
+        row.queueItemId &&
+        TERMINAL_OUTCOMES.has(row.outcome) &&
+        row.outcome === "DRAFTED"
+      ) {
+        draftedItemIds.push(row.queueItemId);
+      }
+    }
+  }
+  const previewByItemId = new Map<string, DraftPreview>();
+  if (draftedItemIds.length > 0) {
+    const items = await withRls(rls, (tx) =>
+      tx.workApprovalQueueItem.findMany({
+        where: { id: { in: draftedItemIds }, workspaceId },
+        select: { id: true, kind: true, payload: true },
+      }),
+    );
+    for (const item of items) {
+      const decrypted = decryptPayloadForRead(item.payload);
+      const preview = extractDraftPreview(item.kind, decrypted);
+      if (preview) previewByItemId.set(item.id, preview);
+    }
+  }
+
   const picked: SkillStatus[] = pickedSlugs.map((slug) => {
     const row = latestBySlug.get(slug);
     if (!row || !TERMINAL_OUTCOMES.has(row.outcome)) {
       return { slug, name: skillName(slug), status: "pending" };
     }
     const { status, reason } = mapOutcome(row.outcome, row.errorMessage);
+    const draftPreview =
+      includeDraft && row.queueItemId
+        ? previewByItemId.get(row.queueItemId)
+        : undefined;
     return {
       slug,
       name: skillName(slug),
@@ -195,6 +241,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       queueItemHref: row.queueItemId
         ? `/app/workspace/${workspaceId}/approvals?focus=${encodeURIComponent(row.queueItemId)}`
         : undefined,
+      draftPreview,
     };
   });
 

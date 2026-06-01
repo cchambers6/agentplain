@@ -8,14 +8,23 @@ import {
 import { withWorkspace } from "@/lib/auth";
 import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
 import { withRls } from "@/lib/db";
-import { listIntegrations, oauthStartPath } from "@/lib/integrations/marketplace";
+import { listDisciplines } from "@/lib/disciplines";
+import {
+  listIntegrations,
+  oauthStartPath,
+} from "@/lib/integrations/marketplace";
 import { isIntegrationConfigured } from "@/lib/integrations/config-status";
 import {
+  INPUT_STEPS,
   STEP_META,
-  STEP_ORDER,
   isStepId,
   type StepId,
 } from "@/lib/onboarding/steps";
+import {
+  readPickedSlugs,
+  resolvePickableSkills,
+  type PickableSkill,
+} from "@/lib/onboarding/picked-skills";
 import { servicePartnerForWorkspace } from "@/lib/onboarding/service-partner";
 import {
   CALENDAR_WINDOWS,
@@ -26,6 +35,7 @@ import {
 } from "@/lib/preferences";
 import { getVerticalContent } from "@/lib/verticals";
 import type { VerticalContent } from "@/lib/verticals/types";
+import { FirstFireWatch } from "./FirstFireWatch";
 import { advanceOnboardingAction } from "./actions";
 
 interface PageProps {
@@ -81,6 +91,27 @@ export default async function OnboardingPage({ params }: PageProps) {
   const partner = servicePartnerForWorkspace(workspaceId);
   const ownerFirstName = firstNameFromEmail(member.email);
 
+  // Wave-9 — pickable skills (filtered to runtime:'live' + connector
+  // gates). The pick_skills step renders these as checkboxes; the
+  // first-fire preview footer on set_preferences names them; the
+  // first_fire_watch step polls SkillRun for them.
+  const hasInbox = connectedIntegrations.some(
+    (c) => c.provider === "GOOGLE" || c.provider === "M365",
+  );
+  const pickableSkills = resolvePickableSkills({
+    verticalSlug: verticalSlug ?? undefined,
+    hasInbox,
+  });
+  const pickedSlugsFromState = readPickedSlugs(state.pickedSkillSlugs);
+  // First visit to pick_skills: default to all pickable. Returning visit:
+  // honor what they saved (including an empty list — that's a real opt-out).
+  const isFirstVisitToPicker = !state.completedSteps
+    ? true
+    : !(state.completedSteps as unknown[]).some((s) => s === "pick_skills");
+  const effectivePickedSlugs = isFirstVisitToPicker
+    ? pickableSkills.filter((p) => p.defaultPicked).map((p) => p.slug)
+    : pickedSlugsFromState;
+
   if (state.completedAt) {
     return (
       <div className="mx-auto max-w-3xl">
@@ -89,9 +120,9 @@ export default async function OnboardingPage({ params }: PageProps) {
           Your workspace is rooted.
         </h1>
         <p className="mt-4 max-w-prose text-[15px] leading-relaxed text-ink-soft">
-          The 9am block runs tomorrow. {partner} files the first briefing
-          then; drafts and compliance flags queue to your overview
-          throughout the day. Revisit any setup choice from{" "}
+          {partner}&rsquo;s fleet is running on your workspace. The first
+          fire landed in your approvals queue; the morning briefing files
+          on the next 9am block. Revisit any setup choice from{" "}
           <Link
             href={`/app/workspace/${workspaceId}/settings`}
             className="text-ink underline"
@@ -177,10 +208,32 @@ export default async function OnboardingPage({ params }: PageProps) {
                   connectedIntegrations={connectedIntegrations}
                   partner={partner}
                 />
-              ) : (
-                <SetPreferences
+              ) : currentStep === "pick_skills" ? (
+                <PickSkills
+                  pickable={pickableSkills}
+                  preChecked={new Set(effectivePickedSlugs)}
                   partner={partner}
-                  existing={existingPreference}
+                  hasInbox={hasInbox}
+                />
+              ) : currentStep === "set_preferences" ? (
+                <>
+                  <SetPreferences
+                    partner={partner}
+                    existing={existingPreference}
+                  />
+                  <FirstFirePreview
+                    partner={partner}
+                    pickedSlugs={effectivePickedSlugs}
+                    pickable={pickableSkills}
+                  />
+                </>
+              ) : (
+                <FirstFireWatchSection
+                  workspaceId={workspaceId}
+                  partner={partner}
+                  pickedSlugs={effectivePickedSlugs}
+                  pickable={pickableSkills}
+                  requestedAt={state.firstFireRequestedAt ?? null}
                 />
               )}
             </div>
@@ -193,10 +246,26 @@ export default async function OnboardingPage({ params }: PageProps) {
               )}
               className="mt-8 flex flex-wrap items-center gap-3 border-t border-rule pt-6"
             >
+              {currentStep === "pick_skills"
+                ? // Hidden inputs name the selected skill slugs so the
+                  // server action can read them without a separate
+                  // form. The PickSkills body renders the visible
+                  // checkboxes; here we mirror the default-picked set
+                  // when the customer hasn't interacted yet. Customers
+                  // who uncheck see their real selection persist because
+                  // the checkbox name matches the hidden-input fallback
+                  // (browsers submit visible checked checkboxes; the
+                  // hidden mirrors are inside PickSkills already).
+                  null
+                : null}
               <ApHeritageButton variant="primary" withArrow type="submit">
                 {currentStep === "set_preferences"
-                  ? "done — open workspace"
-                  : "looks right — continue"}
+                  ? "save & start the first fire"
+                  : currentStep === "first_fire_watch"
+                    ? "open workspace"
+                    : currentStep === "pick_skills"
+                      ? "looks right — continue"
+                      : "looks right — continue"}
               </ApHeritageButton>
               {currentStep === "connect_integration" ? (
                 <button
@@ -243,10 +312,9 @@ function StepCards({
   current: StepId;
   completed: string[];
 }) {
-  const inputSteps = STEP_ORDER.filter((s) => s !== "done");
   return (
-    <ol className="mt-8 grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-3">
-      {inputSteps.map((s) => {
+    <ol className="mt-8 grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-5">
+      {INPUT_STEPS.map((s) => {
         const meta = STEP_META[s];
         const isDone = completed.includes(s);
         const isCurrent = s === current;
@@ -294,6 +362,11 @@ function ConfirmDetails({
   tier: string;
   verticalIsLive: boolean;
 }) {
+  // Wave-9 — show the disciplines that will be installed so the customer
+  // sees what's about to be rooted before they continue. The 8
+  // disciplines are universal (every workspace gets all of them); the
+  // copy below names the ones most concrete in the first session.
+  const disciplines = listDisciplines();
   return (
     <div>
       <p className="text-[15px] leading-relaxed text-ink-soft">
@@ -314,6 +387,26 @@ function ConfirmDetails({
         />
         <Row label="tier" value={tier} />
       </dl>
+      <div className="mt-6 border border-rule bg-paper-deep p-4">
+        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+          your fleet covers · {disciplines.length} disciplines
+        </p>
+        <ul className="mt-3 grid gap-x-4 gap-y-2 text-[14px] text-ink-soft sm:grid-cols-2">
+          {disciplines.map((d) => (
+            <li key={d.id} className="flex items-baseline gap-2">
+              <span className="font-mono text-[11px] uppercase text-mute">
+                ·
+              </span>
+              <span className="text-ink">{d.name}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 text-[12px] leading-relaxed text-mute">
+          Every workspace gets all eight. The next step picks which
+          ones we&rsquo;ll watch from day one — you can turn any of
+          them off from settings later.
+        </p>
+      </div>
       {!verticalIsLive ? (
         <p className="mt-6 border border-rule bg-paper-deep p-4 text-[13px] leading-relaxed text-ink-soft">
           The per-vertical fleet for {verticalLabel} is rooting in. You
@@ -650,14 +743,30 @@ function WorkspacePreview({
   currentStep: StepId;
   partner: string;
 }) {
+  const stepIdx = INPUT_STEPS.indexOf(currentStep);
   const integrationLine =
-    currentStep === "connect_integration" || currentStep === "set_preferences"
-      ? "first integration · wiring up"
+    stepIdx >= INPUT_STEPS.indexOf("connect_integration") &&
+    stepIdx > INPUT_STEPS.indexOf("connect_integration") - 1
+      ? stepIdx > INPUT_STEPS.indexOf("connect_integration")
+        ? "first integration · wired"
+        : "first integration · wiring up"
       : "first integration · not yet";
+  const skillsLine =
+    stepIdx > INPUT_STEPS.indexOf("pick_skills")
+      ? "skills · picked"
+      : stepIdx === INPUT_STEPS.indexOf("pick_skills")
+        ? "skills · picking now"
+        : "skills · pending";
   const preferencesLine =
-    currentStep === "set_preferences"
+    stepIdx > INPUT_STEPS.indexOf("set_preferences")
       ? "preferences · defaults applied"
-      : "preferences · pending";
+      : stepIdx === INPUT_STEPS.indexOf("set_preferences")
+        ? "preferences · setting"
+        : "preferences · pending";
+  const fireLine =
+    currentStep === "first_fire_watch"
+      ? "first fire · in progress"
+      : "first fire · queued";
 
   return (
     <div className="border border-rule bg-paper-deep p-5">
@@ -683,7 +792,9 @@ function WorkspacePreview({
           />
           <PreviewRow label="tier" value={tier} />
           <PreviewRow label="status" value={integrationLine} />
+          <PreviewRow label="picks" value={skillsLine} />
           <PreviewRow label="defaults" value={preferencesLine} />
+          <PreviewRow label="first fire" value={fireLine} />
         </dl>
 
         {verticalContent ? (
@@ -707,6 +818,160 @@ function PreviewRow({ label, value }: { label: string; value: string }) {
         {label}
       </dt>
       <dd className="text-ink">{value}</dd>
+    </div>
+  );
+}
+
+// ─── Pick skills (wave-9 step 3) ────────────────────────────────────────────
+
+function PickSkills({
+  pickable,
+  preChecked,
+  partner,
+  hasInbox,
+}: {
+  pickable: PickableSkill[];
+  preChecked: Set<string>;
+  partner: string;
+  hasInbox: boolean;
+}) {
+  if (pickable.length === 0) {
+    return (
+      <div className="border border-rule bg-paper-deep p-5 text-[14px] text-ink-soft">
+        <p>
+          Nothing in the live catalog matches your workspace yet. We&rsquo;re
+          rooting your fleet in — {partner} will pick this back up on the
+          welcome call.
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-5">
+      <p className="text-[15px] leading-relaxed text-ink-soft">
+        {hasInbox
+          ? `${partner} will fire each of these once you finish onboarding. Uncheck anything you'd rather skip for now — you can re-enable any skill later from the marketplace.`
+          : `${partner} can fire the items below from internal workspace data today. Connect an inbox to unlock inbox triage, the chief of staff, and follow-up chasing on your next visit.`}
+      </p>
+      <ul className="grid gap-px overflow-hidden border border-rule bg-rule">
+        {pickable.map((p) => (
+          <li key={p.slug} className="bg-paper p-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                name="pickedSkillSlugs"
+                value={p.slug}
+                defaultChecked={preChecked.has(p.slug)}
+                className="mt-1"
+              />
+              <span>
+                <span className="block font-display text-base leading-tight text-ink">
+                  {p.name}
+                </span>
+                <span className="mt-1 block font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                  {p.discipline.replace(/-/g, " ")}
+                </span>
+                <span className="mt-2 block text-[14px] leading-relaxed text-ink-soft">
+                  {p.firstFirePromise}
+                </span>
+              </span>
+            </label>
+          </li>
+        ))}
+      </ul>
+      <p className="border-t border-rule pt-4 text-[12px] leading-relaxed text-mute">
+        Honest scope: only skills that can produce real output on first
+        fire are shown. The full catalog of {partner}&rsquo;s skills lives
+        in the marketplace — pick any of them once you&rsquo;re in.
+      </p>
+    </div>
+  );
+}
+
+// ─── First-fire preview (wave-9 set_preferences footer) ─────────────────────
+
+function FirstFirePreview({
+  partner,
+  pickedSlugs,
+  pickable,
+}: {
+  partner: string;
+  pickedSlugs: string[];
+  pickable: PickableSkill[];
+}) {
+  const bySlug = new Map(pickable.map((p) => [p.slug, p] as const));
+  const visible = pickedSlugs
+    .map((slug) => bySlug.get(slug))
+    .filter((p): p is PickableSkill => p !== undefined);
+  return (
+    <div className="mt-8 border border-ink bg-paper-deep p-5">
+      <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+        next: first fire
+      </p>
+      <p className="mt-2 text-[15px] leading-relaxed text-ink">
+        When you save, {partner} runs each of these once. Results land on
+        the next screen as they&rsquo;re ready — typically inside a few
+        minutes.
+      </p>
+      {visible.length === 0 ? (
+        <p className="mt-3 text-[13px] leading-relaxed text-ink-soft">
+          No skills picked. You can pick from the marketplace any time,
+          and the normal cron starts watching your workspace right after.
+        </p>
+      ) : (
+        <ul className="mt-3 space-y-1 text-[14px] text-ink-soft">
+          {visible.map((p) => (
+            <li key={p.slug}>
+              <span className="font-mono text-[12px] text-mute">·</span>{" "}
+              <span className="text-ink">{p.name}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ─── First-fire watch section (wave-9 step 5) ───────────────────────────────
+
+async function FirstFireWatchSection({
+  workspaceId,
+  partner,
+  pickedSlugs,
+  pickable,
+  requestedAt,
+}: {
+  workspaceId: string;
+  partner: string;
+  pickedSlugs: string[];
+  pickable: PickableSkill[];
+  requestedAt: Date | null;
+}) {
+  const bySlug = new Map(pickable.map((p) => [p.slug, p] as const));
+  const initialPicked = pickedSlugs.map((slug) => {
+    const entry = bySlug.get(slug);
+    return {
+      slug,
+      name: entry?.name ?? slug.replace(/-/g, " "),
+      status: "pending" as const,
+    };
+  });
+  return (
+    <div className="space-y-4">
+      <p className="text-[15px] leading-relaxed text-ink-soft">
+        {partner}&rsquo;s fetching that for you. Each card below updates
+        as the first fire lands. You can leave this screen and open the
+        workspace whenever you&rsquo;re ready — the fleet keeps running
+        on its normal cadence either way.
+      </p>
+      <FirstFireWatch
+        workspaceId={workspaceId}
+        initial={{
+          picked: initialPicked,
+          resolved: pickedSlugs.length === 0,
+          requestedAt: requestedAt ? requestedAt.toISOString() : null,
+        }}
+      />
     </div>
   );
 }

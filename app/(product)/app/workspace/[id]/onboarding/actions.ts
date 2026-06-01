@@ -2,13 +2,37 @@
 
 // Advance the onboarding state machine one step. Validates the caller is
 // still an active broker-owner on the workspace (defense in depth — RLS +
-// app-layer check) and records an audit entry. The set_preferences step
-// also persists the form values into WorkspacePreference + records a
-// PreferenceSignal per axis so the audit trail survives later overwrites.
+// app-layer check) and records an audit entry.
+//
+// Per-step write boundaries:
+//   - set_preferences  → persists WorkspacePreference + appends
+//                        PreferenceSignal rows; advances to
+//                        first_fire_watch (NOT done — the wizard owes the
+//                        customer a live first fire before completing).
+//                        DISPATCHES the agentplain/onboarding.first-fire.
+//                        requested event with { workspaceId }; the
+//                        Inngest function reads OnboardingState.
+//                        pickedSkillSlugs and fans out per slug.
+//   - pick_skills      → persists OnboardingState.pickedSkillSlugs from
+//                        the form's `pickedSkillSlugs` multi-select.
+//                        Sanitized against the resolved pickable set.
+//   - first_fire_watch → sets completedAt = now() and redirects to the
+//                        dashboard. The customer has SEEN the wizard's
+//                        last step; no more state machine to traverse.
+//
+// Per project_no_outbound_architecture.md: the only outbound surface in
+// this file is the Inngest event dispatch, which targets an internal
+// worker. No emails, no SMS, no customer-facing sends.
 
 import { redirect } from "next/navigation";
 import { withWorkspace } from "@/lib/auth";
 import { withRls } from "@/lib/db";
+import { inngest } from "@/lib/inngest/client";
+import { ONBOARDING_FIRST_FIRE_EVENT } from "@/lib/inngest/functions/onboarding-first-fire";
+import {
+  resolvePickableSkills,
+  sanitizePickedSlugs,
+} from "@/lib/onboarding/picked-skills";
 import {
   STEP_META,
   isStepId,
@@ -21,6 +45,7 @@ import {
   upsertOnboardingPreference,
   type OnboardingPreferencesInput,
 } from "@/lib/preferences";
+import { getLogger } from "@/lib/observability";
 
 function readPreferencesFromForm(form: FormData): OnboardingPreferencesInput {
   const candidate = {
@@ -38,6 +63,15 @@ function readPreferencesFromForm(form: FormData): OnboardingPreferencesInput {
     );
   }
   return parsed.data;
+}
+
+function readPickedSlugsFromForm(form: FormData): string[] {
+  const raw = form.getAll("pickedSkillSlugs");
+  const slugs: string[] = [];
+  for (const v of raw) {
+    if (typeof v === "string" && v.length > 0) slugs.push(v);
+  }
+  return slugs;
 }
 
 export async function advanceOnboardingAction(
@@ -65,9 +99,6 @@ export async function advanceOnboardingAction(
       categorizationNotes: prefsInput.categorizationNotes,
       calendarWindow: prefsInput.calendarWindow,
     });
-    // Append-only signal log — one row per non-empty axis. Each signal
-    // captures what the broker-owner picked so a future learning pass
-    // (or a counsel audit) can reconstruct the state.
     const axisEntries: Array<[string, string | undefined]> = [
       ['tone', prefsInput.draftingTone],
       ['categorization', prefsInput.categorizationNotes],
@@ -84,8 +115,28 @@ export async function advanceOnboardingAction(
     }
   }
 
+  // Wave-9 — persist picked skill slugs on the pick_skills step. The
+  // form sends one `pickedSkillSlugs` value per checked box (browsers
+  // submit visible-checked checkboxes by name). Unchecked = absent =
+  // sanitized to empty.
+  let pickedSlugsForFirstFire: string[] | null = null;
+  if (fromStep === "pick_skills") {
+    const raw = readPickedSlugsFromForm(formData);
+    const existingConnections = await withRls(rls, (tx) =>
+      tx.integrationCredential.findMany({
+        where: { workspaceId, status: "ACTIVE" },
+        select: { provider: true },
+      }),
+    );
+    const hasInbox = existingConnections.some(
+      (c) => c.provider === "GOOGLE" || c.provider === "M365",
+    );
+    const pickable = resolvePickableSkills({ hasInbox });
+    pickedSlugsForFirstFire = sanitizePickedSlugs(raw, pickable);
+  }
+
   const nextStep = nextStepAfter(fromStep);
-  const isDone = nextStep === "done";
+  const isFinalStep = fromStep === "first_fire_watch";
 
   await withRls(rls, async (tx) => {
     const state = await tx.onboardingState.findUnique({
@@ -100,19 +151,37 @@ export async function advanceOnboardingAction(
     );
     completed.add(fromStep);
 
+    const updateData: {
+      currentStep: string;
+      completedSteps: string[];
+      completedAt?: Date | null;
+      pickedSkillSlugs?: string[];
+      firstFireRequestedAt?: Date | null;
+    } = {
+      currentStep: nextStep,
+      completedSteps: Array.from(completed),
+    };
+    if (isFinalStep) {
+      updateData.completedAt = new Date();
+    }
+    if (pickedSlugsForFirstFire !== null) {
+      updateData.pickedSkillSlugs = pickedSlugsForFirstFire;
+    }
+    if (fromStep === "set_preferences") {
+      // Stamp the request timestamp here so the watch panel's `since`
+      // boundary is correct even if the Inngest event takes a moment to
+      // hand off to the worker.
+      updateData.firstFireRequestedAt = new Date();
+    }
+
     await tx.onboardingState.upsert({
       where: { workspaceId },
       create: {
         workspaceId,
-        currentStep: nextStep,
-        completedSteps: Array.from(completed),
-        completedAt: isDone ? new Date() : null,
+        ...updateData,
+        completedSteps: updateData.completedSteps,
       },
-      update: {
-        currentStep: nextStep,
-        completedSteps: Array.from(completed),
-        completedAt: isDone ? new Date() : null,
-      },
+      update: updateData,
     });
 
     await tx.auditLog.create({
@@ -127,12 +196,38 @@ export async function advanceOnboardingAction(
           stepLabel: STEP_META[fromStep].label,
           nextStep,
           skipped,
+          ...(pickedSlugsForFirstFire !== null
+            ? { pickedSlugCount: pickedSlugsForFirstFire.length }
+            : {}),
         },
       },
     });
   });
 
-  if (isDone) {
+  // Wave-9 — dispatch the first-fire event after the OnboardingState
+  // write commits, so the Inngest worker's fresh read sees the new
+  // pickedSkillSlugs + firstFireRequestedAt. Best-effort: if the
+  // dispatch fails (Inngest down, network blip), the customer still
+  // advances to first_fire_watch and the watch panel falls back to the
+  // "still working" timed-out copy after ~5 minutes. The normal cron
+  // sweeps will pick up the workspace within their cadence either way.
+  if (fromStep === "set_preferences") {
+    try {
+      await inngest.send({
+        name: ONBOARDING_FIRST_FIRE_EVENT,
+        data: { workspaceId },
+      });
+    } catch (err) {
+      getLogger()
+        .child({ boundary: "onboarding-action", workspace_id: workspaceId })
+        .error(
+          "onboarding first-fire event dispatch failed — wizard advances; cron will catch up",
+          err,
+        );
+    }
+  }
+
+  if (isFinalStep) {
     redirect(`/app/workspace/${workspaceId}`);
   } else {
     redirect(`/app/workspace/${workspaceId}/onboarding`);

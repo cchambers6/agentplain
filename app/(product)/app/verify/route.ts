@@ -12,6 +12,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { verifyMagicLink, writeSession, type SessionPayload } from "@/lib/auth";
+import { withSystemContext } from "@/lib/db";
 
 type FailureReason = "missing" | "invalid" | "expired" | "used";
 
@@ -61,8 +62,23 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   };
   await writeSession(session, { remember });
 
-  const destination = result.defaultWorkspaceId
-    ? `/app/workspace/${result.defaultWorkspaceId}`
-    : "/app";
+  // Wave-9 — land non-onboarded customers directly on the onboarding
+  // wizard so the self-serve flow is the first thing they see. Once
+  // OnboardingState.completedAt is set the magic link returns the
+  // customer to the dashboard as before.
+  let destination: string;
+  if (result.defaultWorkspaceId) {
+    const onboardingDone = await withSystemContext((tx) =>
+      tx.onboardingState.findUnique({
+        where: { workspaceId: result.defaultWorkspaceId! },
+        select: { completedAt: true },
+      }),
+    ).catch(() => null);
+    destination = onboardingDone?.completedAt
+      ? `/app/workspace/${result.defaultWorkspaceId}`
+      : `/app/workspace/${result.defaultWorkspaceId}/onboarding`;
+  } else {
+    destination = "/app";
+  }
   return NextResponse.redirect(new URL(destination, origin), { status: 303 });
 }

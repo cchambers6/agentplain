@@ -30,6 +30,8 @@ import { withSystemContext } from "@/lib/db/rls";
 import { encryptTokenSet } from "@/lib/integrations";
 import { requireUser } from "@/lib/auth/server";
 import { env } from "@/lib/env";
+import { inngest } from "@/lib/inngest/client";
+import { MCP_CONNECTED_SEED_INBOX_EVENT } from "@/lib/inngest/functions/mcp-connected-seed-inbox";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -338,6 +340,23 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       },
     }),
   );
+
+  // Wave-10 phase-3a — dispatch the seed-inbox seam (mirrors the Google
+  // callback). Wave-10 handler is a no-op; wave-10b swaps it for real
+  // substrate ingestion. Failure is non-fatal — the OAuth flow
+  // completes regardless.
+  try {
+    await inngest.send({
+      name: MCP_CONNECTED_SEED_INBOX_EVENT,
+      data: {
+        workspaceId,
+        provider: "M365" as const,
+        credentialId: credential.id,
+      },
+    });
+  } catch {
+    // Best-effort; see comment in the Google callback for rationale.
+  }
 
   const res = workspaceRedirect(origin, cookie, {
     connected: INTEGRATION_ID,

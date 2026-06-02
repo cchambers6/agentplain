@@ -12,6 +12,12 @@ import { ApHeritageButton } from "@/components/ui/ap";
  * reason on skip/fail, and (if the skill wrote a queue item) a
  * deep-link to /approvals.
  *
+ * Wave-10 phase-3b: polls with `?includeDraft=1` so the endpoint
+ * returns a `draftPreview` (title + body + meta) for every drafted
+ * skill. The customer sees the actual draft body inline — clicking
+ * through to /approvals is now optional, not required, to read what
+ * Plaino made.
+ *
  * Polls every 5 seconds for up to ~5 minutes (60 ticks). Falls back to
  * "your fleet is running on cron now — check back in 15 min" when the
  * window expires.
@@ -23,12 +29,22 @@ import { ApHeritageButton } from "@/components/ui/ap";
  * calm + concrete, never chirpy.
  */
 
+interface DraftPreview {
+  title: string;
+  body: string;
+  meta?: Array<{ label: string; value: string }>;
+}
+
 interface SkillStatus {
   slug: string;
   name: string;
   status: "pending" | "drafted" | "skipped" | "failed";
   reason?: string;
   queueItemHref?: string;
+  /** Wave-10 phase-3b — populated when status='drafted' and the row's
+   *  payload decrypts to a known kind. The wizard expands this inline
+   *  so the customer reads the draft without clicking through. */
+  draftPreview?: DraftPreview;
 }
 
 interface FirstFireStatusResponse {
@@ -73,7 +89,7 @@ export function FirstFireWatch({ workspaceId, initial }: FirstFireWatchProps) {
       });
       try {
         const res = await fetch(
-          `/api/onboarding/first-fire-status?workspaceId=${encodeURIComponent(workspaceId)}`,
+          `/api/onboarding/first-fire-status?workspaceId=${encodeURIComponent(workspaceId)}&includeDraft=1`,
           { cache: "no-store" },
         );
         if (!res.ok) return;
@@ -122,6 +138,7 @@ export function FirstFireWatch({ workspaceId, initial }: FirstFireWatchProps) {
 }
 
 function SkillRow({ skill }: { skill: SkillStatus }) {
+  const [expanded, setExpanded] = useState(false);
   const accent =
     skill.status === "drafted"
       ? "text-moss"
@@ -138,6 +155,7 @@ function SkillRow({ skill }: { skill: SkillStatus }) {
         : skill.status === "failed"
           ? "failed"
           : "fetching";
+  const hasPreview = skill.status === "drafted" && skill.draftPreview != null;
   return (
     <li className="bg-paper p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -155,8 +173,15 @@ function SkillRow({ skill }: { skill: SkillStatus }) {
           {skill.reason}
         </p>
       ) : null}
+      {hasPreview && skill.draftPreview ? (
+        <DraftPreviewCard
+          preview={skill.draftPreview}
+          expanded={expanded}
+          onToggle={() => setExpanded((v) => !v)}
+        />
+      ) : null}
       {skill.queueItemHref ? (
-        <div className="mt-2">
+        <div className="mt-3">
           <ApHeritageButton
             variant="secondary"
             withArrow
@@ -167,5 +192,51 @@ function SkillRow({ skill }: { skill: SkillStatus }) {
         </div>
       ) : null}
     </li>
+  );
+}
+
+function DraftPreviewCard({
+  preview,
+  expanded,
+  onToggle,
+}: {
+  preview: DraftPreview;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="mt-3 border border-rule bg-paper-deep">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-baseline justify-between gap-3 px-3 py-2 text-left hover:bg-paper"
+      >
+        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+          {preview.title}
+        </p>
+        <span className="font-mono text-[10px] tracking-eyebrow uppercase text-ink-soft">
+          {expanded ? "collapse" : "read draft"}
+        </span>
+      </button>
+      {expanded ? (
+        <div className="border-t border-rule px-3 py-3">
+          {preview.meta && preview.meta.length > 0 ? (
+            <dl className="mb-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[12px]">
+              {preview.meta.map((m) => (
+                <div key={m.label} className="contents">
+                  <dt className="font-mono text-[10px] tracking-eyebrow uppercase text-ink-soft">
+                    {m.label}
+                  </dt>
+                  <dd className="text-ink">{m.value}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
+          <pre className="whitespace-pre-wrap break-words font-sans text-[13px] leading-relaxed text-ink">
+            {preview.body}
+          </pre>
+        </div>
+      ) : null}
+    </div>
   );
 }

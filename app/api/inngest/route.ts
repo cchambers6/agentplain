@@ -60,6 +60,18 @@ import { b2bSalesRepReplySweepFn } from "@/lib/inngest/functions/b2b-sales-rep-r
 // customer sees the first SkillRun row land in the watch panel within
 // minutes of finishing onboarding.
 import { onboardingFirstFireFn } from "@/lib/inngest/functions/onboarding-first-fire";
+// Wave-10 phase-1 — one-off backfill that rewinds in-flight wave-8
+// customers from set_preferences/first_fire_watch back to pick_skills so
+// they pass through the wave-9 picker. Dispatched once via the operator
+// script or the agentplain/onboarding.backfill-pick-skills.requested
+// event. Idempotent.
+import { onboardingBackfillPickSkillsFn } from "@/lib/inngest/functions/onboarding-backfill-pick-skills";
+// Wave-10 phase-3a — seed-inbox seam. Google + Outlook OAuth callbacks
+// dispatch agentplain/mcp.connected.seed-inbox the moment a workspace's
+// first inbox credential lands. The wave-10 handler is a no-op that
+// records an audit row; wave-10b will swap in real substrate ingestion
+// of the last 7 days of inbox content.
+import { mcpConnectedSeedInboxFn } from "@/lib/inngest/functions/mcp-connected-seed-inbox";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -92,5 +104,7 @@ export const { GET, POST, PUT } = serve({
     b2bSalesRepPreCallBriefFn,
     b2bSalesRepReplySweepFn,
     onboardingFirstFireFn,
+    onboardingBackfillPickSkillsFn,
+    mcpConnectedSeedInboxFn,
   ],
 });

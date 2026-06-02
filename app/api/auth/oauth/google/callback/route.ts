@@ -33,6 +33,8 @@ import { decryptCredential, encryptTokenSet, getProvider } from '@/lib/integrati
 import { requireUser } from '@/lib/auth/server';
 import { withSystemContext } from '@/lib/db/rls';
 import { env } from '@/lib/env';
+import { inngest } from '@/lib/inngest/client';
+import { MCP_CONNECTED_SEED_INBOX_EVENT } from '@/lib/inngest/functions/mcp-connected-seed-inbox';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -318,6 +320,27 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       },
     }),
   );
+
+  // Wave-10 phase-3a — dispatch the seed-inbox seam so wave-10b's
+  // substrate ingestion (when it lands) pre-fetches the last 7 days of
+  // inbox content for this credential. The wave-10 handler is a no-op
+  // that records an audit row; the seam guarantees the dispatch site
+  // lives in the right place from day one. Failure is non-fatal — the
+  // OAuth flow completes regardless.
+  try {
+    await inngest.send({
+      name: MCP_CONNECTED_SEED_INBOX_EVENT,
+      data: {
+        workspaceId: cookie.workspaceId,
+        provider: 'GOOGLE' as const,
+        credentialId: credential.id,
+      },
+    });
+  } catch {
+    // Best-effort. The OAuth callback's job is to land the credential;
+    // the seed seam is a follow-on observability + future-ingestion
+    // hook. A failed dispatch doesn't block the customer's connect.
+  }
 
   const res = redirectSuccess(origin, cookie, credential.id);
   res.cookies.set(OAUTH_STATE_COOKIE, '', { path: '/', maxAge: 0 });

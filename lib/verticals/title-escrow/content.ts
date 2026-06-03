@@ -115,7 +115,7 @@ export const titleEscrow: VerticalContent = {
       "agentplain REPLACES the file-intake and document-collection scramble, INTEGRATES with Outlook, OneDrive, Excel, and DocuSign on day one, and AUGMENTS the closer's read on every closing-day prep packet.",
   },
 
-  metaTitle: "agentplain for title and escrow — local title agencies and closing offices",
+  metaTitle: "for local title and escrow agencies",
   metaDescription:
     "An agentic fleet for the 3–20 person title and escrow operation. File intake from realtor + lender channels, milestone tracking, closing-day prep, recording follow-up, and CFPB-aware customer communication — drafted for the closer's review and sent from your own systems.",
 

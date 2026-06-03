@@ -4,7 +4,7 @@ import Section from "@/components/Section";
 import RoiCalculator from "@/components/RoiCalculator";
 
 export const metadata: Metadata = {
-  title: "Pricing — agentplain",
+  title: "Pricing",
   description:
     "Three service-partnership tiers, per-seat, month-to-month. Regular $199 → $99, Partner $299 → $199, Max quoted to scope. First month free. Bespoke engagements live on /custom.",
 };

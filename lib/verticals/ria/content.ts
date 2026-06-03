@@ -128,8 +128,7 @@ export const ria: VerticalContent = {
       "agentplain REPLACES the meeting-prep + post-meeting documentation cycle, INTEGRATES with Outlook, OneDrive, Excel, and DocuSign on day one, and AUGMENTS the advisor's review on every client-facing communication with a fiduciary-aware compliance pass.",
   },
 
-  metaTitle:
-    "agentplain for RIAs — independent registered investment advisors",
+  metaTitle: "for independent RIAs and wealth advisors",
   metaDescription:
     "An agentic fleet for the 1–10 advisor independent registered investment advisor firm. Client-meeting prep, post-meeting note + task drafting, financial-plan refresh cadence, fiduciary-aware communication review, billing on AUM cycle, and ADV-aware compliance — drafted for the advisor's review and sent from your own systems.",
 

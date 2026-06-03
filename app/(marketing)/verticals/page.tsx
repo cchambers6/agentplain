@@ -5,7 +5,7 @@ import Section from "@/components/Section";
 import { getAllVerticals } from "@/lib/verticals";
 
 export const metadata: Metadata = {
-  title: "Verticals — agentplain",
+  title: "Verticals",
   description:
     "agentplain is a service partnership built for ten locked verticals. Three tiers (Regular $199 → $99, Partner $299 → $199, Max quoted) cover every vertical; bespoke engagements live on /custom.",
 };

@@ -107,9 +107,9 @@ export const realEstate: VerticalContent = {
       "agentplain REPLACES the 8–12 weekly hours a broker-owner spends on coordination work, INTEGRATES with Outlook, Gmail, Google Drive, and DocuSign on day one, and AUGMENTS the broker-of-record's review on every customer-facing draft.",
   },
 
-  metaTitle: "agentplain for real estate brokerages — agentic operating layer",
+  metaTitle: "for independent real-estate brokerages",
   metaDescription:
-    "An agentic operating layer for the 5–25-agent independent real-estate brokerage. Listing intake, buyer routing, showings, compliance, CRM hygiene, production reporting, and recruiting — coordinated by a pre-trained fleet that sits on top of the tools you already use.",
+    "The fleet for the 5–25-agent independent real-estate brokerage. Listing intake, buyer routing, showings, compliance, CRM hygiene, production reporting, and recruiting — coordinated by a pre-trained fleet that sits on top of the tools you already use.",
 
   jtbdTables: [
     {
@@ -117,56 +117,49 @@ export const realEstate: VerticalContent = {
       draft: false,
       rows: [
         {
-          job: "Know what the fleet did yesterday",
+          job: "Know what the fleet drafted overnight",
           when: "Morning, with coffee",
-          today: "Email digest from the operator",
+          today: "Open Outlook, scan the last 24 hours of activity by hand",
           withAgentplain:
-            "Workspace overview page — daily briefing + per-agent activity, scannable in under 30 seconds",
-        },
-        {
-          job: "Ratify a capability proposal targeting your fleet",
-          when: "When the capability-builder fires",
-          today: "Operator DMs you",
-          withAgentplain:
-            "/app/workspace/[id]/proposals with the target-agent voice block enforced",
+            "Daily briefing — yesterday's drafts + flags + per-agent activity scannable in under 30 seconds",
         },
         {
           job: "Triage a compliance flag on an in-flight listing",
           when: "Within hours of the flag landing",
-          today: "Operator texts you",
+          today: "Caught after the listing's already on MLS, via a call from the broker-of-record",
           withAgentplain:
-            "/app/workspace/[id]/compliance with an SLA timer per severity tier",
+            "Sentinel pre-checks every customer-facing draft; flags surface before MLS submission with severity rating + suggested rewrite",
         },
         {
           job: "Invite a new agent to the workspace",
           when: "New hire onboarding",
-          today: "Email the operator",
-          withAgentplain: "Self-serve invite UI",
+          today: "Manual setup — credentials, tool access, training",
+          withAgentplain: "Self-serve invite from the workspace settings page",
         },
         {
           job: "Configure which agents are enabled at your tier",
           when: "Initial setup, tier upgrade",
-          today: "Operator does it",
+          today: "Doesn't exist — your current stack doesn't have configurable agents",
           withAgentplain: "Settings page, role-gated by tier",
         },
         {
           job: "See the AI activity on any listing in your brokerage",
           when: "Pre-close review, regulatory inquiry",
-          today: "Ask the operator",
+          today: "Hunt through inbox + CRM history by hand",
           withAgentplain:
-            "/app/workspace/[id]/listings/[id] activity feed — append-only handoff log",
+            "Per-listing activity feed — append-only handoff log on the listing's page",
         },
         {
           job: "See agent-team health — who is using the product, who is not",
           when: "Weekly",
-          today: "Does not exist",
+          today: "Doesn't exist",
           withAgentplain: "Workspace user list with last-active-at",
         },
         {
           job: "Pay your bill",
           when: "Monthly",
-          today: "Manual invoice",
-          withAgentplain: "Billing page (read-only invoice list in V1, self-serve in Phase 4)",
+          today: "Manual invoice from your current tooling",
+          withAgentplain: "Billing page in your workspace — invoice history + payment method",
         },
       ],
     },

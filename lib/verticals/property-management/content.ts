@@ -108,7 +108,7 @@ export const propertyManagement: VerticalContent = {
       "agentplain REPLACES tenant inbound triage and maintenance ticket routing, INTEGRATES with Outlook, Gmail, and QuickBooks Online on day one, and AUGMENTS the owner report cadence so landlords stop calling you for status.",
   },
 
-  metaTitle: "agentplain for property managers — single-family and small-portfolio operators",
+  metaTitle: "for single-family and small-portfolio property managers",
   metaDescription:
     "An agentic fleet for 50–500-door single-family and small-portfolio property management companies. Tenant inbound triage, maintenance ticket routing, rent-collection chase, lease renewal cadence, and owner reporting — drafted for the property manager's review and sent from your own systems.",
 

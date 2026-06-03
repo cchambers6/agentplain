@@ -38,6 +38,9 @@ const MARKETING_ROUTES: Array<{
   { path: "/pricing", changeFrequency: "monthly", priority: 0.9 },
   { path: "/verticals", changeFrequency: "weekly", priority: 0.9 },
   { path: "/custom", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/privacy", changeFrequency: "yearly", priority: 0.4 },
+  { path: "/terms", changeFrequency: "yearly", priority: 0.4 },
+  { path: "/security", changeFrequency: "monthly", priority: 0.5 },
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

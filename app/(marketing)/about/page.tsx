@@ -3,7 +3,7 @@ import Link from "next/link";
 import { tokens } from "@/lib/brand/tokens";
 
 export const metadata: Metadata = {
-  title: "About — agentplain",
+  title: "About",
   description:
     "agentplain is a service partnership for local businesses. We install a fleet of capable AI partners, run weekly reviews, and customize as your ops shift — so you stay focused on the people you serve.",
 };

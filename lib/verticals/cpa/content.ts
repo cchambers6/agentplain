@@ -115,8 +115,7 @@ export const cpa: VerticalContent = {
       "agentplain REPLACES the 8-week document-chase cycle, INTEGRATES with Outlook, OneDrive, QuickBooks Online, and DocuSign on day one, and AUGMENTS the partner's review on every return with a federal + state checklist run before the file hits the desk.",
   },
 
-  metaTitle:
-    "agentplain for CPA firms — 2–10 person practices",
+  metaTitle: "for CPA firms — 2–10 person practices",
   metaDescription:
     "An agentic fleet for the solo or 2–10 partner CPA firm doing 1040s + 1120-S + bookkeeping retainers. Engagement-letter onboarding, document chase, compliance review, books reconciliation, and milestone billing — drafted for the partner's review and sent from your own systems.",
 

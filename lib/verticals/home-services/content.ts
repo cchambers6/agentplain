@@ -130,8 +130,7 @@ export const homeServices: VerticalContent = {
       "agentplain REPLACES the lead-source juggle and the insurance-supplement scramble, INTEGRATES with Outlook, Gmail, and QuickBooks Online on day one, and AUGMENTS the owner's read on every estimate, supplement, and homeowner-facing reply.",
   },
 
-  metaTitle:
-    "agentplain for home services — roofing, HVAC, GC remodel, landscaping",
+  metaTitle: "for home services — roofing, HVAC, GC remodel, landscaping",
   metaDescription:
     "An agentic fleet for the 5–25 crew residential trades operation. Lead routing across inbound sources, estimate drafting from measurement data, insurance-supplement drafting for storm work, project coordination, and review-and-referral cadence — drafted for the owner's review and sent from your own systems.",
 

@@ -128,8 +128,7 @@ export const law: VerticalContent = {
       "agentplain REPLACES the intake-to-engagement bottleneck, INTEGRATES with Outlook, OneDrive, and DocuSign on day one, and AUGMENTS the partner's read on every client communication and every drafted pleading with a privilege-aware compliance pass.",
   },
 
-  metaTitle:
-    "agentplain for law firms — solo and 2–5 attorney practices",
+  metaTitle: "for solo and small law firms (2–5 attorneys)",
   metaDescription:
     "An agentic fleet for the solo or 2–5 attorney law firm. Client intake, engagement-letter drafting, conflict-check coordination, drafted client communication with privilege guard, document chase, billing on milestone, and matter-state reporting — drafted for the partner's review and sent from your own systems. Note: Clio Work shipped agentic in April 2026; agentplain differentiates on the fleet-coordination layer above any single practice-management vendor.",
 

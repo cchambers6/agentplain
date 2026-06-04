@@ -38,7 +38,7 @@ export function generateMetadata({
   params: { vertical: string };
 }): Metadata {
   const content = getVerticalContent(params.vertical);
-  if (!content) return { title: "Not found — agentplain" };
+  if (!content) return { title: "Not found" };
   return {
     title: content.metaTitle,
     description: content.metaDescription,

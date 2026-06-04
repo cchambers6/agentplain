@@ -108,7 +108,7 @@ export const insurance: VerticalContent = {
       "agentplain REPLACES the CSR hours spent on certificates of insurance and renewal prep, INTEGRATES with Outlook, OneDrive, and DocuSign on day one, and AUGMENTS the producer's read on every renewal proposal and claims update.",
   },
 
-  metaTitle: "agentplain for insurance brokerages — independent P&C agencies",
+  metaTitle: "for independent P&C insurance brokerages",
   metaDescription:
     "An agentic fleet for the 3–15 producer independent insurance agency. COI generation, renewal coordination, carrier appetite intelligence, claims-status outreach, and commission reconciliation — drafted for the producer's review and sent from your own systems.",
 

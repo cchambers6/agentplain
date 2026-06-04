@@ -9,7 +9,7 @@ import {
 } from "@/lib/custom-inquiry/types";
 
 export const metadata: Metadata = {
-  title: "Build with us — agentplain Custom engagements",
+  title: "Build with us — Custom engagements",
   description:
     "Need something the standard fleet doesn't do? Custom skill, custom integration, bespoke compliance corpus, white-label, dedicated success, 100+ seats — we scope per customer. Starts at $5K. Typical $5K–$15K + $200–$500/mo maintenance.",
 };

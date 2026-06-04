@@ -113,7 +113,7 @@ export const mortgage: VerticalContent = {
       "agentplain REPLACES the document-chase that drowns every loan file, INTEGRATES with Outlook, OneDrive, and DocuSign on day one, and AUGMENTS the loan officer's read on every borrower interaction and TRID-sensitive disclosure.",
   },
 
-  metaTitle: "agentplain for mortgage brokerages — independent loan-officer offices",
+  metaTitle: "for independent mortgage brokerages",
   metaDescription:
     "An agentic fleet for the 2–10 loan-officer independent mortgage brokerage. Borrower triage, document collection, status updates, RESPA/TRID-aware compliance review on consumer-facing communication, and pipeline reporting — drafted for the loan officer's review and sent from your own systems.",
 

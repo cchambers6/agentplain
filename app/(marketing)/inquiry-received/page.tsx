@@ -12,7 +12,7 @@ import { tokens } from "@/lib/brand/tokens";
 // surface, not an automated email. Nothing fires from here.
 
 export const metadata: Metadata = {
-  title: "Inquiry received — agentplain",
+  title: "Inquiry received",
   description:
     "Got it. A service partner will reach out within 1 business day.",
   robots: { index: false, follow: false },

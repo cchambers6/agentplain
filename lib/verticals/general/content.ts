@@ -106,8 +106,7 @@ export const general: VerticalContent = {
       "agentplain REPLACES the universal admin work — inbox triage, scheduling, follow-up, basic documentation — INTEGRATES with the tools every local business already runs (Gmail, Outlook, Google Drive, QuickBooks, DocuSign), and AUGMENTS the owner's review on every customer-facing draft. No vertical-specific compliance corpus; if you need one, we scope it as a Custom engagement.",
   },
 
-  metaTitle:
-    "agentplain for local businesses — service partnership for any industry",
+  metaTitle: "for local businesses — any industry",
   metaDescription:
     "An honest on-ramp for local businesses outside our ten named verticals. The same service partnership — inbox triage, scheduling, follow-up, drafted responses — scaffolded against common-denominator tools (Gmail, Outlook, Google Drive, QuickBooks, DocuSign). Lighter compliance corpus than the named verticals; if you need bespoke vertical depth, we scope it as a Custom engagement.",
 

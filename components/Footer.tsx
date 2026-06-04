@@ -116,6 +116,21 @@ export default function Footer() {
               </Link>
             </li>
             <li>
+              <Link href="/privacy" className="text-ink hover:text-clay">
+                Privacy
+              </Link>
+            </li>
+            <li>
+              <Link href="/terms" className="text-ink hover:text-clay">
+                Terms
+              </Link>
+            </li>
+            <li>
+              <Link href="/security" className="text-ink hover:text-clay">
+                Security
+              </Link>
+            </li>
+            <li>
               <a
                 href="mailto:hello@agentplain.com"
                 className="text-ink hover:text-clay"

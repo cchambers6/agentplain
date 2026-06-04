@@ -123,7 +123,7 @@ export const recruiting: VerticalContent = {
       "agentplain REPLACES the manual sourcing + first-touch drafting cycle, INTEGRATES with Outlook, Gmail, Slack, and DocuSign on day one, and AUGMENTS the recruiter's read on every outreach with substantiated production evidence.",
   },
 
-  metaTitle: "agentplain for recruiting firms — boutique and in-house talent teams",
+  metaTitle: "for boutique recruiting firms and in-house talent teams",
   metaDescription:
     "An agentic fleet for the 2–10 recruiter boutique firm or in-house talent team. Sourcing against public production data, drafted outreach with one substantiated reference per touch, opt-out compliance, pipeline tracking, and offer-package assembly — drafted for the recruiter's review and sent from your own systems.",
 

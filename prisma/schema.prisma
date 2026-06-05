@@ -1801,4 +1801,11 @@ model SkillRun {
   @@index([workspaceId, skillSlug, firedAt(sort: Desc)])
   @@index([workspaceId, discipline, firedAt(sort: Desc)])
   @@index([workspaceId, outcome, firedAt(sort: Desc)])
+  /// Cross-workspace feed ordering for /operator/fleet (Stream D.1). The
+  /// operator inspector reads the newest N runs across ALL workspaces ordered
+  /// by firedAt; the per-workspace indexes above are workspace-leading and
+  /// can't serve that scan. firedAt-leading index, with workspaceId trailing
+  /// so workspace-filtered feed queries still use it. Matches the
+  /// (timestamp DESC, workspaceId) shape the build plan calls for.
+  @@index([firedAt(sort: Desc), workspaceId])
 }

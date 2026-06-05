@@ -188,6 +188,14 @@ export const supportHandlerOnCreateFn = inngest.createFunction(
             sunk: res.value.sunk,
             substrate: res.value.substrate,
           });
+          // When the draft landed in the operator queue, advance the
+          // request NEW → IN_REVIEW so /operator/support shows "a draft is
+          // waiting". Only NEW rows move — an operator who already touched
+          // it (OPEN / RESOLVED) keeps their state. Best-effort: the draft
+          // is already durable, so a status-flip failure is non-fatal.
+          if (res.value.sunk) {
+            await markRequestInReview(data.supportRequestId);
+          }
           logger.info('support-handler fire finished', {
             support_request_id: data.supportRequestId,
             workspace_id: data.workspaceId,
@@ -247,6 +255,22 @@ async function recordAuditSuccess(args: AuditSuccessArgs): Promise<void> {
   } catch {
     // Best-effort. The drafted proposal is already in the operator
     // queue; an audit-log failure is non-fatal.
+  }
+}
+
+/** Advance a freshly-drafted SupportRequest NEW → IN_REVIEW. Scoped to
+ *  NEW so an operator-touched row (OPEN / RESOLVED / ARCHIVED) is never
+ *  clobbered by a late or retried fire. Best-effort. */
+async function markRequestInReview(supportRequestId: string): Promise<void> {
+  try {
+    await withSystemContext((tx) =>
+      tx.supportRequest.updateMany({
+        where: { id: supportRequestId, status: "NEW" },
+        data: { status: "IN_REVIEW" },
+      }),
+    );
+  } catch {
+    // Non-fatal — the draft is already in the operator queue.
   }
 }
 

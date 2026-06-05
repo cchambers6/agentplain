@@ -82,6 +82,18 @@ ALTER TABLE "WorkspacePreference" DROP CONSTRAINT "WorkspacePreference_workspace
 -- DropIndex
 DROP INDEX "Embedding_vector_cosine_idx";
 
+-- DropIndex
+DROP INDEX "SkillRun_discipline_trgm_idx";
+
+-- DropIndex
+DROP INDEX "SkillRun_errorMessage_trgm_idx";
+
+-- DropIndex
+DROP INDEX "SkillRun_skillSlug_trgm_idx";
+
+-- DropIndex
+DROP INDEX "WorkApprovalQueueItem_agentSlug_trgm_idx";
+
 -- AlterTable
 ALTER TABLE "AuditLog" ALTER COLUMN "id" DROP DEFAULT;
 

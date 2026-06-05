@@ -47,9 +47,8 @@ export default async function ApprovalsPage({ params, searchParams }: PageProps)
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
         Nothing leaves agentplain on its own. We draft; you decide; your
         existing system is what actually sends. Every customer-facing item
-        lands here first — routine work auto-marked APPROVED in a quieter
-        lane, anything above your threshold flagged for explicit
-        ratification.
+        lands here first. Routine, low-stakes work clears in a quieter lane;
+        anything above the threshold you set waits here for your yes.
       </p>
 
       {rows.length === 0 ? (

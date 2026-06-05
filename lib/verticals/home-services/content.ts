@@ -266,11 +266,11 @@ export const homeServices: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "14x",
+    multiplier: "14x–21x",
     inputCost: "Partner tier · $299 per seat (solo), sliding to $199 per seat (50–99 seats) — first month free, includes 4 hrs/mo of named-service-partner time",
     outputValue: "$50,000+ / yr in supplement reclamation alone at a storm-heavy shop",
     math:
-      "Per `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3: \"This single agent [insurance supplement] saves $50K+/yr at a storm-heavy shop.\" Against the solo Partner-tier seat at $299/mo ($3,588/yr) that single value stream alone is ~14x at one seat. Stack on cycle-time compression (estimate-to-contract velocity), reduced lead leakage across HomeAdvisor / Angi / LSA / GBP, and back-office reclamation — total is materially higher than $50k for shops doing $5–25M/yr. The 4 hrs/mo of named-service-partner time bundled with Partner is treated as commitment, not as ROI uplift here. White-label, multi-state ops, or 100+ seats route to Max (quote-based) or /custom (capability build).",
+      "Per `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3: \"This single agent [insurance supplement] saves $50K+/yr at a storm-heavy shop.\" That single value stream alone is ~$4,167/mo per seat. Solo case: against the Partner-tier solo seat ($299/mo) = ~14x ROI. At-scale case: same per-seat value against the 50-seat-band price ($199/mo) = ~21x. Stack on cycle-time compression (estimate-to-contract velocity), reduced lead leakage across HomeAdvisor / Angi / LSA / GBP, and back-office reclamation — total is materially higher than $50k for shops doing $5–25M/yr. The 4 hrs/mo of named-service-partner time bundled with Partner is treated as commitment, not as ROI uplift here. White-label, multi-state ops, or 100+ seats route to Max (quote-based) or /custom (capability build).",
     citation:
       "Supplement-savings claim cited verbatim from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3. Pricing per `project_stripe_both_surfaces.md` (Partner tier per 2026-05-15 ratification; per-seat ladder $299→$199 with 4 hrs/mo of named-service-partner time included). ROI band per `project_pricing_value_anchor.md`.",
   },

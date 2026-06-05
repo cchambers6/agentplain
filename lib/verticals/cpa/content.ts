@@ -257,11 +257,11 @@ export const cpa: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "12x",
+    multiplier: "12x–18x",
     inputCost: "Partner tier · $299 per seat (solo), sliding to $199 per seat (50–99 seats) — first month free, includes 4 hrs/mo of named-service-partner time",
     outputValue: "$42,000 / yr in tax-season hour reclamation per staff seat",
     math:
-      "Tax season = 80-hour weeks. Doc-chase consumes ~25% of staff hours through 8 weeks (per b2b_vertical_opportunity_analysis_2026-04-27.md §3.4 — \"document chase consumes the front office for 8 weeks a year\"). 0.25 × 80 hours × 8 weeks × $65/hr loaded = $10,400 per staff per season. Add onboarding-letter automation and books-recon reclamation: total ~$42k/yr per staff against the solo Partner-tier seat at $299/mo ($3,588/yr) = ~12x at one seat. A 3-staff firm sees ~$126k/yr in reclamation against $10,044/yr of subscription (3 seats × $279/mo at the 2–9 band) — ~12.5x at three seats. The 4 hrs/mo of named-service-partner time bundled with Partner is treated as commitment, not as ROI uplift here — primary research will reset this once first design partner signs. Customers needing bespoke compliance corpora, white-label, or 100+ seats route to Max (quote-based) or /custom (capability build).",
+      "Tax season = 80-hour weeks. Doc-chase consumes ~25% of staff hours through 8 weeks (per b2b_vertical_opportunity_analysis_2026-04-27.md §3.4 — \"document chase consumes the front office for 8 weeks a year\"). 0.25 × 80 hours × 8 weeks × $65/hr loaded = $10,400 per staff per season. Add onboarding-letter automation and books-recon reclamation: total ~$42k/yr (~$3,500/mo) per staff seat. Solo case: against the Partner-tier solo seat ($299/mo) = ~12x ROI. At-scale case: same per-staff value against the 50-seat-band price ($199/mo) = ~18x. The 4 hrs/mo of named-service-partner time bundled with Partner is treated as commitment, not as ROI uplift here — primary research will reset this once first design partner signs. Customers needing bespoke compliance corpora, white-label, or 100+ seats route to Max (quote-based) or /custom (capability build).",
     citation:
       "Pricing per `project_stripe_both_surfaces.md` (Partner tier per 2026-05-15 ratification; per-seat ladder $299→$199 with 4 hrs/mo of named-service-partner time included). ROI band per `project_pricing_value_anchor.md` (Partner-tier value scales with Regular's $2,900–$10,600/mo per seat plus the named-partner overlay). Doc-chase share cited from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.4. Staff-loading rate is operator-modeled — flagged in capability inbox for primary-research validation.",
   },

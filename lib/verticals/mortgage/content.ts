@@ -215,11 +215,11 @@ export const mortgage: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "9x",
+    multiplier: "9x–19x",
     inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
     outputValue: "$22,000 / yr per LO seat in cycle-time reclamation",
     math:
-      "Avg LO closes 3–5 loans/month; doc-chase delay averages 5 days/file. Cycle-time compression of 2 days/file × 4 files/mo × $250 avg gross margin/day-of-float = ~$24k/yr per LO. Against the solo Regular-tier seat ($199/mo, $2,388/yr) that's ~9x at one seat; teams sliding to $99/seat at 50+ LOs run ~20x+ on the same inputs. Storm-cycle and high-volume teams see materially more.",
+      "Solo case: ~$1,833/mo per LO against the Regular-tier solo seat ($199/mo) = ~9x ROI. At-scale case: same per-LO value against the 50-seat-band price ($99/mo) = ~19x. Multi-LO mortgage shops typically see the at-scale economics.",
     citation:
       "Pricing per `project_stripe_both_surfaces.md` (Regular tier per the 2026-05-15 three-tier ratification — Regular is the default entry path; mortgage shops wanting named-service-partner reserved time can step up to Partner ($299→$199/seat), and high-intensity multi-state engagements route to Max (quote-based)). Value math per `project_pricing_value_anchor.md` (Regular-tier ROI range 15x–107x). Loan-cycle and doc-chase reference points pending primary-research validation — flagged in capability inbox. Sales-cycle compression mechanism modeled on the roofing-supplement analog in `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3.",
   },

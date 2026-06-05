@@ -236,11 +236,11 @@ export const insurance: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "11x",
+    multiplier: "11x–23x",
     inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
     outputValue: "$27,000 / yr per CSR seat saved",
     math:
-      "1 CSR @ $52k all-in × 30% of day on COIs (per b2b_vertical_opportunity_analysis_2026-04-27.md §3.2) = $15,600/yr in COI labor alone. Add renewal-prep reclamation (~$11,400/yr) and the per-CSR floor is ~$27k/yr returned, against a solo Regular-tier seat at $199/mo ($2,388/yr) — 11x at one CSR. A 50-seat agency on the $99 floor runs ~23x+ on the same inputs.",
+      "1 CSR @ $52k all-in × 30% of day on COIs (per b2b_vertical_opportunity_analysis_2026-04-27.md §3.2) = $15,600/yr in COI labor alone. Add renewal-prep reclamation (~$11,400/yr) and the per-CSR value is ~$27k/yr (~$2,250/mo) returned. Solo case: against the Regular-tier solo seat ($199/mo) = ~11x ROI. At-scale case: same per-CSR value against the 50-seat-band price ($99/mo) = ~23x. Multi-CSR agencies typically see the at-scale economics.",
     citation:
       "Pricing per `project_stripe_both_surfaces.md` (Regular tier per the 2026-05-15 three-tier ratification — Regular is the default entry path; agencies wanting named-service-partner reserved time can step up to Partner ($299→$199/seat), and high-intensity engagements route to Max (quote-based)). ROI band per `project_pricing_value_anchor.md` (Regular-tier value $2,900–$10,600/mo per seat). COI labor share per `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.2 (\"one CSR can spend 30%+ of the day on it\"). Salary midpoint based on US BLS 2024 SOC 13-2053 (claims/policy processing clerks) — flagged in capability inbox as a primary-research target before first design partner ratifies the math.",
   },

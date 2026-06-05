@@ -38,6 +38,28 @@ it"; reality is "schema CAN'T declare it; keep it."
 Any future reconciliation migration MUST preserve this index by hand-
 editing the generated migration to omit the DROP INDEX line.
 
+### 1b. Four `DROP INDEX … _trgm_idx` — DO NOT APPLY
+
+`20260603000000_operator_fleet_activity_indexes` (the /operator/fleet
+activity inspector, Stream D.1 / PR #137) creates four **GIN `pg_trgm`
+trigram** indexes that back the inspector's free-text `ILIKE %term%`
+search:
+
+- `SkillRun_skillSlug_trgm_idx`
+- `SkillRun_discipline_trgm_idx`
+- `SkillRun_errorMessage_trgm_idx`
+- `WorkApprovalQueueItem_agentSlug_trgm_idx`
+
+Each is `USING gin (<col> gin_trgm_ops)`. Like the pgvector ANN index
+above, these are created by raw SQL in the migration and are **not
+declared in `schema.prisma`** — so `migrate diff` reports them as "schema
+doesn't declare it → drop it" when reality is "keep it." (The migration's
+btree companion, `SkillRun_firedAt_workspaceId_idx`, IS declared via
+`@@index([firedAt(sort: Desc), workspaceId])` and round-trips cleanly, so
+it does NOT appear here.) The same hand-edit-out rule applies to any
+future reconciliation migration: preserve these four `CREATE INDEX … gin`
+statements.
+
 ### 2. `ALTER COLUMN "id" DROP DEFAULT` on 20 tables
 
 Migrations declared a Postgres-level `gen_random_uuid()` DEFAULT on every

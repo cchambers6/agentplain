@@ -36,9 +36,10 @@ export interface FollowUpChaserConfig {
   /** Hard cap on nudges per workspace per run. Higher = more drafts in
    *  /approvals each hour. Default 5. */
   maxNudgesPerRun: number;
-  /** Stored for future use — surfaced to the customer as a captured
-   *  preference but NOT yet inlined into the nudge prompt. Documented in
-   *  the UI as "saved — applied on next skill update". */
+  /** The voice of the nudge body. `professional` (default) keeps the
+   *  original wording; `warm` softens it; `firm` makes the ask direct.
+   *  Live — `lib/skills/follow-up-chaser-general/skill.ts` selects the
+   *  nudge line by tone on every fire. */
   nudgeTone: "professional" | "warm" | "firm";
 }
 
@@ -53,12 +54,14 @@ export interface InboxTriageConfig {
    *  The skill merges these into its URGENT_CUES list on every fire so
    *  the customer's own escalation vocabulary becomes load-bearing. */
   priorityKeywords: string[];
-  /** Stored for future use — sender allowlist for the operator
-   *  needs-decision bucket. Captured in the UI as "saved — applied on
-   *  next skill update" until the skill's sender-aware classifier
-   *  lands. */
+  /** Sender allowlist. A message from one of these senders is forced to
+   *  `urgent` so it tops the queue regardless of body cues. Live — the
+   *  classifier in `inbox-triage-general/skill.ts` matches on every
+   *  fire (exact address, `@domain.com`, or bare `domain.com`). */
   flagFromSenders: string[];
-  /** Stored for future use — sender denylist that demotes to noise. */
+  /** Sender denylist. A message from one of these senders is demoted to
+   *  `noise` (no auto-ack). Live — same classifier. The allowlist wins
+   *  if a sender appears on both. */
   autoArchiveSenders: string[];
 }
 
@@ -76,9 +79,10 @@ export interface ChiefOfStaffConfig {
    *  scheduler refuses to propose slots outside this window. */
   businessHoursStart: number;
   businessHoursEnd: number;
-  /** Stored for future use — minutes of buffer between back-to-back
-   *  meetings. The skill's slot search doesn't yet honor a buffer;
-   *  saved + surfaced as "applied on next skill update". */
+  /** Minutes of breathing room kept on each side of a busy event when
+   *  the scheduler searches for open slots. Live — `findOpenSlots` in
+   *  `chief-of-staff-scheduler/skill.ts` pads every busy interval by
+   *  this many minutes before proposing a slot. Default 15. */
   bufferMinutes: number;
 }
 
@@ -99,12 +103,17 @@ export const CHIEF_OF_STAFF_SLUG = "chief-of-staff-scheduler" as const;
  *  honors today. Used by the settings UI to badge fields as
  *  "live"/"saved-only" without lying. */
 export const SKILL_CONFIG_LIVE_KEYS: Record<string, ReadonlyArray<string>> = {
-  [FOLLOW_UP_CHASER_SLUG]: ["staleAfterDays", "maxNudgesPerRun"],
-  [INBOX_TRIAGE_SLUG]: ["priorityKeywords"],
+  [FOLLOW_UP_CHASER_SLUG]: ["staleAfterDays", "maxNudgesPerRun", "nudgeTone"],
+  [INBOX_TRIAGE_SLUG]: [
+    "priorityKeywords",
+    "flagFromSenders",
+    "autoArchiveSenders",
+  ],
   [CHIEF_OF_STAFF_SLUG]: [
     "defaultMeetingMinutes",
     "businessHoursStart",
     "businessHoursEnd",
+    "bufferMinutes",
   ],
 };
 

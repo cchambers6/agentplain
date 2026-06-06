@@ -10,6 +10,7 @@ import { decrypt } from "@/lib/security/encryption";
 import { servicePartnerForWorkspace } from "@/lib/onboarding/service-partner";
 import { PauseForm } from "./PauseForm";
 import { DeletePauseButton } from "./DeletePauseButton";
+import { SettingAffects } from "../SettingAffects";
 
 function tryDecrypt(payload: string): string | null {
   try {
@@ -60,6 +61,13 @@ export default async function PauseSettingsPage({ params }: PageProps) {
           auto-resumes at the end of the window. Pause the whole fleet
           or narrow it to a few disciplines.
         </p>
+        <SettingAffects>
+          Every skill. While a full pause is active, the follow-up chaser,
+          the chief-of-staff scheduler, and inbox triage all stop drafting
+          — no /approvals rows, no LLM cost — until the window ends. Narrow
+          the pause to specific disciplines to silence only those and leave
+          the rest running.
+        </SettingAffects>
       </header>
 
       <section>

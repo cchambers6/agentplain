@@ -55,6 +55,11 @@ import { retrieveCustomerContext } from '@/lib/customer-files';
 import { PrismaMemoryStore } from '@/lib/plaino/memory';
 import { isWorkspacePaused } from '@/lib/billing/workspace-paused-gate';
 import {
+  gateSkillFire,
+  resolveVacationPause,
+  type FireGateOutcome,
+} from '@/lib/skills/fire-gate';
+import {
   decideRetry,
   readyForProcessingFilter,
 } from '@/lib/integrations/webhook-idempotency';
@@ -174,6 +179,58 @@ export async function processUnprocessedWebhookEvents(
         continue;
       }
 
+      // Vacation / PTO pause (WorkspacePauseConfig) — the emergency stop
+      // the /settings/pause surface promises. SEPARATE from the billing
+      // pause above: a fully-current customer can still put the fleet on
+      // vacation. Previously only the follow-up-chaser sweep honored
+      // this; the webhook path (generic chain + vertical router + inbox
+      // triage) ignored it, so "pause my fleet" did NOT stop
+      // incoming-mail drafts. Read fresh per event
+      // (feedback_cold_start_safe_agents.md) — no cross-event cache.
+      const now = new Date();
+      const activeVacationPauses = await withSystemContext((tx) =>
+        tx.workspacePauseConfig.findMany({
+          where: {
+            workspaceId: workspace.id,
+            pausedFrom: { lte: now },
+            pausedUntil: { gt: now },
+          },
+          select: { pausedDisciplineIds: true, pausedUntil: true },
+        }),
+      );
+      const vacation = resolveVacationPause(activeVacationPauses);
+      if (vacation.fullPause) {
+        // Workspace-wide pause → skip the WHOLE event: no chain, no
+        // router, no triage, no LLM call, no /approvals row. Mark
+        // processed + audit so it isn't reprocessed and the scorecard
+        // shows an honest "skipped — paused" reason.
+        await withSystemContext(async (tx) => {
+          await tx.webhookEvent.update({
+            where: { id: event.id },
+            data: {
+              processed: true,
+              processedAt: new Date(),
+              error: null,
+              attemptCount: { increment: 1 },
+              nextAttemptAt: null,
+            },
+          });
+          await tx.auditLog.create({
+            data: {
+              workspaceId: workspace.id,
+              action: 'skills.loop.paused_vacation',
+              targetTable: 'WebhookEvent',
+              targetId: event.id,
+              payload: {
+                pausedUntil: vacation.pausedUntil?.toISOString() ?? null,
+              },
+            },
+          });
+        });
+        result.succeeded += 1;
+        continue;
+      }
+
       const adapter = buildAdapterForProvider(credential.provider, workspace.id);
 
       // Read durable state per fire (no in-memory cache between events —
@@ -182,6 +239,16 @@ export async function processUnprocessedWebhookEvents(
         SYSTEM_OPERATOR_CONTEXT,
         workspace.id,
       );
+
+      // Fold any discipline-narrowed vacation pause into the disabled-
+      // discipline set so the existing discipline-skip plumbing silences
+      // exactly the paused disciplines for this fire — across the generic
+      // chain, the vertical router, and inbox triage. A full pause was
+      // already handled above (whole-event skip).
+      const effectiveDisabledDisciplines = [
+        ...(workspacePreferences?.disabledDisciplines ?? []),
+        ...vacation.pausedDisciplineIds,
+      ];
 
       // Customer-context retrieval runs after ReadSkill resolves —
       // pass a resolver so the runner uses the real message body as the
@@ -224,7 +291,8 @@ export async function processUnprocessedWebhookEvents(
         // discipline-tagged terminal outputs (office-admin, schedule,
         // draft, compliance) without firing the LLM. Closes the wave-1
         // audit gap "biggest runtime path currently ungated."
-        disabledDisciplineIds: workspacePreferences?.disabledDisciplines ?? [],
+        // Includes any discipline-narrowed vacation pause.
+        disabledDisciplineIds: effectiveDisabledDisciplines,
         // Wave-3 marketplace install gate.
         installedSkillSlugs,
       });
@@ -248,7 +316,7 @@ export async function processUnprocessedWebhookEvents(
       // than fail the entire webhook event, so the vertical chain's
       // work isn't held hostage by a triage hiccup.
       const triageDisciplineId = SKILL_DISCIPLINE['inbox-triage-general'];
-      const triageDisabledIds = (workspacePreferences?.disabledDisciplines ?? [])
+      const triageDisabledIds = effectiveDisabledDisciplines
         .map((d) => asDisciplineId(d))
         .filter((d): d is NonNullable<ReturnType<typeof asDisciplineId>> => d !== null);
       const triageDisabled = triageDisciplineId
@@ -270,7 +338,7 @@ export async function processUnprocessedWebhookEvents(
           workspace,
           event,
           fetcher: adapter,
-          disabledDisciplineIds: workspacePreferences?.disabledDisciplines ?? [],
+          disabledDisciplineIds: effectiveDisabledDisciplines,
         });
         verticalRouterDispatched = routerRes.dispatched;
         verticalRouterSkipped = routerRes.skipped;
@@ -312,7 +380,25 @@ export async function processUnprocessedWebhookEvents(
         workspaceVertical: workspace.vertical,
         skillSlug: 'inbox-triage-general',
       }).catch(() => true);
-      if (!triageDisabled && triageInstalled) {
+      // Schedule window for inbox-triage (/settings/schedule). A narrowed
+      // vacation pause on the triage discipline was already folded into
+      // `triageDisabled`; the load-bearing add here is the per-skill
+      // TZ-aware fire window. gateSkillFire re-checks pause too, which is
+      // harmless and keeps the webhook path consistent with the cron
+      // sweeps. Fails OPEN on a read error so a DB blip never silently
+      // drops triage.
+      const triageGate: FireGateOutcome = triageDisciplineId
+        ? await withSystemContext((tx) =>
+            gateSkillFire({
+              tx,
+              workspaceId: workspace.id,
+              skillSlug: 'inbox-triage-general',
+              disciplineId: triageDisciplineId,
+              now,
+            }),
+          ).catch((): FireGateOutcome => ({ allowed: true }))
+        : { allowed: true };
+      if (!triageDisabled && triageInstalled && triageGate.allowed) {
         try {
           const triageRes = await runInboxTriageForEvent({
             workspaceId: workspace.id,

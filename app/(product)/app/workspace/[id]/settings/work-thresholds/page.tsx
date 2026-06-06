@@ -6,6 +6,7 @@ import {
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
 import { saveThresholdAction } from "./actions";
+import { SettingAffects } from "../SettingAffects";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -85,6 +86,13 @@ export default async function WorkThresholdsPage({ params }: PageProps) {
         explicit approval. Items below threshold flow through
         automatically. Per-action allowlists land in the next release.
       </p>
+      <SettingAffects>
+        Whether a matching item waits in /approvals for your click or flows
+        through automatically. Raising the severity threshold lets
+        lower-severity items pass; setting an auto-approve confidence lets
+        high-confidence items skip the queue. agentplain still never sends —
+        your own system performs any downstream action.
+      </SettingAffects>
 
       <ul className="mt-8 space-y-4">
         {KINDS.map((k) => {

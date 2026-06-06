@@ -416,6 +416,32 @@ enum SupportRequestStatus {
   ARCHIVED
 }
 
+// Which front-door surface a Plaino conversation belongs to
+// (feat/plaino-chatbot-marketing-support, 2026-06-06). Both modes share
+// the /api/chat backbone + the PlainoConversation log; the mode selects
+// the system prompt, the context loader, and the resolution paths.
+//   MARKETING — anonymous site widget. No workspace. Sales-tuned prompt;
+//               can capture a lead at the end of a qualified conversation.
+//   SUPPORT   — authenticated in-app chat. Workspace context loaded;
+//               answers from the knowledge substrate and can draft a
+//               support reply into the operator review queue.
+enum PlainoConversationMode {
+  MARKETING
+  SUPPORT
+}
+
+// Operator triage state for a captured marketing lead. Mirrors the
+// InquiryStatus lifecycle shape (NEW → worked → terminal) but stays
+// separate because a lead is a lighter-weight artifact than a /custom
+// Inquiry — it carries the conversation that produced it, not a scoped
+// engagement brief.
+enum LeadCaptureStatus {
+  NEW
+  CONTACTED
+  CONVERTED
+  DECLINED
+}
+
 // WorkspaceMemoryEntry kind. Mirrors the four-bucket memory taxonomy
 // already in use by the agent system:
 //   USER       — facts about the people in the workspace (names, role
@@ -544,6 +570,7 @@ model Workspace {
   preferenceSignals        PreferenceSignal[]
   chatThreads              ChatThread[]
   chatMessages             ChatMessage[]
+  plainoConversations      PlainoConversation[]
   memoryEntries            WorkspaceMemoryEntry[]
   llmUsageRecords          LlmUsageRecord[]
   briefings                WorkspaceBriefing[]
@@ -1168,6 +1195,77 @@ model Inquiry {
 
   @@index([status, createdAt])
   @@index([inquiryType, status])
+  @@index([createdAt])
+}
+
+// Plaino conversation log — one row per conversation across BOTH front-door
+// surfaces (feat/plaino-chatbot-marketing-support, 2026-06-06). Feeds the
+// drift sweep + voice-fingerprinting passes that keep Plaino's voice
+// consistent everywhere a customer or prospect reads it.
+//
+// `turns` is the full exchange ([{ role, body, at }]) stored as an
+// AES-256-GCM envelope at rest (lib/security/payload-crypto) — same posture
+// as ChatMessage.body + WorkApprovalQueueItem.payload, because a SUPPORT
+// transcript can carry customer specifics. MARKETING transcripts are
+// anonymous but use the same envelope so there is one wire format to audit.
+//
+// RLS: workspace-isolation for SUPPORT rows (the signed-in member reads/
+// writes their own workspace) PLUS operator-all (the marketing widget writes
+// anonymous rows under withSystemContext, and the operator console reads
+// every row). MARKETING rows have a NULL workspaceId and are therefore only
+// reachable by the operator policy — a customer can never read them.
+model PlainoConversation {
+  id           String                 @id @default(uuid()) @db.Uuid
+  mode         PlainoConversationMode
+  /// NULL for MARKETING (anonymous). Set to the workspace for SUPPORT.
+  workspaceId  String?                @db.Uuid
+  /// Anonymous browser session id (MARKETING) or the user id (SUPPORT).
+  /// Lets the drift sweep group multi-turn exchanges without joining users.
+  sessionId    String
+  /// Marketing route the widget was opened on (e.g. "/pricing"). NULL for
+  /// SUPPORT — the workspace is the locus there.
+  sourcePage   String?
+  /// Encrypted envelope ({ enc: "v1:..." }) wrapping the turn array.
+  turns        Json
+  /// True once a MARKETING conversation produced a captured lead.
+  leadCaptured Boolean                @default(false)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  workspace    Workspace?             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([mode, createdAt])
+  @@index([workspaceId, createdAt])
+}
+
+// A lead captured by the marketing Plaino widget when an anonymous
+// conversation produces qualified intent (feat/plaino-chatbot-marketing-
+// support, 2026-06-06). Operator-only, exactly like Inquiry — the widget's
+// capture endpoint persists under withSystemContext, and /operator/leads is
+// the triage queue. No drip, no auto-reply (project_no_outbound_architecture).
+model LeadCapture {
+  id             String            @id @default(uuid()) @db.Uuid
+  email          String
+  name           String?
+  business       String?
+  /// Vertical slug the prospect identified with, or NULL. Free-form string
+  /// (wider than the Vertical enum) so an off-list answer is still captured.
+  vertical       String?
+  /// One-line summary of what the prospect wants (demo / trial / question).
+  intent         String
+  /// Marketing route the conversation happened on (e.g. "/real-estate").
+  sourcePage     String?
+  /// Soft link to the PlainoConversation that produced the lead. No FK so a
+  /// pruned conversation never blocks the lead row.
+  conversationId String?           @db.Uuid
+  status         LeadCaptureStatus @default(NEW)
+  /// Operator-typed prose captured during triage.
+  notes          String?
+  triagedAt      DateTime?
+  triagedByUserId String?          @db.Uuid
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([status, createdAt])
   @@index([createdAt])
 }
 

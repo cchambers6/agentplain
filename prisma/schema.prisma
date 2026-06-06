@@ -264,6 +264,19 @@ enum CapabilityProposalState {
   SUPERSEDED
 }
 
+// Customer-facing draft-feedback category. The /approvals capture modal
+// offers these five; the weekly drift sweep aggregates corrections by
+// (targetSkillSlug, category) and proposes a skill tune-up when one
+// category accumulates enough corrections. UPPER_SNAKE on the wire; the
+// lib/feedback boundary maps to the lowercase labels the UI shows.
+enum PreferenceFeedbackCategory {
+  TONE
+  STRUCTURE
+  FACTUAL
+  LENGTH
+  OTHER
+}
+
 // Integration provider taxonomy. GOOGLE = Gmail + Calendar (Phase 1 ships
 // Gmail only). M365 (Outlook + Graph) follows in a separate PR once the
 // Google path is validated on Conner's dogfood inbox. New providers added
@@ -465,6 +478,7 @@ model User {
   disciplineHeadAssignments DisciplineHead[]             @relation("DisciplineHeadUser")
   disciplineHeadAssignedBy  DisciplineHead[]             @relation("DisciplineHeadAssignedBy")
   requiredApprovalItems     WorkApprovalQueueItem[]      @relation("WorkApprovalRequiredApprover")
+  preferenceFeedback        PreferenceFeedback[]         @relation("PreferenceFeedbackBy")
 
   @@index([email])
 }
@@ -542,6 +556,7 @@ model Workspace {
   supportRequests          SupportRequest[]
   preference               WorkspacePreference?
   preferenceSignals        PreferenceSignal[]
+  preferenceFeedback       PreferenceFeedback[]
   chatThreads              ChatThread[]
   chatMessages             ChatMessage[]
   memoryEntries            WorkspaceMemoryEntry[]
@@ -1326,6 +1341,46 @@ model PreferenceSignal {
 
   @@index([workspaceId, capturedAt])
   @@index([workspaceId, source])
+}
+
+// Customer-facing closed-loop feedback on a specific drafted item.
+// Distinct from the append-only PreferenceSignal log: PreferenceFeedback
+// is the EXPLICIT, categorized correction the customer leaves on a draft
+// in /approvals ("doesn't sound like us" → pick a category + reason). The
+// weekly customer-feedback-drift-sweep aggregates these by
+// (targetSkillSlug, category); ≥3 same-category corrections in a week
+// queues a CapabilityProposal, and the /briefings "what we learned"
+// section surfaces the aggregate back to the customer so the loop closes
+// visibly. The capture path ALSO appends a learnedDraftNote so the very
+// next draft reflects the correction (feedback_cold_start_safe_agents).
+//
+// RLS: workspace-scoped (customer reads/writes own rows; operators read
+// all) — same shape as PreferenceSignal.
+model PreferenceFeedback {
+  id              String                     @id @default(uuid()) @db.Uuid
+  workspaceId     String                     @db.Uuid
+  /// The member who left the feedback. SetNull on user delete so the
+  /// drift sweep still counts the correction after the account is gone.
+  userId          String?                    @db.Uuid
+  /// Slug of the skill/agent that produced the draft (= ApprovalRow
+  /// agentSlug). The drift sweep groups on this.
+  targetSkillSlug String
+  /// The draft body as the fleet produced it, at feedback time. Capped at
+  /// the boundary. Nullable: a feedback row can exist without a snapshot.
+  originalDraft   String?
+  /// The customer's corrected version, when supplied. NULL for pure
+  /// "doesn't sound like us" feedback (no rewrite offered).
+  correctedDraft  String?
+  /// Free-text reason the customer typed. Required by the capture modal.
+  reason          String
+  category        PreferenceFeedbackCategory
+  createdAt       DateTime                   @default(now())
+  workspace       Workspace                  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user            User?                      @relation("PreferenceFeedbackBy", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, targetSkillSlug, category])
+  @@index([createdAt])
 }
 
 // Customer support request (scaffold — feat/support-routing, 2026-05-20).

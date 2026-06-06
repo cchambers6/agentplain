@@ -116,13 +116,14 @@ export default async function SettingsPage({ params }: PageProps) {
         "Export a copy of everything in this workspace, or close the workspace.",
     },
     {
-      label: "team members",
-      description: "Add, remove, and assign roles.",
-      status: "coming-soon",
+      href: `/app/workspace/${workspaceId}/settings/voice`,
+      label: "voice & templates",
+      description:
+        "How your fleet sounds in customer-facing drafts — your tone, the templates it learns from, and the corrections you've made.",
     },
     {
-      label: "drafting tone",
-      description: "How your fleet sounds in customer-facing drafts.",
+      label: "team members",
+      description: "Add, remove, and assign roles.",
       status: "coming-soon",
     },
     {

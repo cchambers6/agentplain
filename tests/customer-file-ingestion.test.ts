@@ -314,6 +314,58 @@ describe('runSkillChain inlines retrieved customer-context into the draft prompt
     assert.doesNotMatch(sys, /Sunbelt Realty Partners/);
   });
 
+  it('voice loop: draft prompt carries the voice directive AND the draft cites a real example', async () => {
+    // The product differentiator — upload your templates, get drafts in
+    // YOUR voice. This is the end-to-end proof: 3 ingested example docs
+    // (the two workspace-A fixtures + a third synthetic template) →
+    // retrieval → the draft prompt instructs the model to follow the
+    // examples' voice → the (heuristic) model cites one. Mirrors the PR
+    // acceptance demo deterministically, no live provider required.
+    const store = makeStore();
+    const source = new FixtureFileSource({ rootDir: FIXTURE_DIR });
+    await ingestWorkspaceFiles({ workspaceId: WORKSPACE_A, source, store });
+
+    const fixtures = await loadAllFixtures();
+    const fixture = fixtures.find((f) => f.id === 're-01-buyer-inquiry');
+    if (!fixture) throw new Error('fixture missing');
+
+    const llm = new TestLlmProvider();
+    const persister = new RecordingDraftPersister();
+    const logDir = await fs.mkdtemp(path.join(os.tmpdir(), 'skill-runs-voice-'));
+    store.setContext({ workspaceId: WORKSPACE_A, isOperator: false });
+
+    await runSkillChain({
+      workspace: WORKSPACE_A_WS,
+      event: buildWebhookEventFromFixture(fixture),
+      fetcher: new FixtureMessageFetcher(fixture),
+      persister,
+      llm,
+      customerContextResolver: async (query) =>
+        retrieveCustomerContext({ workspaceId: WORKSPACE_A, query, store }),
+      logDir,
+    });
+
+    // (1) The draft system prompt instructs voice matching — both the
+    //     shared REPLY RULES voice bullet and the file-context block's
+    //     VOICE directive.
+    const draftCall = llm.calls
+      .filter((c) => c.request.system.includes('[[agentplain.skill.draft.v1]]'))
+      .pop();
+    assert.ok(draftCall, 'expected a draft LLM call');
+    const sys = draftCall!.request.system;
+    assert.match(sys, /Follow the\s+tone, structure, and phrasings/);
+    assert.match(sys, /VOICE: Follow the tone, structure, and phrasings/);
+    assert.match(sys, /Match THIS customer’s voice/);
+
+    // (2) The produced draft cites at least one of the broker-owner's
+    //     own examples (proves the model followed the CITE directive,
+    //     not generic boilerplate).
+    const drafted = persister.calls.at(-1);
+    assert.ok(drafted, 'expected a persisted draft');
+    assert.match(drafted!.body, /Listing Playbook|Riverbend/);
+    assert.match(drafted!.body, /in your voice/);
+  });
+
   it('runner survives a resolver throw — no customer context in the draft prompt', async () => {
     const fixtures = await loadAllFixtures();
     const fixture = fixtures.find((f) => f.id === 're-01-buyer-inquiry');

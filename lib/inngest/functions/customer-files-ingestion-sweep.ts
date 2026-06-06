@@ -128,6 +128,16 @@ export interface RunCustomerFilesIngestionSweepArgs {
    */
   listWorkspaces?: () => Promise<Pick<Workspace, 'id' | 'slug'>[]>;
   /**
+   * Scope the sweep to a SINGLE workspace. Set by the immediate-ingestion
+   * trigger the Drive OAuth callback fires (`{ workspaceId }` in the
+   * event payload) so a fresh connect ingests within seconds instead of
+   * waiting up to 6h for the next cron. Still goes through the same
+   * active-membership filter — an id with no active membership lists
+   * zero workspaces and the sweep is a clean no-op. Ignored when
+   * `listWorkspaces` is overridden (tests already supply their own list).
+   */
+  scopeWorkspaceId?: string;
+  /**
    * Per-workspace IFileSource factory. Default returns an unwired
    * `DriveFileSource`. The factory shape leaves room to inspect
    * IntegrationCredential rows per workspace and route to OneDrive /
@@ -144,7 +154,8 @@ export interface RunCustomerFilesIngestionSweepArgs {
 export async function runCustomerFilesIngestionSweep(
   args: RunCustomerFilesIngestionSweepArgs = {},
 ): Promise<CustomerFilesIngestionSweepResult> {
-  const listWorkspaces = args.listWorkspaces ?? listActiveWorkspaces;
+  const listWorkspaces =
+    args.listWorkspaces ?? (() => listActiveWorkspaces(args.scopeWorkspaceId));
   const buildSource = args.buildSource ?? defaultBuildSource;
 
   const workspaces = await listWorkspaces();
@@ -248,7 +259,9 @@ export async function runCustomerFilesIngestionSweep(
   return result;
 }
 
-async function listActiveWorkspaces(): Promise<Pick<Workspace, 'id' | 'slug'>[]> {
+async function listActiveWorkspaces(
+  scopeWorkspaceId?: string,
+): Promise<Pick<Workspace, 'id' | 'slug'>[]> {
   // Only sweep workspaces with at least one ACTIVE membership. Dormant /
   // never-onboarded rows would burn LLM + DB budget for nothing.
   //
@@ -256,15 +269,31 @@ async function listActiveWorkspaces(): Promise<Pick<Workspace, 'id' | 'slug'>[]>
   // so this cron must open the system context to satisfy the
   // is_operator='true' branch of both policies. Otherwise findMany returns
   // zero rows under FORCE and the sweep silently NO-OPs forever.
+  //
+  // `scopeWorkspaceId` narrows to a single workspace (the immediate-
+  // ingestion trigger from the Drive OAuth callback). The active-
+  // membership filter still applies, so a stale/forbidden id is a clean
+  // zero rather than an error.
   return withSystemContext((tx) =>
     tx.workspace.findMany({
-      where: {
-        memberships: { some: { status: 'ACTIVE' } },
-      },
+      where: workspaceSweepFilter(scopeWorkspaceId),
       select: { id: true, slug: true },
       orderBy: { createdAt: 'asc' },
     }),
   );
+}
+
+/**
+ * Prisma `where` for the sweep's workspace lister. Always requires at
+ * least one ACTIVE membership; narrows to a single `id` when the
+ * immediate-ingestion trigger scoped the sweep to one workspace.
+ * Exported so the scoping decision can be unit-tested without a DB.
+ */
+export function workspaceSweepFilter(
+  scopeWorkspaceId?: string,
+): { memberships: { some: { status: 'ACTIVE' } }; id?: string } {
+  const base = { memberships: { some: { status: 'ACTIVE' as const } } };
+  return scopeWorkspaceId ? { ...base, id: scopeWorkspaceId } : base;
 }
 
 function defaultBuildSource(_workspaceId: string): IFileSource {
@@ -285,7 +314,7 @@ export const customerFilesIngestionSweepFn = inngest.createFunction(
       { event: CUSTOMER_FILES_INGESTION_SWEEP_TRIGGER_EVENT },
     ],
   },
-  async () =>
+  async ({ event }) =>
     runWithDisableGate(CUSTOMER_FILES_INGESTION_SWEEP_FUNCTION_ID, () =>
       withCronMonitor(
         {
@@ -304,8 +333,23 @@ export const customerFilesIngestionSweepFn = inngest.createFunction(
                 boundary: 'inngest',
                 function_id: CUSTOMER_FILES_INGESTION_SWEEP_FUNCTION_ID,
               });
-              logger.info('files ingestion sweep started');
-              const out = await runCustomerFilesIngestionSweep();
+              // The cron fire carries no data; the immediate-ingestion
+              // trigger from the Drive OAuth callback carries
+              // `{ workspaceId }` so a fresh connect ingests now instead
+              // of waiting for the next 6h tick. `event.data` is a union
+              // (cron payload has no fields) so read it defensively.
+              const data = (event?.data ?? {}) as Record<string, unknown>;
+              const scopeWorkspaceId =
+                typeof data.workspaceId === 'string' ? data.workspaceId : undefined;
+              const triggeredBy =
+                typeof data.triggeredBy === 'string' ? data.triggeredBy : 'cron';
+              logger.info('files ingestion sweep started', {
+                scope: scopeWorkspaceId ?? 'all',
+                triggered_by: triggeredBy,
+              });
+              const out = await runCustomerFilesIngestionSweep({
+                scopeWorkspaceId,
+              });
               logger.info('files ingestion sweep finished', {
                 workspaces: out.workspacesConsidered,
                 ingested: out.workspacesIngested,

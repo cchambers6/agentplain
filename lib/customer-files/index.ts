@@ -31,6 +31,14 @@ export type { RetrieveCustomerContextArgs } from './retrieve';
 export { renderCustomerContextBlock } from './render';
 export type { CustomerContextSnippet, RenderCustomerContextOptions } from './render';
 
+export {
+  listWorkspaceTemplates,
+  foldChunkRows,
+  stripChunkSuffix,
+  categorizeTemplate,
+} from './templates';
+export type { WorkspaceTemplate, TemplateCategory } from './templates';
+
 export type {
   FileContent,
   FileRef,

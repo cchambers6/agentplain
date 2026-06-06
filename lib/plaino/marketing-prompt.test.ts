@@ -20,8 +20,21 @@ import {
 describe('buildMarketingSystemPrompt', () => {
   it('carries the version marker for the drift sweep', () => {
     const prompt = buildMarketingSystemPrompt();
-    assert.equal(PLAINO_MARKETING_PROMPT_VERSION, 'PLAINO_MARKETING_V1');
+    // V2 (2026-06-06) added the Claude-for-Small-Business wrapper grounding
+    // per project_sbm_wrapper_positioning_2026_06_06.
+    assert.equal(PLAINO_MARKETING_PROMPT_VERSION, 'PLAINO_MARKETING_V2');
     assert.ok(prompt.includes(PLAINO_MARKETING_PROMPT_VERSION));
+  });
+
+  it('grounds the Claude-SBM wrapper frame without disparaging Claude', () => {
+    const prompt = buildMarketingSystemPrompt();
+    assert.ok(prompt.includes('Claude for Small Business'));
+    assert.ok(prompt.includes('SERVICE LAYER'));
+    // Complementary, never adversarial — the banned framings must be called
+    // out as banned, and the prompt must never instruct Plaino to position
+    // agentplain "instead of" Claude as a positive claim.
+    assert.ok(prompt.includes('COMPLEMENTARY'));
+    assert.ok(/never disparage it/i.test(prompt));
   });
 
   it('grounds in the REPLACE / INTEGRATE / AUGMENT frame', () => {

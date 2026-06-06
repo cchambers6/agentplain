@@ -113,6 +113,8 @@ export const cpa: VerticalContent = {
     // there as planned, not in this present-tense hero clause.
     valueProp:
       "agentplain REPLACES the 8-week document-chase cycle, INTEGRATES with Outlook, OneDrive, QuickBooks Online, and DocuSign on day one, and AUGMENTS the partner's review on every return with a federal + state checklist run before the file hits the desk.",
+    sbmSubhead:
+      "The tax-season skills, agents, and memory you'd otherwise have to build yourself — built on Claude, configured by us.",
   },
 
   metaTitle: "for CPA firms — 2–10 person practices",

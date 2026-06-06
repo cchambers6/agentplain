@@ -266,6 +266,17 @@ export interface VerticalContent {
     eyebrow: string;
     headline: string;
     valueProp: string;
+    /**
+     * One-line SBM-wrapper subhead, rendered under the value prop. Per
+     * `project_sbm_wrapper_positioning_2026_06_06.md` (ratified 2026-06-06):
+     * agentplain is the service layer that makes Claude for Small Business
+     * usable — never a competitor/replacement/alternative. Format:
+     * "[vertical-specific frame] — built on Claude, configured by us."
+     * Optional in the type for backward-compat; populated on all ten ratified
+     * verticals. Keep complementary; banned framings (instead of / alternative
+     * to / replace Claude) must never appear here.
+     */
+    sbmSubhead?: string;
   };
 
   /** SEO + Open Graph metadata. */

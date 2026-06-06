@@ -30,6 +30,12 @@ export const leadCaptureSchema = z.object({
   sourcePage: z.string().trim().max(200).optional(),
   // Soft link to the PlainoConversation that produced the lead.
   conversationId: z.string().uuid().optional(),
+  // True when the prospect asked about Claude / Claude for Small Business
+  // during the conversation. The widget can set it explicitly; the submit
+  // handler also infers it from the linked conversation turns, so an absent
+  // flag never under-counts the comparison-prospect cohort. See
+  // project_sbm_wrapper_positioning_2026_06_06.
+  askedAboutClaude: z.boolean().optional(),
 });
 
 export type LeadCaptureInput = z.infer<typeof leadCaptureSchema>;

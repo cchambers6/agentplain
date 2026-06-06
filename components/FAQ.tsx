@@ -37,7 +37,7 @@ export const FAQ_ITEMS: FAQItem[] = [
   },
   {
     q: "How is this different from Claude for Small Business or other AI-for-SMB tools?",
-    a: "Claude for Small Business hands a horizontal model to a small-business owner who's expected to figure out workflows, write prompts, and stitch integrations on their own. agentplain is the opposite: we ship a vertical-aware fleet (built per industry, with the compliance corpus and integration list each one needs) AND a service team that installs, runs reviews, and customizes for your shop. You're not buying a tool; you're hiring an AI ops team. We don't ask the realtor, the CPA, or the mortgage broker to learn prompt engineering on top of running their business.",
+    a: "We're not a competitor to Claude — we're the service layer that makes it usable. Claude for Small Business is a genuinely capable tool, but it hands an owner a horizontal model and expects them to figure out which skills to write, which agents to build, what to put in memory, and how to wire their tools. agentplain brings all of that pre-built: the per-vertical skills and agents you'd otherwise build yourself, the memory we curate and maintain so it stays useful, the integrations connected for you, and a service team that installs, runs reviews, and customizes for your shop — all for a low flat fee. Built on Claude, configured by us. You're not buying a tool; you're getting it run for you.",
   },
   {
     q: "What if I just want the tool, not the service?",

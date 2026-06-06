@@ -111,6 +111,8 @@ export const mortgage: VerticalContent = {
     // surface honestly there as planned, not in this present-tense hero clause.
     valueProp:
       "agentplain REPLACES the document-chase that drowns every loan file, INTEGRATES with Outlook, OneDrive, and DocuSign on day one, and AUGMENTS the loan officer's read on every borrower interaction and TRID-sensitive disclosure.",
+    sbmSubhead:
+      "The loan-file skills, agents, and memory you'd otherwise have to wire yourself — built on Claude, configured by us.",
   },
 
   metaTitle: "for independent mortgage brokerages",

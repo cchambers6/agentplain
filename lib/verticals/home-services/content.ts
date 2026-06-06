@@ -128,6 +128,8 @@ export const homeServices: VerticalContent = {
     // there as planned, not in this present-tense hero clause.
     valueProp:
       "agentplain REPLACES the lead-source juggle and the insurance-supplement scramble, INTEGRATES with Outlook, Gmail, and QuickBooks Online on day one, and AUGMENTS the owner's read on every estimate, supplement, and homeowner-facing reply.",
+    sbmSubhead:
+      "The lead-to-estimate skills, agents, and memory you'd otherwise have to wire yourself — built on Claude, configured by us.",
   },
 
   metaTitle: "for home services — roofing, HVAC, GC remodel, landscaping",

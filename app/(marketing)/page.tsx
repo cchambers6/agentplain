@@ -79,17 +79,20 @@ export default function HomePage() {
             serve.
           </h1>
           <p className="mt-8 max-w-3xl font-display text-xl leading-snug text-ink-soft md:text-2xl">
-            Your AI ops team — without hiring one.
+            Claude for Small Business is powerful. Most owners can&apos;t figure
+            out how to use it. We do it for you.
           </p>
           <p className="mt-5 max-w-3xl text-lg leading-relaxed text-ink-soft md:text-xl">
-            {tokens.wordmark} is a service partnership. We install the fleet of
-            capable AI partners inside your business, configure it for your
-            vertical, run weekly reviews, and customize as your ops change.
-            The fleet reads from your email, calendar, CRM, and documents,
-            categorizes what's important, drafts what you'd otherwise type,
-            schedules what needs scheduling, and coordinates across threads.
-            You stay in control: the fleet drafts and proposes; you approve and
-            send. We run the operation; you run the business.
+            {tokens.wordmark} is the service layer on top of Claude. We bring the
+            pre-built skills and agents you&apos;d otherwise have to build
+            yourself, manage the memory that keeps it useful, connect the tools
+            you already run, and operate the whole thing for a low flat fee —
+            plug-and-play, not a configure-it-yourself project. The fleet reads
+            your email, calendar, CRM, and documents, categorizes what matters,
+            drafts what you&apos;d otherwise type, schedules what needs
+            scheduling, and coordinates across threads. You stay in control: the
+            fleet drafts and proposes; you approve and send. We run the
+            operation; you run the business.
           </p>
           {/* Supporting copy from Conner's first-pass mission articulation —
               preserved per the canonical rule as useful supporting framing. */}
@@ -146,6 +149,73 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* SBM-WRAPPER FRAME — near the top, by design.
+          Ratified 2026-06-06 (project_sbm_wrapper_positioning_2026_06_06) as
+          the durable answer to Anthropic shipping Claude for Small Business.
+          We are NOT a competitor to Claude — we are the service layer that
+          makes it usable. The four pillars are stated plainly: pre-built
+          skills + agents, memory management, low-cost plug-and-play, and a
+          human-staffed service. BANNED framings (compete/replace/instead-of/
+          alternative-to Claude) are kept out; the tone is complementary. */}
+      <Section
+        id="claude"
+        eyebrow="How agentplain works with Claude for Small Business"
+        title={
+          <>
+            Claude gives small businesses a powerful tool.{" "}
+            <span className="text-clay">We make it actually usable.</span>
+          </>
+        }
+        intro="Claude for Small Business is real and genuinely capable. But it hands you a horizontal model and expects you to figure out which skills to write, which agents to build, what to put in memory, and how to wire your tools. Most owners don't have the time — or the engineer. agentplain is the service layer on top: we bring all of that pre-built, manage it for you, and run it for a low flat fee. Built on Claude, configured by us."
+      >
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-4">
+          <div className="bg-paper p-7 md:p-8">
+            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+              Pre-built skills + agents
+            </p>
+            <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
+              You don&apos;t figure out what skills to write or what agents to
+              build. We bring the per-vertical fleet — the jobs your industry
+              actually needs — ready on day one.
+            </p>
+          </div>
+          <div className="bg-paper p-7 md:p-8">
+            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+              Memory, managed
+            </p>
+            <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
+              The persistent context Claude needs to stay useful long-term —
+              what to remember, what to prune, what not to let go stale — we
+              curate and maintain it. You never touch a config file.
+            </p>
+          </div>
+          <div className="bg-paper p-7 md:p-8">
+            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+              Low-cost, plug-and-play
+            </p>
+            <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
+              One bundled flat fee. One Connect button per integration. No
+              per-skill setup, no prompt engineering, no months of
+              configuration before you see value.
+            </p>
+          </div>
+          <div className="bg-paper p-7 md:p-8">
+            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+              A resource, not a tool
+            </p>
+            <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
+              A human-staffed service partner installs it, runs reviews, and
+              customizes as your ops shift. Done-for-you — not
+              configure-it-yourself.
+            </p>
+          </div>
+        </div>
+        <p className="mt-8 max-w-prose text-[13px] leading-relaxed text-mute">
+          The model is the engine. The service is the difference. That&apos;s the
+          part you can&apos;t get by signing up for the model alone.
+        </p>
+      </Section>
 
       {/* Q1 — Why do we exist? */}
       <Section

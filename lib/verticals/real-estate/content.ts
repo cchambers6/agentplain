@@ -105,6 +105,8 @@ export const realEstate: VerticalContent = {
     // honestly there as planned, not in this present-tense hero clause.
     valueProp:
       "agentplain REPLACES the 8–12 weekly hours a broker-owner spends on coordination work, INTEGRATES with Outlook, Gmail, Google Drive, and DocuSign on day one, and AUGMENTS the broker-of-record's review on every customer-facing draft.",
+    sbmSubhead:
+      "The listing, buyer, and compliance skills, agents, and memory a brokerage would otherwise build itself — built on Claude, configured by us.",
   },
 
   metaTitle: "for independent real-estate brokerages",

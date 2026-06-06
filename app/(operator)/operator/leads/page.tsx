@@ -44,7 +44,7 @@ const STATUS_TONE: Record<LeadCaptureStatus, string> = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; cohort?: string }>;
 }
 
 function statusesFor(filter: string): LeadCaptureStatus[] | null {
@@ -67,13 +67,20 @@ export default async function OperatorLeadsPage({ searchParams }: PageProps) {
   const session = await requireUser();
   if (!session.isOperator) redirect("/app");
 
-  const { status: statusParam } = await searchParams;
+  const { status: statusParam, cohort: cohortParam } = await searchParams;
   const filter = statusParam ?? "open";
   const statuses = statusesFor(filter);
+  // Orthogonal cohort filter — the Claude-SBM comparison prospects, per
+  // project_sbm_wrapper_positioning_2026_06_06. Composes with the status
+  // filter so the operator can see, e.g., open leads that asked about Claude.
+  const claudeOnly = cohortParam === "claude";
 
   const leads = await withSystemContext((tx) =>
     tx.leadCapture.findMany({
-      where: statuses ? { status: { in: statuses } } : undefined,
+      where: {
+        ...(statuses ? { status: { in: statuses } } : {}),
+        ...(claudeOnly ? { askedAboutClaude: true } : {}),
+      },
       orderBy: { createdAt: "desc" },
       take: 100,
     }),
@@ -94,10 +101,13 @@ export default async function OperatorLeadsPage({ searchParams }: PageProps) {
       <div className="mt-6 flex flex-wrap gap-2">
         {STATUS_FILTER_OPTIONS.map((opt) => {
           const active = opt.value === filter;
+          const href = claudeOnly
+            ? `/operator/leads?status=${opt.value}&cohort=claude`
+            : `/operator/leads?status=${opt.value}`;
           return (
             <a
               key={opt.value}
-              href={`/operator/leads?status=${opt.value}`}
+              href={href}
               className={`border px-3 py-1.5 font-mono text-[11px] uppercase tracking-eyebrow ${
                 active
                   ? "border-ink bg-paper-deep text-ink"
@@ -108,6 +118,34 @@ export default async function OperatorLeadsPage({ searchParams }: PageProps) {
             </a>
           );
         })}
+      </div>
+
+      {/* Cohort filter — orthogonal to status. Tracks the Claude-SBM
+          comparison prospects per project_sbm_wrapper_positioning_2026_06_06. */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="font-mono text-[10px] uppercase tracking-eyebrow text-mute">
+          Cohort
+        </span>
+        <a
+          href={`/operator/leads?status=${filter}`}
+          className={`border px-3 py-1.5 font-mono text-[11px] uppercase tracking-eyebrow ${
+            !claudeOnly
+              ? "border-ink bg-paper-deep text-ink"
+              : "border-rule bg-paper text-mute hover:border-ink-soft"
+          }`}
+        >
+          All leads
+        </a>
+        <a
+          href={`/operator/leads?status=${filter}&cohort=claude`}
+          className={`border px-3 py-1.5 font-mono text-[11px] uppercase tracking-eyebrow ${
+            claudeOnly
+              ? "border-clay bg-paper-deep text-ink"
+              : "border-rule bg-paper text-mute hover:border-ink-soft"
+          }`}
+        >
+          Asked about Claude
+        </a>
       </div>
 
       {leads.length === 0 ? (
@@ -133,11 +171,18 @@ export default async function OperatorLeadsPage({ searchParams }: PageProps) {
                     })}
                   </p>
                 </div>
-                <span
-                  className={`border px-2 py-1 font-mono text-[10px] uppercase tracking-eyebrow ${STATUS_TONE[lead.status]}`}
-                >
-                  {STATUS_LABEL[lead.status]}
-                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {lead.askedAboutClaude ? (
+                    <span className="border border-clay bg-paper px-2 py-1 font-mono text-[10px] uppercase tracking-eyebrow text-clay">
+                      Asked about Claude
+                    </span>
+                  ) : null}
+                  <span
+                    className={`border px-2 py-1 font-mono text-[10px] uppercase tracking-eyebrow ${STATUS_TONE[lead.status]}`}
+                  >
+                    {STATUS_LABEL[lead.status]}
+                  </span>
+                </div>
               </div>
 
               <p className="mt-3 whitespace-pre-wrap border-l-2 border-rule pl-3 text-[15px] leading-relaxed text-ink">

@@ -1273,6 +1273,12 @@ model LeadCapture {
   /// pruned conversation never blocks the lead row.
   conversationId String?           @db.Uuid
   status         LeadCaptureStatus @default(NEW)
+  /// True when the conversation that produced this lead asked about Claude /
+  /// Claude for Small Business ("why not just use Claude"). Lets the operator
+  /// track the comparison-prospect cohort. Set at capture time, either from an
+  /// explicit widget flag or by scanning the linked conversation turns.
+  /// See project_sbm_wrapper_positioning_2026_06_06.
+  askedAboutClaude Boolean         @default(false)
   /// Operator-typed prose captured during triage.
   notes          String?
   triagedAt      DateTime?
@@ -1282,6 +1288,7 @@ model LeadCapture {
 
   @@index([status, createdAt])
   @@index([createdAt])
+  @@index([askedAboutClaude, createdAt])
 }
 
 // Magic-link tokens issued for sign-in. Single-use; consumed on verify.

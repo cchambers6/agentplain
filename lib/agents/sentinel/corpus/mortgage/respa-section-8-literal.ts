@@ -25,6 +25,11 @@ No person shall give and no person shall accept any fee, kickback, or thing of v
 
 (b) Splitting charges
 No person shall give and no person shall accept any portion, split, or percentage of any charge made or received for the rendering of a real estate settlement service in connection with a transaction involving a federally related mortgage loan other than for services actually performed.`,
+  purpose: "counsel-reference",
+  severity: "blocking",
+  counselReviewStatus: "draft",
+  safeRewrite:
+    "Describe the referral relationship without any exchange of value tied to it. Strike language offering or soliciting gifts, fees, marketing-cost coverage, leads, or 'thank-you' payments in return for referrals; co-marketing must be paid at fair market value for services actually performed and never contingent on referral volume.",
   drafterNotes:
     "Implementing rule at 12 CFR § 1024.14 elaborates on what constitutes a 'thing of value' (broad — gifts, trips, opportunities, special privileges). Counsel should attach the 1024.14 elaboration as a companion rule once this draft is reviewed.",
 };

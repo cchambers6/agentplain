@@ -21,6 +21,12 @@ import { redirect } from "next/navigation";
 import { withSystemContext } from "@/lib/db/rls";
 import { requireUser } from "@/lib/auth/server";
 import {
+  getFleetBudgetSnapshots,
+  type BudgetStatus,
+  type WorkspaceBudgetSnapshot,
+} from "@/lib/billing/budget";
+import { formatMicroCentsAsUsd } from "@/lib/billing/usage/pricing";
+import {
   TIER_ORDER,
   tierDisplayName,
   tierFromVerticalTier,
@@ -82,6 +88,18 @@ export default async function OperatorWorkspacesPage(props: PageProps) {
     }),
   );
 
+  // Per-workspace token-budget consumption this calendar month (two queries
+  // total, not one-per-workspace — see lib/billing/budget.ts). Operator-facing
+  // cost governor: a WATCH/OVER chip means "review this workspace's tier."
+  const budgetSnapshots = await withSystemContext((tx) =>
+    getFleetBudgetSnapshots(tx, {}),
+  );
+  const budgetByWorkspace = new Map<string, WorkspaceBudgetSnapshot>();
+  for (const s of budgetSnapshots) budgetByWorkspace.set(s.workspaceId, s);
+  const atRiskCount = budgetSnapshots.filter(
+    (s) => s.status !== "OK",
+  ).length;
+
   return (
     <div className="container-wide py-12">
       <p className="eyebrow mb-3">Operator · workspaces</p>
@@ -102,6 +120,16 @@ export default async function OperatorWorkspacesPage(props: PageProps) {
         </div>
       ) : null}
 
+      {atRiskCount > 0 ? (
+        <div className="mt-6 border border-flag bg-paper p-4 text-[14px] text-ink">
+          <strong>{atRiskCount}</strong> workspace
+          {atRiskCount === 1 ? "" : "s"} at or over the monthly token-budget
+          ceiling (≥80% of 30%-of-MRR). Review tier / per-skill model
+          override — these are the margin-risk accounts (production+growth
+          plan §2).
+        </div>
+      ) : null}
+
       <table className="mt-8 w-full border border-rule bg-paper text-left text-[14px]">
         <thead>
           <tr className="border-b border-rule bg-paper-deep text-[11px] font-mono uppercase tracking-eyebrow text-mute">
@@ -109,6 +137,7 @@ export default async function OperatorWorkspacesPage(props: PageProps) {
             <th className="px-4 py-3">Vertical</th>
             <th className="px-4 py-3">Tier</th>
             <th className="px-4 py-3">Subscription</th>
+            <th className="px-4 py-3">Budget (mo)</th>
             <th className="px-4 py-3">Override</th>
           </tr>
         </thead>
@@ -164,6 +193,9 @@ export default async function OperatorWorkspacesPage(props: PageProps) {
                   )}
                 </td>
                 <td className="px-4 py-3">
+                  <BudgetCell snapshot={budgetByWorkspace.get(w.id) ?? null} />
+                </td>
+                <td className="px-4 py-3">
                   <OverrideForm
                     workspaceId={w.id}
                     currentTier={tier}
@@ -196,6 +228,51 @@ export default async function OperatorWorkspacesPage(props: PageProps) {
           → integrations
         </Link>
       </div>
+    </div>
+  );
+}
+
+const BUDGET_STATUS_STYLE: Record<BudgetStatus, string> = {
+  OK: "text-moss",
+  WATCH: "text-clay",
+  OVER: "text-flag",
+};
+
+// Per-workspace token-budget cell. Shows month-to-date spend vs the
+// 30%-of-MRR ceiling + a status chip. Uncapped (Max) workspaces show the
+// spend with no ceiling. Source: lib/billing/budget.ts.
+function BudgetCell({
+  snapshot,
+}: {
+  snapshot: WorkspaceBudgetSnapshot | null;
+}) {
+  if (!snapshot) {
+    return <span className="text-mute">—</span>;
+  }
+  const spend = formatMicroCentsAsUsd(snapshot.spendMicroCents);
+  if (snapshot.ceilingMicroCents === null) {
+    return (
+      <div className="text-[12px]">
+        <p className="font-display text-[14px] text-ink">{spend}</p>
+        <p className="mt-1 font-mono text-[11px] uppercase text-mute">
+          uncapped
+        </p>
+      </div>
+    );
+  }
+  const ceiling = formatMicroCentsAsUsd(snapshot.ceilingMicroCents);
+  const pct = Math.round(snapshot.fraction * 100);
+  return (
+    <div className="text-[12px]">
+      <p className="font-display text-[14px] text-ink">
+        {spend}
+        <span className="text-mute"> / {ceiling}</span>
+      </p>
+      <p
+        className={`mt-1 font-mono text-[11px] uppercase tracking-eyebrow ${BUDGET_STATUS_STYLE[snapshot.status]}`}
+      >
+        {snapshot.status} · {pct}%
+      </p>
     </div>
   );
 }

@@ -38,7 +38,15 @@ export type LlmErrorCode =
   | 'INVALID_ARGUMENT'
   | 'UPSTREAM_ERROR'
   | 'CONTENT_FILTERED'
-  | 'NOT_IMPLEMENTED';
+  | 'NOT_IMPLEMENTED'
+  // The workspace has spent past its monthly token-budget ceiling. Raised
+  // by `BudgetEnforcingLlmProvider` *before* the call reaches the model —
+  // no tokens are spent, no `LlmUsageRecord` row is written. The work is
+  // not lost: the event-driven loop is idempotent (Inngest retries against
+  // persisted `WebhookEvent` rows) and the monthly reset lifts the block,
+  // while the operator sees an OVER chip on `/operator/fleet` to move the
+  // workspace to a higher tier. See `lib/billing/budget.ts`.
+  | 'OVER_BUDGET';
 
 export interface LlmError {
   code: LlmErrorCode;

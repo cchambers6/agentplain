@@ -25,8 +25,10 @@
  * Production-grade output kicks in the moment the key lands.
  */
 
+import { persistBudgetGate } from '../billing/budget';
 import { persistUsageRecorder } from '../billing/usage/recorder';
 import { AnthropicProvider } from './anthropic-provider';
+import { BudgetEnforcingLlmProvider } from './budget-enforcing-provider';
 import { LoggingLlmProvider } from './logging-provider';
 import { TestLlmProvider, TestLlmSeed } from './test-provider';
 import type { LlmProvider } from './types';
@@ -46,12 +48,31 @@ export function getLlmProvider(): LlmProvider {
 
 function buildProvider(): LlmProvider {
   const inner = buildInnerProvider();
+  // Compose the per-workspace token-budget governor in FRONT of the inner
+  // provider so an over-budget call is blocked before it reaches the model
+  // (no tokens spent, no `LlmUsageRecord` row written). The governor reads
+  // the existing usage substrate + the pricing ladder — no new schema. See
+  // `lib/billing/budget.ts` + the production+growth plan §2.
+  //
+  // Operator kill-switch: `LLM_BUDGET_ENFORCEMENT=off` disables the gate
+  // entirely (the recorder + logging stay on) — the §9 "per-skill / global
+  // kill-switch" ethos applied to the cost governor.
+  const enforced = budgetEnforcementEnabled()
+    ? new BudgetEnforcingLlmProvider(inner, persistBudgetGate)
+    : inner;
   // The default factory wires the Prisma-backed usage recorder so every
   // workspace-tagged LLM call writes a `LlmUsageRecord` row used by the
   // customer billing usage pane + the daily Stripe-meter sweep. Tests
   // that don't want a DB write construct `LoggingLlmProvider` directly
   // or omit the `recorder` option.
-  return new LoggingLlmProvider(inner, { recorder: persistUsageRecorder });
+  return new LoggingLlmProvider(enforced, { recorder: persistUsageRecorder });
+}
+
+/** Budget enforcement defaults ON. `LLM_BUDGET_ENFORCEMENT=off` is the
+ *  operator kill-switch (only the BLOCK behavior is suppressed; usage is
+ *  still recorded and the operator/customer surfaces still read live). */
+function budgetEnforcementEnabled(): boolean {
+  return process.env.LLM_BUDGET_ENFORCEMENT !== 'off';
 }
 
 function buildInnerProvider(): LlmProvider {
@@ -93,3 +114,4 @@ export { llmOk, llmError, flattenContent, hasCacheableBlock } from './types';
 export { TestLlmProvider, digestRequest } from './test-provider';
 export { AnthropicProvider } from './anthropic-provider';
 export { LoggingLlmProvider } from './logging-provider';
+export { BudgetEnforcingLlmProvider } from './budget-enforcing-provider';

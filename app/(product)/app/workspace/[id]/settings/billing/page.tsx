@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/ap";
 import { withWorkspace } from "@/lib/auth";
 import { withRls } from "@/lib/db";
+import { getWorkspaceBudgetSnapshot } from "@/lib/billing/budget";
+import { formatMicroCentsAsUsd } from "@/lib/billing/usage/pricing";
 import {
   PARTNER_RESERVED_HOURS_PER_MONTH,
   PER_SEAT_MONTHLY_USD_CENTS,
@@ -26,6 +28,7 @@ import {
   changePlanAction,
   openPortalAction,
 } from "./actions";
+import { BudgetSummary } from "./BudgetSummary";
 import { UsagePanel } from "./UsagePanel";
 
 interface PageProps {
@@ -70,26 +73,33 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
   const queryParams = await searchParams;
   const { workspace, rls } = await withWorkspace(workspaceId, ["BROKER_OWNER"]);
 
-  const [subscription, invoices, recentEvents] = await Promise.all([
-    withRls(rls, (tx) =>
-      tx.subscription.findUnique({ where: { workspaceId } }),
-    ),
-    withRls(rls, (tx) =>
-      tx.workspaceInvoice.findMany({
-        where: { workspaceId },
-        orderBy: { issuedAt: "desc" },
-        take: 12,
-      }),
-    ),
-    withRls(rls, (tx) =>
-      tx.billingEvent.findMany({
-        where: { workspaceId },
-        orderBy: { receivedAt: "desc" },
-        take: 6,
-        select: { id: true, type: true, receivedAt: true },
-      }),
-    ),
-  ]);
+  const [subscription, invoices, recentEvents, budgetSnapshot] =
+    await Promise.all([
+      withRls(rls, (tx) =>
+        tx.subscription.findUnique({ where: { workspaceId } }),
+      ),
+      withRls(rls, (tx) =>
+        tx.workspaceInvoice.findMany({
+          where: { workspaceId },
+          orderBy: { issuedAt: "desc" },
+          take: 12,
+        }),
+      ),
+      withRls(rls, (tx) =>
+        tx.billingEvent.findMany({
+          where: { workspaceId },
+          orderBy: { receivedAt: "desc" },
+          take: 6,
+          select: { id: true, type: true, receivedAt: true },
+        }),
+      ),
+      // Month-to-date token budget vs the allowance included with the plan.
+      // Same RLS context as the rest of the page (BROKER_OWNER on this
+      // workspace) — the snapshot's own queries are workspace-scoped.
+      withRls(rls, (tx) =>
+        getWorkspaceBudgetSnapshot(tx, { workspaceId }),
+      ),
+    ]);
 
   const flash = readFlash(queryParams);
   const daysToTrialEnd =
@@ -384,6 +394,24 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
                 ))}
               </ul>
             </section>
+          ) : null}
+
+          {/* Monthly token budget vs the allowance included with the plan —
+              transparency so there's never a surprise overage. Hidden only
+              when the snapshot can't be resolved (should not happen for a
+              subscribed workspace). */}
+          {budgetSnapshot ? (
+            <BudgetSummary
+              status={budgetSnapshot.status}
+              spendUsd={formatMicroCentsAsUsd(budgetSnapshot.spendMicroCents)}
+              allowanceUsd={
+                budgetSnapshot.ceilingMicroCents === null
+                  ? null
+                  : formatMicroCentsAsUsd(budgetSnapshot.ceilingMicroCents)
+              }
+              fraction={budgetSnapshot.fraction}
+              monthLabel={formatMonth(budgetSnapshot.periodStart)}
+            />
           ) : null}
 
           {/* Token + cost usage. Falls back to the 30-day window when the
@@ -704,4 +732,14 @@ function derivePeriodStart(currentPeriodEnd: Date | null): Date | null {
   const d = new Date(currentPeriodEnd);
   d.setUTCMonth(d.getUTCMonth() - 1);
   return d;
+}
+
+// "June 2026" for the budget allowance card. UTC to match the snapshot's
+// calendar-month window (lib/billing/budget.ts#startOfMonthUtc).
+function formatMonth(date: Date): string {
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 }

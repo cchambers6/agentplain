@@ -5,6 +5,7 @@ import { withRls } from "@/lib/db";
 import { listDisciplines } from "@/lib/disciplines";
 import { servicePartnerForWorkspace } from "@/lib/onboarding/service-partner";
 import { DisciplineHeadForm } from "./DisciplineHeadForm";
+import { SettingAffects } from "../SettingAffects";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -71,6 +72,12 @@ export default async function DisciplineHeadsSettingsPage({ params }: PageProps)
           pile up until they return or you reassign. If you do not have
           a deputy, consider leaving the discipline at the default.
         </p>
+        <SettingAffects>
+          Who can approve new work in a discipline. Assigning a head routes
+          every new approval-queue item in that discipline to that one
+          person; unassigning returns it to any-qualified-member routing.
+          (See <code>lib/auth/route-approval.ts</code>.)
+        </SettingAffects>
       </header>
 
       <section>

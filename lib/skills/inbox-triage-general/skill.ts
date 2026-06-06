@@ -127,6 +127,14 @@ export async function runSkill(
   const extraUrgentCues = (input.extraUrgentCues ?? [])
     .map((c) => c.trim().toLowerCase())
     .filter((c) => c.length > 0);
+  // Per-skill config sender lists (flag / auto-archive). Normalized once
+  // here so the per-message matcher stays case-insensitive.
+  const flagFromSenders = (input.flagFromSenders ?? [])
+    .map((s) => s.trim().toLowerCase())
+    .filter((s) => s.length > 0);
+  const autoArchiveSenders = (input.autoArchiveSenders ?? [])
+    .map((s) => s.trim().toLowerCase())
+    .filter((s) => s.length > 0);
 
   const snapshotRes = await fetchSnapshot(input.fetcher, {
     workspaceId: input.workspaceId,
@@ -136,7 +144,14 @@ export async function runSkill(
   const snapshot = snapshotRes.value;
 
   let proposals = snapshot.inbox.map((msg) =>
-    buildProposal({ msg, noiseFloor, now, extraUrgentCues }),
+    buildProposal({
+      msg,
+      noiseFloor,
+      now,
+      extraUrgentCues,
+      flagFromSenders,
+      autoArchiveSenders,
+    }),
   );
 
   // Wave-4 — opt-in LLM refinement seam. When the caller passes both an
@@ -204,11 +219,16 @@ interface BuildArgs {
   noiseFloor: number;
   now: Date;
   extraUrgentCues: string[];
+  flagFromSenders: string[];
+  autoArchiveSenders: string[];
 }
 
 function buildProposal(args: BuildArgs): TriageProposal {
-  const { msg, noiseFloor, extraUrgentCues } = args;
-  const { priority, confidence, reasoning } = classify(msg, extraUrgentCues);
+  const { msg, noiseFloor, extraUrgentCues, flagFromSenders, autoArchiveSenders } = args;
+  const { priority, confidence, reasoning } = classify(msg, extraUrgentCues, {
+    flagFromSenders,
+    autoArchiveSenders,
+  });
   const finalPriority: TriagePriority =
     confidence < noiseFloor ? 'noise' : priority;
   const ackDraft =
@@ -234,11 +254,35 @@ function buildProposal(args: BuildArgs): TriageProposal {
 function classify(
   msg: TriageMessage,
   extraUrgentCues: string[] = [],
+  senderLists: { flagFromSenders?: string[]; autoArchiveSenders?: string[] } = {},
 ): {
   priority: TriagePriority;
   confidence: number;
   reasoning: string;
 } {
+  // Sender lists win over body cues — they are an explicit per-sender
+  // instruction from the customer (/settings/skills → inbox triage). The
+  // allowlist (flag) is checked before the denylist so a sender on both
+  // surfaces as urgent, never silently archived.
+  const flagMatch = senderMatches(msg.fromEmail, senderLists.flagFromSenders ?? []);
+  if (flagMatch) {
+    return {
+      priority: 'urgent',
+      confidence: 0.9,
+      reasoning: `Flagged sender: "${flagMatch}".`,
+    };
+  }
+  const archiveMatch = senderMatches(
+    msg.fromEmail,
+    senderLists.autoArchiveSenders ?? [],
+  );
+  if (archiveMatch) {
+    return {
+      priority: 'noise',
+      confidence: 0.9,
+      reasoning: `Auto-archive sender: "${archiveMatch}".`,
+    };
+  }
   const haystack = `${msg.subject}\n${msg.bodyText}`.toLowerCase();
   // Precedence: most-specific signal wins. Urgent is the strongest
   // signal regardless of counterparty class. Customer-specific
@@ -302,6 +346,29 @@ function classify(
   };
 }
 
+/**
+ * Match a sender address against a customer-supplied pattern list.
+ * Supports three forms (all case-insensitive):
+ *   - exact address:  "compliance@partner.com"
+ *   - "@domain.com":  matches any address at that domain
+ *   - bare "domain.com": same as "@domain.com"
+ * Returns the matched pattern (for reasoning), or null.
+ */
+function senderMatches(fromEmail: string, patterns: string[]): string | null {
+  const email = fromEmail.trim().toLowerCase();
+  if (email.length === 0 || patterns.length === 0) return null;
+  const at = email.indexOf('@');
+  const domain = at >= 0 ? email.slice(at + 1) : '';
+  for (const raw of patterns) {
+    const p = raw.trim().toLowerCase();
+    if (p.length === 0) continue;
+    if (p === email) return raw;
+    if (p.startsWith('@') && domain.length > 0 && domain === p.slice(1)) return raw;
+    if (!p.includes('@') && domain.length > 0 && domain === p) return raw;
+  }
+  return null;
+}
+
 function renderAckDraft(args: {
   msg: TriageMessage;
   priority: TriagePriority;
@@ -342,4 +409,5 @@ export const __testing = {
   classify,
   renderAckDraft,
   priorityRank,
+  senderMatches,
 };

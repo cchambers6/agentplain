@@ -195,6 +195,8 @@ export async function runInboxTriageForEvent(
     now: input.now,
     sinkThreshold: input.sinkThreshold ?? DEFAULT_SINK_THRESHOLD,
     extraUrgentCues: skillConfig.priorityKeywords,
+    flagFromSenders: skillConfig.flagFromSenders,
+    autoArchiveSenders: skillConfig.autoArchiveSenders,
     llm: llmForRefine ?? undefined,
     feedbackRulesBlock,
   });

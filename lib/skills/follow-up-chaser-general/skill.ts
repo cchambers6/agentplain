@@ -21,12 +21,14 @@ import { skillError, skillOk, type SkillResult } from '../types';
 import {
   DEFAULT_FOLLOW_UP_LOOKBACK_DAYS,
   DEFAULT_MAX_NUDGES_PER_RUN,
+  DEFAULT_NUDGE_TONE,
   DEFAULT_STALE_AFTER_DAYS,
   type FollowUpFetcher,
   type FollowUpInput,
   type FollowUpOutput,
   type FollowUpProposal,
   type FollowUpSnapshot,
+  type NudgeTone,
   type OutboundThread,
 } from './types';
 
@@ -44,6 +46,7 @@ export async function runSkill(
   const maxNudges = input.maxNudgesPerRun ?? DEFAULT_MAX_NUDGES_PER_RUN;
   const lookbackDays = input.lookbackDays ?? DEFAULT_FOLLOW_UP_LOOKBACK_DAYS;
   const sinkThreshold = input.sinkThreshold ?? 0;
+  const nudgeTone = input.nudgeTone ?? DEFAULT_NUDGE_TONE;
 
   const snapshotRes = await fetchSnapshot(input.fetcher, {
     workspaceId: input.workspaceId,
@@ -62,7 +65,9 @@ export async function runSkill(
   stale.sort((a, b) => a.operatorLastSentAt.getTime() - b.operatorLastSentAt.getTime());
   const capped = stale.slice(0, maxNudges);
 
-  const proposals: FollowUpProposal[] = capped.map((t) => buildProposal({ thread: t, now }));
+  const proposals: FollowUpProposal[] = capped.map((t) =>
+    buildProposal({ thread: t, now, nudgeTone }),
+  );
 
   let sunk = 0;
   if (input.sink) {
@@ -134,8 +139,40 @@ function filterStaleThreads(args: FilterArgs): OutboundThread[] {
   });
 }
 
-function buildProposal(args: { thread: OutboundThread; now: Date }): FollowUpProposal {
+/**
+ * Tone-specific nudge wording. `professional` preserves the original
+ * copy; `warm` softens it; `firm` makes the ask direct. The customer
+ * picks the voice in /settings/skills → follow-up chaser. Drafts only —
+ * the operator still approves before anything sends.
+ */
+const NUDGE_LINES: Record<NudgeTone, { first: string; second: string }> = {
+  professional: {
+    first:
+      "Just bumping this up — wanted to make sure my last note didn't fall through the cracks.",
+    second:
+      "Circling back on this one — it's been a couple weeks and I want to make sure I haven't missed your reply.",
+  },
+  warm: {
+    first:
+      "Just wanted to gently float this back to the top of your inbox — no rush at all, only checking in case it slipped by.",
+    second:
+      "Hope you've been well! Circling back on this in case my earlier note got buried — I completely understand things get busy.",
+  },
+  firm: {
+    first:
+      "Following up on my note below — could you let me know where this stands?",
+    second:
+      "Checking in again on this — it's been a couple of weeks, and I'd appreciate a quick reply so I know how best to proceed.",
+  },
+};
+
+function buildProposal(args: {
+  thread: OutboundThread;
+  now: Date;
+  nudgeTone?: NudgeTone;
+}): FollowUpProposal {
   const { thread, now } = args;
+  const nudgeTone = args.nudgeTone ?? DEFAULT_NUDGE_TONE;
   const ageDays = Math.floor(
     (now.getTime() - thread.operatorLastSentAt.getTime()) / MS_PER_DAY,
   );
@@ -148,10 +185,7 @@ function buildProposal(args: { thread: OutboundThread; now: Date }): FollowUpPro
     .slice(0, 240)
     .replace(/\s+/g, ' ')
     .trim();
-  const nudgeLine =
-    stage === 'first'
-      ? "Just bumping this up — wanted to make sure my last note didn't fall through the cracks."
-      : "Circling back on this one — it's been a couple weeks and I want to make sure I haven't missed your reply.";
+  const nudgeLine = NUDGE_LINES[nudgeTone][stage];
   const body = [
     greeting,
     '',

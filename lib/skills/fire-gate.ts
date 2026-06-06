@@ -136,6 +136,61 @@ export async function gateSkillFire(args: FireGateArgs): Promise<FireGateOutcome
 }
 
 /**
+ * A single active `WorkspacePauseConfig` row, narrowed to the fields the
+ * pause resolution needs. `pausedDisciplineIds` empty = workspace-wide
+ * (all-disciplines) pause.
+ */
+export interface ActivePauseRow {
+  pausedDisciplineIds: string[];
+  pausedUntil: Date;
+}
+
+export interface VacationPauseResolution {
+  /** A workspace-wide pause (a row with empty `pausedDisciplineIds`) is
+   *  active. The caller should skip ALL work for this fire — the
+   *  emergency-stop the /settings/pause surface promises. */
+  fullPause: boolean;
+  /** Latest `pausedUntil` across the active workspace-wide pauses, for
+   *  the operator/audit surface. Null when no full pause is active. */
+  pausedUntil: Date | null;
+  /** Union of discipline ids covered by active discipline-narrowed
+   *  pauses. Callers fold this into the runner's `disabledDisciplineIds`
+   *  so a narrowed vacation pause flows through the existing
+   *  discipline-skip plumbing without new gating logic. */
+  pausedDisciplineIds: string[];
+}
+
+/**
+ * Pure resolution of active pause rows into a fire decision. Split out
+ * from `gateSkillFire` so the multi-skill webhook path (which runs the
+ * generic chain + vertical router + inbox triage in one pass) can apply
+ * pause uniformly: a full pause skips the whole event; a narrowed pause
+ * silences just the named disciplines.
+ *
+ * The caller is responsible for the `pausedFrom <= now < pausedUntil`
+ * query filter (same as `gateSkillFire`); this function only classifies
+ * the rows that filter returned.
+ */
+export function resolveVacationPause(
+  activePauses: ActivePauseRow[],
+): VacationPauseResolution {
+  let fullPause = false;
+  let pausedUntil: Date | null = null;
+  const narrowed = new Set<string>();
+  for (const p of activePauses) {
+    if (p.pausedDisciplineIds.length === 0) {
+      fullPause = true;
+      if (pausedUntil === null || p.pausedUntil > pausedUntil) {
+        pausedUntil = p.pausedUntil;
+      }
+    } else {
+      for (const d of p.pausedDisciplineIds) narrowed.add(d);
+    }
+  }
+  return { fullPause, pausedUntil, pausedDisciplineIds: [...narrowed] };
+}
+
+/**
  * Project UTC `now` into the given IANA timezone and return the local
  * hour (0..23) + day-of-week (0..6, Sunday=0). Uses
  * Intl.DateTimeFormat so DST transitions are correct.

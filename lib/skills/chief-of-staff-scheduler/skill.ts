@@ -26,6 +26,7 @@ import { randomUUID } from 'node:crypto';
 import { skillError, skillOk, type SkillResult } from '../types';
 import { maybeRefineCos } from './llm-refine';
 import {
+  DEFAULT_BUFFER_MINUTES,
   DEFAULT_BUSINESS_HOURS,
   DEFAULT_LOOKAHEAD_DAYS,
   DEFAULT_MAX_PROPOSALS_PER_CLASS,
@@ -64,6 +65,7 @@ export async function runSkill(
   const businessHours = input.businessHours ?? DEFAULT_BUSINESS_HOURS;
   const workDays = input.workDays ?? DEFAULT_WORK_DAYS;
   const meetingMinutes = input.defaultMeetingMinutes ?? DEFAULT_MEETING_MINUTES;
+  const bufferMinutes = input.bufferMinutes ?? DEFAULT_BUFFER_MINUTES;
 
   const snapshotRes = await fetchSnapshot(input.fetcher, {
     workspaceId: input.workspaceId,
@@ -81,6 +83,7 @@ export async function runSkill(
     businessHours,
     workDays,
     meetingMinutes,
+    bufferMinutes,
   });
   let replyDraftProposals = buildReplyDraftProposals({
     snapshot,
@@ -194,10 +197,11 @@ interface BuildMeetingArgs {
   businessHours: { startLocalHour: number; endLocalHour: number };
   workDays: WorkDay[];
   meetingMinutes: number;
+  bufferMinutes: number;
 }
 
 function buildMeetingProposals(args: BuildMeetingArgs): MeetingProposal[] {
-  const { snapshot, now, lookaheadDays, maxPerClass, businessHours, workDays, meetingMinutes } = args;
+  const { snapshot, now, lookaheadDays, maxPerClass, businessHours, workDays, meetingMinutes, bufferMinutes } = args;
   const out: MeetingProposal[] = [];
   const workDaySet = new Set(workDays);
   // Pre-compute open slots once; each meeting candidate picks the
@@ -210,6 +214,7 @@ function buildMeetingProposals(args: BuildMeetingArgs): MeetingProposal[] {
     businessHours,
     workDaySet,
     meetingMinutes,
+    bufferMinutes,
   });
   const usedSlotKeys = new Set<string>();
 
@@ -266,6 +271,8 @@ interface FindSlotsArgs {
   businessHours: { startLocalHour: number; endLocalHour: number };
   workDaySet: Set<WorkDay>;
   meetingMinutes: number;
+  /** Minutes of breathing room enforced on each side of a busy event. */
+  bufferMinutes: number;
 }
 
 /**
@@ -278,12 +285,19 @@ interface FindSlotsArgs {
  * adapter does).
  */
 function findOpenSlots(args: FindSlotsArgs): ProposedSlot[] {
-  const { events, now, lookaheadDays, businessHours, workDaySet, meetingMinutes } = args;
+  const { events, now, lookaheadDays, businessHours, workDaySet, meetingMinutes, bufferMinutes } = args;
   const slots: ProposedSlot[] = [];
-  // Sort busy events ascending — efficient overlap check.
+  // Sort busy events ascending — efficient overlap check. Each busy
+  // interval is padded by `bufferMinutes` on BOTH sides so a proposed
+  // slot keeps the customer's configured breathing room before/after an
+  // existing meeting (/settings/skills → chief-of-staff buffer).
+  const bufferMs = Math.max(0, bufferMinutes) * MS_PER_MIN;
   const busy = events
     .filter((e) => e.isBusy)
-    .map((e) => ({ start: e.startUtc.getTime(), end: e.endUtc.getTime() }))
+    .map((e) => ({
+      start: e.startUtc.getTime() - bufferMs,
+      end: e.endUtc.getTime() + bufferMs,
+    }))
     .sort((a, b) => a.start - b.start);
 
   const slotMs = meetingMinutes * MS_PER_MIN;

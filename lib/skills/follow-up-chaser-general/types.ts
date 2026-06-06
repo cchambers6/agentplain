@@ -110,7 +110,16 @@ export interface FollowUpInput {
   lookbackDays?: number;
   /** Sink-confidence threshold. */
   sinkThreshold?: number;
+  /** Per-skill config — the voice of the nudge body. Sourced from
+   *  `lib/skills/config#readFollowUpChaserConfig`. `professional`
+   *  (default) keeps today's wording; `warm` softens it; `firm` makes
+   *  the ask more direct. Drafts only — never sent. */
+  nudgeTone?: 'professional' | 'warm' | 'firm';
 }
+
+export const DEFAULT_NUDGE_TONE: NudgeTone = 'professional';
+
+export type NudgeTone = 'professional' | 'warm' | 'firm';
 
 export interface FollowUpOutput {
   asOf: string;

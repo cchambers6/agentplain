@@ -254,6 +254,12 @@ export interface ChiefOfStaffInput {
   workDays?: WorkDay[];
   /** Default proposed meeting length in minutes. Defaults to 30. */
   defaultMeetingMinutes?: number;
+  /** Per-skill config — minutes of breathing room to keep on EACH side
+   *  of an existing busy event when searching for open slots. A proposed
+   *  slot must not fall within `bufferMinutes` of any busy event.
+   *  Sourced from `lib/skills/config#readChiefOfStaffConfig`. Default 0
+   *  (back-to-back allowed). */
+  bufferMinutes?: number;
   /** Wave-4 — opt-in LLM provider for FEEDBACK-rule refinement. When
    *  provided (alongside a non-empty `feedbackRulesBlock`), the skill
    *  invokes `maybeRefineCos` after the heuristic to let FEEDBACK rules
@@ -305,3 +311,4 @@ export const DEFAULT_WORK_DAYS: WorkDay[] = [
   'friday',
 ];
 export const DEFAULT_MEETING_MINUTES = 30;
+export const DEFAULT_BUFFER_MINUTES = 0;

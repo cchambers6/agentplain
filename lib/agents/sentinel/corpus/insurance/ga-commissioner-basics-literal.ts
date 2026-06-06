@@ -19,7 +19,12 @@ export const rule: ComplianceRule = {
     accessedAt: "2026-05-12",
   },
   literalText: `[UNVERIFIED — needs counsel] Substance: O.C.G.A. § 33-2-1 establishes the office of Commissioner of Insurance and vests the Commissioner with authority to administer the Insurance Code (Title 33). The Commissioner has rulemaking authority (O.C.G.A. § 33-2-9), examination authority over insurers (O.C.G.A. § 33-2-11), and authority to license producers under Chapter 23. Regulations are codified at Rules of the Department of Insurance, Chapter 120.`,
+  purpose: "counsel-reference",
+  severity: "info",
+  counselReviewStatus: "draft",
   unverified: true,
+  safeRewrite:
+    "No draft rewrite — scope/routing rule only. Sentinel uses it to direct flagged Georgia insurance drafts to the correct regulator (Office of Commissioner of Insurance and Safety Fire).",
   drafterNotes:
     "This rule is scope/routing only — sentinel uses it to direct flags to the GA Commissioner's office. Counsel: please confirm rulemaking citation.",
 };

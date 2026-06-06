@@ -123,6 +123,9 @@ export function scanCorpus(input: ScanInput): ScanResult {
 function isLiteralMatchRule(rule: ComplianceRule): boolean {
   if (rule.purpose !== "literal-match") return false;
   if (rule.unverified) return false;
+  // Belt-and-suspenders: a rule counsel explicitly struck must never fire,
+  // even if `unverified` was left unset on it.
+  if (rule.counselReviewStatus === "rejected") return false;
   return Array.isArray(rule.triggers) && rule.triggers.length > 0;
 }
 

@@ -23,7 +23,13 @@
  * defensible way to gate corpus review.
  */
 
-import type { ComplianceRule, CorpusBundle, RuleCitation } from "./types";
+import type {
+  ComplianceRule,
+  CorpusBundle,
+  CounselReviewStatus,
+  RuleCitation,
+  RuleSeverity,
+} from "./types";
 
 /**
  * One literal-match phrase ready for counsel review. The phrase is the
@@ -36,6 +42,10 @@ export interface PacketLiteralTrigger {
   phrase: string;
   category: string | null;
   citation: RuleCitation;
+  /** Advisory weighting for the operator UI (defaults to `advisory`). */
+  severity: RuleSeverity;
+  /** Drafter-suggested remediation guidance, if any. */
+  safeRewrite: string | null;
 }
 
 /**
@@ -53,6 +63,25 @@ export interface PacketCandidateLiteralTrigger extends PacketLiteralTrigger {
 }
 
 /**
+ * One CANDIDATE regex trigger — a deterministic pattern drafted from a
+ * regulator's text but not counsel-verified. Sentinel does not fire on
+ * these; counsel red-lines the pattern, its description, and the worked
+ * example/counter-example before it can move into the live path.
+ */
+export interface PacketCandidateRegexTrigger {
+  ruleId: string;
+  ruleTitle: string;
+  pattern: string;
+  flags: string;
+  description: string;
+  example: string;
+  counterExample: string;
+  category: string | null;
+  severity: RuleSeverity;
+  citation: RuleCitation;
+}
+
+/**
  * One counsel-reference rule — the substantive law sentinel will NOT
  * auto-flag. Counsel decides whether to (a) approve as reference
  * material only, (b) commission an LLM-classifier path, or (c) extract
@@ -64,6 +93,10 @@ export interface PacketCounselReference {
   summary: string;
   literalText: string;
   citation: RuleCitation;
+  severity: RuleSeverity;
+  safeRewrite: string | null;
+  drafterNotes: string | null;
+  counselReviewStatus: CounselReviewStatus;
 }
 
 /**
@@ -86,16 +119,43 @@ export interface CounselHandoffPacket {
    * move a vertical's sentinel from advisory to live.
    */
   candidateLiteralTriggers: PacketCandidateLiteralTrigger[];
+  /**
+   * Regex triggers drafted from regulator text but not counsel-verified.
+   * Sentinel does not fire on these — they ride the same gate as candidate
+   * literal triggers.
+   */
+  candidateRegexTriggers: PacketCandidateRegexTrigger[];
   counselReferences: PacketCounselReference[];
   openQuestions: string[];
 }
 
+const DEFAULT_SEVERITY: RuleSeverity = "advisory";
+
 export function buildCounselHandoffPacket(corpus: CorpusBundle): CounselHandoffPacket {
   const literalTriggers: PacketLiteralTrigger[] = [];
   const candidateLiteralTriggers: PacketCandidateLiteralTrigger[] = [];
+  const candidateRegexTriggers: PacketCandidateRegexTrigger[] = [];
   const counselReferences: PacketCounselReference[] = [];
 
   for (const rule of corpus.rules) {
+    const severity = rule.severity ?? DEFAULT_SEVERITY;
+    // Regex triggers are catalog-only on every rule (none fire live yet),
+    // so collect them regardless of the rule's literal-match status.
+    for (const rx of rule.triggerRegexes ?? []) {
+      candidateRegexTriggers.push({
+        ruleId: rule.ruleId,
+        ruleTitle: rule.title,
+        pattern: rx.pattern,
+        flags: rx.flags ?? "i",
+        description: rx.description,
+        example: rx.example,
+        counterExample: rx.counterExample,
+        category: rule.category ?? null,
+        severity,
+        citation: { ...rule.citation },
+      });
+    }
+
     if (isLiteralMatchRule(rule)) {
       for (const phrase of rule.triggers ?? []) {
         literalTriggers.push({
@@ -104,6 +164,8 @@ export function buildCounselHandoffPacket(corpus: CorpusBundle): CounselHandoffP
           phrase,
           category: rule.category ?? null,
           citation: { ...rule.citation },
+          severity,
+          safeRewrite: rule.safeRewrite ?? null,
         });
       }
       continue;
@@ -116,6 +178,8 @@ export function buildCounselHandoffPacket(corpus: CorpusBundle): CounselHandoffP
           phrase,
           category: rule.category ?? null,
           citation: { ...rule.citation },
+          severity,
+          safeRewrite: rule.safeRewrite ?? null,
           drafterNotes: rule.drafterNotes ?? null,
         });
       }
@@ -130,6 +194,10 @@ export function buildCounselHandoffPacket(corpus: CorpusBundle): CounselHandoffP
       summary: rule.summary,
       literalText: rule.literalText,
       citation: { ...rule.citation },
+      severity,
+      safeRewrite: rule.safeRewrite ?? null,
+      drafterNotes: rule.drafterNotes ?? null,
+      counselReviewStatus: rule.counselReviewStatus ?? "draft",
     });
   }
 
@@ -140,6 +208,7 @@ export function buildCounselHandoffPacket(corpus: CorpusBundle): CounselHandoffP
     counselReviewer: corpus.metadata.counselReviewer,
     literalTriggers,
     candidateLiteralTriggers,
+    candidateRegexTriggers,
     counselReferences,
     openQuestions: corpus.metadata.openQuestions ?? [],
   };

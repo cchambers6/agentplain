@@ -23,7 +23,12 @@ export const rule: ComplianceRule = {
     accessedAt: "2026-05-12",
   },
   literalText: `[UNVERIFIED — needs counsel] Substance: 12 USC § 5103 requires that, in addition to other requirements, an individual may not engage in the business of a loan originator without first obtaining and maintaining annually a registration as a registered loan originator (for federally chartered/regulated depositories) or a state license and registration as a state-licensed loan originator. Implementing rules at 12 CFR Part 1008 set minimum standards for state licensing; the corresponding federal registration rule sits at 12 CFR Part 1007.`,
+  purpose: "counsel-reference",
+  severity: "info",
+  counselReviewStatus: "draft",
   unverified: true,
+  safeRewrite:
+    "Do not state or imply that the workspace can originate, approve, or lock a residential mortgage loan unless a licensed/registered MLO (with NMLS ID) is the named originator. Marketing copy should attribute origination to the licensed individual or entity and include the NMLS ID where the originator's name appears.",
   drafterNotes:
     "Counsel: please replace the placeholder with the actual statutory text from 12 USC § 5103(a). Sentinel currently treats this rule as scope-only (won't fire on text match) until the literal is filled in.",
 };

@@ -308,4 +308,19 @@ export const env = {
   // Vercel injects VERCEL_GIT_COMMIT_SHA on every deploy.
   sentryRelease: () =>
     optional("SENTRY_RELEASE") ?? optional("VERCEL_GIT_COMMIT_SHA"),
+
+  // Compliance corpus go-live gate (lib/agents/sentinel). A vertical's
+  // counsel-reviewed rules only fire live when its slug appears in this
+  // comma-separated allow-list — e.g.
+  // COMPLIANCE_CORPUS_COUNSEL_REVIEWED="mortgage,insurance". This is a
+  // production kill-switch on TOP of the per-rule `unverified` gate: even
+  // after counsel flips a rule to `reviewed` in code, the vertical stays
+  // advisory-only until ops sets the flag. real-estate is baseline-live in
+  // sentinel and does not depend on this var. Slugs are lowercased; unknown
+  // slugs are ignored. See lib/agents/sentinel/index.ts.
+  complianceCounselReviewedVerticals: (): string[] =>
+    (optional("COMPLIANCE_CORPUS_COUNSEL_REVIEWED") ?? "")
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean),
 };

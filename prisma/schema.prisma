@@ -392,14 +392,28 @@ enum ContextKind {
 }
 
 // Customer support routing lifecycle (scaffold — feat/support-routing,
-// 2026-05-20). NEW = freshly submitted, untouched. OPEN = operator has
-// acknowledged / is working it. RESOLVED = closed out. Real ticketing
-// (Intercom/Zendesk-grade) is a later phase; this is the first home for a
-// customer's question so it doesn't vanish into a personal inbox.
+// 2026-05-20; draft-into-review extension — feat/support-draft-into-review-
+// handler, 2026-06-03). Lifecycle:
+//   NEW       — freshly submitted, untouched.
+//   IN_REVIEW — the support-handler fleet drafted a first-touch reply and
+//               it is PENDING in the operator approval queue (set by
+//               lib/inngest/functions/support-handler-on-create once the
+//               draft is sunk). Tells the operator "a draft is waiting".
+//   OPEN      — operator is working it by hand (no fleet draft, or the
+//               draft was rejected and needs manual handling).
+//   RESOLVED  — closed out; an approved reply was sent. resolvedAt /
+//               resolvedBy stamp who/when.
+//   ARCHIVED  — operator filed it away without a reply (spam / duplicate /
+//               non-actionable). Distinct from RESOLVED so analytics can
+//               separate "answered" from "dismissed".
+// Real ticketing (Intercom/Zendesk-grade) is a later phase; this is the
+// first home for a customer's question so it doesn't vanish into an inbox.
 enum SupportRequestStatus {
   NEW
+  IN_REVIEW
   OPEN
   RESOLVED
+  ARCHIVED
 }
 
 // WorkspaceMemoryEntry kind. Mirrors the four-bucket memory taxonomy
@@ -1336,6 +1350,13 @@ model SupportRequest {
   /// Resend / test-provider message id from the notification email. Null when
   /// the send failed; the row is still persisted so nothing is lost.
   emailMessageId String?
+  /// When an operator approved a drafted reply and it was sent (status →
+  /// RESOLVED). NULL until resolved. Set in lib/support/resolve-reply.ts.
+  resolvedAt     DateTime?
+  /// Operator User.id who approved + sent the resolving reply. Plain uuid
+  /// (no FK relation) — mirrors the audit-actor convention; the operator
+  /// account always outlives the request so SetNull semantics aren't needed.
+  resolvedBy     String?              @db.Uuid
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
   workspace      Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)

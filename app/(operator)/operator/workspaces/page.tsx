@@ -121,15 +121,24 @@ export default async function OperatorWorkspacesPage(props: PageProps) {
                 className="border-b border-rule last:border-b-0 align-top"
               >
                 <td className="px-4 py-3">
-                  <p className="font-display text-[15px] leading-tight text-ink">
+                  <Link
+                    href={`/operator/workspaces/${w.id}`}
+                    className="font-display text-[15px] leading-tight text-ink underline decoration-rule underline-offset-4 hover:decoration-ink"
+                  >
                     {w.name}
-                  </p>
+                  </Link>
                   <p className="mt-1 font-mono text-[11px] uppercase text-mute">
                     {w.slug}
                   </p>
                   <p className="mt-1 font-mono text-[11px] text-mute">
                     {w.id}
                   </p>
+                  <Link
+                    href={`/operator/workspaces/${w.id}`}
+                    className="mt-1 inline-block font-mono text-[11px] text-mute underline hover:text-ink"
+                  >
+                    → deep-dive
+                  </Link>
                 </td>
                 <td className="px-4 py-3 font-mono text-[12px] uppercase text-ink-soft">
                   {w.vertical.toLowerCase().replace(/_/g, " ")}

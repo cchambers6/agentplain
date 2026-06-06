@@ -6,9 +6,26 @@ import {
 } from "@/components/ui/ap";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
+import {
+  listWorkspaceFeedbackSince,
+  summarizeWorkspaceWeek,
+  type WorkspaceFeedbackWeekSummary,
+} from "@/lib/feedback";
 import { servicePartnerForWorkspace } from "@/lib/onboarding/service-partner";
 import { decrypt } from "@/lib/security/encryption";
 import { muteBriefingsAction } from "./actions";
+
+const FEEDBACK_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Lever copy mirrors lib/feedback/drift#buildProposalBody, phrased for
+ *  the customer instead of the operator. */
+const LEVER_COPY: Record<string, string> = {
+  tone: "tightening how it sounds",
+  structure: "reshaping how it's laid out",
+  factual: "adding a fact-check pass before drafts reach you",
+  length: "tuning the length",
+  other: "a closer look",
+};
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -49,6 +66,13 @@ export default async function BriefingsPage({ params }: PageProps) {
     return [rows, preference] as const;
   });
 
+  const feedbackThisWeek = await listWorkspaceFeedbackSince(
+    ctx,
+    workspaceId,
+    new Date(Date.now() - FEEDBACK_WEEK_MS),
+  );
+  const feedbackSummary = summarizeWorkspaceWeek(feedbackThisWeek);
+
   const partner = servicePartnerForWorkspace(workspaceId);
   const muted = pref?.briefingsMutedAt != null;
 
@@ -86,6 +110,8 @@ export default async function BriefingsPage({ params }: PageProps) {
             : "mute briefings (you can turn them back on later)"}
         </ApHeritageButton>
       </form>
+
+      <FeedbackLoopSection summary={feedbackSummary} partner={partner} />
 
       {muted ? (
         <div className="mt-8">
@@ -127,6 +153,78 @@ export default async function BriefingsPage({ params }: PageProps) {
         </ul>
       )}
     </div>
+  );
+}
+
+/**
+ * "What we learned from your feedback this week" — the customer-facing end
+ * of the closed loop. Surfaces the corrections the customer left on
+ * /approvals this week and what the fleet is weighing in response. Derived
+ * entirely from the workspace's own PreferenceFeedback rows (no
+ * operator-only CapabilityProposal read), so it renders under the
+ * customer's RLS context. Renders nothing on a zero-feedback week to keep
+ * the page quiet.
+ */
+function FeedbackLoopSection({
+  summary,
+  partner,
+}: {
+  summary: WorkspaceFeedbackWeekSummary;
+  partner: string;
+}) {
+  if (summary.totalCorrections === 0) return null;
+
+  const categoryLine = summary.byCategory
+    .map((c) => `${c.category} ×${c.count}`)
+    .join(" · ");
+
+  return (
+    <section className="mt-8">
+      <ApPaperCard
+        eyebrow="what we learned from your feedback this week"
+        title={`${summary.totalCorrections} correction${
+          summary.totalCorrections === 1 ? "" : "s"
+        } noted`}
+      >
+        <p className="text-[14px] leading-relaxed text-ink-soft">
+          You flagged{" "}
+          <span className="text-ink">{summary.totalCorrections}</span>{" "}
+          draft{summary.totalCorrections === 1 ? "" : "s"} this week
+          {categoryLine ? (
+            <>
+              {" "}
+              — <span className="text-ink">{categoryLine}</span>
+            </>
+          ) : null}
+          . {partner} already folded each one into the next draft.
+        </p>
+
+        {summary.considering.length > 0 ? (
+          <div className="mt-4 border-t border-rule pt-4">
+            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+              what we&rsquo;re considering
+            </p>
+            <ul className="mt-2 space-y-2 text-[14px] leading-relaxed text-ink-soft">
+              {summary.considering.map((g) => (
+                <li key={`${g.targetSkillSlug}-${g.category}`}>
+                  <span className="font-mono text-[13px] text-ink">
+                    {g.targetSkillSlug}
+                  </span>{" "}
+                  was corrected {g.count}× for {g.category} — we&rsquo;re
+                  weighing {LEVER_COPY[g.category] ?? "a change"} in our weekly
+                  review.
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <p className="mt-4 border-t border-rule pt-4 text-[13px] leading-relaxed text-mute">
+            Nothing crossed the threshold to change a skill this week — we keep
+            watching, and every correction still shapes your next draft.
+          </p>
+        )}
+      </ApPaperCard>
+    </section>
   );
 }
 

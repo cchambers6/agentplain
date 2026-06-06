@@ -22,10 +22,16 @@ import {
   type ClassifiedBoard,
 } from "@/lib/operator/leadership-data";
 import { defaultLeadershipDataSource } from "@/lib/operator/leadership-data-snapshot";
+import { summarizeCorrectionRatesSince } from "@/lib/feedback";
 import LeadershipBoardView from "./LeadershipBoardView";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+/** Window the cross-workspace correction-rate signal aggregates over. A
+ *  longer window than the weekly drift sweep so the operator sees a
+ *  durable trend, not a single quiet week. */
+const DRIFT_SIGNAL_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
 export default async function OperatorLeadershipBoardPage() {
   const session = await requireUser();
@@ -37,5 +43,16 @@ export default async function OperatorLeadershipBoardPage() {
   const now = new Date();
   const board: ClassifiedBoard = classifyBoard(snapshot, now);
 
-  return <LeadershipBoardView board={board} now={now} />;
+  // Cross-workspace drift signal — which workspaces correct the fleet most.
+  // Live read under operator/system context (the snapshot adapter covers
+  // the leadership board; this is a distinct, always-fresh signal). Failing
+  // closed keeps the board rendering if the feedback table read errors.
+  const driftSignal = await summarizeCorrectionRatesSince(
+    new Date(now.getTime() - DRIFT_SIGNAL_WINDOW_MS),
+    10,
+  ).catch(() => []);
+
+  return (
+    <LeadershipBoardView board={board} now={now} driftSignal={driftSignal} />
+  );
 }

@@ -72,6 +72,11 @@ import { onboardingBackfillPickSkillsFn } from "@/lib/inngest/functions/onboardi
 // records an audit row; wave-10b will swap in real substrate ingestion
 // of the last 7 days of inbox content.
 import { mcpConnectedSeedInboxFn } from "@/lib/inngest/functions/mcp-connected-seed-inbox";
+// Wave-4 customer-feedback closed loop — weekly drift sweep aggregates
+// categorized /approvals corrections and queues a CapabilityProposal per
+// skill+category that crosses the threshold. The /briefings "what we
+// learned" section + the operator leadership board read the same substrate.
+import { customerFeedbackDriftSweepFn } from "@/lib/inngest/functions/customer-feedback-drift-sweep";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -106,5 +111,6 @@ export const { GET, POST, PUT } = serve({
     onboardingFirstFireFn,
     onboardingBackfillPickSkillsFn,
     mcpConnectedSeedInboxFn,
+    customerFeedbackDriftSweepFn,
   ],
 });

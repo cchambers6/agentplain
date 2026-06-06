@@ -2,6 +2,7 @@ import Link from "next/link";
 import { withSystemContext } from "@/lib/db/rls";
 import { requireUser } from "@/lib/auth/server";
 import { env } from "@/lib/env";
+import { loadCacheHitRateBySkill } from "@/lib/billing/usage/cache-stats";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -64,6 +65,37 @@ export default async function OperatorIntegrationsPage(props: PageProps) {
   );
   const connectedIds = new Set(credentials.map((c) => c.workspaceId));
   const connectableWorkspaces = allWorkspaces.filter((w) => !connectedIds.has(w.id));
+
+  // Per-skill prompt-cache hit rate over the trailing 7 days. Surfaces
+  // whether the auto-caching wrapper (lib/llm/cache-wrapper.ts) is actually
+  // converting stable skill prefixes into cache reads. Cross-workspace
+  // operator read via withSystemContext inside the loader.
+  const cacheStats = await loadCacheHitRateBySkill(7);
+  const cacheTotals = cacheStats.reduce(
+    (acc, s) => {
+      acc.calls += s.calls;
+      acc.inputTokens += s.inputTokens;
+      acc.cacheReadTokens += s.cacheReadTokens;
+      acc.cacheCreationTokens += s.cacheCreationTokens;
+      return acc;
+    },
+    { calls: 0, inputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0 },
+  );
+  const overallHitRate =
+    cacheTotals.cacheReadTokens +
+      cacheTotals.inputTokens +
+      cacheTotals.cacheCreationTokens ===
+    0
+      ? 0
+      : Math.round(
+          (cacheTotals.cacheReadTokens /
+            (cacheTotals.cacheReadTokens +
+              cacheTotals.inputTokens +
+              cacheTotals.cacheCreationTokens)) *
+            1000,
+        ) / 1000;
+  const fmtPct = (rate: number) => `${(rate * 100).toFixed(1)}%`;
+  const fmtTokens = (n: number) => n.toLocaleString("en-US");
 
   const googleConfigured = Boolean(env.googleOAuthClientId() && env.googleOAuthClientSecret());
 
@@ -222,6 +254,85 @@ export default async function OperatorIntegrationsPage(props: PageProps) {
                   </td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="text-lg font-display">
+          Prompt-cache hit rate by skill (last 7 days)
+        </h2>
+        <p className="text-sm text-mute">
+          Share of input-side tokens served from cache vs. processed fresh, per
+          source surface. The auto-caching wrapper{" "}
+          <code className="font-mono text-xs">lib/llm/cache-wrapper.ts</code>{" "}
+          marks each skill&apos;s stable system prefix as an ephemeral cache
+          breakpoint; a warm prefix re-read on every fire trends toward 100%.
+          Rate ={" "}
+          <code className="font-mono text-xs">
+            read / (read + input + write)
+          </code>
+          .
+        </p>
+        {cacheStats.length === 0 ? (
+          <p className="text-sm text-mute">
+            No workspace-tagged LLM usage in the last 7 days. Rows land here as
+            soon as a skill runs on a workspace&apos;s behalf.
+          </p>
+        ) : (
+          <table className="w-full border border-rule text-sm">
+            <thead className="bg-paper text-left font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+              <tr>
+                <th className="px-3 py-2">Skill / surface</th>
+                <th className="px-3 py-2 text-right">Calls</th>
+                <th className="px-3 py-2 text-right">Cache read</th>
+                <th className="px-3 py-2 text-right">Input (uncached)</th>
+                <th className="px-3 py-2 text-right">Cache write</th>
+                <th className="px-3 py-2 text-right">Hit rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cacheStats.map((s) => (
+                <tr key={s.sourceSurface} className="border-t border-rule">
+                  <td className="px-3 py-2 font-mono text-xs">
+                    {s.sourceSurface}
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono text-xs">
+                    {fmtTokens(s.calls)}
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono text-xs">
+                    {fmtTokens(s.cacheReadTokens)}
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono text-xs">
+                    {fmtTokens(s.inputTokens)}
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono text-xs">
+                    {fmtTokens(s.cacheCreationTokens)}
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono text-xs">
+                    {fmtPct(s.cacheHitRate)}
+                  </td>
+                </tr>
+              ))}
+              <tr className="border-t-2 border-rule bg-paper font-semibold">
+                <td className="px-3 py-2 font-mono text-xs">All surfaces</td>
+                <td className="px-3 py-2 text-right font-mono text-xs">
+                  {fmtTokens(cacheTotals.calls)}
+                </td>
+                <td className="px-3 py-2 text-right font-mono text-xs">
+                  {fmtTokens(cacheTotals.cacheReadTokens)}
+                </td>
+                <td className="px-3 py-2 text-right font-mono text-xs">
+                  {fmtTokens(cacheTotals.inputTokens)}
+                </td>
+                <td className="px-3 py-2 text-right font-mono text-xs">
+                  {fmtTokens(cacheTotals.cacheCreationTokens)}
+                </td>
+                <td className="px-3 py-2 text-right font-mono text-xs">
+                  {fmtPct(overallHitRate)}
+                </td>
+              </tr>
             </tbody>
           </table>
         )}

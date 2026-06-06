@@ -250,14 +250,14 @@ export const homeServices: VerticalContent = {
         {
           job: "Read the adjuster's scope and prepare the supplement",
           when: "Storm-season default workflow",
-          today: "30–60% of back-office time at storm-heavy shops",
+          today: "Read the Xactimate scope line by line, hand-match the missing line items, and draft the rebuttal in Word — 30–60% of back-office time at storm-heavy shops",
           withAgentplain:
             "Supplement agent reads the scope, drafts the line-item rebuttal with rebuilding-cost evidence",
         },
         {
           job: "Run review + referral cadence post-completion",
           when: "T+7 of every completed job",
-          today: "Form-letter + sometimes",
+          today: "Form-letter blast when someone remembers to send it — usually skipped under job load",
           withAgentplain:
             "Reviews agent runs the cadence, drafts the NPS + Google review ask, tracks the response",
         },

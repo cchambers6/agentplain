@@ -134,7 +134,7 @@ export const insurance: VerticalContent = {
         {
           job: "Reconcile direct-bill statements against the AMS",
           when: "Monthly",
-          today: "CSR spends 6–10 hours on it; mistakes accrue",
+          today: "Line-match each carrier statement against the AMS by hand — 6–10 hours a month, and mistakes still accrue",
           withAgentplain: "Books agent drafts the reconciliation; principal signs",
         },
         {
@@ -160,7 +160,7 @@ export const insurance: VerticalContent = {
         {
           job: "Issue a COI request",
           when: "Inbound, all day",
-          today: "CSR spends ~30% of their day on this",
+          today: "Look up the policy, navigate the carrier portal, merge the ACORD 25 by hand — ~30% of the CSR's day",
           withAgentplain:
             "COI agent reads the request, drafts the certificate against the producer's policy reference, routes for one-click issue",
         },

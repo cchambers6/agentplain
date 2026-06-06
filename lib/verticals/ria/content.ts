@@ -174,13 +174,13 @@ export const ria: VerticalContent = {
         {
           job: "Draft client meeting recaps",
           when: "Per-meeting",
-          today: "30 minutes per recap",
+          today: "Type the recap from memory and scratch notes — ~30 minutes each",
           withAgentplain: "Note agent drafts; associate edits — 5 minutes",
         },
         {
           job: "Handle inbound client question",
           when: "All day",
-          today: "Reactive, no triage layer",
+          today: "Answer when it surfaces — from memory or by digging through the CRM, with no triage layer",
           withAgentplain:
             "Inbound agent classifies, attaches account context, drafts the response for advisor sign-off",
         },

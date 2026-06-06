@@ -95,6 +95,48 @@ export async function captureDraftRejectSignal(
   });
 }
 
+export interface CaptureVoiceCorrectionArgs {
+  workspaceId: string;
+  /** Free-text "this doesn't sound like me" note from /settings/voice. */
+  note: string;
+}
+
+/**
+ * Capture a voice correction the broker-owner left on the /settings/voice
+ * page ("this doesn't sound like me"). Unlike the edit/reject captures
+ * this is NOT tied to a specific approval item — it's a standing
+ * instruction about how the fleet should write. We:
+ *   (1) write a PreferenceSignal (source=DRAFT_REJECT — the customer is
+ *       rejecting the current voice — with kind='voice-correction' and a
+ *       WorkspacePreference ref so it's distinguishable from a per-draft
+ *       reject in the audit trail),
+ *   (2) prepend it to learnedDraftNotes so the very NEXT draft fire reads
+ *       it from disk and applies it (cold-start-safe, no cache).
+ * Returns false when the note is blank (nothing captured).
+ */
+export async function captureVoiceCorrectionSignal(
+  ctx: RlsContext,
+  args: CaptureVoiceCorrectionArgs,
+): Promise<boolean> {
+  const note = (args.note ?? '').trim();
+  if (note.length === 0) return false;
+  const learned = clip(`Voice correction from settings: ${note}`, LEARNED_NOTE_MAX_CHARS);
+  await recordPreferenceSignal(ctx, {
+    workspaceId: args.workspaceId,
+    source: 'DRAFT_REJECT',
+    kind: 'voice-correction',
+    text: clip(note, SIGNAL_TEXT_MAX_CHARS),
+    refTable: 'WorkspacePreference',
+    refId: args.workspaceId,
+  });
+  await appendLearnedDraftNote(ctx, {
+    workspaceId: args.workspaceId,
+    note: learned,
+    cap: LEARNED_NOTES_CAP,
+  });
+  return true;
+}
+
 /**
  * Derive a one-line observation from an edit diff. Deliberately simple:
  * length delta + a few well-bounded phrase-add/remove heuristics. The

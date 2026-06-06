@@ -415,6 +415,24 @@ function draftHeuristic(user: string, system: string): string {
   const subject = pickSubject(user);
   const greeting = tone === 'formal' ? 'Hello,' : 'Hi,';
   const closer = tone === 'formal' ? 'Best regards,' : 'Thanks,';
+  // Voice match — the prod prompt (lib/skills/prompts/shared.ts + the
+  // WORKSPACE FILE CONTEXT block in lib/customer-files/render.ts) now
+  // instructs the model to follow the broker-owner's own examples and
+  // cite at least one. The heuristic models that behavior so the e2e
+  // can assert the loop deterministically: when a file-context block is
+  // present, cite the first example's title and echo a phrase from it.
+  // Per feedback_integration_acceptance_is_functional.md the test
+  // provider must surface the same wiring a real model would.
+  const example = extractFirstFileContext(system);
+  if (example) {
+    const echo = example.phrase ? ` Following our usual note: “${example.phrase}”.` : '';
+    return JSON.stringify({
+      subject,
+      body: `${greeting}\n\nThanks for the note.${echo} I drew on your “${example.title}” to keep this in your voice, and I'll follow up with specifics shortly.\n\n${closer}`,
+      tone,
+      confidence: 0.6,
+    });
+  }
   // Avoid over-promising — the body acknowledges receipt + signals next step
   // rather than committing to specifics the human hasn't approved.
   return JSON.stringify({
@@ -423,6 +441,38 @@ function draftHeuristic(user: string, system: string): string {
     tone,
     confidence: 0.55,
   });
+}
+
+/**
+ * Pull the first snippet's title (+ a short phrase from its body) out of
+ * a rendered WORKSPACE FILE CONTEXT block. The render format (see
+ * `lib/customer-files/render.ts`) opens each snippet with a line:
+ *
+ *   — <title> (similarity=0.87; <url>)
+ *   <body…>
+ *
+ * Returns null when no file-context block is present (fresh workspace,
+ * no ingested files) so the caller falls back to the generic draft.
+ */
+function extractFirstFileContext(
+  system: string,
+): { title: string; phrase: string | null } | null {
+  if (!system.includes('WORKSPACE FILE CONTEXT')) return null;
+  const lines = system.split('\n');
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    // Snippet header lines start with the em-dash bullet "— " and carry
+    // a "(similarity=" marker. The directive bullets use "  • " so they
+    // never match here.
+    const m = /^—\s+(.+?)\s+\(similarity=/.exec(line);
+    if (m) {
+      const title = m[1].trim().slice(0, 80);
+      const body = (lines[i + 1] ?? '').trim();
+      const phrase = body.length > 0 ? body.split(/(?<=[.!?])\s/)[0].slice(0, 80) : null;
+      return { title, phrase };
+    }
+  }
+  return null;
 }
 
 function coordinateHeuristic(user: string): string {

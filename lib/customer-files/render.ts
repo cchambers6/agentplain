@@ -35,7 +35,16 @@ export function renderCustomerContextBlock(
   const bodyCap = opts.bodyCharCap ?? 800;
   const maxN = opts.maxSnippets ?? 5;
   const lines: string[] = [
-    'WORKSPACE FILE CONTEXT (snippets from the broker-owner’s own files — anchor specifics to these; do not invent facts that contradict them):',
+    // These snippets are excerpts from the broker-owner's OWN files
+    // (past replies, listings, playbooks, templates). They are the
+    // single best signal for how THIS customer writes — treat them as
+    // voice exemplars, not just facts. The directive below is the
+    // product differentiator: drafts that sound like the customer, not
+    // like generic boilerplate.
+    'WORKSPACE FILE CONTEXT — excerpts from the broker-owner’s own files (past messages, listings, playbooks, templates). These are the gold standard for how THIS customer writes:',
+    '  • VOICE: Follow the tone, structure, and phrasings of these examples. Match THIS customer’s voice — do NOT fall back on generic, paraphrased boilerplate.',
+    '  • CITE: Reuse or reference at least one of these examples when applicable.',
+    '  • GROUND: Anchor specifics (names, numbers, terms) to these snippets; never invent facts that contradict them.',
   ];
   for (const s of snippets.slice(0, maxN)) {
     lines.push('');

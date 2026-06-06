@@ -114,7 +114,7 @@ export const proof = [
   },
   {
     label: "ROI math, not vibes",
-    body: "Value math anchored at $2,900–$10,600/mo per practitioner against $99–$199/mo per-seat subscription — typical ROI multiple 15x to 110x, every claim traceable to a memory rule.",
+    body: "Value math anchored at $2,900–$10,600/mo per practitioner against $99–$199/mo per-seat subscription — typical ROI multiple 15x to 50x per workflow, plus the regulatory violations a draft-then-approve loop keeps from ever sending. Every claim traceable to a memory rule.",
     cite: "project_pricing_value_anchor.md",
   },
   {

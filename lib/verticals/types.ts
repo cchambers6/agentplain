@@ -92,6 +92,19 @@ export interface JtbdRoleTable {
  * `multiplier` is the headline ratio (e.g. "23x"). The math line shows the
  * arithmetic so the reader can audit it. The citation names the memory file
  * that grounds the input numbers.
+ *
+ * `violationAvoidance` is the second half of the ROI story (added 2026-06-06
+ * per Conner's "softer true claim beats an over-inflated one" ruling that
+ * also capped the headline band at 50x — see the competitive audit in PR
+ * #155). The hours-reclaimed multiplier understates the real value because
+ * it ignores the regulatory downside the draft-then-approve loop removes:
+ * an auto-execution competitor sends before any human sees the message, so
+ * a non-compliant draft becomes a fileable violation; our loop hands every
+ * customer-facing draft to a person for approval, so a violating message
+ * never leaves the building. This field names the vertical-specific
+ * regulation(s), states the statutory/CMP penalty exposure with its source,
+ * and explains how the approval gate avoids it. Required — every vertical
+ * must name its own regulator, not a generic disclaimer.
  */
 export interface RoiAnchor {
   multiplier: string;
@@ -99,6 +112,7 @@ export interface RoiAnchor {
   outputValue: string;
   math: string;
   citation: string;
+  violationAvoidance: string;
 }
 
 /**

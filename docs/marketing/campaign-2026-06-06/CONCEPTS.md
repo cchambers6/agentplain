@@ -146,8 +146,11 @@ scenes, and the widest ROI spread (12x → 26x).
 - **Persona:** P1 across all verticals (general umbrella).
 - **Channel fit:** YouTube (brand), Meta (broad prospecting), homepage / `/verticals`.
 - **ROI claim:** value band **$2,900–$10,600/mo per practitioner vs. $99–$299/seat — 15x to
-  110x typical** (`lib/marketing/home-content.ts` L116-118; `app/(marketing)/page.tsx` L483).
-  Names all ten verticals on-screen per the page-one rule.
+  50x per workflow typical, plus the regulatory violations a draft-then-approve loop keeps
+  from ever sending** (`lib/marketing/home-content.ts` L116-118; `app/(marketing)/page.tsx`
+  L483). Cap softened from 107x/110x to 50x per Conner's 2026-06-06 ruling ("softer true
+  claim beats an over-inflated one") — competitors top out at 21–50x per single workflow
+  (PR #155). Names all ten verticals on-screen per the page-one rule.
 - **Use:** top-of-funnel brand + the connective tissue between vertical-specific concepts.
   This is the line already live in the hero ("Your AI ops team — without hiring one,"
   `app/(marketing)/page.tsx` L82).

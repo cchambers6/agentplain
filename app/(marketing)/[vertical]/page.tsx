@@ -11,6 +11,7 @@ import VerticalHero from "@/components/vertical/VerticalHero";
 import ValueLoopExample from "@/components/vertical/ValueLoopExample";
 import JtbdTables from "@/components/vertical/JtbdTables";
 import RoiAnchor from "@/components/vertical/RoiAnchor";
+import ViolationAvoidance from "@/components/vertical/ViolationAvoidance";
 import ClaimsTriadGrid from "@/components/vertical/ClaimsTriadGrid";
 import PricingTierBanner from "@/components/vertical/PricingTierBanner";
 import IntegrationsList from "@/components/vertical/IntegrationsList";
@@ -75,6 +76,7 @@ export default function VerticalPage({
       ) : null}
       <JtbdTables tables={content.jtbdTables} />
       <RoiAnchor roi={content.roi} />
+      <ViolationAvoidance paragraph={content.roi.violationAvoidance} />
       <ClaimsTriadGrid claims={content.claims} />
       <PricingTierBanner tier={content.tier} />
       <IntegrationsList integrations={content.integrations} />

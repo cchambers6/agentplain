@@ -77,7 +77,7 @@ export const FAQ_ITEMS: FAQItem[] = [
   },
   {
     q: "What's the ROI math?",
-    a: "Value delivered per practitioner runs $2,900–$10,600/mo — hours saved × your productive-hour rate, plus mistakes avoided, plus deals closed faster. Against the $99 → $299 per-seat subscription cost depending on tier, the typical ROI multiple is 15x to 110x. Run your own numbers in the calculator on the pricing page.",
+    a: "Value delivered per practitioner runs $2,900–$10,600/mo — hours saved × your productive-hour rate, plus deals closed faster. Against the $99 → $299 per-seat subscription cost depending on tier, the typical ROI multiple is 15x to 50x per workflow. On top of that sits the regulatory exposure a draft-then-approve loop removes: a non-compliant message (TCPA, fair-housing, RESPA, SEC Marketing Rule, and the like) is caught as a draft, never sent — the one thing an auto-execution tool can't promise to dodge. Run your own numbers in the calculator on the pricing page.",
   },
   {
     q: "Why should anyone believe you?",

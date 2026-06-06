@@ -647,8 +647,8 @@ Q2. What is agentplain? — AI ops layer that runs as a fleet of agents inside y
 Q3. What does the app do? Can everyone use it? — One unified product. 1-seat solo to N-seat workspace.
 Q4. What makes it unique? — Vertical-aware; you stay in control (drafts, never auto-sends); integrates with what you already use; built BY agents; compliance-first.
 Q5. How easy is it to use? — Sign up free, pick your vertical, connect Gmail or CRM in 60 seconds, see drafts within minutes.
-Q6. Why should anyone believe us? — Eat-our-own-cooking; counsel-reviewed compliance corpus; flatsbo brokerage v0; ROI math anchored in concrete per-vertical examples (15-107x).
-Q7. ROI? — 15-107x per realtor anchored in $2,900-$10,600/mo value vs $99-$499/mo subscription.
+Q6. Why should anyone believe us? — Eat-our-own-cooking; counsel-reviewed compliance corpus; flatsbo brokerage v0; ROI math anchored in concrete per-vertical examples (15-50x per workflow, plus avoided regulatory violations a draft-then-approve loop keeps from ever sending).
+Q7. ROI? — 15-50x per workflow anchored in $2,900-$10,600/mo value vs $99-$199/mo subscription, on top of the regulatory penalties (TCPA, fair-housing, RESPA, SEC Marketing Rule, EEOC, etc.) that auto-execution competitors can't promise to dodge.
 Q8. Future of work? — Humans focus on what only humans can do; AI handles what AI is better at.
 Q9. Why now? — Models got good enough in 2025; vendor APIs stabilized; compliance frameworks clear; demand real.`,
     source: 'memory/project_agentplain_mission_and_positioning.md',

@@ -3,6 +3,12 @@
 > Vendor shortlist, the case for AI-generated B-roll, a budget estimate for the three flagship
 > concepts (C1 · C2 · C5), and a timeline to launch.
 >
+> **Companion docs:** the full AI-tool ranking + one-tool-per-job stack is in **AI_VIDEO_STACK.md**;
+> how the real product appears in each film (screen map, capture method, mobile strategy, climax
+> moments) is in **DEMO_INTEGRATION.md**; the per-frame shot lists with `[PRODUCT UI]` tags are in
+> **STORYBOARDS/**. This plan now treats **product screen capture + interactive demos** as
+> first-class production deliverables, not afterthoughts.
+>
 > **Estimate discipline:** the dollar ranges below are **market planning bands** for SMB-grade
 > branded video, used to scope the budget — not quoted figures. Per
 > `feedback_no_guesses_no_estimates.md`, any number later asserted as *the* cost must cite the
@@ -69,9 +75,12 @@ product UI.** This is the right division of labor for a "rooted in reality" bran
   - Weather/scale shots that are expensive or unsafe to film (storm, lightning, overhead roof
     fields).
   - Rapid variant generation for paid-social testing (alt backgrounds, alt establishing shots).
-  - Tools: **Runway (Gen-4)**, **OpenAI Sora**, **Google Veo**, **Luma Dream Machine** — all
-    real, current text/image-to-video tools as of 2026. Use whichever the studio is fluent in;
-    don't over-specify.
+  - Tools: ranked in **AI_VIDEO_STACK.md** (verified pricing/capability, 2026-06-06). Picks:
+    **Adobe Firefly Generative Extend** on our own real plates (cleanest licensing — C2PA +
+    indemnified) as the primary move, with **Runway Gen-4 (image-to-video)** / **Luma Ray2** for
+    motion. **Avoid Pika** (slop-prone) and **text-to-video Sora 2** for hero shots (visible
+    moving watermark). **Veo** carries an invisible SynthID mark on all output — note for
+    disclosure.
 - **Where AI generation is banned for this brand:**
   - The **human principals** (Sarah at the laptop, the CPA partner, the trades owner). These
     carry the trust; synthetic humans read as fake and would directly undercut "rooted in
@@ -98,19 +107,20 @@ Scope per concept: one shoot day's worth of material → **30s + 60s + a 15s cut
 |---|---|---|
 | Pre-production (script lock, casting, location, shotlist) | $2,000–$5,000 | scripts already drafted (SCRIPTS/) — reduces this line |
 | Production (1 shoot day, crew, talent, location) | $6,000–$15,000 | managed-marketplace SMB band |
-| Real-UI capture + compositing | $1,500–$3,500 | product screens already exist |
+| Real-UI capture + compositing (seeded dev workspace, Tella/Descript) | $1,500–$3,500 | product screens already exist; DEMO_INTEGRATION.md §3A |
+| Interactive demo (Supademo/Arcade) + Figma push-banner prototype | $500–$1,500 | reused on `/promo/[slug]`; one not-yet-built mobile screen |
 | AI B-roll generation (atmosphere/transitions) | $500–$1,500 | mostly tool-subscription + artist time |
 | Edit, multi-aspect cuts, captions, color, mix | $3,000–$7,000 | one master + platform cuts |
 | Licensed music + SFX | $300–$1,000 | Musicbed/Artlist library license |
-| **Per-concept subtotal** | **$13,300–$33,000** | |
+| **Per-concept subtotal** | **$13,800–$34,500** | incl. product capture + interactive demo |
 
 | Slate scenario | Estimate | Notes |
 |---|---|---|
-| **Lean (all 3 via managed marketplace, shared shoot efficiencies)** | **~$40,000–$55,000** | recommended Wave-1 path; volume + reused crew/edit pipeline |
+| **Lean (all 3 via managed marketplace, shared shoot efficiencies)** | **~$42,000–$58,000** | recommended Wave-1 path; volume + reused crew/edit pipeline; incl. product capture + demos |
 | **Mid (2 marketplace + 1 boutique hero film for C1)** | **~$55,000–$80,000** | upgrades the brand-flagship |
 | **Premium (all 3 boutique narrative)** | **~$90,000–$130,000** | only if Wave-1 paid results justify it |
 
-**Recommendation:** start **Lean (~$40k–$55k)**. It matches the Wave-1 working-media budget
+**Recommendation:** start **Lean (~$42k–$58k)**. It matches the Wave-1 working-media budget
 (CHANNELS.md, $40k/mo) — i.e., roughly one month of media to produce a slate that will run for
 many months. Reserve the boutique-hero upgrade for C1 in Wave 2 if paid results warrant.
 
@@ -127,7 +137,9 @@ Assumes scripts are already drafted (they are — SCRIPTS/) and decisions move a
 |---|---|---|---|
 | **Vendor selection** | Week 1 | Conner / marketing | 3 quotes per §1, vendor chosen |
 | **Pre-production** | Weeks 2–3 | Vendor + us | Casting, location lock, shotlist, real-UI capture brief, music selects |
-| **Real-UI capture** | Week 2 (parallel) | Eng/product | Clean screen recordings of the real app flows the scripts call for |
+| **Real-UI capture** | Week 2 (parallel) | Eng/product | Seed dev workspace per concept (`scripts/seed-loop-demo.ts`); record the product mini-arcs incl. the climax approve (DEMO_INTEGRATION.md §2,§4) at 4K + phone-viewport |
+| **Interactive demos** | Week 2 (parallel) | Marketing | One Supademo/Arcade per concept — embedded on `/promo/[slug]` + exported for the film |
+| **Figma push-banner prototype** | Week 2 (parallel) | Design | The one not-yet-built mobile screen (DEMO_INTEGRATION.md §3-mobile, method C), in real tokens |
 | **AI B-roll generation** | Weeks 2–3 (parallel) | Vendor/artist | Storm, time-passage, texture plates approved |
 | **Shoot** | Week 4 | Vendor | All 3 concepts' principal footage (stagger or block days) |
 | **Edit v1** | Weeks 5–6 | Vendor | 30s/60s/15s masters, rough |
@@ -137,17 +149,27 @@ Assumes scripts are already drafted (they are — SCRIPTS/) and decisions move a
 | **Trafficking + QA** | Week 8 | Marketing | Pixels, UTMs, audiences, creative uploaded |
 | **LAUNCH** | **End of Week 8** | — | Wave-1 live across the CHANNELS.md mix |
 
-**Critical path:** vendor selection → shoot → edit. **Parallelizable (do now):** real-UI capture
-and AI B-roll generation can start as soon as scripts are locked, independent of vendor pick.
-**Fastest possible:** a single-vendor Lean slate with a blocked 2-day shoot can compress to ~6
-weeks. **Storm-mode (C5) caveat:** the 15s storm-trigger cut should be finished *first* so it's
-ready to deploy against the next qualifying weather event regardless of the full-slate timeline.
+**Critical path:** vendor selection → shoot → edit. **Parallelizable (do now):** real-UI capture,
+interactive demos, the Figma push prototype, and AI B-roll can all start as soon as scripts are
+locked, independent of vendor pick. **Fastest possible:** a single-vendor Lean slate with a
+blocked 2-day shoot can compress to ~6 weeks. **Storm-mode (C5) caveat:** the 15s storm-trigger
+cut should be finished *first* so it's ready to deploy against the next qualifying weather event.
+**Mobile reshoot (Wave-1.5):** the push-to-approve climax ships Wave-1 as composited real
+mobile-web + Figma push banner; reshoot fully native (iOS-sim capture) the moment the Expo
+notification + approvals screens land on `feat/mobile-app-v1-scaffold-2026-06-06`.
 
 ---
 
 ## 5. Pre-launch checklist (brand + compliance)
 
-- [ ] Every film: product UI is real, Plaino footer present, no autonomous-send implied.
+- [ ] Every film: product UI is the **real app** captured from a seeded dev workspace (not a
+      mockup, not AI-generated); Plaino footer present; no autonomous-send implied.
+- [ ] Every film: at least one `[PRODUCT UI]` frame + the ~4s climax approve moment (STORYBOARDS/).
+- [ ] No screen overclaims: `schema-only`/`rooting` agents never shown as `live`; roadmap
+      integrations shown as "planned," not connected.
+- [ ] Mobile: native push-to-approve is composited (real mobile-web + Figma banner) and flagged
+      for the Wave-1.5 native reshoot — no faked native screen presented as shipped.
+- [ ] AI-generated frames carry no disqualifying watermark (no visible Sora mark); B-roll only.
 - [ ] Every film: ROI figure on screen matches its cited `lib/verticals/*/content.ts` source.
 - [ ] Every film: "first month free," never "pilot"; no "AI magic" / "automate everything."
 - [ ] End cards name the vertical breadth (page-one-verticals rule).

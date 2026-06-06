@@ -74,6 +74,19 @@
 
 ---
 
+## Product UI in this film (see STORYBOARDS/C2, DEMO_INTEGRATION.md)
+
+This film must show the **real agentplain UI** (not a mockup, not AI-generated). Product-UI
+frames, captured live from a seeded CPA dev workspace (DEMO_INTEGRATION.md §3A):
+- **F4** `/integrations` — connect Outlook + QuickBooks Online tiles
+- **F5** `/marketplace` — the CPA fleet with honest `live`/`rooting` badges (the honesty is proof)
+- **F7–F8 — CLIMAX (~4s):** `/approvals` stacked with 23 drafted doc-chase reminders; the partner
+  taps **Approve, Approve**, edits one, **Approve** — the count ticks down while the line
+  *"Nothing leaves agentplain on its own. We draft; you decide."*
+  (`app/(product)/app/workspace/[id]/approvals/page.tsx` L48-52) holds legible. This frame is the
+  literal answer to the ad's "why pay vs. a free chatbot" thesis.
+The F1–F2 empty-chatbot frames are a *non-agentplain* tool, deliberately sterile by contrast.
+
 ## Production brief
 
 - **Talent:** one principal CPA (credible, 45–60, not a model) + one brief appearance of the

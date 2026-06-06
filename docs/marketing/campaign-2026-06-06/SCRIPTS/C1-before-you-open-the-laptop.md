@@ -72,6 +72,18 @@
 
 ---
 
+## Product UI in this film (see STORYBOARDS/C1, DEMO_INTEGRATION.md)
+
+This film must show the **real agentplain UI** (not a mockup, not AI-generated). Three product-UI
+frames, captured live from a seeded real-estate dev workspace (DEMO_INTEGRATION.md §3A):
+- **F5** `/briefings` — "Two weeks of mornings." (the 6:30am summary Plaino filed)
+- **F6–F7** `/approvals` — "Decisions waiting for you." + the drafted counter-offer PENDING card
+- **F9 — CLIMAX (~4s):** Sarah taps **Approve**; the card clears with a "sent from your system"
+  confirm; the line *"We draft; you decide; your existing system is what actually sends"*
+  (`app/(product)/app/workspace/[id]/approvals/page.tsx` L48-52) holds on screen. Then F10 cuts to
+  her own dotloop sending under *her* name — agentplain never sent.
+9:16 cut captures these phone-viewport from the responsive web app.
+
 ## Production brief
 
 - **Talent:** one principal — a credible 40s real-estate professional (not a model). Wardrobe:

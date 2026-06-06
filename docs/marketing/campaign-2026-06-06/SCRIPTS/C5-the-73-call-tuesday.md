@@ -74,6 +74,20 @@
 
 ---
 
+## Product UI in this film (see STORYBOARDS/C5, DEMO_INTEGRATION.md)
+
+This film must show the **real agentplain UI** (not a mockup, not AI-generated). Product-UI
+frames, captured live (phone-viewport primary — owner is in the field) from a seeded
+home-services dev workspace (DEMO_INTEGRATION.md §3A):
+- **F5–F6** the workspace today view / lead queue — 41 leads ranked high-margin, intake replies
+  drafted (Lead Router)
+- **F8** `/approvals` — drafted intake replies + a supplement line-item rebuttal card
+- **F9 — CLIMAX (~4s):** the owner taps **Approve** on the batch; the dispatch view fills; then
+  taps **Approve** on the supplement ("you sign it"). agentplain drafted and ranked; the owner
+  decided; crews dispatch from the owner's own FSM.
+Storm/atmosphere frames (F1) are AI B-roll on real plates; people and product UI stay real. The
+15s storm-geo cut leads to F9 fast.
+
 ## Production brief
 
 - **Talent:** one principal — a believable trades owner (work shirt, real hands, weathered, not

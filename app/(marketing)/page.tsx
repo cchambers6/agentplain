@@ -81,7 +81,19 @@ export default function HomePage() {
           detail lives. Paper scrims (left + bottom) keep the copy column
           fully legible per `feedback_everything_tells_a_story.md`. */}
       <section className="relative overflow-hidden border-b border-rule bg-paper">
-        <div aria-hidden className="pointer-events-none absolute inset-0">
+        {/* Decorative heritage backdrop — md+ ONLY. Below md the hero is an
+            extreme-portrait box (≈393×1700px on an iPhone), so `object-right`
+            crops the landscape illustration to a thin vertical slice and the
+            left scrim's `to-paper/30` tail can't cover the right half — the
+            cropped slice bleeds through as a soft vertical band down the page
+            (reported on iOS Safari, iPhone 16). There's no horizontal room for
+            art beside the copy on a phone anyway, so we drop the whole backdrop
+            (img + both scrims) under md. It's `aria-hidden` decoration — zero
+            content/SEO loss. Desktop is unchanged. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 hidden md:block"
+        >
           {/* eslint-disable-next-line @next/next/no-img-element -- decorative
               local brand raster; next/image is avoided product-wide (see Plaino.tsx) */}
           <img

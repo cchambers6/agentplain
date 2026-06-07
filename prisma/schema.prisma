@@ -455,6 +455,39 @@ enum LeadCaptureStatus {
   DECLINED
 }
 
+// Lifecycle of a human-creator brief — the structured handoff for
+// brand-defining creative the fleet must NOT improvise in raw SVG/PNG
+// (feedback_creative_assets_use_tools_or_humans). A brief is authored by the
+// Creative discipline's router (creative-router), sent to an outside creator,
+// and the finished asset is pasted back on the operator surface.
+//   DRAFT     — packet assembled, not yet sent to a creator.
+//   BRIEFED   — handed to a creator; awaiting delivery.
+//   DELIVERED — creator returned an asset; awaiting acceptance review.
+//   ACCEPTED  — asset met the acceptance criteria; in use.
+//   REJECTED  — asset failed acceptance; re-brief or escalate.
+//   CANCELLED — brief withdrawn before delivery.
+enum CreatorBriefStatus {
+  DRAFT
+  BRIEFED
+  DELIVERED
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+// The creative job a brief covers. Mirrors the brand-defining rows in
+// docs/strategy/creative-asset-capability-2026-06-06/JOB_TO_TOOL_MATRIX.md
+// that route to "human creator required" rather than a design-tool skill.
+enum CreatorBriefKind {
+  BRAND_MARK
+  HERO_ILLUSTRATION
+  MASCOT_ILLUSTRATION
+  PHOTOGRAPHY_DIRECTION
+  MOTION_IDENT
+  PRINT_COLLATERAL
+  OTHER
+}
+
 // WorkspaceMemoryEntry kind. Mirrors the four-bucket memory taxonomy
 // already in use by the agent system:
 //   USER       — facts about the people in the workspace (names, role
@@ -586,6 +619,7 @@ model Workspace {
   chatThreads              ChatThread[]
   chatMessages             ChatMessage[]
   plainoConversations      PlainoConversation[]
+  creatorBriefs            CreatorBrief[]
   memoryEntries            WorkspaceMemoryEntry[]
   llmUsageRecords          LlmUsageRecord[]
   briefings                WorkspaceBriefing[]
@@ -1289,6 +1323,59 @@ model LeadCapture {
   @@index([status, createdAt])
   @@index([createdAt])
   @@index([askedAboutClaude, createdAt])
+}
+
+// A structured handoff to an outside human creator for brand-defining work
+// (feat/creative-asset-capability-2026-06-06). The fleet does NOT improvise
+// brand assets in raw SVG/PNG — when a job is brand-defining or no design
+// tool can hit the bar, the creative router assembles a CreatorBrief packet
+// (brand tokens + references + delivery spec + acceptance criteria) and an
+// operator dispatches it to a creator. The finished asset is pasted back at
+// /operator/creative-briefs. See feedback_creative_assets_use_tools_or_humans
+// and docs/strategy/creative-asset-capability-2026-06-06/ARCHITECTURE.md.
+//
+// Operator-only RLS, exactly like LeadCapture — `workspaceId` is an optional
+// link (a brief can be platform-level brand work with no workspace). The
+// packet + delivery payloads are stored as JSON; nothing here is encrypted
+// because a creator brief carries brand tokens + a public-facing spec, not
+// customer PII (the acceptance review keeps PII out by construction).
+model CreatorBrief {
+  id              String             @id @default(uuid()) @db.Uuid
+  /// Optional link to the workspace the asset is for. NULL = platform-level
+  /// agentplain brand work (e.g. the robot-dog mark itself).
+  workspaceId     String?            @db.Uuid
+  kind            CreatorBriefKind
+  status          CreatorBriefStatus @default(DRAFT)
+  /// One-line human-readable title (e.g. "Plaino — 'reviewing' pose").
+  title           String
+  /// The assembled brief packet: brand tokens snapshot, reference asset
+  /// URLs/paths, delivery spec (dimensions/formats), and acceptance
+  /// criteria. Shape mirrors CreatorBriefPacket in lib/creative-handoff.
+  packet          Json
+  /// The job-to-tool routing decision that sent this to a human rather than a
+  /// tool — kept for audit ("why didn't a tool do this?"). Free-form slug,
+  /// e.g. "brand-defining" or "no-tool-meets-bar".
+  routedReason    String
+  /// Creator the brief was sent to (name/handle/marketplace), set when an
+  /// operator marks it BRIEFED. No outbound fires from here — the operator
+  /// reaches the creator out of band (project_no_outbound_architecture).
+  creatorRef      String?
+  /// Where the delivered asset landed (Vercel Blob URL / path) + creator
+  /// notes, set when an operator marks it DELIVERED. Shape mirrors
+  /// CreatorDelivery in lib/creative-handoff.
+  delivery        Json?
+  /// Operator prose from the acceptance review (why accepted/rejected).
+  reviewNotes     String?
+  createdByAgent  String?
+  decidedByUserId String?            @db.Uuid
+  decidedAt       DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  workspace       Workspace?         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([workspaceId, createdAt])
+  @@index([kind, status])
 }
 
 // Magic-link tokens issued for sign-in. Single-use; consumed on verify.

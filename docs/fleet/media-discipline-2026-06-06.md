@@ -1,9 +1,16 @@
 # Media discipline — 2026-06-06
 
-The fleet now does **end-to-end media facilitation**, not just marketing strategy:
-the creative + platform-expert agents that own the work from ad concept → live-campaign
-plan → reporting. This doc is the org chart, the architectural decision behind where the
-media fleet lives, and how it integrates with the existing Marketing + Brand-Voice work.
+> **Split ratified 2026-06-06 (`project_creative_vs_media_disciplines_2026_06_06`).**
+> This doc originally covered both production and distribution. They are now **two peer
+> disciplines**: **Creative** *makes* the work (`docs/fleet/creative-discipline-2026-06-06.md`)
+> and **Media** *distributes* it (this doc). Both report to the CEO tier; both are arms of
+> `marketing`. The makers (video / static / copy / voice) + the creative-router moved to
+> Creative; Media keeps the Media Director + platform specialists + influencer + PR + analytics.
+
+**Media is distribution.** It takes a *finished* asset from Creative and decides where, how, and
+when it runs: paid, earned, measured — from live-campaign plan → reporting. This doc is the
+Media org chart, the architectural decision behind where the fleet lives, and how it integrates
+with Marketing + Brand-Voice work.
 
 Source of truth for the roster + reporting lines + standing crons is
 `lib/fleet/roster.ts` (zod-validated; the operator panel and this doc both read it).
@@ -56,35 +63,37 @@ draft-and-propose posture every other agentplain agent holds.
 ```
 Conner
 └── CEO tier (b2b-ceo)
-    └── Head of Media ......................... media-head            [Class B]
-        ├── Creative Director ................. media-creative-director [Class B]
-        │   ├── Video producer ............... media-video-producer
-        │   ├── Static designer .............. media-static-designer
-        │   ├── Copywriter — long-form ....... media-copywriter-longform
-        │   ├── Copywriter — direct response . media-copywriter-direct
-        │   └── Voice / audio producer ....... media-voice-producer
-        └── Media Director .................... media-director         [Class B]
-            ├── Meta specialist .............. media-meta
-            ├── TikTok specialist ............ media-tiktok
-            ├── YouTube specialist ........... media-youtube
-            ├── LinkedIn specialist .......... media-linkedin
-            ├── X / Twitter specialist ....... media-x
-            ├── Google Ads specialist ........ media-google-ads
-            ├── Pinterest specialist ......... media-pinterest
-            ├── Reddit specialist ............ media-reddit
-            ├── Influencer / creator partnerships  media-influencer-partnerships
-            ├── PR / earned media ............ media-pr-earned
-            └── Analytics + attribution ...... media-analytics-attribution
+    ├── Head of Media ........................ media-head            [Class B]   ◀── this doc
+    │   └── Media Director ................... media-director        [Class B]
+    │       ├── Meta specialist ............. media-meta
+    │       ├── TikTok specialist ........... media-tiktok
+    │       ├── YouTube specialist .......... media-youtube
+    │       ├── LinkedIn specialist ......... media-linkedin
+    │       ├── X / Twitter specialist ...... media-x
+    │       ├── Google Ads specialist ....... media-google-ads
+    │       ├── Pinterest specialist ........ media-pinterest
+    │       ├── Reddit specialist ........... media-reddit
+    │       ├── Influencer / creator partnerships  media-influencer-partnerships
+    │       ├── PR / earned media ........... media-pr-earned
+    │       └── Analytics + attribution ..... media-analytics-attribution
+    └── Creative Director .................... creative-director     [Class B]   ◀── peer; see creative-discipline doc
+        └── (production pool — video / static / copy / voice + creative-router)
 ```
 
-19 agents: **3 leadership (Class B)** + **8 platform specialists (Class C)** +
-**8 creative production specialists (Class C)**.
+**Media discipline: 13 agents** — **2 leadership (Class B)** (Head of Media + Media Director)
++ **8 platform specialists (Class C)** + **3 earned/measurement specialists (Class C)**
+(influencer, PR, analytics). The Creative discipline (7 agents) is documented separately.
 
-**Reporting-line rationale:** the Creative Director owns the *makers* (anything that is a
-brand-expressed asset — video, static, copy, voice). The Media Director owns *planning,
-channels, and measurement* — so the platform specialists, plus influencer/PR (earned-media
-planning) and analytics/attribution, report to the Media Director. Both directors report to
-the Head of Media; the Head reports into the CEO tier; Conner sits above that.
+**Reporting-line rationale:** the Media Director owns *planning, channels, and measurement* —
+the platform specialists, plus influencer/PR (earned-media planning) and analytics/attribution,
+report to the Media Director, who reports to the Head of Media. The **Creative Director is a
+peer** discipline head (both report to the CEO tier), **not** under the Head of Media — Creative
+makes the work, Media distributes it.
+
+> **Documented call (the analytics wrinkle):** `media-analytics-attribution` stays in **Media** —
+> it measures distribution. When an analytics read needs a *visualization*, that viz is a creative
+> asset and routes through the **creative-router** like any other creative request. Measuring is
+> Media; *making the chart* is Creative.
 
 ---
 
@@ -92,14 +101,14 @@ the Head of Media; the Head reports into the CEO tier; Conner sits above that.
 
 Per `project_hierarchical_approval_chain` (agents → heads → CEOs → Conner):
 
-1. **Specialist** (Class C) drafts the asset or plan.
-2. **Creative Director** reviews every asset for brand expression; **Media Director** reviews
-   every plan + budget split (Class B).
+0. **Creative** hands Media a **finished, signed-off asset** (the Creative Director's sign-off
+   is the gate inside Creative — see the creative-discipline doc).
+1. **Specialist** (Class C) drafts the channel plan.
+2. **Media Director** reviews every plan + budget split (Class B).
 3. **Head of Media** greenlights the campaign.
 4. **CEO tier → Conner** approves spend. Conner executes the paid placement — never an agent.
 
-Creative cannot go to a media buy until the Creative Director signs; a media buy cannot be
-proposed to Conner until the Head of Media greenlights.
+A media buy cannot be proposed to Conner until the Head of Media greenlights.
 
 ---
 
@@ -111,11 +120,18 @@ disable-gate + observability stack, and cost **zero Anthropic tokens** until the
 CronDefinition runner port lands (the same port the b2b-* crons wait on). Schedules and
 ownership are real and read from `lib/fleet/roster.ts`.
 
+All three function ids keep the legacy `media-` prefix for Inngest registration stability,
+**but ownership split with the disciplines.** The two Media crons:
+
 | Cron | Schedule (UTC) | Owner | Drafts |
 |---|---|---|---|
-| `media-weekly-creative-review` | Thu 14:00 | Creative Director | A creative-review queue — every in-flight asset checked against the brand system before any buy. |
 | `media-platform-performance-digest` | Mon 15:00 | Media Director | A cross-channel performance read + a proposed reallocation (Conner approves any spend move). |
 | `media-monthly-media-plan` | 1st of month 13:00 | Media Director | The month's channel mix, budget split, and earned-media calendar — a proposal, not a spend. |
+
+`media-weekly-creative-review` (Thu 14:00) now belongs to the **Creative** discipline
+(owned + approved by the Creative Director) — see the creative-discipline doc. Roster:
+`listMediaCrons()` returns the 2 above; `listCreativeCrons()` returns the weekly review;
+`listAllCrons()` returns all 3.
 
 The Monday digest runs at 15:00, deliberately **after** the 13:00 customer
 `content-calendar-drafter` sweep, so the two never contend for the same window.
@@ -169,13 +185,17 @@ chat** for ideation — the same calm, grounded service-partner voice across the
 
 ## Files
 
-- `lib/fleet/roster.ts` — the roster (19 agents) + the 3 standing crons. Source of truth.
-- `lib/fleet/roster.test.ts` — structure invariants (count, class/tier split, reporting integrity).
-- `lib/inngest/functions/media-weekly-creative-review.ts`
+- `lib/fleet/roster.ts` — the roster (20 agents across both arms: 7 Creative + 13 Media) +
+  the 3 standing crons (1 Creative + 2 Media). Source of truth.
+- `lib/fleet/roster.test.ts` — structure invariants (per-arm counts, class/tier split, reporting integrity).
+- `lib/inngest/functions/media-weekly-creative-review.ts` — Creative-owned (legacy id prefix).
 - `lib/inngest/functions/media-platform-performance-digest.ts`
 - `lib/inngest/functions/media-monthly-media-plan.ts`
 - `lib/inngest/functions/__tests__/media-crons.test.ts`
 - `app/api/inngest/route.ts` — registers the three crons.
-- `app/(operator)/operator/fleet/media/page.tsx` — the operator media panel.
-- `app/(operator)/layout.tsx` — "Media" added to the operator console nav.
-- `~/.claude/skills/media-*/SKILL.md` — the 19 agent definitions (not git-tracked; home-dir fleet).
+- `app/(operator)/operator/fleet/media/page.tsx` — the operator Media panel.
+- `app/(operator)/operator/fleet/creative/page.tsx` — the operator Creative panel.
+- `app/(operator)/layout.tsx` — "Creative" + "Media" in the operator console nav.
+- `docs/fleet/creative-discipline-2026-06-06.md` — the peer Creative discipline doc.
+- `~/.claude/skills/media-*/SKILL.md` + `~/.claude/skills/creative-*/SKILL.md` — the 20 agent
+  definitions (not git-tracked; home-dir fleet).

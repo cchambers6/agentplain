@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { PlainoAvatar } from "@/components/ui/ap/PlainoAvatar";
+import { Plaino } from "@/components/ui/ap/Plaino";
 
 interface ChatTurn {
   role: "user" | "plaino";
@@ -101,7 +101,7 @@ export default function PlainoSupportChat({ workspaceId, workspaceName }: Props)
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-6 flex items-center gap-3">
-        <PlainoAvatar size="lg" pose="sit" decorative={false} />
+        <Plaino state="head-icon" size={48} alt="Plaino" />
         <div>
           <p className="font-mono text-[11px] uppercase tracking-eyebrow text-mute">
             support
@@ -180,7 +180,7 @@ function Bubble({ turn }: { turn: ChatTurn }) {
   return (
     <div>
       <div className="mb-2 flex items-center gap-2 font-mono text-[11px] uppercase tracking-eyebrow text-mute">
-        {isPlaino ? <PlainoAvatar size="xs" /> : null}
+        {isPlaino ? <Plaino state="head-icon" size={16} /> : null}
         <span>{isPlaino ? "Plaino" : "You"}</span>
       </div>
       <div

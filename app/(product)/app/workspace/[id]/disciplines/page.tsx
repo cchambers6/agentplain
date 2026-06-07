@@ -3,7 +3,7 @@ import {
   ApEyebrow,
   ApHeritageButton,
   ApPaperCard,
-  PlainoAvatar,
+  Plaino,
 } from "@/components/ui/ap";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
@@ -177,7 +177,7 @@ export default async function DisciplinesPanelPage({ params }: PageProps) {
       </p>
 
       <p className="mt-4 flex max-w-2xl items-center gap-2 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-        <PlainoAvatar size="xs" pose="herd" />
+        <Plaino state="head-icon" size={16} />
         <span>herded by Plaino</span>
       </p>
 

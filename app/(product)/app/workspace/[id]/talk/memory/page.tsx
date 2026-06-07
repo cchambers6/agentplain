@@ -1,7 +1,7 @@
 import {
   ApEyebrow,
   ApRootedEmptyState,
-  PlainoAvatar,
+  Plaino,
 } from "@/components/ui/ap";
 import { requireWorkspaceMember } from "@/lib/auth/server";
 import { PrismaMemoryStore } from "@/lib/plaino";
@@ -35,7 +35,7 @@ export default async function MemoryPage({ params }: PageProps) {
     <div className="mx-auto max-w-3xl">
       <div className="mb-6 flex items-start justify-between gap-4 text-ink">
         <div className="flex items-center gap-3">
-          <PlainoAvatar size="lg" pose="sit" decorative={false} />
+          <Plaino state="head-icon" size={48} alt="Plaino" />
           <div>
             <ApEyebrow>what Plaino remembers</ApEyebrow>
             <h1 className="font-display text-3xl leading-tight text-ink">

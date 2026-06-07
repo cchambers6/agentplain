@@ -1,4 +1,4 @@
-import { ApEyebrow, ApRootedEmptyState, PlainoAvatar } from "@/components/ui/ap";
+import { ApEyebrow, ApRootedEmptyState, Plaino } from "@/components/ui/ap";
 import type { PersistedChatMessage } from "@/lib/plaino";
 
 // DB-free presentation for the Plaino talk thread. `page.tsx` owns the
@@ -89,7 +89,7 @@ export function ChatBubble({
   return (
     <li>
       <div className="mb-2 flex items-center gap-2 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-        {isPlaino ? <PlainoAvatar size="xs" /> : null}
+        {isPlaino ? <Plaino state="head-icon" size={16} /> : null}
         <span>{speaker}</span>
         <span aria-hidden>·</span>
         <span>{formatTimestamp(message.createdAt)}</span>
@@ -265,7 +265,7 @@ export function TalkHeader({ workspaceId }: { workspaceId: string }) {
   return (
     <div className="mb-6 flex items-start justify-between gap-4 text-ink">
       <div className="flex items-center gap-3">
-        <PlainoAvatar size="lg" pose="sit" decorative={false} />
+        <Plaino state="head-icon" size={48} alt="Plaino" />
         <div>
           <ApEyebrow>talk with Plaino</ApEyebrow>
           <h1 className="font-display text-3xl leading-tight text-ink">

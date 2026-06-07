@@ -229,10 +229,109 @@ const DIRECTIONS = {
     plainHi: "mossHi",
     horizon: "mossDeep",
   },
+  // --- v2: restrained, brand-mark directions (Conner: "silhouette of the new
+  // dog, simplicity of the old line-art mark"). Flat INK silhouette, 3 colours
+  // max (ink + paper + one clay accent), single eye-hole, boxy legs, no
+  // shading, no sky gradient. Same alert-sit silhouette / antenna / boxy snout
+  // as direction-1. Ground is the only variable: none / line / clay strip.
+  4: { name: "mark-flat", minimal: true, pose: "sit", ground: "none" },
+  5: { name: "mark-horizon", minimal: true, pose: "sit", ground: "line" },
+  6: { name: "mark-claystrip", minimal: true, pose: "sit", ground: "clay" },
 };
+
+// ----------------------------------------------------------------------------
+// Minimal mark — flat ink silhouette of the alert-sitting robot dog. Built from
+// per-row spans (outline-first) so the silhouette reads, not a blob. One clay
+// pixel (antenna beacon) is the only accent; the eye is a knocked-out hole.
+// Local content box ~22w x 23h; clay tip at the very top, feet at the bottom.
+// ----------------------------------------------------------------------------
+const MIN_SPANS = [
+  // [y, xStart, xEnd] — ink fill. Profile alert-sit: head up-right with a snout,
+  // a neck PINCH (rows 9-10, narrow) separating head from body, the back
+  // sloping up from a rounded rump (left) to the shoulders, ending in a single
+  // vertical front leg + folded back paw on the ground.
+  [3, 9, 15],            // head crown
+  [4, 8, 16],            // head
+  [5, 8, 18],            // head + snout
+  [6, 8, 19],            // snout jut (muzzle)
+  [7, 8, 17],            // jaw
+  [8, 9, 15],            // jaw underside
+  [9, 10, 14],           // neck pinch
+  [10, 10, 14],          // neck pinch
+  [11, 8, 16],           // shoulders
+  [12, 6, 16],           // chest widening
+  [13, 5, 16],           // back sloping out to the left
+  [14, 4, 16],
+  [15, 3, 16],
+  [16, 3, 16],
+  [17, 3, 16],
+  [18, 3, 15],           // lower body, rump rounding
+];
+const MIN_W = 22;
+const MIN_H = 24;
+const MIN_OX = 1;
+const MIN_OY = 1;
+
+function drawDogMinimal(g, ox, oy) {
+  const ink = (x, y) => set(g, ox + x, oy + y, "ink");
+  for (const [y, x0, x1] of MIN_SPANS) for (let x = x0; x <= x1; x++) ink(x, y);
+  // Ear (one upright, back of head) + antenna with clay beacon (the one accent)
+  ink(9, 1); ink(9, 2); ink(10, 2);     // ear
+  ink(14, 1); ink(14, 2);               // antenna stalk
+  set(g, ox + 14, oy + 0, "clay");      // antenna beacon tip
+  // Tail — short stub curling up off the back-left
+  ink(1, 14); ink(2, 14); ink(0, 13); ink(1, 13);
+  // Sitting stance: the rear is a folded HAUNCH resting flat on the ground
+  // (solid wedge, left) and the front is a single vertical LEG (right). A
+  // 1-column gap separates them so the sit reads. Boxy, no shading.
+  for (let y = 19; y <= 22; y++) {
+    for (let x = 3; x <= 10; x++) ink(x, y);  // seated haunch on the ground
+    for (let x = 12; x <= 15; x++) ink(x, y); // front leg pillar
+  }
+  // Round the haunch's lower-back corner so the seated rear reads as a curve.
+  set(g, ox + 3, oy + 22, null);
+  // Eye — single knocked-out hole in the head (one calm, alert eye)
+  set(g, ox + 15, oy + 5, null);
+  // Soften the rump's top-back corner so it isn't a hard rectangle
+  set(g, ox + 3, oy + 13, null);
+}
+
+// Minimal transparent sprite. withGround adds the variant's ground under it.
+function buildMinimalDog(dir, withGround = false) {
+  const d = DIRECTIONS[dir];
+  const w = MIN_W;
+  const h = MIN_H + (withGround && d.ground !== "none" ? 3 : 1);
+  const g = makeGrid(w, h);
+  drawDogMinimal(g, MIN_OX, MIN_OY);
+  if (withGround && d.ground !== "none") {
+    const gy = MIN_OY + 22 + 2; // just below the feet
+    hline(g, 0, w - 1, gy, "ink");
+    if (d.ground === "clay") hline(g, 0, w - 1, gy + 1, "clay");
+  }
+  return g;
+}
+
+// Minimal opaque square scene (paper field, ink dog, variant ground).
+function buildMinimalScene(dir, size = 36) {
+  const d = DIRECTIONS[dir];
+  const g = makeGrid(size, size, "paper");
+  const dog = makeGrid(MIN_W, MIN_H, null);
+  drawDogMinimal(dog, MIN_OX, MIN_OY);
+  const ox = Math.round((size - MIN_W) / 2);
+  // Feet sit ~58% down so there's headroom; horizon (if any) aligns to feet.
+  const feetY = Math.round(size * 0.62);
+  const oy = feetY - 22; // local feet row 22
+  if (d.ground !== "none") {
+    hline(g, 0, size - 1, feetY + 2, "ink");
+    if (d.ground === "clay") hline(g, 0, size - 1, feetY + 3, "clay");
+  }
+  blit(g, dog, ox, oy);
+  return g;
+}
 
 // Full opaque square scene (dog on a plain). size = grid edge in art-pixels.
 function buildScene(dir, size = 36) {
+  if (DIRECTIONS[dir].minimal) return buildMinimalScene(dir, size);
   const g = makeGrid(size, size);
   const d = DIRECTIONS[dir];
   const horizonY = Math.round(size * 0.66);
@@ -264,6 +363,7 @@ function buildScene(dir, size = 36) {
 
 // Transparent dog sprite alone (for adaptive fg / notification / mark on plain).
 function buildDog(dir, withPlain = false) {
+  if (DIRECTIONS[dir].minimal) return buildMinimalDog(dir, withPlain);
   const w = DOG_W + 4;
   const h = DOG_H + (withPlain ? 5 : 2);
   const g = makeGrid(w, h);
@@ -560,11 +660,15 @@ function buildOG(dir) {
   const ty = Math.round((H - 14) / 2) - 6;
   drawText(g, tx, ty, word, "ink", scale);
   rect(g, tx, ty + 18, tx + wW, ty + 19, "clay");
-  // tagline in small pixel font (only has glyphs for agentplain; render the
-  // few we can — keep it to the wordmark to avoid missing glyphs). Add a moss
-  // ground accent strip at the very bottom to echo the plain.
-  rect(g, 0, H - 4, W - 1, H - 1, "moss");
-  hline(g, 0, W - 1, H - 4, "mossDeep");
+  // Bottom ground accent strip echoing the plain. Full directions use the moss
+  // plain; minimal (3-colour) directions stay ink+paper+clay only — no moss.
+  if (DIRECTIONS[dir].minimal) {
+    rect(g, 0, H - 3, W - 1, H - 1, "clay");
+    hline(g, 0, W - 1, H - 3, "ink");
+  } else {
+    rect(g, 0, H - 4, W - 1, H - 1, "moss");
+    hline(g, 0, W - 1, H - 4, "mossDeep");
+  }
   const img = scaleNN(gridToRGBA(g), 1200, 630);
   return encodePNG(img);
 }
@@ -584,6 +688,12 @@ function blit(dst, src, ox, oy) {
 function buildAdaptiveBg(dir, sizePx) {
   const d = DIRECTIONS[dir];
   const g = makeGrid(48, 48);
+  if (d.minimal) {
+    // Flat paper field; a clay strip at the base only for the clay-strip variant.
+    rect(g, 0, 0, 47, 47, "paper");
+    if (d.ground === "clay") rect(g, 0, 44, 47, 47, "clay");
+    return encodePNG(scaleNN(gridToRGBA(g), sizePx, sizePx));
+  }
   const horizonY = 32;
   for (let y = 0; y < horizonY; y++)
     hline(g, 0, 47, y, y < horizonY * 0.55 ? d.skyHi : d.skyLo);
@@ -666,6 +776,6 @@ function emitDirection(dir) {
   return { tag, mDir, wDir };
 }
 
-const built = [1, 2, 3].map(emitDirection);
+const built = [1, 2, 3, 4, 5, 6].map(emitDirection);
 console.log("Generated 8-bit robot-dog brand directions:");
 for (const b of built) console.log(`  ${b.tag}\n    mobile: ${b.mDir}\n    web:    ${b.wDir}`);

@@ -22,7 +22,7 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ApEyebrow, ApPaperCard, PlainoAvatar } from "@/components/ui/ap";
+import { ApEyebrow, ApPaperCard, Plaino } from "@/components/ui/ap";
 import { requireUser } from "@/lib/auth/server";
 import {
   listMediaByTier,
@@ -75,7 +75,7 @@ export default async function OperatorMediaFleetPage() {
           The fleet that makes the work.
         </h1>
         <p className="mt-3 flex max-w-2xl items-start gap-3 text-[15px] leading-relaxed text-ink-soft">
-          <PlainoAvatar size="md" className="shrink-0" />
+          <Plaino state="head-icon" size={32} className="shrink-0" />
           <span>
             agentplain&rsquo;s own creative + platform org — from ad concept to
             live-campaign plan to reporting. It is the production and

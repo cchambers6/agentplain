@@ -877,7 +877,9 @@ Build tasks should ask for these by name. Each one corresponds to a pattern abov
 | `ApIntegrationTile` | Marketplace tile (icon + status + body + action) | Shipped at `components/marketplace/IntegrationTile.tsx` — rename to `ApIntegrationTile` on next pass |
 | `ApMotif` | Single line-illustrated plains motif (lone-tree, silo, wheat) | New — bundle as a small SVG set |
 | `ApFlashBanner` | Connected / disconnected / error banner | Pattern at `integrations/page.tsx:135-178` |
-| `PlainoAvatar` | The Plaino character avatar (sizes xs / sm / md / lg / xl). Placeholder line-art robot until logo v3 lands. | Shipped at `components/ui/ap/PlainoAvatar.tsx` — see §10. |
+| `Plaino` | Canonical Plaino brand mark — 10 illustrated states (standing-watch / sitting-alert / herding / fetching / scouting / guarding / resting / head-icon / 8bit / heritage), `size` in px. The production successor to `PlainoAvatar`. | Shipped at `components/ui/ap/Plaino.tsx` — see `docs/brand/plaino-system.md`. |
+| `PlainoAvatar` | The line-art Plaino scaffold (sizes xs / sm / md / lg / xl). Superseded by `Plaino` for product surfaces; retained for the persona test and any currentColor-tinted contexts. | Shipped at `components/ui/ap/PlainoAvatar.tsx` — see §10. |
+| `LogoLockup` | Horizontal lockup: Plaino head-icon + agentplain wordmark. Used in chrome where mark + name appear together. | Shipped at `components/brand/LogoLockup.tsx`. |
 
 When a future build task references a name not on this list, the task is either (a) wrong about what they want, or (b) discovering a new primitive — add it to this doc in the same PR rather than smuggling it in.
 

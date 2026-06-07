@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ApPaperCard, PlainoAvatar } from "@/components/ui/ap";
+import { ApPaperCard, Plaino, type PlainoState } from "@/components/ui/ap";
 import { type DisciplineId } from "@/lib/disciplines";
 import type { RenderedApproval } from "./renderApprovalPayload";
 
@@ -24,9 +24,19 @@ interface ApprovalCardProps {
   row: ApprovalRow;
   /** Action controls (approve / edit / reject). Rendered in the footer. */
   footer?: ReactNode;
+  /** Plaino's posture for this item. The approvals queue holds delivered
+   *  drafts, so the default is "fetching" (Plaino brought work to the
+   *  queue). Callers on other surfaces pass "sitting-alert" (approved /
+   *  ready), "guarding" (Sentinel-blocked), or "resting" (paused /
+   *  over-budget) per docs/brand/plaino-system.md. */
+  plainoState?: PlainoState;
 }
 
-export function ApprovalCard({ row, footer }: ApprovalCardProps) {
+export function ApprovalCard({
+  row,
+  footer,
+  plainoState = "fetching",
+}: ApprovalCardProps) {
   const { rendered } = row;
   const adminCardClass = adminBorderClass(rendered.admin?.priority);
   return (
@@ -112,7 +122,7 @@ export function ApprovalCard({ row, footer }: ApprovalCardProps) {
           to:"). Per project_agents_work_proactively — the customer sees
           the fleet's work, not a black box. */}
       <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-        <PlainoAvatar size="xs" pose="herd" />
+        <Plaino state={plainoState} size={16} />
         <span className="text-ink-soft">drafted by</span>
         <span className="text-ink">{row.agentSlug}</span>
         <span aria-hidden>·</span>

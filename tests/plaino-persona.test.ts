@@ -116,6 +116,19 @@ const TALK_COMPOSER = path.join(
   "talk",
   "TalkComposer.tsx",
 );
+// The /talk thread + header copy lives in talk-view.tsx, which page.tsx
+// renders. The REGISTER status microcopy ("herding through the team") is
+// here, not in the thin page.tsx wrapper.
+const TALK_VIEW = path.join(
+  process.cwd(),
+  "app",
+  "(product)",
+  "app",
+  "workspace",
+  "[id]",
+  "talk",
+  "talk-view.tsx",
+);
 const APPROVALS_LIST = path.join(
   process.cwd(),
   "app",
@@ -125,6 +138,18 @@ const APPROVALS_LIST = path.join(
   "[id]",
   "approvals",
   "ApprovalsList.tsx",
+);
+// The per-item provenance attribution ("herded in by Plaino") lives on the
+// card the list renders, not the list shell.
+const APPROVALS_CARD = path.join(
+  process.cwd(),
+  "app",
+  "(product)",
+  "app",
+  "workspace",
+  "[id]",
+  "approvals",
+  "ApprovalCard.tsx",
 );
 const APPROVALS_PAGE = path.join(
   process.cwd(),
@@ -181,7 +206,7 @@ describe("plaino microcopy — persona verbs reach the customer surface", () => 
   });
 
   it("/talk REGISTER microcopy uses herd language", () => {
-    const src = readSurface(TALK_PAGE);
+    const src = readSurface(TALK_VIEW);
     assert.match(
       src,
       /herd/i,
@@ -190,7 +215,7 @@ describe("plaino microcopy — persona verbs reach the customer surface", () => 
   });
 
   it("approvals queue attribution uses herd vocabulary", () => {
-    const src = readSurface(APPROVALS_LIST);
+    const src = readSurface(APPROVALS_CARD);
     assert.match(
       src,
       /herd/i,
@@ -223,8 +248,10 @@ describe("plaino microcopy — metaphor MUST NOT leak to customer surface", () =
   // named on for the explicit forbidden phrases.
   const SURFACES: Array<{ name: string; file: string }> = [
     { name: "/talk page", file: TALK_PAGE },
+    { name: "/talk view", file: TALK_VIEW },
     { name: "/talk composer", file: TALK_COMPOSER },
     { name: "approvals list", file: APPROVALS_LIST },
+    { name: "approvals card", file: APPROVALS_CARD },
     { name: "approvals page", file: APPROVALS_PAGE },
     { name: "memory page", file: MEMORY_PAGE },
   ];

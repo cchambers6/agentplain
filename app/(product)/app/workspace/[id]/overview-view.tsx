@@ -6,7 +6,7 @@ import {
   ApHeritageButton,
   ApPaperCard,
   ApRootedEmptyState,
-  PlainoAvatar,
+  Plaino,
 } from "@/components/ui/ap";
 
 // Broker-owner workspace overview — the daily report-back from the fleet.
@@ -126,7 +126,7 @@ export function OverviewView({
           {headline}
         </h1>
         <p className="mt-3 flex max-w-2xl items-start gap-3 text-[15px] leading-relaxed text-ink-soft">
-          <PlainoAvatar size="md" className="shrink-0" />
+          <Plaino state="head-icon" size={32} className="shrink-0" />
           <span>
             {partner} is your service partner. Your fleet is doing the work
             that doesn&rsquo;t need you so you can focus on what does. Approve,

@@ -61,9 +61,26 @@ export default function HomePage() {
       <JsonLd id="ld-service" data={serviceJsonLd()} />
       <JsonLd id="ld-faqpage" data={faqPageJsonLd(FAQ_ITEMS)} />
 
-      {/* HERO — wordmark + tagline + locked mission line + all 10 verticals */}
-      <section className="border-b border-rule bg-paper">
-        <div className="container-wide pb-24 pt-20 md:pb-28 md:pt-24">
+      {/* HERO — wordmark + tagline + locked mission line + all 10 verticals.
+          The heritage Plaino illustration sits behind the headline as an
+          above-the-fold backdrop, anchored right where the dog-on-the-plain
+          detail lives. Paper scrims (left + bottom) keep the copy column
+          fully legible per `feedback_everything_tells_a_story.md`. */}
+      <section className="relative overflow-hidden border-b border-rule bg-paper">
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          {/* eslint-disable-next-line @next/next/no-img-element -- decorative
+              local brand raster; next/image is avoided product-wide (see Plaino.tsx) */}
+          <img
+            src="/brand/plaino-system/heritage.png"
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover object-right opacity-90"
+          />
+          {/* Left scrim — keeps the text column on paper */}
+          <div className="absolute inset-0 bg-gradient-to-r from-paper via-paper/95 to-paper/30" />
+          {/* Bottom scrim — fades the scene into the section edge */}
+          <div className="absolute inset-0 bg-gradient-to-t from-paper via-paper/30 to-transparent" />
+        </div>
+        <div className="relative container-wide pb-24 pt-20 md:pb-28 md:pt-24">
           {/* Wordmark-and-tagline lockup. The wordmark is rendered by the
               header logo above; this hero echoes the brand thesis line.
               Visual hierarchy: tagline is a small eyebrow above the mission

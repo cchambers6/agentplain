@@ -33,6 +33,8 @@ export { ApPaperSheet } from "./ApPaperSheet";
 export { ApRootedEmptyState } from "./ApRootedEmptyState";
 export { ApRootedLoader } from "./ApRootedLoader";
 export type { ApRootedLoaderKind } from "./ApRootedLoader";
+export { Plaino } from "./Plaino";
+export type { PlainoState } from "./Plaino";
 export { PlainoAvatar } from "./PlainoAvatar";
 export type {
   PlainoAvatarPose,

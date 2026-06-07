@@ -246,6 +246,14 @@ const DIRECTIONS = {
   7: { name: "collie-forward", collie: true, head: "level" },
   8: { name: "collie-watch", collie: true, head: "low" },
   9: { name: "collie-step", collie: true, head: "level", step: true },
+  // --- v4: hound robot (Conner's reference: beagle/scenthound, standing alert,
+  // WHITE body + ink outline line-art, robot panel/joints/collar/tail-antenna,
+  // clay accents replacing all the blue). Long floppy ears, blunt droopy snout,
+  // dewlap, tail up. Palette: paper body, ink outline+seams+eye, clay accents
+  // (2 chest dots + collar tag + antenna LED), moss only for the collar strap.
+  10: { name: "hound-forward", hound: true },
+  11: { name: "hound-curious", hound: true, head: "down", earPerk: true },
+  12: { name: "hound-alert", hound: true, head: "up" },
 };
 
 // ----------------------------------------------------------------------------
@@ -475,10 +483,131 @@ function buildCollieScene(dir, size = 40) {
   return g;
 }
 
+// ----------------------------------------------------------------------------
+// v4: hound robot — beagle/scenthound standing alert, drawn line-art style to
+// match Conner's reference: WHITE (paper) body with an INK outline, long floppy
+// ears, blunt droopy snout, dewlap, tail up. Robot details are integrated: a
+// chest panel with 2 clay status dots, ink joint-articulation seams on shoulder
+// + hip, a collar (moss strap + clay tag), a tail-tip antenna with a clay LED,
+// and an ear-base seam. Faces right. Local content ~58w x 42h; feet at y = 38.
+// ----------------------------------------------------------------------------
+const HOUND_W = 62;
+const HOUND_H = 46;
+const HOUND_OX = 3;
+const HOUND_OY = 3;
+const HGROUND = 38;
+
+function drawHound(g, ox, oy, opts = {}) {
+  const hd = opts.head === "down" ? 3 : opts.head === "up" ? -2 : 0;
+  const P = (x, y) => set(g, ox + x, oy + y, "paper");
+  const I = (x, y) => set(g, ox + x, oy + y, "ink");
+  const C = (x, y) => set(g, ox + x, oy + y, "clay");
+  const M = (x, y) => set(g, ox + x, oy + y, "moss");
+
+  // --- BODY fill (paper) between top/bottom splines. Head pts (x>=34) by hd. ---
+  const top = [
+    [6, 17], [12, 15], [22, 15], [30, 14],
+    [34, 13 + hd], [38, 12 + hd], [41, 11 + hd], [44, 10 + hd], [47, 11 + hd],
+    [50, 12 + hd], [53, 14 + hd], [55, 16 + hd],
+  ];
+  const bot = [
+    [6, 23], [11, 25], [16, 26], [24, 27], [30, 28], [34, 27], [37, 25],
+    [40, 24 + hd], [44, 24 + hd], [48, 24 + hd], [51, 23 + hd], [54, 21 + hd], [55, 20 + hd],
+  ];
+  for (let x = 6; x <= 55; x++) {
+    const yt = lerpProfile(top, x);
+    const yb = lerpProfile(bot, x);
+    if (yt == null || yb == null) continue;
+    for (let y = yt; y <= yb; y++) P(x, y);
+  }
+
+  // --- Legs (paper), sturdy 3px hound legs ---
+  const legP = (x0, x1, yTop) => {
+    for (let y = yTop; y <= HGROUND; y++) for (let x = x0; x <= x1; x++) P(x, y);
+  };
+  legP(10, 12, 25); // back-far
+  legP(15, 17, 26); // back-near
+  legP(29, 31, 27); // front-far
+  legP(34, 36, 27); // front-near
+
+  // --- Long floppy hound ear (paper pendant draping down past the jaw) ---
+  const eb = hd;
+  const earPerk = opts.earPerk ? -3 : 0;
+  // near ear — a floppy lobe emerging from the head, flaring wider toward the
+  // tip (the way a hound ear hangs) and ending just below the jaw, where the
+  // silhouette pass outlines it against open space so it reads as an ear.
+  for (let y = 9 + eb; y <= 19 + eb; y++) for (let x = 41; x <= 45; x++) P(x, y);
+  for (let y = 20 + eb; y <= 25 + eb; y++) for (let x = 40; x <= 46; x++) P(x, y); // flare
+  P(41, 26 + eb); P(42, 26 + eb); P(43, 26 + eb); P(44, 26 + eb); P(45, 26 + eb); // tip
+
+  // --- Tail UP, carried alert with a slight curve; tip is an antenna ---
+  P(8, 16); P(7, 14); P(6, 13); P(6, 12); P(5, 11); P(5, 10); P(4, 9); P(4, 8);
+  P(7, 15); P(6, 14); P(5, 12); // thickness
+
+  // --- Ink outline halo around the whole paper figure ---
+  outline(g, "ink");
+
+  // --- Interior ink detail lines (over the paper body). Kept sparse so the
+  // hound face reads clean, not scribbly. ---
+  // Ear definition: ONE front edge separating the ear from the face, plus a
+  // base seam. The back of the ear blends into the neck; the lower lobe hangs
+  // free (outlined above). One line reads as an ear; two read as a panel.
+  for (let y = 10 + eb; y <= 24 + eb; y++) I(46, y);
+  for (let x = 41; x <= 45; x++) I(x, 9 + eb); // ear base seam (robot tell)
+  // Eye — a kind ink eye on the face, ahead of the ear.
+  I(48, 13 + eb); I(48, 14 + eb);
+  // Blunt nose + one mouth line on the long droopy snout.
+  I(55, 17 + eb); I(55, 18 + eb); I(54, 18 + eb);
+  for (let x = 50; x <= 54; x++) I(x, 20 + eb);  // mouth line
+  // Dewlap hint — one short curve under the chin.
+  I(49, 23 + eb); I(50, 23 + eb);
+  // Chest panel (ink rect) with 2 clay status lights.
+  for (let x = 30; x <= 35; x++) { I(x, 20); I(x, 25); }
+  for (let y = 20; y <= 25; y++) { I(30, y); I(35, y); }
+  C(32, 22); C(34, 22);
+  // Joint-articulation seams — shoulder + hip.
+  I(28, 28); I(29, 29);   // shoulder
+  I(14, 26); I(15, 27);   // hip
+  // Collar — a short moss strap across the throat + a hanging clay tag.
+  M(48, 22 + eb); M(49, 22 + eb); M(47, 22 + eb);
+  C(48, 24 + eb); C(48, 25 + eb); // tag hanging below the throat
+  // Tail-tip antenna LED — the one clay sparkle up top.
+  C(4, 7);
+  // Tan hound blaze — one clay mark on the snout (tricolour tell).
+  C(51, 14 + eb);
+}
+
+function buildHoundDog(dir, withGround = false) {
+  const g = makeGrid(HOUND_W, HOUND_H + (withGround ? 2 : 0));
+  drawHound(g, HOUND_OX, HOUND_OY, DIRECTIONS[dir]);
+  if (withGround) {
+    const gy = HOUND_OY + HGROUND + 1;
+    hline(g, 0, HOUND_W - 1, gy, "ink");
+    set(g, 20, gy - 1, "ink"); set(g, 20, gy - 2, "ink");
+  }
+  return g;
+}
+
+function buildHoundScene(dir, size = 40) {
+  const S = Math.max(size, HOUND_W + 10);
+  const g = makeGrid(S, S, "paper");
+  const dog = makeGrid(HOUND_W, HOUND_H, null);
+  drawHound(dog, HOUND_OX, HOUND_OY, DIRECTIONS[dir]);
+  const ox = Math.round((S - HOUND_W) / 2);
+  const feetY = Math.round(S * 0.58);
+  const oy = feetY - (HOUND_OY + HGROUND);
+  hline(g, 0, S - 1, feetY + 1, "ink");
+  const tuftX = ox + 20;
+  set(g, tuftX, feetY, "ink"); set(g, tuftX, feetY - 1, "ink");
+  blit(g, dog, ox, oy);
+  return g;
+}
+
 // Full opaque square scene (dog on a plain). size = grid edge in art-pixels.
 function buildScene(dir, size = 36) {
   if (DIRECTIONS[dir].minimal) return buildMinimalScene(dir, size);
   if (DIRECTIONS[dir].collie) return buildCollieScene(dir, size);
+  if (DIRECTIONS[dir].hound) return buildHoundScene(dir, size);
   const g = makeGrid(size, size);
   const d = DIRECTIONS[dir];
   const horizonY = Math.round(size * 0.66);
@@ -512,6 +641,7 @@ function buildScene(dir, size = 36) {
 function buildDog(dir, withPlain = false) {
   if (DIRECTIONS[dir].minimal) return buildMinimalDog(dir, withPlain);
   if (DIRECTIONS[dir].collie) return buildCollieDog(dir, withPlain);
+  if (DIRECTIONS[dir].hound) return buildHoundDog(dir, withPlain);
   const w = DOG_W + 4;
   const h = DOG_H + (withPlain ? 5 : 2);
   const g = makeGrid(w, h);
@@ -810,7 +940,7 @@ function buildOG(dir) {
   rect(g, tx, ty + 18, tx + wW, ty + 19, "clay");
   // Bottom ground accent strip echoing the plain. Full directions use the moss
   // plain; minimal (3-colour) directions stay ink+paper+clay only — no moss.
-  if (DIRECTIONS[dir].minimal || DIRECTIONS[dir].collie) {
+  if (DIRECTIONS[dir].minimal || DIRECTIONS[dir].collie || DIRECTIONS[dir].hound) {
     rect(g, 0, H - 3, W - 1, H - 1, "clay");
     hline(g, 0, W - 1, H - 3, "ink");
   } else {
@@ -836,7 +966,7 @@ function blit(dst, src, ox, oy) {
 function buildAdaptiveBg(dir, sizePx) {
   const d = DIRECTIONS[dir];
   const g = makeGrid(48, 48);
-  if (d.minimal || d.collie) {
+  if (d.minimal || d.collie || d.hound) {
     // Flat paper field; a clay strip at the base only for the clay-strip variant.
     rect(g, 0, 0, 47, 47, "paper");
     if (d.ground === "clay") rect(g, 0, 44, 47, 47, "clay");
@@ -924,6 +1054,6 @@ function emitDirection(dir) {
   return { tag, mDir, wDir };
 }
 
-const built = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(emitDirection);
+const built = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(emitDirection);
 console.log("Generated 8-bit robot-dog brand directions:");
 for (const b of built) console.log(`  ${b.tag}\n    mobile: ${b.mDir}\n    web:    ${b.wDir}`);

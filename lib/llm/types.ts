@@ -39,12 +39,21 @@ export type LlmErrorCode =
   | 'UPSTREAM_ERROR'
   | 'CONTENT_FILTERED'
   | 'NOT_IMPLEMENTED'
+  // The workspace has spent past its monthly token-budget ceiling. Raised
+  // by `BudgetEnforcingLlmProvider` *before* the call reaches the model —
+  // no tokens are spent, no `LlmUsageRecord` row is written. The work is
+  // not lost: the event-driven loop is idempotent (Inngest retries against
+  // persisted `WebhookEvent` rows) and the monthly reset lifts the block,
+  // while the operator sees an OVER chip on `/operator/fleet` to move the
+  // workspace to a higher tier. See `lib/billing/budget.ts`.
+  | 'OVER_BUDGET'
   // The configured credential is the deliberate "paused" sentinel
   // (`sk-ant-PAUSED-…`). We detect it BEFORE any network call and refuse
   // the request, so the failed-auth round-trip is never burned. Distinct
   // from AUTHENTICATION (a real key the vendor rejected) so customer
   // surfaces can show a calm "resting right now" message + lead hand-off
-  // rather than a generic transient error. See `lib/llm/paused.ts`.
+  // rather than a generic transient error. See `lib/llm/paused.ts` +
+  // `lib/llm/index.ts` (the `Sentinel` compose layer).
   | 'PAUSED';
 
 export interface LlmError {

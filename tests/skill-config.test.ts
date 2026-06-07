@@ -253,14 +253,18 @@ describe("SKILL_CONFIG_LIVE_KEYS — honesty registry matches the runtime wiring
     assert.deepEqual(SKILL_CONFIG_LIVE_KEYS[FOLLOW_UP_CHASER_SLUG], [
       "staleAfterDays",
       "maxNudgesPerRun",
+      "nudgeTone",
     ]);
     assert.deepEqual(SKILL_CONFIG_LIVE_KEYS[INBOX_TRIAGE_SLUG], [
       "priorityKeywords",
+      "flagFromSenders",
+      "autoArchiveSenders",
     ]);
     assert.deepEqual(SKILL_CONFIG_LIVE_KEYS[CHIEF_OF_STAFF_SLUG], [
       "defaultMeetingMinutes",
       "businessHoursStart",
       "businessHoursEnd",
+      "bufferMinutes",
     ]);
   });
 });

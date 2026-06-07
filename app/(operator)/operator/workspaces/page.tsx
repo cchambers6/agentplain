@@ -14,12 +14,25 @@
 // the workspace flag is the durable record, and any associated invoice is
 // raised out-of-band through manual invoicing.
 //
+// The "Budget (mo)" column reads the SAME `WorkspaceBudgetStatus` seam the
+// per-workspace gate enforces on (`lib/billing/budget.ts`). It shows
+// month-to-date token spend against each workspace's operator-set explicit
+// cap; a WARN/OVER chip means "review this workspace." A workspace with no
+// cap configured shows NO CAP (never throttled) — open the deep-dive to set a
+// recommended cap.
+//
 // RLS: layout enforces `isOperator`; defense-in-depth check below.
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { withSystemContext } from "@/lib/db/rls";
 import { requireUser } from "@/lib/auth/server";
+import {
+  getFleetBudgetSnapshots,
+  type BudgetState,
+  type WorkspaceBudgetStatus,
+} from "@/lib/billing/budget";
+import { formatMicroCentsAsUsd } from "@/lib/billing/usage/pricing";
 import {
   TIER_ORDER,
   tierDisplayName,
@@ -82,6 +95,19 @@ export default async function OperatorWorkspacesPage(props: PageProps) {
     }),
   );
 
+  // Per-workspace token-budget consumption (two queries total, not
+  // one-per-workspace — see lib/billing/budget.ts). Derived through the same
+  // deriveBudgetStatus the gate throttles on, so the chip here matches what a
+  // customer is throttled on. A WARN/OVER chip means "review this workspace."
+  const budgetStatuses = await withSystemContext((tx) =>
+    getFleetBudgetSnapshots(tx, {}),
+  );
+  const budgetByWorkspace = new Map<string, WorkspaceBudgetStatus>();
+  for (const s of budgetStatuses) budgetByWorkspace.set(s.workspaceId, s);
+  const atRiskCount = budgetStatuses.filter(
+    (s) => s.state === "WARN" || s.state === "OVER",
+  ).length;
+
   return (
     <div className="container-wide py-12">
       <p className="eyebrow mb-3">Operator · workspaces</p>
@@ -102,6 +128,16 @@ export default async function OperatorWorkspacesPage(props: PageProps) {
         </div>
       ) : null}
 
+      {atRiskCount > 0 ? (
+        <div className="mt-6 border border-flag bg-paper p-4 text-[14px] text-ink">
+          <strong>{atRiskCount}</strong> workspace
+          {atRiskCount === 1 ? "" : "s"} at or near their configured monthly
+          token cap. Open the deep-dive to review the cap or move the
+          workspace to a higher tier — these are the margin-risk accounts
+          (production+growth plan §2).
+        </div>
+      ) : null}
+
       <table className="mt-8 w-full border border-rule bg-paper text-left text-[14px]">
         <thead>
           <tr className="border-b border-rule bg-paper-deep text-[11px] font-mono uppercase tracking-eyebrow text-mute">
@@ -109,6 +145,7 @@ export default async function OperatorWorkspacesPage(props: PageProps) {
             <th className="px-4 py-3">Vertical</th>
             <th className="px-4 py-3">Tier</th>
             <th className="px-4 py-3">Subscription</th>
+            <th className="px-4 py-3">Budget (mo)</th>
             <th className="px-4 py-3">Override</th>
           </tr>
         </thead>
@@ -173,6 +210,9 @@ export default async function OperatorWorkspacesPage(props: PageProps) {
                   )}
                 </td>
                 <td className="px-4 py-3">
+                  <BudgetCell status={budgetByWorkspace.get(w.id) ?? null} />
+                </td>
+                <td className="px-4 py-3">
                   <OverrideForm
                     workspaceId={w.id}
                     currentTier={tier}
@@ -205,6 +245,57 @@ export default async function OperatorWorkspacesPage(props: PageProps) {
           → integrations
         </Link>
       </div>
+    </div>
+  );
+}
+
+const BUDGET_STATE_STYLE: Record<BudgetState, string> = {
+  NO_CAP: "text-mute",
+  OK: "text-moss",
+  WARN: "text-clay",
+  OVER: "text-flag",
+};
+
+// Per-workspace token-budget cell. Shows month-to-date spend vs the
+// operator-set explicit cap + a state chip. Workspaces with no cap configured
+// show their spend with a NO CAP chip (never throttled). Source:
+// lib/billing/budget.ts.
+function BudgetCell({
+  status,
+}: {
+  status: WorkspaceBudgetStatus | null;
+}) {
+  if (!status) {
+    return <span className="text-mute">—</span>;
+  }
+  const spend = formatMicroCentsAsUsd(status.consumedMicroCents);
+  if (status.capUsdMonthly === null) {
+    return (
+      <div className="text-[12px]">
+        <p className="font-display text-[14px] text-ink">{spend}</p>
+        <p
+          className={`mt-1 font-mono text-[11px] uppercase tracking-eyebrow ${BUDGET_STATE_STYLE.NO_CAP}`}
+        >
+          no cap
+        </p>
+      </div>
+    );
+  }
+  const pct = Math.round((status.percentUsed ?? 0) * 100);
+  return (
+    <div className="text-[12px]">
+      <p className="font-display text-[14px] text-ink">
+        {spend}
+        <span className="text-mute">
+          {" "}
+          / ${status.capUsdMonthly.toLocaleString("en-US")}
+        </span>
+      </p>
+      <p
+        className={`mt-1 font-mono text-[11px] uppercase tracking-eyebrow ${BUDGET_STATE_STYLE[status.state]}`}
+      >
+        {status.state} · {pct}%
+      </p>
     </div>
   );
 }

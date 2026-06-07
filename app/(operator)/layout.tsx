@@ -12,6 +12,7 @@ import { requireUser } from "@/lib/auth/server";
 const OPERATOR_NAV: Array<{ href: string; label: string }> = [
   { href: "/operator/leadership-board", label: "Leadership" },
   { href: "/operator/fleet", label: "Fleet" },
+  { href: "/operator/fleet/media", label: "Media" },
   { href: "/operator/workspaces", label: "Workspaces" },
   { href: "/operator/inquiries", label: "Inquiries" },
   { href: "/operator/leads", label: "Leads" },

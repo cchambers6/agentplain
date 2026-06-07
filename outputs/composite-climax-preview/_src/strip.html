@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>climax motion strip</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --paper:#F7F4ED; --paper-deep:#EDE9DE; --ink:#1A1A1F; --ink-soft:#2E2E33;
+    --clay:#B65D3A; --clay-deep:#9A4D2F; --moss:#3F5C3F; --mute:#726A5E; --rule:#E0DAC9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#000}
+  .device{
+    position:relative;width:393px;height:852px;overflow:hidden;background:var(--paper);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;
+  }
+  .device img.bg{display:block;width:393px;height:auto;}
+  .statusbar{position:absolute;top:0;left:0;right:0;height:108px;z-index:30;
+    background:linear-gradient(to bottom, var(--paper) 0%, var(--paper) 46%, rgba(247,244,237,0.0) 100%);
+    display:flex;align-items:flex-start;justify-content:space-between;padding:14px 28px 0 30px;color:var(--ink);pointer-events:none}
+  .statusbar .time{font-weight:600;font-size:15px;letter-spacing:.2px;font-variant-numeric:tabular-nums}
+  .statusbar .right{display:flex;align-items:center;gap:7px;margin-top:1px}
+  .island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:124px;height:36px;border-radius:20px;background:#06060a;z-index:31}
+  .island::after{content:"";position:absolute;right:14px;top:11px;width:13px;height:13px;border-radius:50%;background:#0d0d12;box-shadow:inset 0 0 0 2px #1c1c22}
+  .bat{width:25px;height:13px;border:1.5px solid var(--ink);border-radius:3px;position:relative;opacity:.92}
+  .bat::after{content:"";position:absolute;right:-3px;top:3.5px;width:2px;height:5px;background:var(--ink);border-radius:0 1px 1px 0}
+  .bat .lvl{position:absolute;inset:1.5px;width:70%;background:var(--ink);border-radius:1px}
+  .sig,.wifi{font-size:13px;font-weight:600}
+  .banner-wrap{position:absolute;top:64px;left:8px;right:8px;z-index:40;transform-origin:top center}
+  .banner{display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(247,244,237,0.86);
+    -webkit-backdrop-filter:blur(18px) saturate(120%);backdrop-filter:blur(18px) saturate(120%);
+    border:1px solid var(--rule);border-radius:22px;
+    box-shadow:0 18px 40px -12px rgba(26,26,31,0.45), 0 2px 6px rgba(26,26,31,0.10)}
+  .icon{position:relative;flex:0 0 auto;width:40px;height:40px;border-radius:10px;background:var(--paper-deep);
+    border:1px solid var(--clay);display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .icon .mark{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:19px;color:var(--clay);line-height:1;letter-spacing:-.5px}
+  .icon .ph{position:absolute;bottom:0;left:0;right:0;height:9px;background:var(--clay);color:var(--paper);font-size:5px;line-height:9px;text-align:center;letter-spacing:.6px;text-transform:uppercase;font-weight:700}
+  .copy{flex:1 1 auto;min-width:0}
+  .copy .top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  .copy .app{font-size:13px;font-weight:600;color:var(--ink-soft);letter-spacing:.1px}
+  .copy .when{font-size:12px;color:var(--mute);white-space:nowrap}
+  .copy .msg{margin-top:1px;font-size:15px;line-height:1.25;color:var(--ink);font-weight:500}
+  .copy .msg b{font-weight:700}
+  #strip{display:flex;flex-direction:column}
+</style>
+</head>
+<body>
+<div id="strip"></div>
+<script>
+  var N = 12; // motion frames in the slide-in
+  function easeOutCubic(x){return 1-Math.pow(1-x,3);}
+  function deviceHTML(){
+    return ''+
+      '<div class="screen"><img class="bg" src="./phone-climax-bg.png" alt=""></div>'+
+      '<div class="island"></div>'+
+      '<div class="statusbar"><span class="time">6:30</span>'+
+        '<span class="right"><span class="sig">▮▮▮▮</span>'+
+        '<span class="wifi">●)</span><span class="bat"><span class="lvl"></span></span></span></div>'+
+      '<div class="banner-wrap"><div class="banner">'+
+        '<div class="icon"><span class="mark">ap</span><span class="ph">placeholder</span></div>'+
+        '<div class="copy"><div class="top"><span class="app">agentplain</span><span class="when">just now</span></div>'+
+        '<div class="msg">New approval ready for <b>Maria Garcia</b></div></div>'+
+      '</div></div>';
+  }
+  var strip = document.getElementById('strip');
+  for(var i=0;i<N;i++){
+    var d = document.createElement('div');
+    d.className='device';
+    d.innerHTML = deviceHTML();
+    strip.appendChild(d);
+    var p = easeOutCubic(i/(N-1));
+    var y = -150 + 150*p;
+    var op = Math.min(1, p*1.2);
+    var sc = 0.965 + 0.035*p;
+    var w = d.querySelector('.banner-wrap');
+    w.style.transform = 'translateY('+y.toFixed(2)+'px) scale('+sc.toFixed(3)+')';
+    w.style.opacity = op.toFixed(3);
+  }
+  window.__STRIP_N = N;
+</script>
+</body>
+</html>

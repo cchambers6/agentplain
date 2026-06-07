@@ -9,6 +9,9 @@ import {
 } from "@/components/ui/ap";
 import { withWorkspace } from "@/lib/auth";
 import { withRls } from "@/lib/db";
+import { getWorkspaceBudgetSnapshot } from "@/lib/billing/budget";
+import { recommendBudgetCapUsd } from "@/lib/billing/recommendations";
+import { formatMicroCentsAsUsd } from "@/lib/billing/usage/pricing";
 import {
   PARTNER_RESERVED_HOURS_PER_MONTH,
   PER_SEAT_MONTHLY_USD_CENTS,
@@ -26,6 +29,7 @@ import {
   changePlanAction,
   openPortalAction,
 } from "./actions";
+import { BudgetSummary } from "./BudgetSummary";
 import { UsagePanel } from "./UsagePanel";
 
 interface PageProps {
@@ -70,26 +74,33 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
   const queryParams = await searchParams;
   const { workspace, rls } = await withWorkspace(workspaceId, ["BROKER_OWNER"]);
 
-  const [subscription, invoices, recentEvents] = await Promise.all([
-    withRls(rls, (tx) =>
-      tx.subscription.findUnique({ where: { workspaceId } }),
-    ),
-    withRls(rls, (tx) =>
-      tx.workspaceInvoice.findMany({
-        where: { workspaceId },
-        orderBy: { issuedAt: "desc" },
-        take: 12,
-      }),
-    ),
-    withRls(rls, (tx) =>
-      tx.billingEvent.findMany({
-        where: { workspaceId },
-        orderBy: { receivedAt: "desc" },
-        take: 6,
-        select: { id: true, type: true, receivedAt: true },
-      }),
-    ),
-  ]);
+  const [subscription, invoices, recentEvents, budgetSnapshot] =
+    await Promise.all([
+      withRls(rls, (tx) =>
+        tx.subscription.findUnique({ where: { workspaceId } }),
+      ),
+      withRls(rls, (tx) =>
+        tx.workspaceInvoice.findMany({
+          where: { workspaceId },
+          orderBy: { issuedAt: "desc" },
+          take: 12,
+        }),
+      ),
+      withRls(rls, (tx) =>
+        tx.billingEvent.findMany({
+          where: { workspaceId },
+          orderBy: { receivedAt: "desc" },
+          take: 6,
+          select: { id: true, type: true, receivedAt: true },
+        }),
+      ),
+      // Month-to-date token budget vs the allowance included with the plan.
+      // Same RLS context as the rest of the page (BROKER_OWNER on this
+      // workspace) — the snapshot's own queries are workspace-scoped.
+      withRls(rls, (tx) =>
+        getWorkspaceBudgetSnapshot(tx, { workspaceId }),
+      ),
+    ]);
 
   const flash = readFlash(queryParams);
   const daysToTrialEnd =
@@ -104,6 +115,15 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
     : null;
   const hasPaymentMethod = Boolean(subscription?.defaultPaymentMethodId);
   const currentSeats = subscription?.seats ?? 1;
+
+  // Advisory recommended monthly budget (MRR × 0.30, lib/billing/recommendations.ts).
+  // Customer-facing copy only — nothing is enforced unless the operator sets an
+  // explicit cap on this workspace. Max (quote-based) has no productized price,
+  // so no recommendation.
+  const monthlyRevenueUsd =
+    charge && tier !== "max" ? charge.totalCents / 100 : null;
+  const recommendedBudgetUsd =
+    monthlyRevenueUsd !== null ? recommendBudgetCapUsd(monthlyRevenueUsd) : null;
 
   return (
     <div>
@@ -384,6 +404,22 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
                 ))}
               </ul>
             </section>
+          ) : null}
+
+          {/* Monthly token activity — transparency so there's never a surprise
+              overage. Shows last-30-day spend against the workspace's explicit
+              cap when an operator has set one (otherwise no cap), plus the
+              recommended budget for the plan as advisory copy. Hidden only when
+              the snapshot can't be resolved (should not happen for a subscribed
+              workspace). */}
+          {budgetSnapshot ? (
+            <BudgetSummary
+              state={budgetSnapshot.state}
+              spendUsd={formatMicroCentsAsUsd(budgetSnapshot.consumedMicroCents)}
+              capUsd={budgetSnapshot.capUsdMonthly}
+              percentUsed={budgetSnapshot.percentUsed}
+              recommendedUsd={recommendedBudgetUsd}
+            />
           ) : null}
 
           {/* Token + cost usage. Falls back to the 30-day window when the

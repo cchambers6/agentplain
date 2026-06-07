@@ -113,6 +113,8 @@ export const titleEscrow: VerticalContent = {
     // clause.
     valueProp:
       "agentplain REPLACES the file-intake and document-collection scramble, INTEGRATES with Outlook, OneDrive, Excel, and DocuSign on day one, and AUGMENTS the closer's read on every closing-day prep packet.",
+    sbmSubhead:
+      "The closing-file skills, agents, and memory you'd otherwise have to build yourself — built on Claude, configured by us.",
   },
 
   metaTitle: "for local title and escrow agencies",

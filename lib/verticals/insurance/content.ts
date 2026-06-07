@@ -106,6 +106,8 @@ export const insurance: VerticalContent = {
     // hero clause.
     valueProp:
       "agentplain REPLACES the CSR hours spent on certificates of insurance and renewal prep, INTEGRATES with Outlook, OneDrive, and DocuSign on day one, and AUGMENTS the producer's read on every renewal proposal and claims update.",
+    sbmSubhead:
+      "The agency skills, agents, and memory you'd otherwise have to build yourself — built on Claude, configured by us.",
   },
 
   metaTitle: "for independent P&C insurance brokerages",

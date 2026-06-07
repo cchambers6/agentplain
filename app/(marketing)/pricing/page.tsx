@@ -84,6 +84,34 @@ const whenToChoose = [
   },
 ];
 
+// Build-it-yourself-on-Claude vs. plug-and-play-with-agentplain. Four
+// dimensions that actually cost the owner. Per
+// project_sbm_wrapper_positioning_2026_06_06: complementary framing only —
+// Claude is the engine; the service is the difference. No "instead of" / "vs."
+// disparagement of the model itself.
+const SBM_COMPARISON: { dimension: string; diy: string; us: string }[] = [
+  {
+    dimension: "Cost",
+    diy: "The subscription is cheap — but the real cost is the months of configuration time, plus per-skill engineering you do (or hire) to make it do your job.",
+    us: "One bundled flat fee, per seat, month-to-month. The skills, agents, and integrations come pre-built — no engineering line item.",
+  },
+  {
+    dimension: "Time to value",
+    diy: "Weeks to months: learn prompting, decide which agents to build, write the skills, wire each integration, then tune until it's reliable.",
+    us: "Days. We install the per-vertical fleet, connect your tools, and you're approving real drafts in the first week. First month free.",
+  },
+  {
+    dimension: "Ongoing maintenance",
+    diy: "You own it forever — curating memory, pruning stale context, updating prompts and skills as your ops and the model change.",
+    us: "Your service partner owns it — memory management, tuning, and customization handled in recurring reviews. You never touch a config file.",
+  },
+  {
+    dimension: "Compliance depth",
+    diy: "You research the regulations and write the guardrails yourself, with no safety net if you miss one.",
+    us: "A per-vertical, counsel-reviewed compliance corpus pre-checks every customer-facing draft. The real-estate fair-housing scanner fires today.",
+  },
+];
+
 export default function PricingPage() {
   return (
     <>
@@ -199,6 +227,47 @@ export default function PricingPage() {
       </Section>
 
       <Section
+        tone="deep"
+        eyebrow="Built on Claude, configured by us"
+        title="Build it yourself on Claude — or plug in agentplain."
+        intro="Claude for Small Business is the engine. You can wire it up yourself, or have us run it for you. Here's the honest comparison across the four things that actually cost you."
+      >
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
+          {/* Column heads */}
+          <div className="bg-paper p-7 md:p-8">
+            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+              Build it yourself on Claude SBM
+            </p>
+            <p className="mt-2 font-display text-base leading-snug text-ink-soft">
+              You configure and maintain it.
+            </p>
+          </div>
+          <div className="bg-paper p-7 md:p-8">
+            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+              Plug-and-play with agentplain
+            </p>
+            <p className="mt-2 font-display text-base leading-snug text-ink">
+              We configure and run it.
+            </p>
+          </div>
+
+          {SBM_COMPARISON.map((row) => (
+            <SbmCompareRow
+              key={row.dimension}
+              dimension={row.dimension}
+              diy={row.diy}
+              us={row.us}
+            />
+          ))}
+        </div>
+        <p className="mt-8 max-w-prose text-[13px] leading-relaxed text-mute">
+          Not a knock on Claude — it&apos;s a genuinely capable model. The gap is
+          everything between &ldquo;powerful tool&rdquo; and &ldquo;running your
+          business.&rdquo; That gap is the service.
+        </p>
+      </Section>
+
+      <Section
         eyebrow="What ships with every tier"
         title="The same value loop, the same guardrails."
       >
@@ -273,6 +342,37 @@ export default function PricingPage() {
           </div>
         </div>
       </section>
+    </>
+  );
+}
+
+// One row of the build-it-yourself-vs-plug-and-play comparison. Renders the
+// DIY (left) then agentplain (right) cell so the hairline grid keeps the two
+// columns aligned across breakpoints — same pattern as the homepage
+// ContrastRow.
+function SbmCompareRow({
+  dimension,
+  diy,
+  us,
+}: {
+  dimension: string;
+  diy: string;
+  us: string;
+}) {
+  return (
+    <>
+      <div className="bg-paper p-7 md:p-8">
+        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+          {dimension}
+        </p>
+        <p className="mt-3 text-[15px] leading-relaxed text-ink-soft">{diy}</p>
+      </div>
+      <div className="bg-paper p-7 md:p-8">
+        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+          {dimension}
+        </p>
+        <p className="mt-3 text-[15px] leading-relaxed text-ink">{us}</p>
+      </div>
     </>
   );
 }

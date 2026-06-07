@@ -126,6 +126,8 @@ export const law: VerticalContent = {
     // hero clause.
     valueProp:
       "agentplain REPLACES the intake-to-engagement bottleneck, INTEGRATES with Outlook, OneDrive, and DocuSign on day one, and AUGMENTS the partner's read on every client communication and every drafted pleading with a privilege-aware compliance pass.",
+    sbmSubhead:
+      "The intake-to-drafting skills, agents, and memory you'd otherwise have to build yourself — built on Claude, configured by us.",
   },
 
   metaTitle: "for solo and small law firms (2–5 attorneys)",

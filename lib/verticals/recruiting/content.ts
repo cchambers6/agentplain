@@ -121,6 +121,8 @@ export const recruiting: VerticalContent = {
     // hero clause.
     valueProp:
       "agentplain REPLACES the manual sourcing + first-touch drafting cycle, INTEGRATES with Outlook, Gmail, Slack, and DocuSign on day one, and AUGMENTS the recruiter's read on every outreach with substantiated production evidence.",
+    sbmSubhead:
+      "The sourcing and outreach skills, agents, and memory you'd otherwise have to build yourself — built on Claude, configured by us.",
   },
 
   metaTitle: "for boutique recruiting firms and in-house talent teams",

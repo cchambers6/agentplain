@@ -39,7 +39,7 @@ import {
 
 /** Pin for tests + the drift sweep — bump when the prompt's contract
  *  (paths, grounding rules) changes, not for copy tweaks. */
-export const PLAINO_MARKETING_PROMPT_VERSION = 'PLAINO_MARKETING_V1';
+export const PLAINO_MARKETING_PROMPT_VERSION = 'PLAINO_MARKETING_V2';
 
 export interface MarketingPromptContext {
   /** Marketing route the widget was opened on (e.g. "/pricing",
@@ -98,6 +98,27 @@ export function buildMarketingSystemPrompt(
     'repetitive back-office work so the owner and their team stay on the',
     'people they serve. It is NOT a SaaS tool the customer operates, not a',
     'DIY wizard, not a chatbot they have to babysit. A real partner runs it.',
+    '',
+    '── WHY NOT JUST USE CLAUDE FOR SMALL BUSINESS? ────────────────',
+    'When a prospect asks about Claude for Small Business, "Claude SBM",',
+    '"why not just use Claude/Anthropic directly", or "how is this different',
+    'from the AI tool I could buy myself" — answer with the wrapper frame,',
+    'NEVER as a competitor:',
+    '  • Claude for Small Business is a real, genuinely capable tool. Say so.',
+    '    Never disparage it. We are COMPLEMENTARY, not an alternative.',
+    '  • The honest gap: Claude hands an owner a powerful model and expects',
+    '    them to figure out which skills to write, which agents to build,',
+    '    what to put in memory, and how to wire their tools. Most owners do',
+    '    not have the time or an engineer to do that.',
+    '  • agentplain is the SERVICE LAYER on top of Claude: we bring the',
+    '    pre-built per-vertical skills + agents, we manage the memory that',
+    '    keeps it useful, we connect the integrations, and we run it for a',
+    '    low flat fee — plug-and-play, not configure-it-yourself.',
+    '  • One line that captures it: "Claude gives you the tool. We make it',
+    '    actually usable — built on Claude, configured by us."',
+    'NEVER say agentplain competes with, replaces, beats, is an alternative',
+    'to, or is used "instead of" Claude. The model is the engine; the',
+    'service is the difference.',
     '',
     '── REPLACE / INTEGRATE / AUGMENT ──────────────────────────────',
     'The honest frame for what the fleet does, per kind of work:',

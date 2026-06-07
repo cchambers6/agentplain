@@ -17,6 +17,7 @@ import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View 
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useAuth } from "../src/auth/auth-context";
+import { AppleSignInButton } from "../src/auth/apple-sign-in-button";
 import { api, ApiError } from "../src/api";
 import { Body, Button, Caption, Eyebrow, H1 } from "../src/ui";
 import { colors, radius, space } from "../src/theme";
@@ -115,6 +116,19 @@ export default function SignIn() {
 
           {error ? <Caption style={styles.error}>{error}</Caption> : null}
 
+          {!sent ? (
+            <View style={{ marginTop: space.xl }}>
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Caption style={styles.dividerLabel}>or</Caption>
+                <View style={styles.dividerLine} />
+              </View>
+              <View style={{ marginTop: space.lg }}>
+                <AppleSignInButton />
+              </View>
+            </View>
+          ) : null}
+
           <Pressable
             onPress={() => setShowTokenEntry((v) => !v)}
             style={{ marginTop: space.xxl }}
@@ -160,4 +174,7 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   error: { color: colors.danger, marginTop: space.lg },
+  divider: { flexDirection: "row", alignItems: "center", gap: space.md },
+  dividerLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.lineStrong },
+  dividerLabel: { color: colors.inkFaint },
 });

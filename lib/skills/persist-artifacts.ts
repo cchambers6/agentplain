@@ -27,6 +27,7 @@
 import type { Prisma } from '@prisma/client';
 import type { ComplianceFlag } from '../agents/sentinel';
 import { withRls, type RlsContext } from '../db';
+import { notifyApprovalQueued } from '../push';
 import { encryptPayloadForWrite } from '../security/payload-crypto';
 import { getVerticalContent } from '../verticals';
 import type { AgentLoopWork } from '../verticals/types';
@@ -119,9 +120,26 @@ export async function persistSkillRunArtifacts(
     isOperator: true,
   };
   if (args.client) {
+    // Test / caller-supplied transaction path: stay pure — the push trigger
+    // only fires on the production (committed) path so suites stay
+    // deterministic and offline.
     return writeArtifacts(args.client, args.workspaceId, args.record);
   }
-  return withRls(ctx, (tx) => writeArtifacts(tx, args.workspaceId, args.record));
+  const result = await withRls(ctx, (tx) =>
+    writeArtifacts(tx, args.workspaceId, args.record),
+  );
+  // The transaction has committed. Fire the approval-ready push so the
+  // owner's phone lights up ("7am push → tap approve"). Best-effort and
+  // self-contained — notifyApprovalQueued never throws, but we still guard
+  // so a regression here can't poison the persist result. Awaited (not
+  // floated) because un-awaited promises are dropped in serverless.
+  if (result.approvalsWritten > 0) {
+    await notifyApprovalQueued({
+      workspaceId: args.workspaceId,
+      count: result.approvalsWritten,
+    }).catch(() => 0);
+  }
+  return result;
 }
 
 async function writeArtifacts(

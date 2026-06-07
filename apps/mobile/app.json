@@ -17,6 +17,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.agentplain.app",
+      "usesAppleSignIn": true,
       "associatedDomains": ["applinks:app.agentplain.com"],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -52,6 +53,7 @@
       "expo-router",
       "expo-secure-store",
       "expo-web-browser",
+      "expo-apple-authentication",
       [
         "expo-notifications",
         {

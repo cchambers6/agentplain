@@ -63,6 +63,57 @@ export interface ApprovalItem {
   proposedAt: string;
 }
 
+/** "Doesn't sound like us" categories — mirrors lib/feedback FEEDBACK_CATEGORIES.
+ *  Kept inline so the RN bundle pulls in no server module. */
+export type FeedbackCategory =
+  | "tone"
+  | "structure"
+  | "factual"
+  | "length"
+  | "other";
+
+export interface IntegrationTile {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  status: "connected" | "available" | "coming-soon";
+  connectMode: "oauth" | "api-key";
+  configured: boolean;
+  accountLabel: string | null;
+  /** Relative web OAuth start path; null when not self-connectable in-app. */
+  connectPath: string | null;
+  /** Relative web manage/detail path (api-key connect + manage connected). */
+  webPath: string;
+}
+
+/** A single chat turn. `plaino` is the assistant role on the wire. */
+export interface ChatTurn {
+  role: "user" | "plaino";
+  body: string;
+}
+
+export interface SupportChatResponse {
+  reply: string;
+  conversationId: string | null;
+  /** True when the line is degraded/paused — the UI surfaces the human
+   *  hand-off (sentinel-aware degradation, PR #163). */
+  degraded: boolean;
+}
+
+export interface AppleSignInInput {
+  identityToken: string;
+  remember?: boolean;
+  nonce?: string;
+  fullName?: { givenName?: string | null; familyName?: string | null };
+}
+
+export interface RegisterPushInput {
+  expoPushToken: string;
+  platform: "ios" | "android";
+  deviceName?: string;
+}
+
 // ---------------------------------------------------------------------------
 // Client
 // ---------------------------------------------------------------------------
@@ -100,6 +151,43 @@ export interface MobileApiClient {
   briefings(workspaceId: string): Promise<BriefingItem[]>;
   /** GET /api/mobile/workspace/:id/approvals — PENDING queue items. */
   approvals(workspaceId: string): Promise<ApprovalItem[]>;
+  /** POST .../approvals/:itemId/approve — optional edited body ("Approve edited"). */
+  approveApproval(
+    workspaceId: string,
+    itemId: string,
+    editedBody?: string,
+  ): Promise<void>;
+  /** POST .../approvals/:itemId/reject — optional reason. */
+  rejectApproval(
+    workspaceId: string,
+    itemId: string,
+    reason?: string,
+  ): Promise<void>;
+  /** POST .../approvals/:itemId/feedback — "doesn't sound like us". */
+  submitApprovalFeedback(
+    workspaceId: string,
+    itemId: string,
+    input: { targetSkillSlug: string; category: FeedbackCategory; reason: string },
+  ): Promise<void>;
+  /** GET /api/mobile/workspace/:id/integrations — marketplace tiles + status. */
+  integrations(workspaceId: string): Promise<IntegrationTile[]>;
+  /** POST /api/chat (mode=support) — one Plaino support turn. */
+  supportChat(input: {
+    workspaceId: string;
+    messages: ChatTurn[];
+    conversationId?: string | null;
+  }): Promise<SupportChatResponse>;
+  /** POST /api/support/draft — "send this to a person" hand-off. */
+  supportDraft(input: {
+    workspaceId: string;
+    subject: string;
+    body: string;
+    conversationId?: string | null;
+  }): Promise<void>;
+  /** POST /api/mobile/push/register — register this device's Expo token. */
+  registerPushDevice(input: RegisterPushInput): Promise<{ id: string }>;
+  /** POST /api/auth/apple — Sign in with Apple → sealed session. */
+  appleSignIn(input: AppleSignInInput): Promise<ExchangeResponse>;
 }
 
 export function createApiClient(config: ApiClientConfig): MobileApiClient {
@@ -187,6 +275,95 @@ export function createApiClient(config: ApiClientConfig): MobileApiClient {
         { auth: true },
       );
       return data.approvals;
+    },
+
+    async approveApproval(workspaceId, itemId, editedBody) {
+      await request<{ ok: boolean }>(
+        `/api/mobile/workspace/${encodeURIComponent(workspaceId)}/approvals/${encodeURIComponent(itemId)}/approve`,
+        {
+          method: "POST",
+          auth: true,
+          body: JSON.stringify(
+            typeof editedBody === "string" ? { body: editedBody } : {},
+          ),
+        },
+      );
+    },
+
+    async rejectApproval(workspaceId, itemId, reason) {
+      await request<{ ok: boolean }>(
+        `/api/mobile/workspace/${encodeURIComponent(workspaceId)}/approvals/${encodeURIComponent(itemId)}/reject`,
+        {
+          method: "POST",
+          auth: true,
+          body: JSON.stringify(reason ? { reason } : {}),
+        },
+      );
+    },
+
+    async submitApprovalFeedback(workspaceId, itemId, input) {
+      await request<{ ok: boolean }>(
+        `/api/mobile/workspace/${encodeURIComponent(workspaceId)}/approvals/${encodeURIComponent(itemId)}/feedback`,
+        { method: "POST", auth: true, body: JSON.stringify(input) },
+      );
+    },
+
+    async integrations(workspaceId) {
+      const data = await request<{ tiles: IntegrationTile[] }>(
+        `/api/mobile/workspace/${encodeURIComponent(workspaceId)}/integrations`,
+        { auth: true },
+      );
+      return data.tiles;
+    },
+
+    async supportChat(input) {
+      const data = await request<{
+        ok: boolean;
+        reply?: string;
+        conversationId?: string | null;
+        degraded?: boolean;
+      }>("/api/chat", {
+        method: "POST",
+        auth: true,
+        body: JSON.stringify({
+          mode: "support",
+          workspaceId: input.workspaceId,
+          messages: input.messages,
+          conversationId: input.conversationId ?? undefined,
+        }),
+      });
+      return {
+        reply: data.reply ?? "",
+        conversationId: data.conversationId ?? null,
+        degraded: Boolean(data.degraded),
+      };
+    },
+
+    async supportDraft(input) {
+      await request<{ ok: boolean }>("/api/support/draft", {
+        method: "POST",
+        auth: true,
+        body: JSON.stringify({
+          workspaceId: input.workspaceId,
+          subject: input.subject,
+          body: input.body,
+          conversationId: input.conversationId ?? undefined,
+        }),
+      });
+    },
+
+    async registerPushDevice(input) {
+      return request<{ ok: boolean; id: string }>(
+        "/api/mobile/push/register",
+        { method: "POST", auth: true, body: JSON.stringify(input) },
+      );
+    },
+
+    appleSignIn(input) {
+      return request<ExchangeResponse>("/api/auth/apple", {
+        method: "POST",
+        body: JSON.stringify(input),
+      });
     },
   };
 }

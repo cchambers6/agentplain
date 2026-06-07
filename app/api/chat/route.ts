@@ -21,6 +21,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { readSession } from "@/lib/auth/session";
+import { readMobileSession } from "@/lib/auth/mobile-session";
 import { withSystemContext } from "@/lib/db/rls";
 import { getLlmProvider } from "@/lib/llm";
 import { MODEL_OPUS, MODEL_SONNET } from "@/lib/llm/model-tiers";
@@ -83,7 +84,7 @@ export async function POST(req: Request) {
 
   return input.mode === "marketing"
     ? handleMarketing(input)
-    : handleSupport(input);
+    : handleSupport(input, req);
 }
 
 type ChatInput = z.infer<typeof chatSchema>;
@@ -130,14 +131,17 @@ async function handleMarketing(input: ChatInput) {
   );
 }
 
-async function handleSupport(input: ChatInput) {
+async function handleSupport(input: ChatInput, req: Request) {
   if (!input.workspaceId) {
     return NextResponse.json(
       { ok: false, error: "workspaceId is required for support chat." },
       { status: 400 },
     );
   }
-  const session = await readSession();
+  // Web sends an httpOnly cookie; the native app sends the same sealed session
+  // as a bearer (lib/auth/mobile-session). Accept either so the one /api/chat
+  // support backbone serves both surfaces (project_plaino_chatbot_two_surfaces).
+  const session = (await readSession()) ?? (await readMobileSession(req));
   if (!session) {
     return NextResponse.json({ ok: false, error: "Not signed in." }, { status: 401 });
   }

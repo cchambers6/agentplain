@@ -514,9 +514,16 @@ model User {
   email                     String                       @unique @db.Citext
   name                      String?
   isOperator                Boolean                      @default(false)
+  /// Apple "Sign in with Apple" stable subject claim (the `sub` in the Apple
+  /// identity token). Set the first time a user signs in with Apple; used to
+  /// re-match a returning Apple user even when Apple withholds the email on
+  /// subsequent logins. NULL for users who have only ever used magic link /
+  /// passkey. One identity, multiple auth methods — see /api/auth/apple.
+  appleSub                  String?                      @unique
   createdAt                 DateTime                     @default(now())
   updatedAt                 DateTime                     @updatedAt
   memberships               Membership[]
+  pushDevices               PushDevice[]
   decidedItems              WorkApprovalQueueItem[]      @relation("DecidedBy")
   configuredThresholds      WorkThresholdConfig[]        @relation("ConfiguredBy")
   configuredSkills          SkillConfig[]                @relation("SkillConfigBy")
@@ -1436,6 +1443,43 @@ model WebAuthnCredential {
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// A registered Expo push token for the native mobile app (feat/mobile-app-
+// v2-polish, 2026-06-06). Scoped to User, NOT Membership: a push token
+// belongs to a physical device the person carries, and notifications fan
+// out per-user (the approval-ready ping). The same person may carry several
+// devices, so the table is one-row-per-device, keyed by the Expo token.
+//
+// The token itself is NOT a secret (it's an opaque routing handle Expo
+// issues; it can only deliver to that device via Expo's authenticated push
+// service) so, like WebAuthnCredential.publicKey, it is stored in the clear.
+//
+// RLS: user-isolation (`app.user_id`) OR operator-all — the server-side
+// approval-trigger fan-out runs under withSystemContext and reads every
+// owner's devices, exactly like the briefing fan-out pattern.
+model PushDevice {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  /// Expo push token, e.g. "ExponentPushToken[xxxxxxxx]". Unique across the
+  /// table — re-registering the same device upserts on this handle so a
+  /// reinstall never leaves a duplicate row delivering twice.
+  expoPushToken String   @unique
+  /// "ios" | "android" — surfaced in settings + lets the trigger pick a
+  /// platform-specific payload if it ever needs to.
+  platform     String
+  /// Best-effort device label ("iPhone 15"), supplied by the client.
+  deviceName   String?
+  /// Set false when Expo reports the token is no longer registered
+  /// (DeviceNotRegistered) so the trigger stops fanning out to it without
+  /// deleting the audit row.
+  enabled      Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lastUsedAt   DateTime?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, enabled])
 }
 
 // Source that produced a preference signal. ONBOARDING_FORM = the

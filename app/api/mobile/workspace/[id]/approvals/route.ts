@@ -16,6 +16,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { requireMobileWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
+import { decryptPayloadForRead } from "@/lib/security/payload-crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,7 +67,10 @@ export async function GET(
       agentSlug: r.agentSlug,
       kind: r.kind,
       discipline: r.discipline,
-      payload: r.payload,
+      // Decrypt the at-rest envelope so the app shows real draft text (and can
+      // pre-fill the edit drawer). RLS + the membership gate already bound this
+      // to the owner — same decrypt-for-read the web approvals page does.
+      payload: decryptPayloadForRead(r.payload),
       proposedAt: r.proposedAt.toISOString(),
     })),
   });

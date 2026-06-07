@@ -323,4 +323,28 @@ export const env = {
       .split(",")
       .map((s) => s.trim().toLowerCase())
       .filter(Boolean),
+
+  // Native mobile app (feat/mobile-app-v2-polish).
+  //
+  // Expo push: the Expo push service accepts unauthenticated sends, but an
+  // EXPO_ACCESS_TOKEN (enhanced-security mode in the Expo dashboard) is the
+  // recommended posture — when set we send it as a bearer. Optional so the
+  // send path works in dev/preview without it.
+  expoAccessToken: () => optional("EXPO_ACCESS_TOKEN"),
+  // Override the Expo push endpoint (tests / self-hosted). Defaults to Expo's
+  // hosted service.
+  expoPushUrl: () =>
+    optional("EXPO_PUSH_URL") ?? "https://exp.host/--/api/v2/push/send",
+
+  // Sign in with Apple: the audience the identity token must be issued for.
+  // For a native iOS app this is the app's bundle id. Defaults to the
+  // committed bundle id in apps/mobile/app.json; override only if the bundle
+  // id changes or a services-id (web) flow is added later. A comma-separated
+  // list is accepted so the native app + a future web service id can both
+  // validate.
+  appleAllowedAudiences: (): string[] =>
+    (optional("APPLE_BUNDLE_ID") ?? "com.agentplain.app")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
 };

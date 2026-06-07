@@ -50,9 +50,27 @@ const cookieOpts = (origin: string, remember: boolean) => {
   return { ...base, maxAge: REMEMBER_MAX_AGE_SECONDS };
 };
 
-export async function readSession(): Promise<SessionPayload | null> {
-  const jar = await cookies();
-  const raw = jar.get(env.sessionCookieName())?.value;
+// Seal/unseal the raw session token, decoupled from the cookie jar. The web
+// flow seals into an httpOnly cookie (writeSession); the mobile flow returns
+// the SAME sealed string in a JSON body so a native client can store it in
+// SecureStore and replay it as a bearer credential. There is exactly one
+// iron-session boundary (this file) — both surfaces share it, so a future
+// seal-format change is a one-file edit. See lib/auth/mobile-session.ts.
+export async function sealSessionToken(
+  payload: SessionPayload,
+  options: WriteSessionOptions = {},
+): Promise<string> {
+  const remember = options.remember ?? true;
+  const sealTtl = remember ? REMEMBER_MAX_AGE_SECONDS : SESSION_COOKIE_SEAL_TTL_SECONDS;
+  return sealData(payload, {
+    password: env.sessionPassword(),
+    ttl: sealTtl,
+  });
+}
+
+export async function unsealSessionToken(
+  raw: string,
+): Promise<SessionPayload | null> {
   if (!raw) return null;
   try {
     return await unsealData<SessionPayload>(raw, {
@@ -63,16 +81,18 @@ export async function readSession(): Promise<SessionPayload | null> {
   }
 }
 
+export async function readSession(): Promise<SessionPayload | null> {
+  const jar = await cookies();
+  const raw = jar.get(env.sessionCookieName())?.value;
+  return unsealSessionToken(raw ?? "");
+}
+
 export async function writeSession(
   payload: SessionPayload,
   options: WriteSessionOptions = {},
 ): Promise<void> {
   const remember = options.remember ?? true;
-  const sealTtl = remember ? REMEMBER_MAX_AGE_SECONDS : SESSION_COOKIE_SEAL_TTL_SECONDS;
-  const sealed = await sealData(payload, {
-    password: env.sessionPassword(),
-    ttl: sealTtl,
-  });
+  const sealed = await sealSessionToken(payload, { remember });
   const jar = await cookies();
   jar.set(
     env.sessionCookieName(),

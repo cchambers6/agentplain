@@ -48,8 +48,15 @@ export {
   readSession,
   writeSession,
   clearSession,
+  sealSessionToken,
+  unsealSessionToken,
   type SessionPayload,
 } from "./session";
+export {
+  extractMobileToken,
+  readMobileSession,
+  requireMobileWorkspaceMember,
+} from "./mobile-session";
 export {
   signUpBrokerOwner,
   requestMagicLink,

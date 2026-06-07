@@ -10,7 +10,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test \"tests/*.test.ts\" \"lib/**/*.test.ts\"",
-    "test:ui": "tsx --tsconfig ./tests/tsconfig.test.json --test \"tests/customer-workspace-home.test.tsx\" \"tests/customer-approvals.test.tsx\" \"tests/customer-talk.test.tsx\"",
+    "test:ui": "tsx --tsconfig ./tests/tsconfig.test.json --test \"tests/customer-workspace-home.test.tsx\" \"tests/customer-approvals.test.tsx\" \"tests/customer-talk.test.tsx\" \"tests/customer-settings-states.test.tsx\" \"tests/customer-visibility-states.test.tsx\" \"tests/operator-workspace-detail.test.tsx\"",
     "check:schema-drift": "tsx scripts/check-schema-drift.ts",
     "encrypt:payloads-at-rest": "tsx scripts/encrypt-payloads-at-rest.ts",
     "prisma:generate": "prisma generate",

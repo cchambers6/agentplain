@@ -234,6 +234,7 @@ export async function runFollowUpChaserSweep(
         lookbackDays,
         staleAfterDays: skillConfig.staleAfterDays,
         maxNudgesPerRun: skillConfig.maxNudgesPerRun,
+        nudgeTone: skillConfig.nudgeTone,
       });
       if (!run.ok) {
         if (run.error.code === 'NOT_CONFIGURED') {

@@ -32,7 +32,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { Vertical, WebhookEvent, Workspace } from '@prisma/client';
-import { loadCorpusFor, scanCorpus } from '../agents/sentinel';
+import { loadCorpusFor, scanCorpus, isVerticalLiveAllowed } from '../agents/sentinel';
 import { getLlmProvider } from '../llm';
 import type { LlmProvider } from '../llm/types';
 import { renderPreferencesBlock } from '../preferences/render';
@@ -474,9 +474,17 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
   // honestly rooting.
   if (outcome.draft && !disabledDisciplines.has('legal')) {
     const corpus = loadCorpusFor(prompts.verticalSlug);
-    if (corpus) {
+    // Go-live gate: a vertical's corpus only fires live when ops has
+    // cleared it (real-estate is baseline; mortgage/insurance/etc. require
+    // COMPLIANCE_CORPUS_COUNSEL_REVIEWED). Counsel-handoff DRAFT corpora
+    // load but stay advisory-only — they never reach the scanner here.
+    if (corpus && isVerticalLiveAllowed(prompts.verticalSlug)) {
       const hasLiteralMatchRule = corpus.rules.some(
-        (r) => r.purpose === 'literal-match' && !r.unverified && (r.triggers?.length ?? 0) > 0,
+        (r) =>
+          r.purpose === 'literal-match' &&
+          !r.unverified &&
+          r.counselReviewStatus !== 'rejected' &&
+          (r.triggers?.length ?? 0) > 0,
       );
       if (hasLiteralMatchRule) {
         const tScan = Date.now();

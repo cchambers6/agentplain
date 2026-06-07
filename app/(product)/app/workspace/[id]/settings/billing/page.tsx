@@ -10,6 +10,7 @@ import {
 import { withWorkspace } from "@/lib/auth";
 import { withRls } from "@/lib/db";
 import { getWorkspaceBudgetSnapshot } from "@/lib/billing/budget";
+import { recommendBudgetCapUsd } from "@/lib/billing/recommendations";
 import { formatMicroCentsAsUsd } from "@/lib/billing/usage/pricing";
 import {
   PARTNER_RESERVED_HOURS_PER_MONTH,
@@ -114,6 +115,15 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
     : null;
   const hasPaymentMethod = Boolean(subscription?.defaultPaymentMethodId);
   const currentSeats = subscription?.seats ?? 1;
+
+  // Advisory recommended monthly budget (MRR × 0.30, lib/billing/recommendations.ts).
+  // Customer-facing copy only — nothing is enforced unless the operator sets an
+  // explicit cap on this workspace. Max (quote-based) has no productized price,
+  // so no recommendation.
+  const monthlyRevenueUsd =
+    charge && tier !== "max" ? charge.totalCents / 100 : null;
+  const recommendedBudgetUsd =
+    monthlyRevenueUsd !== null ? recommendBudgetCapUsd(monthlyRevenueUsd) : null;
 
   return (
     <div>
@@ -396,21 +406,19 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
             </section>
           ) : null}
 
-          {/* Monthly token budget vs the allowance included with the plan —
-              transparency so there's never a surprise overage. Hidden only
-              when the snapshot can't be resolved (should not happen for a
-              subscribed workspace). */}
+          {/* Monthly token activity — transparency so there's never a surprise
+              overage. Shows last-30-day spend against the workspace's explicit
+              cap when an operator has set one (otherwise no cap), plus the
+              recommended budget for the plan as advisory copy. Hidden only when
+              the snapshot can't be resolved (should not happen for a subscribed
+              workspace). */}
           {budgetSnapshot ? (
             <BudgetSummary
-              status={budgetSnapshot.status}
-              spendUsd={formatMicroCentsAsUsd(budgetSnapshot.spendMicroCents)}
-              allowanceUsd={
-                budgetSnapshot.ceilingMicroCents === null
-                  ? null
-                  : formatMicroCentsAsUsd(budgetSnapshot.ceilingMicroCents)
-              }
-              fraction={budgetSnapshot.fraction}
-              monthLabel={formatMonth(budgetSnapshot.periodStart)}
+              state={budgetSnapshot.state}
+              spendUsd={formatMicroCentsAsUsd(budgetSnapshot.consumedMicroCents)}
+              capUsd={budgetSnapshot.capUsdMonthly}
+              percentUsed={budgetSnapshot.percentUsed}
+              recommendedUsd={recommendedBudgetUsd}
             />
           ) : null}
 
@@ -732,14 +740,4 @@ function derivePeriodStart(currentPeriodEnd: Date | null): Date | null {
   const d = new Date(currentPeriodEnd);
   d.setUTCMonth(d.getUTCMonth() - 1);
   return d;
-}
-
-// "June 2026" for the budget allowance card. UTC to match the snapshot's
-// calendar-month window (lib/billing/budget.ts#startOfMonthUtc).
-function formatMonth(date: Date): string {
-  return date.toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
 }

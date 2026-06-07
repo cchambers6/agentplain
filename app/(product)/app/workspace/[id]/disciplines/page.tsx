@@ -254,7 +254,7 @@ export default async function DisciplinesPanelPage({ params }: PageProps) {
             <footer className="mt-auto flex flex-wrap items-center gap-3 border-t border-rule pt-4">
               <Link
                 href={`/app/workspace/${workspaceId}/disciplines/${card.id}`}
-                className="inline-flex items-center justify-center border border-ink bg-paper px-3 py-2 font-sans text-sm text-ink underline-offset-4 hover:underline"
+                className="inline-flex min-h-[44px] items-center justify-center border border-ink bg-paper px-3 py-2 font-sans text-sm text-ink underline-offset-4 transition hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
                 aria-label={`Open ${card.name} detail`}
               >
                 open detail

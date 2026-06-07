@@ -33,15 +33,21 @@ import {
   type BoardRow,
   type ClassifiedBoard,
 } from "@/lib/operator/leadership-data";
+import type { WorkspaceDriftRow } from "@/lib/feedback";
 
 interface LeadershipBoardViewProps {
   board: ClassifiedBoard;
   now: Date;
+  /** Cross-workspace correction-rate signal — workspaces ranked by how
+   *  often they correct the fleet. Optional so existing callers/tests that
+   *  don't pass it still render. */
+  driftSignal?: WorkspaceDriftRow[];
 }
 
 export default function LeadershipBoardView({
   board,
   now,
+  driftSignal = [],
 }: LeadershipBoardViewProps) {
   const anyObservations = board.tiers.some((t) =>
     t.rows.some((r) => r.observation !== null),
@@ -76,6 +82,8 @@ export default function LeadershipBoardView({
       </header>
 
       <SummaryRow summary={board.summary} />
+
+      <FeedbackDriftSignal rows={driftSignal} />
 
       {anyObservations ? (
         <div className="space-y-10">
@@ -141,6 +149,62 @@ function SummaryRow({ summary }: { summary: ClassifiedBoard["summary"] }) {
         </div>
       ))}
     </div>
+  );
+}
+
+/**
+ * Cross-workspace feedback-drift signal. Surfaces the workspaces correcting
+ * the fleet most over the trailing window — the fleet-level signal for
+ * which skills need tuning. Sourced live (not from the snapshot) by the
+ * page. Renders an explicit empty state so a blank list reads as "no
+ * corrections yet", never "data missing".
+ */
+function FeedbackDriftSignal({ rows }: { rows: WorkspaceDriftRow[] }) {
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="font-display text-2xl text-ink">
+          Feedback drift &mdash; last 30 days
+        </h2>
+        <p className="mt-1 max-w-2xl text-sm text-ink-soft">
+          Workspaces ranked by how often they correct the fleet on{" "}
+          <span className="font-mono text-xs">/approvals</span>. A high rate is
+          the signal a skill needs tuning &mdash; the weekly drift sweep turns
+          the same corrections into capability proposals.
+        </p>
+      </div>
+      {rows.length === 0 ? (
+        <div className="border border-rule bg-paper-deep px-4 py-5 text-sm text-ink-soft">
+          No corrections recorded in the last 30 days. Customer feedback from{" "}
+          <span className="font-mono text-xs">/approvals</span> lands here as it
+          comes in.
+        </div>
+      ) : (
+        <div className="border border-rule bg-paper">
+          <ul className="divide-y divide-rule">
+            {rows.map((row, i) => (
+              <li
+                key={row.workspaceId}
+                className="grid grid-cols-[auto_1.6fr_0.8fr_1fr] items-center gap-3 px-4 py-3"
+              >
+                <span className="font-mono text-[11px] text-mute">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="truncate text-sm text-ink" title={row.workspaceName}>
+                  {row.workspaceName}
+                </span>
+                <span className="font-display text-2xl leading-none text-clay-deep">
+                  {row.corrections}
+                </span>
+                <span className="font-mono text-[11px] uppercase tracking-eyebrow text-mute">
+                  {row.topCategory ? `mostly ${row.topCategory}` : "—"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
   );
 }
 

@@ -22,7 +22,12 @@ export const rule: ComplianceRule = {
     accessedAt: "2026-05-12",
   },
   literalText: `[UNVERIFIED — needs counsel] Substance: under the Georgia Unfair Trade Practices Act (O.C.G.A. § 33-6-4), it is an unfair trade practice for an insurer, producer, or other licensee, knowingly, to permit or offer to make or make any insurance contract or agreement as to such contract other than as plainly expressed in the contract issued thereon, or to pay, allow, give, or offer to pay, allow, or give, directly or indirectly, as an inducement to such insurance contract, any rebate of premiums, any special favor or advantage in the dividends or other benefits, or any valuable consideration or inducement whatever not specified in the contract.`,
+  purpose: "counsel-reference",
+  severity: "blocking",
+  counselReviewStatus: "draft",
   unverified: true,
+  safeRewrite:
+    "Strike any offer of value not specified in the policy as an inducement to buy — premium rebates, gift cards, 'cash back,' or special favors. Permissible value-added services are narrow and state-capped (NAIC Model #880 was amended 2020); describe only services that fall under Georgia's allowance and never frame them as a reward for purchasing.",
   drafterNotes:
     "Counsel: please confirm whether the operative subsection is (b)(7) or (b)(8) of O.C.G.A. § 33-6-4 (rendering differs across published copies) and replace placeholder with the canonical statutory text.",
 };

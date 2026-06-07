@@ -22,7 +22,12 @@ export const rule: ComplianceRule = {
     accessedAt: "2026-05-12",
   },
   literalText: `[UNVERIFIED — needs counsel] Substance: the Georgia Residential Mortgage Act (O.C.G.A. Title 7, Chapter 1, Article 13) requires a license from the Department of Banking and Finance to act as a mortgage broker, mortgage lender, or mortgage loan originator with respect to a residential mortgage loan on Georgia real property; specifies licensing standards, examinations, and bonding; and prohibits unlicensed activity. Implementing regulations at Rules of the Department of Banking and Finance, Chapter 80-11.`,
+  purpose: "counsel-reference",
+  severity: "info",
+  counselReviewStatus: "draft",
   unverified: true,
+  safeRewrite:
+    "Confirm the workspace's Georgia mortgage-broker/lender license (and each MLO's GA license) is active before any customer-facing copy solicits, advertises, or negotiates a residential mortgage loan on Georgia property. Do not imply Georgia lending authority the licensee does not hold.",
   drafterNotes:
     "Counsel: please confirm citation form (some sources cite as O.C.G.A. § 7-1-1000 et seq.) and replace placeholder with the operative prohibition language. Sentinel will not match on this rule until literal is filled in.",
 };

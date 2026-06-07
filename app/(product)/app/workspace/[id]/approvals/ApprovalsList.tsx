@@ -8,7 +8,15 @@ import {
 } from "@/components/ui/ap";
 import { listDisciplines, type DisciplineId } from "@/lib/disciplines";
 import { bucketApprovals } from "@/lib/disciplines/grouping";
-import { decideApprovalAction, editApprovalDraftAction } from "./actions";
+import {
+  FEEDBACK_CATEGORIES,
+  CATEGORY_DESCRIPTION,
+} from "@/lib/feedback/types";
+import {
+  decideApprovalAction,
+  editApprovalDraftAction,
+  submitDraftFeedbackAction,
+} from "./actions";
 import { ApprovalCard, type ApprovalRow } from "./ApprovalCard";
 
 export type { ApprovalRow } from "./ApprovalCard";
@@ -42,6 +50,7 @@ export function ApprovalsList({
 }: ApprovalsListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [feedbackId, setFeedbackId] = useState<string | null>(null);
   const [isRejectPending, startReject] = useTransition();
   const [activeFilter, setActiveFilter] = useState<FilterValue>(
     initialDiscipline ?? ALL,
@@ -51,6 +60,7 @@ export function ApprovalsList({
   const [sort, setSort] = useState<SortValue>("oldest");
   const editing = rows.find((r) => r.id === editingId) ?? null;
   const rejecting = rows.find((r) => r.id === rejectingId) ?? null;
+  const givingFeedback = rows.find((r) => r.id === feedbackId) ?? null;
   const disciplines = listDisciplines();
 
   // Apply the discipline filter + sort once, up front. The pure-function
@@ -108,6 +118,13 @@ export function ApprovalsList({
             edit
           </ApHeritageButton>
         ) : null}
+        <button
+          type="button"
+          onClick={() => setFeedbackId(row.id)}
+          className="inline-flex items-center justify-center gap-2 rounded-sm px-3 py-2 font-sans text-sm font-medium text-ink-soft underline-offset-4 transition hover:text-ink hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+        >
+          doesn&rsquo;t sound like us
+        </button>
         <button
           type="button"
           onClick={() => setRejectingId(row.id)}
@@ -268,6 +285,83 @@ export function ApprovalsList({
               <button
                 type="button"
                 onClick={() => setEditingId(null)}
+                className="inline-flex items-center justify-center rounded-none px-3 py-2 font-sans text-sm text-ink underline-offset-4 hover:underline"
+              >
+                cancel
+              </button>
+            </div>
+          </form>
+        ) : null}
+      </ApPaperSheet>
+
+      <ApPaperSheet
+        open={givingFeedback !== null}
+        onClose={() => setFeedbackId(null)}
+        eyebrow="shape the next draft"
+        title="Doesn&rsquo;t sound like us"
+      >
+        {givingFeedback ? (
+          <form
+            action={async (form: FormData) => {
+              await submitDraftFeedbackAction(form);
+              setFeedbackId(null);
+            }}
+          >
+            <input type="hidden" name="workspaceId" value={workspaceId} />
+            <input type="hidden" name="itemId" value={givingFeedback.id} />
+            <input
+              type="hidden"
+              name="targetSkillSlug"
+              value={givingFeedback.agentSlug}
+            />
+            <p className="text-[14px] leading-relaxed text-ink-soft">
+              Tell Plaino what was off. We log it against{" "}
+              <span className="font-mono text-[13px] text-ink">
+                {givingFeedback.agentSlug}
+              </span>
+              , fold it into the next draft, and review it in our weekly
+              sweep. The draft stays in your queue — this is feedback, not a
+              decision.
+            </p>
+
+            <label className="mt-6 block">
+              <span className="mb-2 block font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                what was off
+              </span>
+              <select
+                name="category"
+                defaultValue="tone"
+                className="block w-full rounded-none border border-rule bg-paper p-3 font-sans text-[15px] text-ink focus:border-ink focus:outline-none"
+              >
+                {FEEDBACK_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {CATEGORY_DESCRIPTION[c]}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="mt-4 block">
+              <span className="mb-2 block font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                what should change
+              </span>
+              <textarea
+                name="reason"
+                required
+                rows={6}
+                maxLength={2000}
+                placeholder="e.g. Too formal — we'd open with the first name and drop the 'Dear'."
+                className="block w-full rounded-none border border-rule bg-paper p-3 font-sans text-[15px] leading-relaxed text-ink focus:border-ink focus:outline-none"
+              />
+            </label>
+
+            <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-rule pt-5">
+              <ApHeritageButton variant="primary" type="submit">
+                send feedback
+              </ApHeritageButton>
+              <button
+                type="button"
+                onClick={() => setFeedbackId(null)}
                 className="inline-flex items-center justify-center rounded-none px-3 py-2 font-sans text-sm text-ink underline-offset-4 hover:underline"
               >
                 cancel

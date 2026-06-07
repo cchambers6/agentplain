@@ -129,7 +129,7 @@ function FilterStrip({
             key={item.key ?? "all"}
             href={item.key ? `${base}?kind=${item.key}` : base}
             aria-current={active ? "page" : undefined}
-            className={`rounded-none border px-3 py-2 font-mono text-[11px] tracking-eyebrow uppercase transition focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper ${
+            className={`inline-flex min-h-[44px] items-center rounded-none border px-3 py-2 font-mono text-[11px] tracking-eyebrow uppercase transition focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper ${
               active
                 ? "border-clay bg-clay text-paper"
                 : "border-rule bg-paper text-mute hover:border-ink hover:text-ink"

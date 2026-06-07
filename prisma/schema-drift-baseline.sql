@@ -44,6 +44,12 @@ ALTER TABLE "Membership" DROP CONSTRAINT "Membership_workspaceId_fkey";
 ALTER TABLE "OnboardingState" DROP CONSTRAINT "OnboardingState_workspaceId_fkey";
 
 -- DropForeignKey
+ALTER TABLE "PreferenceFeedback" DROP CONSTRAINT "PreferenceFeedback_userId_fkey";
+
+-- DropForeignKey
+ALTER TABLE "PreferenceFeedback" DROP CONSTRAINT "PreferenceFeedback_workspaceId_fkey";
+
+-- DropForeignKey
 ALTER TABLE "PreferenceSignal" DROP CONSTRAINT "PreferenceSignal_workspaceId_fkey";
 
 -- DropForeignKey
@@ -141,6 +147,9 @@ ALTER TABLE "Membership" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AlterTable
 ALTER TABLE "OnboardingState" ALTER COLUMN "id" DROP DEFAULT;
+
+-- AlterTable
+ALTER TABLE "PreferenceFeedback" ALTER COLUMN "id" DROP DEFAULT;
 
 -- AlterTable
 ALTER TABLE "PreferenceSignal" ALTER COLUMN "id" DROP DEFAULT;
@@ -282,6 +291,12 @@ ALTER TABLE "WorkspacePreference" ADD CONSTRAINT "WorkspacePreference_workspaceI
 
 -- AddForeignKey
 ALTER TABLE "PreferenceSignal" ADD CONSTRAINT "PreferenceSignal_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PreferenceFeedback" ADD CONSTRAINT "PreferenceFeedback_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PreferenceFeedback" ADD CONSTRAINT "PreferenceFeedback_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- RenameIndex
 ALTER INDEX "HandoffLogEntry_subject_idx" RENAME TO "HandoffLogEntry_workspaceId_relatedSubjectTable_relatedSubj_idx";

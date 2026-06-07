@@ -24,6 +24,7 @@ import {
   CUSTOMER_FILES_INGESTION_SWEEP_FUNCTION_ID,
   customerFilesIngestionSweepFn,
   runCustomerFilesIngestionSweep,
+  workspaceSweepFilter,
 } from '../customer-files-ingestion-sweep';
 import { disableFlagEnvName } from '../../disable-flag';
 import { FixtureFileSource } from '@/lib/customer-files';
@@ -64,6 +65,24 @@ class UnconfiguredSource implements IFileSource {
     return fileSourceError('NOT_CONFIGURED', 'never reached in the unconfigured path');
   }
 }
+
+describe('workspaceSweepFilter — immediate-ingestion scoping', () => {
+  it('requires an active membership and no id filter for the full cron sweep', () => {
+    const filter = workspaceSweepFilter();
+    assert.deepEqual(filter, {
+      memberships: { some: { status: 'ACTIVE' } },
+    });
+    assert.equal('id' in filter, false);
+  });
+
+  it('narrows to a single workspace id when the Drive connect scopes the sweep', () => {
+    const filter = workspaceSweepFilter(WORKSPACE_A);
+    assert.equal(filter.id, WORKSPACE_A);
+    // The active-membership guard still applies — a scoped sweep never
+    // ingests for a dormant/forbidden workspace.
+    assert.deepEqual(filter.memberships, { some: { status: 'ACTIVE' } });
+  });
+});
 
 describe('runCustomerFilesIngestionSweep — NOT_CONFIGURED workspaces NO-OP', () => {
   it('counts unconfigured workspaces as skipped, not failed', async () => {

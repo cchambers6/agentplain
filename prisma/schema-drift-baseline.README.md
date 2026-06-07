@@ -60,7 +60,7 @@ it does NOT appear here.) The same hand-edit-out rule applies to any
 future reconciliation migration: preserve these four `CREATE INDEX … gin`
 statements.
 
-### 2. `ALTER COLUMN "id" DROP DEFAULT` on 20 tables
+### 2. `ALTER COLUMN "id" DROP DEFAULT` on 21 tables
 
 Migrations declared a Postgres-level `gen_random_uuid()` DEFAULT on every
 UUID id column. The current schema declares `@default(uuid())` which
@@ -68,17 +68,17 @@ Prisma generates *client-side* (no Postgres-level DEFAULT). Tables
 affected: `AuditLog`, `BillingEvent`, `CapabilityProposal`,
 `ComplianceFlag`, `Embedding`, `HandoffLogEntry`,
 `IntegrationCredential`, `KnowledgeDocument`, `MagicLinkToken`,
-`Membership`, `OnboardingState`, `PreferenceSignal`, `Subscription`,
-`WebhookEvent`, `WebhookSubscription`, `WorkApprovalQueueItem`,
-`WorkThresholdConfig`, `Workspace`, `WorkspaceInvoice`,
-`WorkspacePreference`.
+`Membership`, `OnboardingState`, `PreferenceFeedback`, `PreferenceSignal`,
+`Subscription`, `WebhookEvent`, `WebhookSubscription`,
+`WorkApprovalQueueItem`, `WorkThresholdConfig`, `Workspace`,
+`WorkspaceInvoice`, `WorkspacePreference`.
 
 This is **cosmetic** — every insert goes through the Prisma client which
 supplies the UUID, so the database never relies on the missing default.
 Removing the defaults would touch every table; not worth a churn
 migration for zero runtime difference.
 
-### 3. All 22 FKs dropped + re-added (identical semantics)
+### 3. All 24 FKs dropped + re-added (identical semantics)
 
 Each `ALTER TABLE … DROP CONSTRAINT … _fkey` is paired with an
 `ALTER TABLE … ADD CONSTRAINT … _fkey FOREIGN KEY … REFERENCES …`. Same

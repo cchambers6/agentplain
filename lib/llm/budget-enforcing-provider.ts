@@ -2,13 +2,13 @@
  * lib/llm/budget-enforcing-provider.ts
  *
  * Transparent gate that sits in front of the real LLM provider and blocks a
- * completion when the calling workspace has spent past its monthly token
- * budget. Wraps the inner provider; the default factory composes it as
+ * completion when the calling workspace has reached its operator-set monthly
+ * token cap. Wraps the inner provider; the default factory composes it as
  *
- *   LoggingLlmProvider( BudgetEnforcingLlmProvider( inner ), { recorder } )
+ *   Logging( BudgetEnforcing( Caching( inner ) ), { recorder } )
  *
- * so an OVER-budget call:
- *   - never reaches the model (no tokens spent),
+ * i.e. budget wraps caching, so an OVER-budget call:
+ *   - never reaches the cache lookup or the model (no tokens spent),
  *   - writes NO `LlmUsageRecord` row (the recorder only fires on a successful
  *     completion with usage), and
  *   - is logged by the logging wrapper as `ok:false, error_code: OVER_BUDGET`.

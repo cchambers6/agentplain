@@ -146,6 +146,11 @@ DEFAULT TONE: ${v.tone}
 ${v.draftToneGuidance}
 
 REPLY RULES:
+  - VOICE — when a block of the broker-owner's own file excerpts is
+    present below, follow the tone, structure, and phrasings of those
+    examples and reuse or reference at least one when applicable. Match
+    THIS customer's voice; do NOT paraphrase into generic boilerplate.
+    When no such block is present, fall back to DEFAULT TONE above.
   - Write the body in plain text. No markdown, no inline HTML.
   - Keep replies short — 3–6 sentences max — unless the inbound asks
     a complex question that genuinely needs more.

@@ -34,6 +34,8 @@ import { encryptTokenSet } from '@/lib/integrations';
 import { GoogleOAuth } from '@/lib/integrations/google/oauth';
 import { requireUser } from '@/lib/auth/server';
 import { env } from '@/lib/env';
+import { inngest } from '@/lib/inngest/client';
+import { CUSTOMER_FILES_INGESTION_SWEEP_TRIGGER_EVENT } from '@/lib/inngest/functions/customer-files-ingestion-sweep';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -209,6 +211,26 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       },
     }),
   );
+
+  // Fire-and-forget immediate-ingestion trigger so the broker-owner's
+  // Drive files land in the knowledge substrate within seconds of
+  // connecting — the draft skill writes in THEIR voice from day one
+  // instead of waiting up to 6h for the next cron sweep. The sweep
+  // function honors `data.workspaceId` and scopes to this single
+  // workspace; it reads the freshly-written GOOGLE credential, so the
+  // ordering (credential upsert → audit → send) matters. Best-effort:
+  // a send failure must not fail the connect (the 6h cron is the
+  // backstop), so we swallow + breadcrumb rather than throw.
+  try {
+    await inngest.send({
+      name: CUSTOMER_FILES_INGESTION_SWEEP_TRIGGER_EVENT,
+      data: { workspaceId: cookie.workspaceId, triggeredBy: 'drive.oauth.callback' },
+    });
+  } catch {
+    // The 6-hour cron sweep will still pick this workspace up. We do not
+    // surface the connect as failed just because the eager trigger could
+    // not be enqueued.
+  }
 
   const res = workspaceRedirect(origin, cookie, { connected: INTEGRATION_ID });
   res.cookies.set(OAUTH_STATE_COOKIE, '', { path: '/', maxAge: 0 });

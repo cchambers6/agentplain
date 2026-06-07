@@ -22,6 +22,11 @@ export const rule: ComplianceRule = {
     accessedAt: "2026-05-12",
   },
   literalText: `(b) Purpose. The purpose of this part is to promote the informed use of consumer credit by requiring disclosures about its terms and cost, to ensure that consumers are provided with greater and more timely information on the nature and costs of the residential real estate settlement process, and to effect certain changes in the settlement process for residential real estate that will result in more effective advance disclosure to home buyers and sellers of settlement costs.`,
+  purpose: "counsel-reference",
+  severity: "info",
+  counselReviewStatus: "draft",
+  safeRewrite:
+    "Do not state or imply a rate, payment, APR, or 'cost of credit' figure in customer-facing copy unless the corresponding TILA/Reg Z disclosures are delivered with it. Quote terms only from the issued Loan Estimate / Closing Disclosure, not ad-hoc in correspondence.",
   drafterNotes:
     "Counsel: the field-by-field disclosure list (12 CFR § 1026.18 for closed-end non-mortgage; § 1026.37 for the Loan Estimate; § 1026.38 for the Closing Disclosure) is what sentinel actually needs to match against. This excerpt establishes purpose; the field-level literals are the next pass.",
 };

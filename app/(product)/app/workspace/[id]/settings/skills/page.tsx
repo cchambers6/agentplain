@@ -34,6 +34,7 @@ import {
   saveFollowUpChaserConfigAction,
   saveInboxTriageConfigAction,
 } from "./actions";
+import { SettingAffects } from "../SettingAffects";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -84,6 +85,13 @@ export default async function SkillsSettingsPage({ params }: PageProps) {
         the running skill doesn't honor them yet — they wire up in a
         future release, and the badge will flip when they do.
       </p>
+      <SettingAffects>
+        How each skill behaves on its next fire: wait-days, per-run cap, and
+        nudge tone for the follow-up chaser; priority keywords plus
+        flag/auto-archive sender lists for inbox triage; and meeting length,
+        business hours, and inter-meeting buffer for the chief-of-staff
+        scheduler.
+      </SettingAffects>
 
       <ul className="mt-8 space-y-4">
         <li>

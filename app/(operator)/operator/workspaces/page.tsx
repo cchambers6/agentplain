@@ -14,6 +14,13 @@
 // the workspace flag is the durable record, and any associated invoice is
 // raised out-of-band through manual invoicing.
 //
+// The "Budget (mo)" column reads the SAME `WorkspaceBudgetStatus` seam the
+// per-workspace gate enforces on (`lib/billing/budget.ts`). It shows
+// month-to-date token spend against each workspace's operator-set explicit
+// cap; a WARN/OVER chip means "review this workspace." A workspace with no
+// cap configured shows NO CAP (never throttled) — open the deep-dive to set a
+// recommended cap.
+//
 // RLS: layout enforces `isOperator`; defense-in-depth check below.
 
 import Link from "next/link";
@@ -22,8 +29,8 @@ import { withSystemContext } from "@/lib/db/rls";
 import { requireUser } from "@/lib/auth/server";
 import {
   getFleetBudgetSnapshots,
-  type BudgetStatus,
-  type WorkspaceBudgetSnapshot,
+  type BudgetState,
+  type WorkspaceBudgetStatus,
 } from "@/lib/billing/budget";
 import { formatMicroCentsAsUsd } from "@/lib/billing/usage/pricing";
 import {
@@ -88,16 +95,17 @@ export default async function OperatorWorkspacesPage(props: PageProps) {
     }),
   );
 
-  // Per-workspace token-budget consumption this calendar month (two queries
-  // total, not one-per-workspace — see lib/billing/budget.ts). Operator-facing
-  // cost governor: a WATCH/OVER chip means "review this workspace's tier."
-  const budgetSnapshots = await withSystemContext((tx) =>
+  // Per-workspace token-budget consumption (two queries total, not
+  // one-per-workspace — see lib/billing/budget.ts). Derived through the same
+  // deriveBudgetStatus the gate throttles on, so the chip here matches what a
+  // customer is throttled on. A WARN/OVER chip means "review this workspace."
+  const budgetStatuses = await withSystemContext((tx) =>
     getFleetBudgetSnapshots(tx, {}),
   );
-  const budgetByWorkspace = new Map<string, WorkspaceBudgetSnapshot>();
-  for (const s of budgetSnapshots) budgetByWorkspace.set(s.workspaceId, s);
-  const atRiskCount = budgetSnapshots.filter(
-    (s) => s.status !== "OK",
+  const budgetByWorkspace = new Map<string, WorkspaceBudgetStatus>();
+  for (const s of budgetStatuses) budgetByWorkspace.set(s.workspaceId, s);
+  const atRiskCount = budgetStatuses.filter(
+    (s) => s.state === "WARN" || s.state === "OVER",
   ).length;
 
   return (
@@ -123,10 +131,10 @@ export default async function OperatorWorkspacesPage(props: PageProps) {
       {atRiskCount > 0 ? (
         <div className="mt-6 border border-flag bg-paper p-4 text-[14px] text-ink">
           <strong>{atRiskCount}</strong> workspace
-          {atRiskCount === 1 ? "" : "s"} at or over the monthly token-budget
-          ceiling (≥80% of 30%-of-MRR). Review tier / per-skill model
-          override — these are the margin-risk accounts (production+growth
-          plan §2).
+          {atRiskCount === 1 ? "" : "s"} at or near their configured monthly
+          token cap. Open the deep-dive to review the cap or move the
+          workspace to a higher tier — these are the margin-risk accounts
+          (production+growth plan §2).
         </div>
       ) : null}
 
@@ -150,15 +158,24 @@ export default async function OperatorWorkspacesPage(props: PageProps) {
                 className="border-b border-rule last:border-b-0 align-top"
               >
                 <td className="px-4 py-3">
-                  <p className="font-display text-[15px] leading-tight text-ink">
+                  <Link
+                    href={`/operator/workspaces/${w.id}`}
+                    className="font-display text-[15px] leading-tight text-ink underline decoration-rule underline-offset-4 hover:decoration-ink"
+                  >
                     {w.name}
-                  </p>
+                  </Link>
                   <p className="mt-1 font-mono text-[11px] uppercase text-mute">
                     {w.slug}
                   </p>
                   <p className="mt-1 font-mono text-[11px] text-mute">
                     {w.id}
                   </p>
+                  <Link
+                    href={`/operator/workspaces/${w.id}`}
+                    className="mt-1 inline-block font-mono text-[11px] text-mute underline hover:text-ink"
+                  >
+                    → deep-dive
+                  </Link>
                 </td>
                 <td className="px-4 py-3 font-mono text-[12px] uppercase text-ink-soft">
                   {w.vertical.toLowerCase().replace(/_/g, " ")}
@@ -193,7 +210,7 @@ export default async function OperatorWorkspacesPage(props: PageProps) {
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <BudgetCell snapshot={budgetByWorkspace.get(w.id) ?? null} />
+                  <BudgetCell status={budgetByWorkspace.get(w.id) ?? null} />
                 </td>
                 <td className="px-4 py-3">
                   <OverrideForm
@@ -232,46 +249,52 @@ export default async function OperatorWorkspacesPage(props: PageProps) {
   );
 }
 
-const BUDGET_STATUS_STYLE: Record<BudgetStatus, string> = {
+const BUDGET_STATE_STYLE: Record<BudgetState, string> = {
+  NO_CAP: "text-mute",
   OK: "text-moss",
-  WATCH: "text-clay",
+  WARN: "text-clay",
   OVER: "text-flag",
 };
 
 // Per-workspace token-budget cell. Shows month-to-date spend vs the
-// 30%-of-MRR ceiling + a status chip. Uncapped (Max) workspaces show the
-// spend with no ceiling. Source: lib/billing/budget.ts.
+// operator-set explicit cap + a state chip. Workspaces with no cap configured
+// show their spend with a NO CAP chip (never throttled). Source:
+// lib/billing/budget.ts.
 function BudgetCell({
-  snapshot,
+  status,
 }: {
-  snapshot: WorkspaceBudgetSnapshot | null;
+  status: WorkspaceBudgetStatus | null;
 }) {
-  if (!snapshot) {
+  if (!status) {
     return <span className="text-mute">—</span>;
   }
-  const spend = formatMicroCentsAsUsd(snapshot.spendMicroCents);
-  if (snapshot.ceilingMicroCents === null) {
+  const spend = formatMicroCentsAsUsd(status.consumedMicroCents);
+  if (status.capUsdMonthly === null) {
     return (
       <div className="text-[12px]">
         <p className="font-display text-[14px] text-ink">{spend}</p>
-        <p className="mt-1 font-mono text-[11px] uppercase text-mute">
-          uncapped
+        <p
+          className={`mt-1 font-mono text-[11px] uppercase tracking-eyebrow ${BUDGET_STATE_STYLE.NO_CAP}`}
+        >
+          no cap
         </p>
       </div>
     );
   }
-  const ceiling = formatMicroCentsAsUsd(snapshot.ceilingMicroCents);
-  const pct = Math.round(snapshot.fraction * 100);
+  const pct = Math.round((status.percentUsed ?? 0) * 100);
   return (
     <div className="text-[12px]">
       <p className="font-display text-[14px] text-ink">
         {spend}
-        <span className="text-mute"> / {ceiling}</span>
+        <span className="text-mute">
+          {" "}
+          / ${status.capUsdMonthly.toLocaleString("en-US")}
+        </span>
       </p>
       <p
-        className={`mt-1 font-mono text-[11px] uppercase tracking-eyebrow ${BUDGET_STATUS_STYLE[snapshot.status]}`}
+        className={`mt-1 font-mono text-[11px] uppercase tracking-eyebrow ${BUDGET_STATE_STYLE[status.state]}`}
       >
-        {snapshot.status} · {pct}%
+        {status.state} · {pct}%
       </p>
     </div>
   );

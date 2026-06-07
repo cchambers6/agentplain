@@ -113,6 +113,28 @@ export async function upsertOnboardingPreference(
   });
 }
 
+/** Set ONLY the drafting tone, leaving every other preference field
+ *  (learnedDraftNotes, categorizationNotes, calendarWindow) untouched.
+ *  The onboarding upsert nulls the sibling fields; this focused setter
+ *  is what the /settings/voice tone picker uses so changing tone later
+ *  never wipes accumulated learnings. */
+export async function setDraftingTone(
+  ctx: RlsContext,
+  args: { workspaceId: string; draftingTone: DraftingTone },
+): Promise<WorkspacePreferenceView> {
+  return withRls(ctx, async (tx) => {
+    const row = (await tx.workspacePreference.upsert({
+      where: { workspaceId: args.workspaceId },
+      create: {
+        workspaceId: args.workspaceId,
+        draftingTone: args.draftingTone,
+      },
+      update: { draftingTone: args.draftingTone },
+    })) as PrismaPreferenceRow;
+    return toView(row);
+  });
+}
+
 export interface AppendLearnedNoteArgs {
   workspaceId: string;
   note: string;

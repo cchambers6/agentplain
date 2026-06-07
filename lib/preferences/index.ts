@@ -7,6 +7,7 @@
 export {
   getWorkspacePreference,
   upsertOnboardingPreference,
+  setDraftingTone,
   appendLearnedDraftNote,
   recordPreferenceSignal,
   listPreferenceSignals,
@@ -15,6 +16,7 @@ export {
 export {
   captureDraftEditSignal,
   captureDraftRejectSignal,
+  captureVoiceCorrectionSignal,
   deriveEditNote,
 } from './capture';
 

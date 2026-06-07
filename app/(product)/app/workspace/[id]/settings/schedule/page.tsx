@@ -9,6 +9,7 @@ import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
 import { withRls } from "@/lib/db";
 import { servicePartnerForWorkspace } from "@/lib/onboarding/service-partner";
 import { ScheduleWindowForm } from "./ScheduleWindowForm";
+import { SettingAffects } from "../SettingAffects";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -75,6 +76,12 @@ export default async function ScheduleSettingsPage({ params }: PageProps) {
           skipped honestly — no draft, no LLM cost — and resumes on the
           next in-window fire.
         </p>
+        <SettingAffects>
+          When the windowed skill is allowed to fire. The follow-up chaser,
+          the chief-of-staff scheduler, and inbox triage each skip any fire
+          whose local hour or day falls outside the window — honestly, with
+          no draft and no LLM cost — and resume on the next in-window fire.
+        </SettingAffects>
       </header>
 
       <section>

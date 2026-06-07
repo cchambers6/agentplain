@@ -64,6 +64,7 @@ import {
 } from '@/lib/skills/config';
 import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
 import { isWorkspacePaused } from '@/lib/billing/workspace-paused-gate';
+import { gateSkillFire, type FireGateOutcome } from '@/lib/skills/fire-gate';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
 import {
@@ -100,6 +101,11 @@ export interface SchedulerSweepResult {
   workspacesSkippedDisciplineDisabled: number;
   /** Wave-2 marketplace gate — workspace uninstalled the skill. */
   workspacesSkippedNotInstalled: number;
+  /** Customer-control gate — workspace is paused (vacation/PTO/cutover)
+   *  OR the per-skill scheduling window excludes the current moment.
+   *  Mirrors the follow-up-chaser sweep's gate so /settings/pause +
+   *  /settings/schedule are honored for the scheduler too. */
+  workspacesSkippedFireGate: number;
   /** Total proposals (meetings + reply-drafts + to-dos) written. */
   proposalsWritten: number;
   /** Per-workspace failures — one row dies, the sweep keeps going. */
@@ -131,6 +137,10 @@ export interface RunSchedulerSweepArgs {
   readConfig?: (workspaceId: string) => Promise<ChiefOfStaffConfig>;
   /** Override the marketplace install check. Default = live reader. */
   isInstalled?: (workspaceId: string, vertical: Vertical) => Promise<boolean>;
+  /** Customer-control gate override. Tests pass a deterministic result;
+   *  production leaves undefined and the live reader hits
+   *  WorkspacePauseConfig + SkillScheduleWindow via the system context. */
+  gateFire?: (workspaceId: string) => Promise<FireGateOutcome>;
 }
 
 /**
@@ -153,6 +163,7 @@ export async function runSchedulerSweep(
     workspacesSkippedUnconfigured: 0,
     workspacesSkippedDisciplineDisabled: 0,
     workspacesSkippedNotInstalled: 0,
+    workspacesSkippedFireGate: 0,
     proposalsWritten: 0,
     failures: [],
   };
@@ -198,6 +209,31 @@ export async function runSchedulerSweep(
       continue;
     }
 
+    // Gate 4: vacation/PTO + scheduling-window check. Same gate the
+    // follow-up-chaser sweep uses — reads WorkspacePauseConfig +
+    // SkillScheduleWindow fresh per fire so /settings/pause (emergency
+    // stop) and /settings/schedule (per-skill window) actually halt the
+    // scheduler. Previously this sweep only honored the BILLING pause
+    // (Gate 0); a vacation pause or off-hours window left it firing.
+    // The skip is honest: no calendar read, no LLM cost, no /approvals
+    // row. A gate read error fails OPEN (allowed) so a transient DB blip
+    // doesn't silently stop the fleet.
+    const gateResult = await (args.gateFire
+      ? args.gateFire(ws.id)
+      : withSystemContext((tx) =>
+          gateSkillFire({
+            tx,
+            workspaceId: ws.id,
+            skillSlug: 'chief-of-staff-scheduler',
+            disciplineId: SCHEDULER_DISCIPLINE_ID,
+            now,
+          }),
+        ).catch((): FireGateOutcome => ({ allowed: true })));
+    if (!gateResult.allowed) {
+      result.workspacesSkippedFireGate += 1;
+      continue;
+    }
+
     // Build the fetcher (test stub or production multiplexer) and run
     // the skill. NOT_CONFIGURED here is a clean skip — the workspace
     // disconnected between candidate listing and execution.
@@ -228,6 +264,7 @@ export async function runSchedulerSweep(
           startLocalHour: skillConfig.businessHoursStart,
           endLocalHour: skillConfig.businessHoursEnd,
         },
+        bufferMinutes: skillConfig.bufferMinutes,
       });
       if (!run.ok) {
         if (run.error.code === 'NOT_CONFIGURED') {
@@ -352,6 +389,7 @@ export const schedulerSweepFn = inngest.createFunction(
                 with_proposals: out.workspacesWithProposals,
                 skipped_unconfigured: out.workspacesSkippedUnconfigured,
                 skipped_discipline_disabled: out.workspacesSkippedDisciplineDisabled,
+                skipped_fire_gate: out.workspacesSkippedFireGate,
                 proposals_written: out.proposalsWritten,
                 failed: out.failures.length,
               });

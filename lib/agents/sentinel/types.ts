@@ -85,6 +85,73 @@ export interface RuleCitation {
 export type RuleMatchPurpose = "literal-match" | "counsel-reference";
 
 /**
+ * How sentinel weights a flag for the operator. This is advisory metadata
+ * for the /approvals UI and the counsel-handoff packet — per
+ * `project_no_outbound_architecture.md` sentinel NEVER blocks a send, so
+ * `blocking` means "counsel-grade exposure, surface prominently," not
+ * "stop the draft."
+ *
+ * - `blocking`  — phrase is a probable per-se violation (e.g. a Reg Z
+ *   § 1026.24(i) prohibited representation, an FHA-protected-class
+ *   limitation). Operator should remove or rewrite before sending.
+ * - `advisory`  — phrase is lawful but conditions a duty (e.g. a Reg Z
+ *   § 1026.24(d)(1) triggering term that requires additional disclosure,
+ *   a claim-handling timeline reference). Operator should confirm the
+ *   accompanying requirement is satisfied.
+ * - `info`      — scope/routing rule with no draft-text match (e.g. a
+ *   licensure or regulator-identity rule). Surfaces as context only.
+ */
+export type RuleSeverity = "blocking" | "advisory" | "info";
+
+/**
+ * Per-rule counsel review status. Distinct from corpus-level
+ * `CorpusMetadata.status`: a corpus can be DRAFT overall while individual
+ * rules move through review independently.
+ *
+ * - `draft`    — drafted by the fleet, not yet counsel-reviewed (default).
+ * - `reviewed` — counsel has red-lined and approved this exact rule.
+ * - `rejected` — counsel reviewed and struck this rule; the scanner MUST
+ *   never fire it even if `unverified` was left unset.
+ *
+ * Relationship to `unverified`: `unverified` is the SCANNER GATE (a rule
+ * never fires live while `unverified === true`); `counselReviewStatus` is
+ * the HUMAN-FACING workflow state surfaced in the counsel-handoff packet
+ * and the operator UI. For LITERAL-MATCH rules the two stay consistent:
+ * `draft` ⟺ `unverified: true`, so a draft phrase never fires. A
+ * COUNSEL-REFERENCE rule never fires regardless, so it may carry
+ * `counselReviewStatus: 'draft'` with `unverified: false` when the drafter
+ * pulled authentic published text but counsel has not yet approved its
+ * use. The scanner additionally refuses to fire a `rejected` rule as a
+ * belt-and-suspenders guard.
+ */
+export type CounselReviewStatus = "draft" | "reviewed" | "rejected";
+
+/**
+ * A deterministic regular-expression trigger. Used where a literal phrase
+ * list cannot capture the pattern (e.g. "$0 down", "guaranteed … approval",
+ * a dollar/percentage figure). Still audit-defensible: the pattern IS the
+ * rule, and `example` shows exactly what it is meant to catch.
+ *
+ * Per the project memo (LITERAL MATCH ONLY ships live): regex triggers ride
+ * the SAME `unverified` / env gate as literal triggers — they do not fire
+ * live until counsel red-lines the rule AND the vertical's
+ * `COMPLIANCE_CORPUS_COUNSEL_REVIEWED` flag is set. Until then they are
+ * catalog content for the counsel-handoff packet only.
+ */
+export interface RuleRegexTrigger {
+  /** Source string for `new RegExp(pattern, flags)`. Author in lowercase; the scanner lowercases input before matching. */
+  pattern: string;
+  /** Regex flags (default `"i"` applied by the matcher if omitted). */
+  flags?: string;
+  /** One-line description of what the pattern catches — shown to counsel. */
+  description: string;
+  /** A string the pattern MUST match (pins the intended behavior in tests). */
+  example: string;
+  /** A near-miss string the pattern MUST NOT match (guards over-matching). */
+  counterExample: string;
+}
+
+/**
  * One regulatory rule. Each ships as its own `*-literal.ts` file so a
  * sentinel update touches one rule, not the entire vertical bundle.
  */
@@ -128,6 +195,33 @@ export interface ComplianceRule {
    * handoff packet instead. Each phrase MUST be lowercase.
    */
   triggers?: string[];
+  /**
+   * Deterministic regex triggers — for patterns a literal phrase list
+   * cannot express ("$0 down", "guaranteed … approval", a dollar figure).
+   * Catalog content for the counsel-handoff packet; rides the same
+   * `unverified` / env gate as literal `triggers` before it can fire live.
+   */
+  triggerRegexes?: RuleRegexTrigger[];
+  /**
+   * How prominently the operator UI surfaces a flag from this rule, and
+   * how the counsel packet groups it. Advisory metadata only — sentinel
+   * never blocks a send. Defaults to `advisory` when omitted.
+   */
+  severity?: RuleSeverity;
+  /**
+   * Drafter-suggested safe replacement / remediation guidance shown
+   * alongside a flag and in the counsel-handoff packet. Guidance, not a
+   * mechanical 1:1 substitution — one rule can fire on many phrases, so
+   * this describes the fix rather than swapping a single token.
+   */
+  safeRewrite?: string;
+  /**
+   * Per-rule counsel workflow state. Defaults to `draft` when omitted.
+   * Kept consistent with `unverified` in this corpus (`draft` ⟺
+   * `unverified: true`); the scanner refuses to fire a `rejected` rule
+   * regardless of `unverified`.
+   */
+  counselReviewStatus?: CounselReviewStatus;
   /**
    * Optional protected-class / category tag attached to flags produced
    * by this rule. For housing rules these mirror HUD's enumerated

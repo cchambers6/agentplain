@@ -318,14 +318,21 @@ const ADAPTERS: SmokeAdapter[] = [
 
 const ADAPTERS_BY_ID = new Map(ADAPTERS.map((a) => [a.id, a]));
 
-// Connectors that are `available` but intentionally not covered in wave 1.
+// Connectors covered by the wave-2 dispatch suite
+// (`marketplace-smoke-wave2.test.ts`). They expose the shared mcp-core
+// JSON-RPC dispatch surface and take the same contract there, plus a read-
+// only real-data value loop. Listed here so this file's coverage guardrail
+// counts them as covered (not silently deferred).
+const COVERED_IN_WAVE_2 = new Set(['docusign', 'quickbooks', 'slack']);
+
+// Connectors that are `available` but still awaiting a fixture + real-data
+// leg. NOTE: `hubspot` is available but ships no JSON-RPC dispatch surface
+// (no HUBSPOT_TOOLS / namespace / route); it is consumed via its typed
+// interface and is exercised + its gap documented in the wave-2 suite.
 const DEFERRED = new Set([
   'teams',
-  'quickbooks',
   'hubspot',
-  'docusign',
   'google-drive',
-  'slack',
   'taxdome',
   'karbon',
   'follow-up-boss',
@@ -360,7 +367,7 @@ describe('Marketplace MCP contract', () => {
   it('every available connector is either covered or explicitly deferred', () => {
     const uncovered = available
       .map((e) => e.id)
-      .filter((id) => !ADAPTERS_BY_ID.has(id) && !DEFERRED.has(id));
+      .filter((id) => !ADAPTERS_BY_ID.has(id) && !DEFERRED.has(id) && !COVERED_IN_WAVE_2.has(id));
     assert.deepEqual(
       uncovered,
       [],

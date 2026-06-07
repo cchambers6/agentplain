@@ -150,6 +150,17 @@ export interface TriageInput {
    *  built-in URGENT_CUES list at fire time. Empty/undefined = no
    *  customer cues. */
   extraUrgentCues?: string[];
+  /** Per-skill config — sender allowlist. A message whose `fromEmail`
+   *  matches (exact address, `@domain.com`, or bare `domain.com`) is
+   *  forced to `urgent` so it tops the queue regardless of body cues.
+   *  Sourced from `lib/skills/config#readInboxTriageConfig`. Empty =
+   *  off. */
+  flagFromSenders?: string[];
+  /** Per-skill config — sender denylist. A message whose `fromEmail`
+   *  matches is demoted to `noise` (no auto-ack) so routine senders
+   *  stay out of the operator's active buckets. Allowlist wins if a
+   *  sender somehow appears on both. Empty = off. */
+  autoArchiveSenders?: string[];
   /** Wave-4 — opt-in LLM provider for FEEDBACK-rule refinement. When
    *  provided (alongside a non-empty `feedbackRulesBlock`), the skill
    *  invokes `maybeRefineTriage` after the heuristic classifier to let

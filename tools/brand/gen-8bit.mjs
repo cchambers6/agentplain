@@ -28,6 +28,7 @@ const PAL = {
   inkSoft: "#2E2E33",
   paper: "#F7F4ED",
   paperDeep: "#EDE9DE",
+  bodyShadow: "#D9D5C7", // interpolated paper->ink, body underside shading (v5 hound)
   clay: "#B65D3A",
   clayDeep: "#9A4D2F",
   moss: "#3F5C3F",
@@ -254,6 +255,14 @@ const DIRECTIONS = {
   10: { name: "hound-forward", hound: true },
   11: { name: "hound-curious", hound: true, head: "down", earPerk: true },
   12: { name: "hound-alert", hound: true, head: "up" },
+  // --- v5: HIGH-FIDELITY hound, the shipping candidate. Drawn on a ~116x84
+  // master grid (vs the icon-tiny grids of 1-12) so every breed feature has
+  // room to read: long draped ear with an interior shadow, blunt drooped snout
+  // with a nose dot, an eye in a light socket, a chest panel with 2 clay lights,
+  // per-leg joint seams, tail-up with a clay antenna LED, an ink collar + clay
+  // tag, and a body-underside shadow tone so it reads as pixel art (not flat
+  // line art). Palette: paper + bodyShadow + ink + clay + moss(collar).
+  13: { name: "hound-hifi", houndHi: true },
 };
 
 // ----------------------------------------------------------------------------
@@ -603,11 +612,141 @@ function buildHoundScene(dir, size = 40) {
   return g;
 }
 
+// ----------------------------------------------------------------------------
+// v5: HIGH-FIDELITY hound (direction-13, shipping candidate). Master grid is
+// ~116x84 — roughly 2x the resolution of directions 1-12 — so the breed detail
+// reads instead of compressing to nothing. Outline-spline body fill (paper)
+// with a body-underside shadow tone, then the silhouette outline pass, then the
+// full robot/hound detail layer. Faces right, head up, mouth closed.
+// ----------------------------------------------------------------------------
+const H2_W = 118;
+const H2_H = 84;
+const H2_OX = 4;
+const H2_OY = 4;
+const H2_GROUND = 72;
+
+function drawHoundHi(g, ox, oy) {
+  const P = (x, y) => set(g, ox + x, oy + y, "paper");
+  const SH = (x, y) => set(g, ox + x, oy + y, "bodyShadow");
+  const I = (x, y) => set(g, ox + x, oy + y, "ink");
+  const C = (x, y) => set(g, ox + x, oy + y, "clay");
+  const M = (x, y) => set(g, ox + x, oy + y, "moss");
+
+  // Body outline (rump -> nose). Beagle: level-ish back, slight rise to withers,
+  // arched neck to a head held up, blunt drooped snout.
+  const top = [
+    [8, 32], [16, 26], [30, 25], [46, 25], [58, 24], [68, 22],
+    [74, 20], [80, 16], [86, 13], [92, 12], [97, 13], [102, 16], [107, 20],
+  ];
+  const bot = [
+    [8, 42], [16, 48], [26, 51], [40, 53], [52, 54], [62, 53], [68, 51],
+    [73, 45], [78, 39], [84, 37], [90, 36], [96, 35], [101, 34], [107, 28],
+  ];
+  // Fill body paper; shade the bottom rows (underside) + a hair under the back.
+  for (let x = 8; x <= 107; x++) {
+    const yt = lerpProfile(top, x);
+    const yb = lerpProfile(bot, x);
+    if (yt == null || yb == null) continue;
+    for (let y = yt; y <= yb; y++) P(x, y);
+    for (let y = yb - 4; y <= yb; y++) SH(x, y); // belly underside shadow
+    SH(x, yt + 1);                                // thin back-line shadow
+  }
+
+  // Legs — sturdy (6px), with a body-shadow back edge for roundness.
+  const legHi = (x0, x1, yTop) => {
+    for (let y = yTop; y <= H2_GROUND; y++) {
+      for (let x = x0; x <= x1; x++) P(x, y);
+      SH(x1, y); SH(x1 - 1, y); // back edge of leg in shadow
+    }
+    for (let x = x0; x <= x1 + 1; x++) P(x, H2_GROUND); // paw forward
+  };
+  legHi(20, 26, 46); // back-far
+  legHi(31, 37, 49); // back-near
+  legHi(58, 64, 50); // front-far
+  legHi(69, 75, 50); // front-near
+
+  // Floppy ear — a long pendant draping from the top of the head, hanging well
+  // PAST the jaw line so it reads as a hound ear, with an interior shadow shape
+  // down its inner face. Sits behind the eye; its lower half hangs free.
+  for (let y = 12; y <= 46; y++) {
+    const x0 = 80 + Math.floor((y - 12) / 9); // drifts forward as it hangs
+    const x1 = x0 + 10;
+    for (let x = x0; x <= x1; x++) P(x, y);
+    for (let x = x0 + 6; x <= x1; x++) SH(x, y); // interior ear shadow
+  }
+  // rounded ear tip
+  for (let x = 84; x <= 92; x++) P(x, 47); for (let x = 86; x <= 90; x++) P(x, 48);
+
+  // Tail — held up and slightly back off the rump, tapering to an antenna tip.
+  for (let y = 14; y <= 32; y++) {
+    const x0 = 14 - Math.floor((32 - y) / 2);
+    for (let x = x0; x <= x0 + 4; x++) P(x, y);
+  }
+
+  // Silhouette outline.
+  outline(g, "ink");
+
+  // --- Detail layer (over the body) ---
+  // Ear leading edge (traces the flap's front) + base seam — reads as an ear.
+  for (let y = 13; y <= 46; y++) I(80 + Math.floor((y - 12) / 9) + 10, y);
+  for (let x = 80; x <= 90; x++) I(x, 12);   // ear base seam (robot tell)
+  // Eye — ink pixel inside a light socket so it reads.
+  for (let x = 95; x <= 99; x++) for (let y = 19; y <= 23; y++) P(x, y); // socket
+  I(97, 21); I(98, 21);                       // pupil
+  C(96, 19);                                  // tan brow blaze above the eye
+  // Nose dot + mouth line on the blunt drooped snout.
+  I(106, 23); I(107, 23); I(107, 24);
+  for (let x = 100; x <= 106; x++) I(x, 27);
+  // Dewlap hint under the chin.
+  for (let x = 92; x <= 98; x++) I(x, 35);
+  // Chest panel — visible rectangle with 2 clay status lights.
+  for (let x = 44; x <= 58; x++) { I(x, 36); I(x, 48); }
+  for (let y = 36; y <= 48; y++) { I(44, y); I(58, y); }
+  C(49, 42); C(50, 42); C(53, 42); C(54, 42); // two 2px clay lights
+  // Leg joint seams — one ink break per leg at the knee/elbow.
+  for (let x = 20; x <= 26; x++) I(x, 61); // back-far
+  for (let x = 31; x <= 37; x++) I(x, 62); // back-near
+  for (let x = 58; x <= 64; x++) I(x, 62); // front-far
+  for (let x = 69; x <= 75; x++) I(x, 62); // front-near
+  // Collar — ink strap around the neck + a clay hanging tag.
+  for (let y = 18; y <= 38; y++) { I(74, y); I(75, y); }
+  C(74, 40); C(75, 40); C(74, 41); C(75, 41); // hanging tag
+  // Tail antenna LED — the clay sparkle at the tail tip.
+  C(13, 13); C(14, 13);
+}
+
+function buildHoundHiDog(withGround = false) {
+  const g = makeGrid(H2_W, H2_H + (withGround ? 4 : 0));
+  drawHoundHi(g, H2_OX, H2_OY);
+  if (withGround) {
+    const gy = H2_OY + H2_GROUND + 2;
+    hline(g, 0, H2_W - 1, gy, "ink");
+    for (const tx of [38, 40]) { set(g, tx, gy - 1, "ink"); set(g, tx, gy - 2, "ink"); }
+  }
+  return g;
+}
+
+function buildHoundHiScene(dir, size = 40) {
+  const S = Math.max(size, H2_W + 12);
+  const g = makeGrid(S, S, "paper");
+  const dog = makeGrid(H2_W, H2_H, null);
+  drawHoundHi(dog, H2_OX, H2_OY);
+  const ox = Math.round((S - H2_W) / 2);
+  const feetY = Math.round(S * 0.60);
+  const oy = feetY - (H2_OY + H2_GROUND);
+  hline(g, 0, S - 1, feetY + 2, "ink");
+  const tuftX = ox + 30;
+  set(g, tuftX, feetY + 1, "ink"); set(g, tuftX, feetY, "ink"); set(g, tuftX, feetY - 1, "ink");
+  blit(g, dog, ox, oy);
+  return g;
+}
+
 // Full opaque square scene (dog on a plain). size = grid edge in art-pixels.
 function buildScene(dir, size = 36) {
   if (DIRECTIONS[dir].minimal) return buildMinimalScene(dir, size);
   if (DIRECTIONS[dir].collie) return buildCollieScene(dir, size);
   if (DIRECTIONS[dir].hound) return buildHoundScene(dir, size);
+  if (DIRECTIONS[dir].houndHi) return buildHoundHiScene(dir, size);
   const g = makeGrid(size, size);
   const d = DIRECTIONS[dir];
   const horizonY = Math.round(size * 0.66);
@@ -642,6 +781,7 @@ function buildDog(dir, withPlain = false) {
   if (DIRECTIONS[dir].minimal) return buildMinimalDog(dir, withPlain);
   if (DIRECTIONS[dir].collie) return buildCollieDog(dir, withPlain);
   if (DIRECTIONS[dir].hound) return buildHoundDog(dir, withPlain);
+  if (DIRECTIONS[dir].houndHi) return buildHoundHiDog(withPlain);
   const w = DOG_W + 4;
   const h = DOG_H + (withPlain ? 5 : 2);
   const g = makeGrid(w, h);
@@ -927,8 +1067,12 @@ function buildOG(dir) {
   const W = 240;
   const H = 126;
   const g = makeGrid(W, H, "paper");
-  // left: full scene tile
-  const scene = buildScene(dir, 96);
+  // left: full scene tile — cap its width so the wordmark always fits the right
+  // column (the hi-fi hound renders on a ~130px grid, too wide raw for the og).
+  let scene = buildScene(dir, 96);
+  const MAX_SCENE_W = 104;
+  if (scene.w > MAX_SCENE_W)
+    scene = downscaleGrid(scene, MAX_SCENE_W, Math.round((scene.h * MAX_SCENE_W) / scene.w));
   blit(g, scene, 8, Math.round((H - scene.h) / 2));
   // right: pixel wordmark + a clay rule (sized to fit the right column)
   const word = "agentplain";
@@ -940,7 +1084,7 @@ function buildOG(dir) {
   rect(g, tx, ty + 18, tx + wW, ty + 19, "clay");
   // Bottom ground accent strip echoing the plain. Full directions use the moss
   // plain; minimal (3-colour) directions stay ink+paper+clay only — no moss.
-  if (DIRECTIONS[dir].minimal || DIRECTIONS[dir].collie || DIRECTIONS[dir].hound) {
+  if (DIRECTIONS[dir].minimal || DIRECTIONS[dir].collie || DIRECTIONS[dir].hound || DIRECTIONS[dir].houndHi) {
     rect(g, 0, H - 3, W - 1, H - 1, "clay");
     hline(g, 0, W - 1, H - 3, "ink");
   } else {
@@ -949,6 +1093,18 @@ function buildOG(dir) {
   }
   const img = scaleNN(gridToRGBA(g), 1200, 630);
   return encodePNG(img);
+}
+
+// Nearest-neighbour downscale of a grid (keeps palette keys; no blending).
+function downscaleGrid(src, destW, destH) {
+  const g = makeGrid(destW, destH, null);
+  for (let y = 0; y < destH; y++)
+    for (let x = 0; x < destW; x++) {
+      const sx = Math.min(src.w - 1, Math.floor((x * src.w) / destW));
+      const sy = Math.min(src.h - 1, Math.floor((y * src.h) / destH));
+      g.px[y * destW + x] = src.px[sy * src.w + sx];
+    }
+  return g;
 }
 
 // blit src grid onto dst at (ox,oy), skipping transparent src pixels.
@@ -966,7 +1122,7 @@ function blit(dst, src, ox, oy) {
 function buildAdaptiveBg(dir, sizePx) {
   const d = DIRECTIONS[dir];
   const g = makeGrid(48, 48);
-  if (d.minimal || d.collie || d.hound) {
+  if (d.minimal || d.collie || d.hound || d.houndHi) {
     // Flat paper field; a clay strip at the base only for the clay-strip variant.
     rect(g, 0, 0, 47, 47, "paper");
     if (d.ground === "clay") rect(g, 0, 44, 47, 47, "clay");
@@ -1054,6 +1210,6 @@ function emitDirection(dir) {
   return { tag, mDir, wDir };
 }
 
-const built = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(emitDirection);
+const built = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map(emitDirection);
 console.log("Generated 8-bit robot-dog brand directions:");
 for (const b of built) console.log(`  ${b.tag}\n    mobile: ${b.mDir}\n    web:    ${b.wDir}`);

@@ -13,15 +13,16 @@ import { tokens } from "@/lib/brand/tokens";
 // rest of the site's display type. The pixel mark is a static SVG (crispEdges,
 // no font dependency) loaded as an <img>.
 //
-// `direction` selects which of the three candidate art directions to show.
-// Defaults to direction-1 (alert sit, sunrise) — the wired default until Conner
-// picks the winner from the PR preview, after which this default flips to it.
+// `direction` selects which candidate art direction to show. Defaults to
+// direction-13 — the higher-fidelity standing hound (chest panel + antenna +
+// collar) wired as the production brand mark while a human pixel artist is
+// commissioned for the final v2. Change the default to swap the shipped mark.
 
 type LockupVariant = "default" | "inverted";
 type LockupSize = "sm" | "md" | "lg";
 
 type LogoLockupProps = {
-  direction?: 1 | 2 | 3;
+  direction?: number;
   variant?: LockupVariant;
   size?: LockupSize;
   className?: string;
@@ -34,10 +35,12 @@ const WORDMARK_SIZE: Record<LockupSize, string> = {
   lg: "text-[2.25rem]",
 };
 
+// Height-based with auto width: the hi-fi hound mark (direction-13) is wider
+// than tall, so a fixed square box would squish it. h-N w-auto preserves aspect.
 const MARK_SIZE: Record<LockupSize, string> = {
-  sm: "h-7 w-7",
-  md: "h-9 w-9",
-  lg: "h-12 w-12",
+  sm: "h-7 w-auto",
+  md: "h-9 w-auto",
+  lg: "h-12 w-auto",
 };
 
 const WORD_COLOR: Record<LockupVariant, string> = {
@@ -46,7 +49,7 @@ const WORD_COLOR: Record<LockupVariant, string> = {
 };
 
 export default function LogoLockup({
-  direction = 1,
+  direction = 13,
   variant = "default",
   size = "md",
   className = "",

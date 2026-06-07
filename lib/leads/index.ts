@@ -13,9 +13,24 @@
 // from the rest. Best-effort — a flag failure never fails the capture.
 
 import { withSystemContext } from "@/lib/db/rls";
-import { markConversationLeadCaptured } from "@/lib/plaino/conversation-log";
+import {
+  getConversationTurns,
+  markConversationLeadCaptured,
+} from "@/lib/plaino/conversation-log";
 import { leadCaptureSchema } from "./types";
 import type { LeadCaptureInput, LeadCaptureSubmitResult } from "./types";
+
+// Phrases that mark a prospect comparing us to Claude / Claude for Small
+// Business. Matched case-insensitively against the prospect's own words
+// (their intent line + the user turns of the linked conversation) so the
+// comparison-prospect cohort is tracked even when the widget doesn't set the
+// flag explicitly. Per project_sbm_wrapper_positioning_2026_06_06.
+const CLAUDE_MENTION_RE = /\b(claude|anthropic)\b/i;
+
+/** True when the prospect's own words reference Claude / Anthropic. */
+export function mentionsClaude(text: string | null | undefined): boolean {
+  return typeof text === "string" && CLAUDE_MENTION_RE.test(text);
+}
 
 export async function submitLeadCapture(
   raw: unknown,
@@ -33,6 +48,21 @@ export async function submitLeadCapture(
   }
   const input = parsed.data;
 
+  // Tag the comparison-prospect cohort. Trust an explicit widget flag, else
+  // infer from the prospect's own words: the intent line plus the user turns
+  // of the linked conversation. Best-effort — a turn-read failure never blocks
+  // the capture; the explicit flag and intent line still stand.
+  let askedAboutClaude = input.askedAboutClaude === true || mentionsClaude(input.intent);
+  if (!askedAboutClaude && input.conversationId) {
+    try {
+      const turns = await getConversationTurns(input.conversationId);
+      askedAboutClaude =
+        turns?.some((t) => t.role === "user" && mentionsClaude(t.body)) ?? false;
+    } catch {
+      // Non-fatal — fall back to the explicit flag + intent scan above.
+    }
+  }
+
   let leadId: string;
   try {
     leadId = await withSystemContext(async (tx) => {
@@ -45,6 +75,7 @@ export async function submitLeadCapture(
           intent: input.intent,
           sourcePage: input.sourcePage ?? null,
           conversationId: input.conversationId ?? null,
+          askedAboutClaude,
         },
         select: { id: true },
       });

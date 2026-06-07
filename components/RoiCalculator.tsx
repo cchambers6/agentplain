@@ -67,6 +67,15 @@ const DEFAULT_HOURS = 10;
 const DEFAULT_RATE = 100;
 const WEEKS_PER_MONTH = 4.3;
 
+// Substantiated ceiling for the displayed ROI multiple. Per Conner's
+// 2026-06-06 ruling ("softer true claim beats an over-inflated one"), the
+// headline band caps at 50x — competitors top out at 21–50x per single
+// workflow (PR #155 competitive audit), so a higher number reads as pixie
+// dust. The calculator clamps its displayed multiple to this ceiling and
+// shows a "+" when the raw inputs would exceed it, rather than printing an
+// uncapped figure the page can't stand behind.
+const ROI_CEILING = 50;
+
 // Estimated dollar value of a named-service-partner hour. Used as a
 // placeholder until `project_pricing_value_anchor.md` ships with a
 // committed Partner value rate; surfaced in copy as "[estimate]" so the
@@ -210,12 +219,25 @@ export default function RoiCalculator() {
                   ROI multiple
                 </p>
                 <p className="mt-3 font-display text-6xl leading-none text-ink md:text-7xl">
-                  {result.roi >= 1 ? `${formatRoi(result.roi)}x` : "—"}
+                  {result.roi >= 1
+                    ? `${formatRoi(Math.min(result.roi, ROI_CEILING))}x${
+                        result.roi > ROI_CEILING ? "+" : ""
+                      }`
+                    : "—"}
                 </p>
                 <p className="mt-3 max-w-md text-[14px] leading-relaxed text-ink-soft">
                   Value delivered per dollar of subscription, at the inputs
-                  above. Typical range 15x to 110x — illustrative; your
-                  numbers will vary with the hours you actually reclaim.
+                  above. Typical range 15x to 50x — illustrative, and capped
+                  here at the {ROI_CEILING}x we'll substantiate; your numbers
+                  will vary with the hours you actually reclaim.
+                </p>
+                <p className="mt-3 max-w-md text-[13px] leading-relaxed text-clay">
+                  Violation avoidance: this multiple counts only reclaimed
+                  hours. It does not price the regulatory violations a
+                  draft-then-approve loop keeps from ever sending — TCPA,
+                  fair-housing, RESPA, SEC Marketing Rule and the rest carry
+                  per-violation penalties an auto-execution tool can't promise
+                  to dodge. Real ROI sits above the number above.
                 </p>
 
                 {result.overEnterprise ? (

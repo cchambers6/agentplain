@@ -142,7 +142,7 @@ const proof = [
   {
     label: "ROI math, not vibes",
     body:
-      "Custom work pays back the same way the standard product does: hours saved × productive-hour rate, plus mistakes avoided, plus deals closed faster. We anchor every spec against a 15x–110x ROI target before we send it.",
+      "Custom work pays back the same way the standard product does: hours saved × productive-hour rate, plus the regulatory violations a draft-then-approve loop keeps from ever sending. We anchor every spec against a 15x–50x ROI target before we send it.",
     cite: "project_pricing_value_anchor.md",
   },
   {

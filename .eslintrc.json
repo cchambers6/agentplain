@@ -5,7 +5,8 @@
     "node_modules/",
     ".next/",
     "prisma/migrations/",
-    "tests/**"
+    "tests/**",
+    "apps/mobile/**"
   ],
   "rules": {
     "react/no-unescaped-entities": "off"

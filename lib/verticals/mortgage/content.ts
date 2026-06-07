@@ -111,6 +111,8 @@ export const mortgage: VerticalContent = {
     // surface honestly there as planned, not in this present-tense hero clause.
     valueProp:
       "agentplain REPLACES the document-chase that drowns every loan file, INTEGRATES with Outlook, OneDrive, and DocuSign on day one, and AUGMENTS the loan officer's read on every borrower interaction and TRID-sensitive disclosure.",
+    sbmSubhead:
+      "The loan-file skills, agents, and memory you'd otherwise have to wire yourself — built on Claude, configured by us.",
   },
 
   metaTitle: "for independent mortgage brokerages",
@@ -221,7 +223,9 @@ export const mortgage: VerticalContent = {
     math:
       "Solo case: ~$1,833/mo per LO against the Regular-tier solo seat ($199/mo) = ~9x ROI. At-scale case: same per-LO value against the 50-seat-band price ($99/mo) = ~19x. Multi-LO mortgage shops typically see the at-scale economics.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (Regular tier per the 2026-05-15 three-tier ratification — Regular is the default entry path; mortgage shops wanting named-service-partner reserved time can step up to Partner ($299→$199/seat), and high-intensity multi-state engagements route to Max (quote-based)). Value math per `project_pricing_value_anchor.md` (Regular-tier ROI range 15x–107x). Loan-cycle and doc-chase reference points pending primary-research validation — flagged in capability inbox. Sales-cycle compression mechanism modeled on the roofing-supplement analog in `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3.",
+      "Pricing per `project_stripe_both_surfaces.md` (Regular tier per the 2026-05-15 three-tier ratification — Regular is the default entry path; mortgage shops wanting named-service-partner reserved time can step up to Partner ($299→$199/seat), and high-intensity multi-state engagements route to Max (quote-based)). Value math per `project_pricing_value_anchor.md` (Regular-tier ROI range 15x–50x). Loan-cycle and doc-chase reference points pending primary-research validation — flagged in capability inbox. Sales-cycle compression mechanism modeled on the roofing-supplement analog in `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3.",
+    violationAvoidance:
+      "Mortgage communications sit on top of RESPA, ECOA, HMDA, and TRID at once — a kickback-implying referral note (RESPA §8 carries $10,000 criminal exposure plus CFPB civil penalties reaching $1,443,275 for knowing violations, 2025 inflation-adjusted), a careless adverse-action line (ECOA / Regulation B), a reporting gap (HMDA), or a mis-stated fee (TRID) each become regulator-fileable the moment they send. Auto-execution means the violation is already out the door before anyone reviews it; agentplain's fleet drafts the LO's borrower outreach and disclosures and routes every one through human approval, so a non-compliant message is caught as a draft rather than litigated as a sent record. That avoided exposure is value the hours-reclaimed multiplier doesn't count.",
   },
 
   claims: {

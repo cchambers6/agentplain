@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>climax comparison sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --paper:#F7F4ED; --paper-deep:#EDE9DE; --ink:#1A1A1F; --ink-soft:#2E2E33;
+    --clay:#B65D3A; --clay-deep:#9A4D2F; --moss:#3F5C3F; --mute:#726A5E; --rule:#E0DAC9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--paper);font-family:Inter,system-ui,sans-serif;color:var(--ink)}
+  #sheet{width:1320px;padding:48px 52px 44px}
+  .eyebrow{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--mute)}
+  h1{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:34px;margin-top:8px;color:var(--ink)}
+  .sub{margin-top:8px;font-size:15px;color:var(--ink-soft);max-width:980px;line-height:1.5}
+  .cols{margin-top:34px;display:grid;grid-template-columns:repeat(3,1fr);gap:30px}
+  .col{display:flex;flex-direction:column}
+  .tag{display:flex;align-items:center;gap:8px;font-family:"JetBrains Mono",ui-monospace,monospace;
+    font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink)}
+  .dot{width:9px;height:9px;border-radius:50%}
+  .title{margin-top:6px;font-family:"Source Serif 4",Georgia,serif;font-size:21px;color:var(--ink)}
+  .desc{margin-top:6px;font-size:13px;line-height:1.5;color:var(--mute);min-height:54px}
+  .frame{margin-top:14px;position:relative;border:1px solid var(--rule);background:var(--paper-deep);
+    border-radius:14px;overflow:hidden;align-self:flex-start}
+  .frame img{display:block;width:380px;height:auto}
+  .badge{position:absolute;top:10px;left:10px;z-index:5;font-family:"JetBrains Mono",ui-monospace,monospace;
+    font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+    padding:5px 9px;border-radius:6px}
+  .badge.ship{background:var(--clay);color:var(--paper)}
+  .badge.now{background:var(--ink);color:var(--paper)}
+  .badge.next{background:var(--paper);color:var(--ink-soft);border:1px dashed var(--mute)}
+  /* native overlay on col C */
+  .native-veil{position:absolute;inset:0;z-index:4;
+    background:linear-gradient(180deg, rgba(26,26,31,0.0) 38%, rgba(26,26,31,0.62) 100%)}
+  .native-note{position:absolute;left:14px;right:14px;bottom:14px;z-index:6;color:var(--paper);
+    font-size:12.5px;line-height:1.45}
+  .native-note b{font-weight:700}
+  .foot{margin-top:30px;border-top:1px solid var(--rule);padding-top:16px;display:flex;
+    justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap}
+  .foot .k{font-size:12.5px;color:var(--mute);line-height:1.55;max-width:840px}
+  .foot .k b{color:var(--ink-soft)}
+  .wm{font-family:"Source Serif 4",Georgia,serif;font-size:18px;color:var(--ink)}
+</style>
+</head>
+<body>
+  <div id="sheet">
+    <div class="eyebrow">wave 1 · campaign 2026-06-06 · C1 realty climax</div>
+    <h1>The 4-second climax: from notification to the approval.</h1>
+    <div class="sub">
+      The peak frame of the Wave-1 films — Sarah gets a push, opens agentplain, and approves the
+      drafted counter-offer. Per <b>DEMO_INTEGRATION.md</b>, this composites two honest pieces: the
+      <b>real, responsive /approvals screen</b> filmed in a phone viewport (method A) and a
+      <b>prototyped push banner in the real brand tokens</b> (method C) — the one piece of UI not
+      yet built. Nothing here is an AI-generated or stock "dashboard."
+    </div>
+
+    <div class="cols">
+      <!-- A -->
+      <div class="col">
+        <div class="tag"><span class="dot" style="background:var(--mute)"></span>A · real product, raw</div>
+        <div class="title">The actual /approvals screen</div>
+        <div class="desc">The production route, seeded with a realistic (non-customer) queue, rendered in a 393&times;852 iPhone viewport. No banner — this is the app exactly as it ships today.</div>
+        <div class="frame">
+          <span class="badge now">today · web</span>
+          <img src="/zzclimax/phone-climax-bg.png" alt="raw approvals screen" />
+        </div>
+      </div>
+      <!-- B -->
+      <div class="col">
+        <div class="tag"><span class="dot" style="background:var(--clay)"></span>B · composite frame (this PR)</div>
+        <div class="title">Approval screen + push banner</div>
+        <div class="desc">The same real screen with the prototyped notification composited on top. This is the frame the Wave-1 ad uses. Icon is a marked placeholder until the robot-dog mark lands.</div>
+        <div class="frame">
+          <span class="badge ship">ships wave 1</span>
+          <img src="/zzclimax/CLIMAX_FRAME.png" alt="composite climax frame" />
+        </div>
+      </div>
+      <!-- C -->
+      <div class="col">
+        <div class="tag"><span class="dot" style="background:var(--moss)"></span>C · native target (wave 1.5)</div>
+        <div class="title">Reshot fully native</div>
+        <div class="desc">When the Expo notification + approvals screens land, we reshoot from an iOS simulator: a real OS push and the native approval — same moment, no compositing.</div>
+        <div class="frame">
+          <span class="badge next">representation</span>
+          <div class="native-veil"></div>
+          <img src="/zzclimax/CLIMAX_FRAME.png" alt="native target representation" />
+          <div class="native-note">
+            <b>What changes:</b> real iOS push (expo-notifications), the native app's
+            approvals screen, and the final robot-dog app icon. Reshoot ticket per
+            DEMO_INTEGRATION.md §5.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot">
+      <div class="k">
+        <b>Sources:</b> screen = <code>app/(product)/app/workspace/[id]/approvals</code> (real components, seeded rows) ·
+        banner tokens = <code>lib/brand/tokens.ts</code> · on-screen promise verbatim: "Nothing leaves
+        agentplain on its own. We draft; you decide; your existing system is what actually sends." ·
+        Seeded buyer "Maria Garcia" is fictional test data, not a real customer.
+      </div>
+      <div class="wm">agentplain</div>
+    </div>
+  </div>
+</body>
+</html>

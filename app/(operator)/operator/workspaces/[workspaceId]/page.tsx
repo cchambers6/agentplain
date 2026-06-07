@@ -23,11 +23,13 @@ import { requireUser } from "@/lib/auth/server";
 import { listIntegrations } from "@/lib/integrations/marketplace";
 import { getWorkspaceUsageReport } from "@/lib/billing/usage/aggregate";
 import { deriveBudgetStatus, resolveBudgetCapUsd } from "@/lib/billing/budget";
+import { recommendBudgetCapUsdFromRow } from "@/lib/billing/recommendations";
 import {
   tierDisplayName,
   tierFromVerticalTier,
   monthlyChargeUsdCents,
 } from "@/lib/pricing/tiers";
+import { applyBudgetCapAction } from "../actions";
 import {
   buildActivityTimeline,
   buildApprovalQueueSummary,
@@ -77,6 +79,7 @@ export default async function OperatorWorkspaceDetailPage(props: PageProps) {
         slug: true,
         vertical: true,
         verticalTier: true,
+        tierPriceUsdMonthly: true,
         billingMode: true,
         closureStatus: true,
         settings: true,
@@ -241,6 +244,16 @@ export default async function OperatorWorkspaceDetailPage(props: PageProps) {
     monthlyRevenueUsd = monthlyChargeUsdCents(tier, sub.seats).totalCents / 100;
   }
 
+  // Advisory budget-cap recommendation (MRR × 0.30). NOT enforced — the
+  // operator applies it explicitly via the Apply control, which writes
+  // settings.tokenBudgetUsdMonthly (the only cap the gate throttles on). Max
+  // (quote-based) workspaces have no productized price → null (no rec).
+  const recommendedCapUsd = recommendBudgetCapUsdFromRow({
+    verticalTier: workspace.verticalTier,
+    tierPriceUsdMonthly: workspace.tierPriceUsdMonthly,
+    subscription: sub ? { tier: sub.tier, seats: sub.seats } : null,
+  });
+
   const billing: BillingSummary = {
     hasSubscription: Boolean(sub),
     status: sub?.status ?? null,
@@ -296,6 +309,8 @@ export default async function OperatorWorkspaceDetailPage(props: PageProps) {
       memberships={memberships}
       capabilityProposals={capabilityProposals}
       lastUserActivityAt={lastUserActivityAt}
+      recommendedCapUsd={recommendedCapUsd}
+      applyBudgetCapAction={applyBudgetCapAction}
     />
   );
 }

@@ -67,6 +67,15 @@ export interface WorkspaceDetailViewProps {
   memberships: MembershipRow[];
   capabilityProposals: CapabilityProposalRow[];
   lastUserActivityAt: Date | null;
+  /** MRR-proportional advisory cap (whole USD), or null when there is no
+   *  productized price to anchor a recommendation (Max). NOT enforced — see
+   *  `lib/billing/recommendations.ts`. When present, the Token budget section
+   *  renders a "Recommended cap — Apply" control. */
+  recommendedCapUsd?: number | null;
+  /** Server action that writes the explicit cap (settings.tokenBudgetUsdMonthly)
+   *  for this workspace. Reads `workspaceId` + `capUsd` from the submitted
+   *  form. Omitted in DB-free render tests, where the Apply control is hidden. */
+  applyBudgetCapAction?: (formData: FormData) => void | Promise<void>;
 }
 
 function fmtDate(d: Date | null): string {
@@ -132,6 +141,8 @@ export function WorkspaceDetailView(props: WorkspaceDetailViewProps) {
     memberships,
     capabilityProposals,
     lastUserActivityAt,
+    recommendedCapUsd,
+    applyBudgetCapAction,
   } = props;
 
   const unhealthy = integrations.filter((i) => i.health !== "HEALTHY").length;
@@ -230,6 +241,64 @@ export function WorkspaceDetailView(props: WorkspaceDetailViewProps) {
             </p>
           ) : null}
         </div>
+
+        {/* Recommended cap (advisory, MRR × 0.30 — lib/billing/recommendations.ts).
+            Applying it WRITES the explicit cap the gate enforces on; it is never
+            auto-applied. Hidden when there's no recommendation (Max / no price). */}
+        {recommendedCapUsd != null && recommendedCapUsd > 0 ? (
+          <div className="mt-4 border border-rule bg-paper-deep p-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <div>
+                <p className="font-mono text-[11px] uppercase tracking-eyebrow text-mute">
+                  recommended cap
+                </p>
+                <p className="mt-1 font-display text-xl text-ink">
+                  ${recommendedCapUsd.toLocaleString("en-US")}
+                  <span className="ml-2 font-mono text-[11px] uppercase text-mute">
+                    / mo
+                  </span>
+                </p>
+                <p className="mt-1 text-[12px] leading-relaxed text-ink-soft">
+                  30% of MRR — keeps token COGS inside a ~70% gross-margin
+                  target. Advisory only; applying it sets this workspace&rsquo;s
+                  enforced monthly cap.
+                </p>
+              </div>
+              {applyBudgetCapAction ? (
+                <form action={applyBudgetCapAction} className="shrink-0">
+                  <input type="hidden" name="workspaceId" value={workspace.id} />
+                  <input type="hidden" name="capUsd" value={recommendedCapUsd} />
+                  <button
+                    type="submit"
+                    className="border border-rule bg-paper px-3 py-2 font-mono text-[11px] uppercase tracking-eyebrow text-ink hover:bg-paper-deep"
+                  >
+                    {budget.capUsdMonthly === null
+                      ? "Apply recommended cap"
+                      : "Set cap to recommended"}
+                  </button>
+                </form>
+              ) : null}
+            </div>
+            {budget.capUsdMonthly !== null &&
+            budget.capUsdMonthly !== recommendedCapUsd ? (
+              <p className="mt-3 font-mono text-[11px] uppercase tracking-eyebrow text-mute">
+                current cap: ${budget.capUsdMonthly.toLocaleString("en-US")}/mo
+              </p>
+            ) : null}
+            {applyBudgetCapAction && budget.capUsdMonthly !== null ? (
+              <form action={applyBudgetCapAction} className="mt-2">
+                <input type="hidden" name="workspaceId" value={workspace.id} />
+                <input type="hidden" name="capUsd" value="" />
+                <button
+                  type="submit"
+                  className="font-mono text-[11px] uppercase tracking-eyebrow text-mute underline hover:text-ink"
+                >
+                  remove cap (NO_CAP)
+                </button>
+              </form>
+            ) : null}
+          </div>
+        ) : null}
 
         {topSurfaces.length > 0 ? (
           <table className="mt-4 w-full border border-rule bg-paper text-left text-[13px]">

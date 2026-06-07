@@ -25,6 +25,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { readSession } from "@/lib/auth/session";
+import { readMobileSession } from "@/lib/auth/mobile-session";
 import { withSystemContext } from "@/lib/db/rls";
 import { servicePartnerForWorkspace } from "@/lib/onboarding/service-partner";
 import { submitSupportRequest } from "@/lib/support";
@@ -64,7 +65,8 @@ export async function POST(req: Request) {
   }
   const input = parsed.data;
 
-  const session = await readSession();
+  // Web cookie OR native bearer — the support hand-off serves both surfaces.
+  const session = (await readSession()) ?? (await readMobileSession(req));
   if (!session) {
     return NextResponse.json({ ok: false, formError: "Not signed in." }, { status: 401 });
   }

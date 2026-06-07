@@ -18,7 +18,6 @@
 // are JSON API route handlers that must answer 401/403, never a 30x redirect
 // to an HTML sign-in page.
 
-import type { NextRequest } from "next/server";
 import type { Role } from "@prisma/client";
 import { withSystemContext } from "../db/rls";
 import { unsealSessionToken, type SessionPayload } from "./session";
@@ -26,8 +25,13 @@ import type { MembershipAssertion } from "./server";
 
 const BEARER_PREFIX = "Bearer ";
 
+// These take a plain `Request` (not NextRequest) so the same bearer path
+// works from any route handler — including /api/chat, whose handler is typed
+// `Request`. NextRequest extends Request, so existing NextRequest callers are
+// unaffected. Only the headers are read; no Next-specific surface is touched.
+
 /** Pull the sealed session token from the request headers, or null. */
-export function extractMobileToken(req: NextRequest): string | null {
+export function extractMobileToken(req: Request): string | null {
   const auth = req.headers.get("authorization");
   if (auth && auth.startsWith(BEARER_PREFIX)) {
     const token = auth.slice(BEARER_PREFIX.length).trim();
@@ -40,7 +44,7 @@ export function extractMobileToken(req: NextRequest): string | null {
 
 /** Read + unseal the mobile session, or null if absent/invalid/expired. */
 export async function readMobileSession(
-  req: NextRequest,
+  req: Request,
 ): Promise<SessionPayload | null> {
   const raw = extractMobileToken(req);
   if (!raw) return null;
@@ -57,7 +61,7 @@ export async function readMobileSession(
  * still runs ahead of RLS, per engineering_plan §10.2.
  */
 export async function requireMobileWorkspaceMember(
-  req: NextRequest,
+  req: Request,
   workspaceId: string,
   allowedRoles: Role[] = ["BROKER_OWNER"],
 ): Promise<MembershipAssertion | null> {

@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { requireWorkspaceMember } from "@/lib/auth";
+import { requireWorkspaceMember, listPasskeys } from "@/lib/auth";
 import { withSystemContext } from "@/lib/db";
 import { ApWorkspaceStrip } from "@/components/ui/ap";
 import { signOutAction } from "../../actions";
 import { WorkspaceNavLink } from "./WorkspaceNavLink";
+import { PasskeyEnrollNudge } from "./PasskeyEnrollNudge";
 import { isWorkspacePaused } from "@/lib/billing/workspace-paused-gate";
 
 interface WorkspaceLayoutProps {
@@ -51,6 +52,13 @@ export default async function WorkspaceLayout({
     () => ({ isPaused: false, status: null, reason: '' }),
   );
 
+  // Passkey enrollment nudge — show only to a member who has none yet. The
+  // client component additionally gates on browser support + a per-device
+  // dismissal, so this is a single cheap count, not a render decision.
+  const hasPasskey = await listPasskeys(member.userId)
+    .then((list) => list.length > 0)
+    .catch(() => true); // on error, assume enrolled → never nag
+
   const base = `/app/workspace/${id}`;
 
   return (
@@ -97,6 +105,7 @@ export default async function WorkspaceLayout({
           </WorkspaceNavLink>
         ))}
       />
+      {!hasPasskey ? <PasskeyEnrollNudge /> : null}
       {pauseState.isPaused ? (
         <div className="container-wide mt-4">
           <div

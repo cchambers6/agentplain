@@ -63,9 +63,26 @@ export function PasskeysManager({ workspaceId, passkeys }: PasskeysManagerProps)
       setStatus("added");
       setMessage("Passkey added. You can sign in with it next time.");
       router.refresh();
-    } catch {
-      // User dismissed the OS prompt, or the device declined — reset quietly.
-      setStatus("idle");
+    } catch (err) {
+      // NotAllowedError = user dismissed the OS prompt / timed out. That's a
+      // legitimate quiet reset. Anything else (SecurityError on rpID/origin
+      // mismatch, NotSupportedError, InvalidStateError when the device is
+      // already enrolled) is a real failure the user must see — swallowing it
+      // is what made "I tried to add a passkey and nothing happened" invisible.
+      const name =
+        err && typeof err === "object" && "name" in err
+          ? String((err as { name?: unknown }).name)
+          : "";
+      if (name === "NotAllowedError") {
+        setStatus("idle");
+        return;
+      }
+      setStatus("error");
+      setMessage(
+        name === "InvalidStateError"
+          ? "This device already has a passkey for your account."
+          : "Your browser blocked that passkey. If this keeps happening, you can still sign in with an email link.",
+      );
     }
   };
 

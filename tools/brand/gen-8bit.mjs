@@ -237,6 +237,15 @@ const DIRECTIONS = {
   4: { name: "mark-flat", minimal: true, pose: "sit", ground: "none" },
   5: { name: "mark-horizon", minimal: true, pose: "sit", ground: "line" },
   6: { name: "mark-claystrip", minimal: true, pose: "sit", ground: "clay" },
+  // --- v3: "a dog's dog" (Conner: real working-dog silhouette first, robot
+  // discovered second). Border Collie / Aussie Shepherd STANDING. Blunt
+  // muzzle, semi-erect rounded ears, level back + slight withers peak, deep
+  // chest, low feathered tail, four legs on the ground. Robot layer is subtle:
+  // short antenna behind the ear (clay tip = the one accent), one panel seam,
+  // single hard-pixel eye. Palette ink + paper + one clay. Single ink horizon.
+  7: { name: "collie-forward", collie: true, head: "level" },
+  8: { name: "collie-watch", collie: true, head: "low" },
+  9: { name: "collie-step", collie: true, head: "level", step: true },
 };
 
 // ----------------------------------------------------------------------------
@@ -329,9 +338,147 @@ function buildMinimalScene(dir, size = 36) {
   return g;
 }
 
+// ----------------------------------------------------------------------------
+// v3: "a dog's dog" — a STANDING Border Collie / working-sheepdog silhouette.
+// Built from a top + bottom outline spline (filled) so the anatomy is real:
+// blunt muzzle, level back with a withers peak, deep chest + belly tuck,
+// four legs, low feathered tail, semi-erect rounded ears. Robot layer is
+// subtle and discovered: a short antenna behind the ear (clay tip = the one
+// accent), a single hard-pixel eye, one faint panel seam. Faces right.
+// Local content ~54w x 36h; ground (feet) at local y = 33.
+// ----------------------------------------------------------------------------
+const COLLIE_W = 56;
+const COLLIE_H = 38;
+const COLLIE_OX = 1;
+const COLLIE_OY = 2;
+const COLLIE_GROUND = 33; // local y the feet stand on
+
+function lerpProfile(points, x) {
+  for (let i = 0; i < points.length - 1; i++) {
+    const [x0, y0] = points[i];
+    const [x1, y1] = points[i + 1];
+    if (x >= x0 && x <= x1) {
+      const t = x1 === x0 ? 0 : (x - x0) / (x1 - x0);
+      return Math.round(y0 + (y1 - y0) * t);
+    }
+  }
+  return null;
+}
+
+function drawCollie(g, ox, oy, opts = {}) {
+  const headDrop = opts.head === "low" ? 4 : 0;
+  const ink = (x, y) => set(g, ox + x, oy + y, "ink");
+  const clear = (x, y) => set(g, ox + x, oy + y, null);
+
+  // Top outline (tail -> nose). Neck/head points (x>=28) sink by headDrop.
+  // Lean athletic topline: level back, a withers peak, then an ARCHED neck
+  // rising steeply to a head carried UP above the back line (alert stance).
+  const top = [
+    [4, 16], [8, 12], [14, 12], [20, 11], [25, 10],
+    [28, 11 + headDrop], [31, 8 + headDrop], [34, 6 + headDrop], [37, 5 + headDrop],
+    [40, 5 + headDrop], [42, 6 + headDrop], [43, 8 + headDrop],
+    [45, 9 + headDrop], [47, 10 + headDrop], [49, 12 + headDrop],
+  ];
+  // Bottom outline (tail -> nose). Deep-but-not-barrel chest, a loin tuck, then
+  // the throat rising steeply to a blunt muzzle.
+  const bot = [
+    [4, 19], [8, 21], [12, 22], [17, 21], [22, 22], [27, 22],
+    [29, 21 + headDrop], [31, 18 + headDrop], [33, 15 + headDrop], [35, 13 + headDrop],
+    [38, 13 + headDrop], [41, 14 + headDrop], [45, 14 + headDrop], [49, 14 + headDrop],
+  ];
+  // Fill the torso + neck + head between the two outlines.
+  for (let x = 4; x <= 51; x++) {
+    const yt = lerpProfile(top, x);
+    const yb = lerpProfile(bot, x);
+    if (yt == null || yb == null) continue;
+    for (let y = yt; y <= yb; y++) ink(x, y);
+  }
+
+  // Legs — four, lean (2px) and long so there's daylight under the dog. Drawn
+  // from inside the body to the ground. step pushes the near front leg forward.
+  const leg = (x0, x1, yTop) => {
+    for (let y = yTop; y <= COLLIE_GROUND; y++) for (let x = x0; x <= x1; x++) ink(x, y);
+    for (let x = x0; x <= x1 + 1; x++) ink(x, COLLIE_GROUND); // paw, forward
+  };
+  leg(9, 10, 20);   // back-far
+  leg(13, 14, 21);  // back-near
+  leg(24, 25, 21);  // front-far
+  if (opts.step) {
+    leg(31, 32, 22); // front-near, stepped forward (mid-stride)
+  } else {
+    leg(28, 29, 21); // front-near
+  }
+
+  // Ears — semi-erect, ROUNDED tips (the working-dog tell; no sharp triangles).
+  // Back ear perked, front ear half-flopped forward.
+  const eb = headDrop;
+  for (let y = 1 + eb; y <= 5 + eb; y++) for (let x = 37; x <= 39; x++) ink(x, y);
+  ink(37, 1 + eb); ink(38, 1 + eb);       // back ear, rounded 2px tip
+  for (let y = 2 + eb; y <= 6 + eb; y++) for (let x = 40; x <= 42; x++) ink(x, y);
+  ink(42, 3 + eb); ink(43, 4 + eb);       // front ear folds forward, rounded
+
+  // Antenna — short, behind the back ear. Clay beacon tip = the one accent.
+  ink(35, 4 + eb); ink(35, 3 + eb); ink(35, 2 + eb);
+  set(g, ox + 35, oy + 1 + eb, "clay");
+
+  // Low feathered tail off the rump, sweeping down with a slight upturned tip.
+  ink(5, 17); ink(4, 18); ink(3, 19); ink(2, 20); ink(1, 21);
+  ink(1, 20); ink(0, 20); // upturned feathered tip
+  ink(4, 17); ink(3, 18); ink(2, 19); // feathering thickness
+
+  // Rough working-coat feathering — breaks the smooth (greyhound) outline so it
+  // reads as a scruffy sheepdog. A solid chest frill jutting down off the
+  // throat, "culottes" on the rump, belly tufts, leg feathering.
+  for (let y = 16; y <= 20; y++) ink(31, y);           // chest frill spine
+  ink(32, 17); ink(32, 18); ink(33, 19); ink(30, 19); // frill spread
+  ink(6, 18); ink(5, 19); ink(6, 20); ink(7, 21);      // rump culottes
+  ink(15, 23); ink(19, 23); ink(23, 23);               // belly tufts
+  ink(27, 24); ink(30, 25);                            // leg feathering
+
+  // Single hard-pixel eye (paper knockout) — reads dog + faintly mechanical.
+  clear(42, 8 + eb);
+  // One faint panel seam at the shoulder (discovered, not announced).
+  clear(22, 14); clear(22, 15);
+}
+
+// Transparent standing-collie sprite. withGround draws the horizon under it.
+function buildCollieDog(dir, withGround = false) {
+  const g = makeGrid(COLLIE_W, COLLIE_H + (withGround ? 2 : 0));
+  drawCollie(g, COLLIE_OX, COLLIE_OY, DIRECTIONS[dir]);
+  if (withGround) {
+    const gy = COLLIE_OY + COLLIE_GROUND + 1;
+    hline(g, 0, COLLIE_W - 1, gy, "ink");
+    // one tuft of grass at the feet for scale (single clay accent kept to the
+    // antenna; grass is ink so the palette stays ink+paper+one-clay)
+    set(g, 18, gy - 1, "ink"); set(g, 18, gy - 2, "ink");
+  }
+  return g;
+}
+
+// Opaque square scene: paper field, ink collie, single ink horizon line.
+// The collie sprite is high-res (~56 wide); the canvas is sized to fit it with
+// margin regardless of the requested `size` (callers pass small values meant
+// for the low-res scenes). Consumers just nearest-neighbour scale the result.
+function buildCollieScene(dir, size = 40) {
+  const S = Math.max(size, COLLIE_W + 12);
+  const g = makeGrid(S, S, "paper");
+  const dog = makeGrid(COLLIE_W, COLLIE_H, null);
+  drawCollie(dog, COLLIE_OX, COLLIE_OY, DIRECTIONS[dir]);
+  const ox = Math.round((S - COLLIE_W) / 2);
+  const feetY = Math.round(S * 0.58);
+  const oy = feetY - (COLLIE_OY + COLLIE_GROUND);
+  // horizon + a small grass tuft for scale
+  hline(g, 0, S - 1, feetY + 1, "ink");
+  const tuftX = ox + 18;
+  set(g, tuftX, feetY, "ink"); set(g, tuftX, feetY - 1, "ink");
+  blit(g, dog, ox, oy);
+  return g;
+}
+
 // Full opaque square scene (dog on a plain). size = grid edge in art-pixels.
 function buildScene(dir, size = 36) {
   if (DIRECTIONS[dir].minimal) return buildMinimalScene(dir, size);
+  if (DIRECTIONS[dir].collie) return buildCollieScene(dir, size);
   const g = makeGrid(size, size);
   const d = DIRECTIONS[dir];
   const horizonY = Math.round(size * 0.66);
@@ -364,6 +511,7 @@ function buildScene(dir, size = 36) {
 // Transparent dog sprite alone (for adaptive fg / notification / mark on plain).
 function buildDog(dir, withPlain = false) {
   if (DIRECTIONS[dir].minimal) return buildMinimalDog(dir, withPlain);
+  if (DIRECTIONS[dir].collie) return buildCollieDog(dir, withPlain);
   const w = DOG_W + 4;
   const h = DOG_H + (withPlain ? 5 : 2);
   const g = makeGrid(w, h);
@@ -662,7 +810,7 @@ function buildOG(dir) {
   rect(g, tx, ty + 18, tx + wW, ty + 19, "clay");
   // Bottom ground accent strip echoing the plain. Full directions use the moss
   // plain; minimal (3-colour) directions stay ink+paper+clay only — no moss.
-  if (DIRECTIONS[dir].minimal) {
+  if (DIRECTIONS[dir].minimal || DIRECTIONS[dir].collie) {
     rect(g, 0, H - 3, W - 1, H - 1, "clay");
     hline(g, 0, W - 1, H - 3, "ink");
   } else {
@@ -688,7 +836,7 @@ function blit(dst, src, ox, oy) {
 function buildAdaptiveBg(dir, sizePx) {
   const d = DIRECTIONS[dir];
   const g = makeGrid(48, 48);
-  if (d.minimal) {
+  if (d.minimal || d.collie) {
     // Flat paper field; a clay strip at the base only for the clay-strip variant.
     rect(g, 0, 0, 47, 47, "paper");
     if (d.ground === "clay") rect(g, 0, 44, 47, 47, "clay");
@@ -776,6 +924,6 @@ function emitDirection(dir) {
   return { tag, mDir, wDir };
 }
 
-const built = [1, 2, 3, 4, 5, 6].map(emitDirection);
+const built = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(emitDirection);
 console.log("Generated 8-bit robot-dog brand directions:");
 for (const b of built) console.log(`  ${b.tag}\n    mobile: ${b.mDir}\n    web:    ${b.wDir}`);

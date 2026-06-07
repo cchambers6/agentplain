@@ -117,7 +117,7 @@ export const mortgage: VerticalContent = {
 
   metaTitle: "for independent mortgage brokerages",
   metaDescription:
-    "An agentic fleet for the 2–10 loan-officer independent mortgage brokerage. Borrower triage, document collection, status updates, RESPA/TRID-aware compliance review on consumer-facing communication, and pipeline reporting — drafted for the loan officer's review and sent from your own systems.",
+    "Borrower triage, document collection, status updates, and RESPA/TRID-aware compliance review — for the 2–10 loan-officer independent mortgage brokerage.",
 
   jtbdTables: [
     {

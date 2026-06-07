@@ -6,12 +6,22 @@ import { tokens } from "@/lib/brand/tokens";
 // The heritage Plaino illustration (public/brand/plaino-system/heritage.png) is the
 // hero. next/og fetches it from the deployment's own origin at request time, so
 // nothing is bundled (an inlined base64 of the illustration ballooned the build).
+// A source-of-truth SVG mirror lives at public/brand/og-image.svg; a committed
+// PNG preview for mobile spot-check lives at public/og/home.png.
 // 1200×630 is the OpenGraph standard size.
+//
+// 2026-06-06 refresh (SEO/marketing pack following PR #158 SBM-wrapper +
+// PR #159 ROI softening): the heritage illustration is the hero canvas; the
+// text overlay carries the SBM-wrapper positioning subhead, the softened ROI
+// claim, and the built-on-Claude stamp — true + verifiable per
+// `project_sbm_wrapper_positioning_2026_06_06.md`.
 
 export const runtime = "edge";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = `${tokens.wordmark} — ${tokens.tagline}`;
+export const alt = `${tokens.wordmark} — ${tokens.tagline} Built on Claude.`;
+
+const ROI_LINE = "15–50× per workflow + the violations you don't pay for";
 
 export default async function OpenGraphImage() {
   const { colors } = tokens;
@@ -52,14 +62,16 @@ export default async function OpenGraphImage() {
             objectFit: "cover",
           }}
         />
-        {/* Paper scrim for text legibility — bottom-anchored gradient */}
+        {/* Paper scrim for text legibility — bottom-anchored gradient.
+            Lifted higher than the standalone Plaino card because the overlay
+            now carries the positioning subhead + ROI row, not just the tagline. */}
         <div
           style={{
             position: "absolute",
             inset: 0,
             display: "flex",
             background:
-              "linear-gradient(180deg, rgba(247,244,237,0) 30%, rgba(247,244,237,0.55) 60%, rgba(247,244,237,0.96) 100%)",
+              "linear-gradient(180deg, rgba(247,244,237,0) 22%, rgba(247,244,237,0.62) 52%, rgba(247,244,237,0.97) 100%)",
           }}
         />
         {/* Wordmark eyebrow, top-left */}
@@ -77,24 +89,24 @@ export default async function OpenGraphImage() {
         >
           {tokens.wordmark}
         </div>
-        {/* Tagline lockup, bottom */}
+        {/* Tagline + positioning lockup, bottom */}
         <div
           style={{
             position: "relative",
             display: "flex",
             flexDirection: "column",
-            gap: 18,
-            padding: "0 80px 72px",
+            gap: 16,
+            padding: "0 80px 56px",
           }}
         >
-          <div style={{ fontSize: 76, lineHeight: 1.04, letterSpacing: -2 }}>
+          <div style={{ fontSize: 72, lineHeight: 1.04, letterSpacing: -2 }}>
             Intelligence rooted in
           </div>
           {/* Satori requires display:flex on any div with more than one child */}
           <div
             style={{
               display: "flex",
-              fontSize: 76,
+              fontSize: 72,
               lineHeight: 1.04,
               letterSpacing: -2,
             }}
@@ -104,14 +116,53 @@ export default async function OpenGraphImage() {
           </div>
           <div
             style={{
+              display: "flex",
               fontSize: 26,
               color: colors.inkSoft.hex,
               fontFamily: "system-ui, sans-serif",
+              maxWidth: 1000,
             }}
           >
-            The service layer that makes Claude work for local businesses.
+            Claude for Small Business is powerful. We make it usable — the
+            service layer that runs it for you.
           </div>
-          <div style={{ width: 120, height: 4, background: colors.clay.hex }} />
+          {/* ROI claim + Built on Claude stamp, over a clay accent bar */}
+          <div style={{ display: "flex", width: 120, height: 4, background: colors.clay.hex, marginTop: 4 }} />
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              fontFamily: "system-ui, sans-serif",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                fontSize: 22,
+                color: colors.ink.hex,
+                maxWidth: 760,
+                lineHeight: 1.25,
+              }}
+            >
+              {ROI_LINE}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                border: `2px solid ${colors.ink.hex}`,
+                padding: "10px 18px",
+                fontSize: 18,
+                letterSpacing: 1.5,
+                color: colors.ink.hex,
+                fontFamily: "ui-monospace, monospace",
+                textTransform: "uppercase",
+              }}
+            >
+              Built on Claude
+            </div>
+          </div>
         </div>
       </div>
     ),

@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { tokens } from "@/lib/brand/tokens";
+import { alternatesFor } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
   title: "About",
   description:
-    "agentplain is a service partnership for local businesses. We install a fleet of capable AI partners, run weekly reviews, and customize as your ops shift — so you stay focused on the people you serve.",
+    "The service layer on top of Claude for local businesses. We install the fleet, run reviews, and customize as your ops shift — so you serve your people.",
+  alternates: alternatesFor("/about"),
 };
 
 // About page. Mission line carries the lede; tagline closes the page; vision

@@ -132,7 +132,7 @@ export const law: VerticalContent = {
 
   metaTitle: "for solo and small law firms (2–5 attorneys)",
   metaDescription:
-    "An agentic fleet for the solo or 2–5 attorney law firm. Client intake, engagement-letter drafting, conflict-check coordination, drafted client communication with privilege guard, document chase, billing on milestone, and matter-state reporting — drafted for the partner's review and sent from your own systems. Note: Clio Work shipped agentic in April 2026; agentplain differentiates on the fleet-coordination layer above any single practice-management vendor.",
+    "Client intake, engagement letters, conflict checks, privilege-guarded comms, document chase, and milestone billing — for the solo or 2–5 attorney firm.",
 
   jtbdTables: [
     {

@@ -112,7 +112,7 @@ export const propertyManagement: VerticalContent = {
 
   metaTitle: "for single-family and small-portfolio property managers",
   metaDescription:
-    "An agentic fleet for 50–500-door single-family and small-portfolio property management companies. Tenant inbound triage, maintenance ticket routing, rent-collection chase, lease renewal cadence, and owner reporting — drafted for the property manager's review and sent from your own systems.",
+    "Tenant triage, maintenance routing, rent-collection chase, lease-renewal cadence, and owner reporting — for 50–500-door single-family property managers.",
 
   jtbdTables: [
     {

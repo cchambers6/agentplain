@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { alternatesFor } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
   title: "Terms of service",
   description:
-    "Terms governing agentplain — service partnership scope, payment, cancellation, liability boundaries, and governing law.",
+    "Terms for agentplain — service-partnership scope, payment, cancellation, liability boundaries, and governing law.",
+  alternates: alternatesFor("/terms"),
 };
 
 // Terms of service. Plain-language, customer-facing. Not legal advice. Counsel

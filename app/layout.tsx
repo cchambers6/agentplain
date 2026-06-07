@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     template: `${tokens.wordmark} — %s`,
   },
   description:
-    "agentplain lifts up local businesses by doing the work that takes their time and money away from the people they serve. A fleet of capable AI partners across ten verticals — real estate, mortgage, insurance, property management, title & escrow, recruiting, home services, CPA / tax, law, and RIA. Intelligence rooted in reality.",
+    "agentplain is the service layer on top of Claude for local businesses — a managed AI fleet across ten verticals. Intelligence rooted in reality.",
   metadataBase: new URL("https://agentplain.com"),
   openGraph: {
     title: tokens.wordmark,

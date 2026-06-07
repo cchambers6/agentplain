@@ -7,11 +7,13 @@ import {
   INQUIRY_TYPE_OPTIONS,
   type InquiryType,
 } from "@/lib/custom-inquiry/types";
+import { alternatesFor } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
   title: "Build with us — Custom engagements",
   description:
-    "Need something the standard fleet doesn't do? Custom skill, custom integration, bespoke compliance corpus, white-label, dedicated success, 100+ seats — we scope per customer. Starts at $5K. Typical $5K–$15K + $200–$500/mo maintenance.",
+    "Custom skills, integrations, bespoke compliance corpus, white-label, 100+ seats — scoped per customer. Starts at $5K; typical $5K–$15K + maintenance.",
+  alternates: alternatesFor("/custom"),
 };
 
 // /custom — the catch-all surface for anything Regular doesn't cover.

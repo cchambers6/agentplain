@@ -112,7 +112,7 @@ export const insurance: VerticalContent = {
 
   metaTitle: "for independent P&C insurance brokerages",
   metaDescription:
-    "An agentic fleet for the 3–15 producer independent insurance agency. COI generation, renewal coordination, carrier appetite intelligence, claims-status outreach, and commission reconciliation — drafted for the producer's review and sent from your own systems.",
+    "COI generation, renewal coordination, carrier-appetite intel, claims-status outreach, and commission reconciliation — for the 3–15 producer P&C agency.",
 
   jtbdTables: [
     {

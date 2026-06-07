@@ -108,7 +108,7 @@ export const general: VerticalContent = {
 
   metaTitle: "for local businesses — any industry",
   metaDescription:
-    "An honest on-ramp for local businesses outside our ten named verticals. The same service partnership — inbox triage, scheduling, follow-up, drafted responses — scaffolded against common-denominator tools (Gmail, Outlook, Google Drive, QuickBooks, DocuSign). Lighter compliance corpus than the named verticals; if you need bespoke vertical depth, we scope it as a Custom engagement.",
+    "The same managed fleet for local businesses outside our ten verticals — inbox triage, scheduling, follow-up, drafts. Need depth? A Custom engagement.",
 
   jtbdTables: [
     {

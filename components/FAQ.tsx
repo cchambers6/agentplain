@@ -1,6 +1,14 @@
 export type FAQItem = {
   q: string;
   a: string;
+  /**
+   * Optional topic tag. `pricing` items are rendered on /pricing (visibly,
+   * plus a matching FAQPage JSON-LD subset) in addition to the homepage. The
+   * homepage always renders the full list. Google requires FAQPage structured
+   * data to mirror VISIBLE on-page FAQ content, so the tag is the seam that
+   * keeps /pricing's JSON-LD honest — see `pricingFaqItems()`.
+   */
+  topic?: "pricing";
 };
 
 // FAQ content. Every entry cross-references mission rule
@@ -61,22 +69,27 @@ export const FAQ_ITEMS: FAQItem[] = [
   },
   {
     q: "How does pricing work?",
+    topic: "pricing",
     a: "Three tiers of service partnership, all per seat, month-to-month, first month free. (1) Regular — standard partnership, monthly review cadence, $199 solo sliding to $99 at 50+ seats. (2) Partner — named service partner with weekly review cadence and deeper customization, $299 solo sliding to $199 at scale. (3) Max — ad-hoc service partnership for firms with non-standard scope; quoted to the engagement, sales-led. No pilot fees. No setup charges. Cancel anytime from your billing settings.",
   },
   {
     q: "What's the difference between Regular, Partner, and Max?",
+    topic: "pricing",
     a: "Cadence and dedication. Regular is the standard service partnership: a partner installs, runs a monthly review call, handles tuning between calls. Most local-business shops fit Regular. Partner adds a named service partner who's dedicated to your account, runs a weekly review, owns customization, and handles change management as your ops shift — typically firms with more complex ops or higher stakes per draft. Max is sales-led: ad-hoc service partnership for firms whose ops don't fit the productized shape — different cadence, different deliverables, quoted to scope.",
   },
   {
     q: "When would I want Partner instead of Regular?",
+    topic: "pricing",
     a: "Three common patterns. (1) Your week-over-week change is high — new listings, new clients, new compliance rules — and you want a weekly review instead of a monthly one. (2) Your stakes per draft are higher than the average shop (litigation work, wealth management, broker-of-record-sensitive comms) and you want a partner who's dedicated to your account and knows your conventions. (3) You're growing or restructuring and want change management built into the relationship, not retrofitted later. If none of those apply, Regular usually fits.",
   },
   {
     q: "What is /custom and how is it different from Max?",
+    topic: "pricing",
     a: "Max is a service-partnership tier — recurring per-seat relationship with non-standard scope. /custom is engagement work: a written spec, a 4–6 week build, a fixed price ($5K–$15K typical plus $200–$500/mo maintenance), then handoff. You'd reach /custom when you need something the productized tiers don't include: a bespoke compliance corpus, a white-label deployment, a custom integration to a tool that isn't on our roadmap, 100+ seats, custom reporting. You can be on Regular OR Partner AND have a /custom engagement in flight at the same time.",
   },
   {
     q: "What's the ROI math?",
+    topic: "pricing",
     a: "Value delivered per practitioner runs $2,900–$10,600/mo — hours saved × your productive-hour rate, plus deals closed faster. Against the $99 → $299 per-seat subscription cost depending on tier, the typical ROI multiple is 15x to 50x per workflow. On top of that sits the regulatory exposure a draft-then-approve loop removes: a non-compliant message (TCPA, fair-housing, RESPA, SEC Marketing Rule, and the like) is caught as a draft, never sent — the one thing an auto-execution tool can't promise to dodge. Run your own numbers in the calculator on the pricing page.",
   },
   {
@@ -108,10 +121,21 @@ export const FAQ_ITEMS: FAQItem[] = [
 // Back-compat alias for any historical imports.
 const items = FAQ_ITEMS;
 
-export default function FAQ() {
+/**
+ * The pricing-topic subset — rendered VISIBLY on /pricing and emitted as the
+ * matching FAQPage JSON-LD there (so the structured data mirrors on-page
+ * content per Google's FAQ guidelines). Source of truth is the `topic` tag;
+ * the homepage still renders the full list.
+ */
+export function pricingFaqItems(): FAQItem[] {
+  return FAQ_ITEMS.filter((i) => i.topic === "pricing");
+}
+
+/** Reusable disclosure-list renderer so /pricing and the homepage share UI. */
+export function FaqList({ items: list }: { items: FAQItem[] }) {
   return (
     <div className="grid gap-4 md:grid-cols-2 md:gap-x-10 md:gap-y-8">
-      {items.map((item) => (
+      {list.map((item) => (
         <details
           key={item.q}
           className="group border-b border-rule py-5"
@@ -134,4 +158,8 @@ export default function FAQ() {
       ))}
     </div>
   );
+}
+
+export default function FAQ() {
+  return <FaqList items={items} />;
 }

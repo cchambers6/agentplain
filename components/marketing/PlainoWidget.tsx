@@ -15,6 +15,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { PlainoAvatar } from "@/components/ui/ap/PlainoAvatar";
+import {
+  PLAINO_NETWORK_REPLY,
+  PLAINO_TRANSIENT_REPLY,
+} from "@/lib/plaino/degraded-copy";
 
 interface ChatTurn {
   role: "user" | "plaino";
@@ -35,6 +39,10 @@ export default function PlainoWidget() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  // Set true when a turn degrades (paused or transient): we auto-expand the
+  // email hand-off so the customer doesn't have to find it. Treat every bot
+  // failure as a lead-capture opportunity, not an apology.
+  const [leadExpanded, setLeadExpanded] = useState(false);
   const sessionIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -83,25 +91,28 @@ export default function PlainoWidget() {
         ok: boolean;
         reply?: string;
         conversationId?: string | null;
+        degraded?: boolean;
+        expandLeadCapture?: boolean;
       };
       if (json.ok && json.reply) {
         setMessages((m) => [...m, { role: "plaino", body: json.reply as string }]);
         if (json.conversationId) setConversationId(json.conversationId);
+        // Paused/transient turns still come back ok:true with the in-voice
+        // notice as the reply; the flag tells us to surface the hand-off.
+        if (json.expandLeadCapture || json.degraded) setLeadExpanded(true);
       } else {
         setMessages((m) => [
           ...m,
-          {
-            role: "plaino",
-            body:
-              "something went wrong reaching the line. try again in a moment.",
-          },
+          { role: "plaino", body: PLAINO_TRANSIENT_REPLY },
         ]);
+        setLeadExpanded(true);
       }
     } catch {
       setMessages((m) => [
         ...m,
-        { role: "plaino", body: "i couldn't reach the line. try again shortly." },
+        { role: "plaino", body: PLAINO_NETWORK_REPLY },
       ]);
+      setLeadExpanded(true);
     } finally {
       setSending(false);
     }
@@ -159,6 +170,7 @@ export default function PlainoWidget() {
               <LeadCapturePanel
                 conversationId={conversationId}
                 sourcePage={pathname}
+                forceExpand={leadExpanded}
               />
             ) : null}
           </div>
@@ -228,14 +240,26 @@ function Bubble({ turn }: { turn: ChatTurn }) {
 
 // Inline lead hand-off. Appears once a conversation is underway; the prospect
 // can leave an email so a human follows up. Posts to /api/leads/capture.
-function LeadCapturePanel({
+//
+// `forceExpand` is driven by the parent when a turn degrades (paused or
+// transient): the panel opens itself so the customer doesn't have to hunt
+// for the hand-off after Plaino couldn't answer. Exported so the render
+// test can pin the expanded shape without simulating a fetch.
+export function LeadCapturePanel({
   conversationId,
   sourcePage,
+  forceExpand = false,
 }: {
   conversationId: string | null;
   sourcePage: string;
+  forceExpand?: boolean;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(forceExpand);
+  // When the parent flips forceExpand on (a turn just degraded), open the
+  // panel. We never auto-collapse — the customer stays in control once open.
+  useEffect(() => {
+    if (forceExpand) setExpanded(true);
+  }, [forceExpand]);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [intent, setIntent] = useState("");

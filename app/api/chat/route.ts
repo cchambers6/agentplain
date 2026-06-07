@@ -36,12 +36,14 @@ import {
 } from "@/lib/plaino/chat-turns";
 import { getKnowledgeStore } from "@/lib/knowledge";
 import { tierDisplayName, tierFromVerticalTier } from "@/lib/pricing/tiers";
+import { LlmPausedError } from "@/lib/llm/paused";
+import {
+  PLAINO_PAUSED_REPLY,
+  PLAINO_TRANSIENT_REPLY,
+} from "@/lib/plaino/degraded-copy";
+import { getLogger } from "@/lib/observability/logger";
 
 export const runtime = "nodejs";
-
-const DEGRADED_REPLY =
-  "i can't reach the line just now. give me a moment and try again — or " +
-  "use the email hand-off and a person will follow up.";
 
 const turnSchema = z.object({
   role: z.enum(["user", "plaino"]),
@@ -113,8 +115,17 @@ async function handleMarketing(input: ChatInput) {
     // Logging is best-effort — never fail the customer's chat on a log write.
   }
 
+  const { expandLeadCapture } = degradedResponseExtras(reply, {
+    mode: "marketing",
+  });
   return NextResponse.json(
-    { ok: true, reply: reply.text, conversationId, degraded: reply.degraded },
+    {
+      ok: true,
+      reply: reply.text,
+      conversationId,
+      degraded: reply.degraded,
+      expandLeadCapture,
+    },
     { status: 200 },
   );
 }
@@ -199,8 +210,18 @@ async function handleSupport(input: ChatInput) {
     // Best-effort log.
   }
 
+  const { expandLeadCapture } = degradedResponseExtras(reply, {
+    mode: "support",
+    workspaceId,
+  });
   return NextResponse.json(
-    { ok: true, reply: reply.text, conversationId, degraded: reply.degraded },
+    {
+      ok: true,
+      reply: reply.text,
+      conversationId,
+      degraded: reply.degraded,
+      expandLeadCapture,
+    },
     { status: 200 },
   );
 }
@@ -214,16 +235,27 @@ interface CompleteMeta {
   verticalSlug?: string;
 }
 
+interface CompletionOutcome {
+  text: string;
+  /** True for any state where Plaino couldn't answer (paused or transient). */
+  degraded: boolean;
+  /** True only for the deliberate paused-spend sentinel — distinct copy +
+   *  a same-day human-follow-up promise rather than "try again". */
+  paused: boolean;
+}
+
 /** Run one completion through the provider. Maps the chat turns to the
  *  provider's role shape and degrades gracefully — a provider error
- *  returns a calm in-voice line rather than a 500, so the widget never
- *  shows a stack trace. */
+ *  returns a calm in-voice reply rather than a 500, so the widget never
+ *  shows a stack trace. The `PAUSED` result (spend paused; no network call
+ *  was made) gets its own copy so the customer hears "resting, a person
+ *  will follow up" instead of a generic transient error. */
 async function complete(
   system: string,
   messages: ChatInput["messages"],
   model: string,
   meta: CompleteMeta,
-): Promise<{ text: string; degraded: boolean }> {
+): Promise<CompletionOutcome> {
   const result = await getLlmProvider().complete({
     system,
     messages: toLlmMessages(messages),
@@ -233,11 +265,34 @@ async function complete(
     cacheSystem: true,
     meta,
   });
-  if (!result.ok) return { text: DEGRADED_REPLY, degraded: true };
+  if (!result.ok) {
+    if (result.error.code === "PAUSED") {
+      return { text: PLAINO_PAUSED_REPLY, degraded: true, paused: true };
+    }
+    return { text: PLAINO_TRANSIENT_REPLY, degraded: true, paused: false };
+  }
   const text = result.value.text.trim();
   return text.length > 0
-    ? { text, degraded: false }
-    : { text: DEGRADED_REPLY, degraded: true };
+    ? { text, degraded: false, paused: false }
+    : { text: PLAINO_TRANSIENT_REPLY, degraded: true, paused: false };
+}
+
+/** Treat every failed turn as a lead-capture opportunity: tell the widget
+ *  to auto-expand the email hand-off so the customer doesn't have to find
+ *  it. Paused turns additionally emit a structured log so we can see the
+ *  sentinel state firing in the logs / Sentry. */
+function degradedResponseExtras(
+  outcome: CompletionOutcome,
+  meta: { mode: "marketing" | "support"; workspaceId?: string },
+): { expandLeadCapture: boolean } {
+  if (outcome.paused) {
+    getLogger().warn("plaino.api_paused_returned_lead_offer", {
+      mode: meta.mode,
+      workspace_id: meta.workspaceId ?? null,
+      error_name: new LlmPausedError().name,
+    });
+  }
+  return { expandLeadCapture: outcome.degraded };
 }
 
 async function searchKnowledge(

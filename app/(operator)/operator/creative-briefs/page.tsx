@@ -1,6 +1,6 @@
 // /operator/creative-briefs — the human-creator handoff queue.
 //
-// When the Media discipline's creative router decides a job is brand-defining
+// When the Creative discipline's router decides a job is brand-defining
 // (or no design tool meets the bar), it lands a DRAFT CreatorBrief here
 // instead of improvising raw SVG/PNG
 // (feedback_creative_assets_use_tools_or_humans). The operator dispatches the

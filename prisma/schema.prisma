@@ -458,8 +458,8 @@ enum LeadCaptureStatus {
 // Lifecycle of a human-creator brief — the structured handoff for
 // brand-defining creative the fleet must NOT improvise in raw SVG/PNG
 // (feedback_creative_assets_use_tools_or_humans). A brief is authored by the
-// Media discipline's creative router, sent to an outside creator, and the
-// finished asset is pasted back on the operator surface.
+// Creative discipline's router (creative-router), sent to an outside creator,
+// and the finished asset is pasted back on the operator surface.
 //   DRAFT     — packet assembled, not yet sent to a creator.
 //   BRIEFED   — handed to a creator; awaiting delivery.
 //   DELIVERED — creator returned an asset; awaiting acceptance review.

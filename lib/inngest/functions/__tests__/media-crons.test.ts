@@ -27,13 +27,13 @@ import {
   MEDIA_MONTHLY_MEDIA_PLAN_FUNCTION_ID,
   MEDIA_MONTHLY_MEDIA_PLAN_CRON,
 } from '../media-monthly-media-plan';
-import { listMediaCrons, getMediaAgent } from '@/lib/fleet/roster';
+import { listAllCrons, getFleetAgent } from '@/lib/fleet/roster';
 
 describe('media standing crons — stub contract', () => {
   it('weekly creative review returns the pending-runner-port stub owned by the creative director', async () => {
     const out = await runMediaWeeklyCreativeReview();
     assert.equal(out.status, 'pending-runner-port');
-    assert.equal(out.ownerSlug, 'media-creative-director');
+    assert.equal(out.ownerSlug, 'creative-director');
     assert.match(out.reason, /runner port/i);
   });
 
@@ -68,14 +68,16 @@ describe('media standing crons — stub contract', () => {
   });
 
   it('every roster cron resolves to a registered function id + a real owner', () => {
-    // The roster and the cron modules must not drift: each MediaCron.functionId
-    // matches a *_FUNCTION_ID export, and each owner/contributor is a real agent.
+    // The roster and the cron modules must not drift: each FleetCron.functionId
+    // matches a *_FUNCTION_ID export, and each owner/contributor is a real agent
+    // in either arm (the weekly creative review is a Creative cadence; the other
+    // two are Media).
     const registeredIds = new Set([
       MEDIA_WEEKLY_CREATIVE_REVIEW_FUNCTION_ID,
       MEDIA_PLATFORM_PERFORMANCE_DIGEST_FUNCTION_ID,
       MEDIA_MONTHLY_MEDIA_PLAN_FUNCTION_ID,
     ]);
-    const crons = listMediaCrons();
+    const crons = listAllCrons();
     assert.equal(crons.length, 3);
     for (const c of crons) {
       assert.ok(
@@ -83,12 +85,12 @@ describe('media standing crons — stub contract', () => {
         `cron ${c.functionId} is not a registered function id`,
       );
       assert.ok(
-        getMediaAgent(c.ownerSlug),
+        getFleetAgent(c.ownerSlug),
         `cron ${c.functionId} owner ${c.ownerSlug} is not a roster agent`,
       );
       for (const contributor of c.contributorSlugs) {
         assert.ok(
-          getMediaAgent(contributor),
+          getFleetAgent(contributor),
           `cron ${c.functionId} contributor ${contributor} is not a roster agent`,
         );
       }

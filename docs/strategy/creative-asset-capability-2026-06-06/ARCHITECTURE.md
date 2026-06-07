@@ -1,8 +1,13 @@
 # Creative-Asset Capability — Architecture
 
 > How the routing layer + human handoff fit together, and how they wire into the
-> Media discipline. Companion to `SKILL_AUDIT.md` and `JOB_TO_TOOL_MATRIX.md`.
+> Creative discipline. Companion to `SKILL_AUDIT.md` and `JOB_TO_TOOL_MATRIX.md`.
 > (feat/creative-asset-capability-2026-06-06)
+>
+> **Discipline note (ratified 2026-06-06).** Creative (production — *makes* the
+> asset) and Media (distribution — *routes* it to audiences) are two **peer**
+> disciplines under the CEO tier, both arms of `marketing`. This capability lives
+> in **Creative**. See `docs/fleet/creative-discipline-2026-06-06.md`.
 
 ---
 
@@ -16,7 +21,7 @@ inserts that step and makes it unskippable.
 
 ```
                          ┌─────────────────────────────────────────────┐
-   any creative   ───▶   │            media-creative-router            │
+   any creative   ───▶   │               creative-router               │
    asset request         │   "ask first, improvise never" — reads      │
                          │       JOB_TO_TOOL_MATRIX.md, decides         │
                          └───────────────┬─────────────────────────────┘
@@ -30,7 +35,7 @@ inserts that step and makes it unskippable.
         │                                │                          lib/creative-handoff
         ▼                                ▼                          createDraftBrief()
    asset produced  ◀───────── (video → AI_VIDEO_STACK.md             │
-   → Creative Director review      via media-video-producer)         ▼
+   → Creative Director review      via creative-video-producer)         ▼
                                                               CreatorBrief (DRAFT)
                                                                      │
                                                                      ▼
@@ -40,27 +45,27 @@ inserts that step and makes it unskippable.
 
 ---
 
-## Layer 1 — The router (`media-creative-router` skill)
+## Layer 1 — The router (`creative-router` skill)
 
-A new skill at `~/.claude/skills/media-creative-router/SKILL.md`. It is the
-**single front door** for creative-asset requests inside the Media discipline.
+A new skill at `~/.claude/skills/creative-router/SKILL.md`. It is the
+**single front door** for creative-asset requests inside the Creative discipline.
 It owns no production work; it **decides and dispatches**:
 
 - Reads `JOB_TO_TOOL_MATRIX.md` and runs the 5-step decision (brand-defining? →
   ready skill? → needs-connection? → video? → human).
 - For tool jobs, names the exact skill and hands off to the right maker
-  (`media-static-designer`, `media-video-producer`, etc.).
+  (`creative-static-designer`, `creative-video-producer`, etc.).
 - For brand-defining / no-tool-meets-bar jobs, calls into `lib/creative-handoff`
   to assemble a `CreatorBrief` and stops — **it never renders the asset.**
 - Enforces the prohibition: **no raw-SVG/PNG improvisation of a brand asset.**
 
-The other media SKILLs were updated to point at it:
-- `media-creative-director` — added a **Tool selection** section referencing the
+The other creative SKILLs were updated to point at it:
+- `creative-director` — added a **Tool selection** section referencing the
   matrix; the Creative Director routes through the router before briefing a maker.
-- `media-static-designer` — its tools now name **Figma + Adobe Express as the
+- `creative-static-designer` — its tools now name **Figma + Adobe Express as the
   primary design surfaces**, with `canvas-design`/`frontend-design` as the
   self-contained fallbacks, explicitly **not "improvise SVG."**
-- `media-video-producer` — already pointed at `AI_VIDEO_STACK.md`; reinforced.
+- `creative-video-producer` — already pointed at `AI_VIDEO_STACK.md`; reinforced.
 
 ## Layer 2 — The human handoff (`lib/creative-handoff/`)
 
@@ -117,20 +122,34 @@ and the persistence layer just lands them.
 
 ---
 
-## How it integrates with the Media discipline (PR #156)
+## How it integrates with the Creative + Media disciplines
 
-The Media discipline is the **production + platform-execution arm of Marketing**
-(`project_media_discipline`), with Head of Media → Creative Director → makers
-(video / static / copy / voice). This capability slots in **above the makers**:
+Per the 2026-06-06 split (`project_creative_vs_media_disciplines_2026_06_06`),
+**Creative** (production) and **Media** (distribution) are peer disciplines under
+the CEO tier, both arms of `marketing`. This capability lives in **Creative** —
+the discipline that *makes* the asset:
 
-1. A request enters the discipline → **`media-creative-router`** decides.
+- **Creative** = Creative Director → the production pool (video / static /
+  long-form copy / direct-response copy / voice) **+ the creative-router**.
+- **Media** = Head of Media → Media Director → 8 platform specialists +
+  influencer + PR + analytics. Media takes the finished asset and decides
+  where/how/when it runs.
+
+The flow:
+
+1. A creative request enters **Creative** → **`creative-router`** decides.
 2. Tool job → the matching maker produces with the **named tool** (not improv).
 3. Brand-defining job → a `CreatorBrief` packet, dispatched by an operator to a
    human creator; the **Creative Director runs the acceptance review** against
    the packet's criteria when it comes back.
-4. The existing approval cascade (maker → Creative Director → Head of Media →
-   CEO tier → Conner) is unchanged; the router just makes sure the *right tool
-   or the right human* does the work in the first place.
+4. The approved asset is **handed to Media for distribution** — Media never
+   makes the asset; Creative never buys the placement.
+
+> **Documented call (the wrinkle Conner flagged):** `media-analytics-attribution`
+> stays in **Media** — it measures distribution. When an analytics read needs a
+> *visualization*, that viz is a creative asset and routes back through the
+> `creative-router` like any other creative request. Measurement is Media;
+> *making the chart* is Creative.
 
 ## What's deliberately out of scope tonight (Phase 5+)
 

@@ -3,7 +3,7 @@
 > **The rule this table enforces:** an agent picks the **right tool** for a
 > creative job, or routes it to a **human creator** — it does **not** improvise
 > the asset in raw SVG/PNG (`feedback_creative_assets_use_tools_or_humans`).
-> Every creative request goes through `media-creative-router`, which reads this
+> Every creative request goes through `creative-router`, which reads this
 > matrix.
 >
 > **Status legend:**
@@ -27,11 +27,11 @@
 | 7 | **Sales / investor / customer deck** | `anthropic-skills:pptx` | `figma-use-slides` | `[ready]` | `.pptx` | Real editable deck. **Never** screenshot slides. Content from `marketing:*` / `sales:create-an-asset`. |
 | 8 | **One-pager / sell-sheet** | `anthropic-skills:docx` or `pdf` | `adobe-design-from-template` | `[ready]` | `.docx`/`.pdf` | Editable doc; print path via `pdf`. |
 | 9 | **ROI calculator / model** | `anthropic-skills:xlsx` | `flatsbo-b2b-sales-roi` skill | `[ready]` | `.xlsx` | Numbers real or labelled (`feedback_no_guesses_no_estimates`). |
-| 10 | **Social post — single (LinkedIn/IG/X)** | `adobe-design-from-template` | `canvas-design`; `small-business:canva-creator` | `[needs-connection]` → `[ready]` fallback | PNG | Copy from `media-copywriter-*`. Compose only — **do not auto-publish** (`project_no_outbound_architecture`). |
+| 10 | **Social post — single (LinkedIn/IG/X)** | `adobe-design-from-template` | `canvas-design`; `small-business:canva-creator` | `[needs-connection]` → `[ready]` fallback | PNG | Copy from `creative-copywriter-*`. Compose only — **do not auto-publish** (`project_no_outbound_architecture`). |
 | 11 | **Social variations (one design → all placements)** | `adobe-create-social-variations` | `adobe-resize-photos-and-videos`; manual `canvas-design` | `[needs-connection]` | PNG set | The per-placement fan-out. High-value once Adobe connected. |
 | 12 | **Email template** | `frontend-design` (HTML email) | `marketing:email-sequence` for copy | `[installed]` | HTML | Render/lint for email clients. Sending is **customer-side**, never ours. |
-| 13 | **Marketing video / sizzle / cutdowns** | Video stack (Tella/Firefly/Descript) | `adobe-edit-quick-cut` | `[external]` | MP4 | Routes to `AI_VIDEO_STACK.md` via `media-video-producer`. No AI faces/UI. |
-| 14 | **AI voiceover** | ElevenLabs (distinct cloned voice) | — | `[external]` | audio | `media-voice-producer`. Commercial tier only. |
+| 13 | **Marketing video / sizzle / cutdowns** | Video stack (Tella/Firefly/Descript) | `adobe-edit-quick-cut` | `[external]` | MP4 | Routes to `AI_VIDEO_STACK.md` via `creative-video-producer`. No AI faces/UI. |
+| 14 | **AI voiceover** | ElevenLabs (distinct cloned voice) | — | `[external]` | audio | `creative-voice-producer`. Commercial tier only. |
 | 15 | **Interactive product demo** | Supademo / Arcade | Tella produced capture | `[external]` | embed/HTML | Captures the **real** UI — zero slop. `DEMO_INTEGRATION.md`. |
 | 16 | **Product UI mockup** | `frontend-design` | Figma once connected | `[installed]` | React/HTML | Build the real thing, screenshot it — never AI-generate UI. |
 | 17 | **Screenshot annotation** | `Claude_in_Chrome` / `Claude_Preview` capture → `canvas-design` markup | `pdf` annotate | `[ready]` | PNG/PDF | Capture real product, annotate. |

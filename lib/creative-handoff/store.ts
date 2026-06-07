@@ -19,7 +19,7 @@ export interface CreateBriefInput extends BuildPacketInput {
   routedReason: string;
   /** Optional workspace the asset is for; omit for platform brand work. */
   workspaceId?: string | null;
-  /** The agent slug that authored the brief (e.g. "media-creative-router"). */
+  /** The agent slug that authored the brief (e.g. "creative-router"). */
   createdByAgent?: string | null;
 }
 

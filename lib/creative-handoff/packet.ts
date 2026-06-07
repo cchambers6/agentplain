@@ -3,8 +3,8 @@
 // The fleet does NOT improvise brand assets in raw SVG/PNG when a real design
 // tool exists OR when the work is brand-defining
 // (feedback_creative_assets_use_tools_or_humans). For the brand-defining jobs
-// in JOB_TO_TOOL_MATRIX.md that route to "human creator required", the Media
-// discipline's creative router (`media-creative-router`) assembles a
+// in JOB_TO_TOOL_MATRIX.md that route to "human creator required", the Creative
+// discipline's router (`creative-router`) assembles a
 // CreatorBriefPacket: a self-contained brief an outside creator can act on
 // without our context — brand tokens snapshot, references, delivery spec, and
 // acceptance criteria.

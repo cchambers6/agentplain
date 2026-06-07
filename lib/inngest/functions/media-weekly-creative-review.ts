@@ -1,12 +1,13 @@
 /**
  * Inngest cron: media — weekly creative review.
  *
- * Standing work for the internal media fleet (see `lib/fleet/roster.ts`). Owned
- * by the Creative Director; the Head of Media is the final approver. Thursdays
- * 14:00 UTC.
+ * Standing work for the Creative discipline (see `lib/fleet/roster.ts`). Owned
+ * by the Creative Director, who heads Creative as a peer to the Head of Media.
+ * Thursdays 14:00 UTC. (The function id keeps its legacy `media-` prefix for
+ * Inngest registration stability — the cadence itself is Creative's.)
  *
  * Honest stub (mirrors `b2b-ceo-daily.ts`): the real body drives the
- * media-creative-director SKILL over the week's in-flight assets and drafts a
+ * creative-director SKILL over the week's in-flight assets and drafts a
  * creative-review queue. That runner depends on the CronDefinition runner port
  * (the same `scripts/cron-skills/*.md` + memory-tree port `b2b-ceo-daily` is
  * waiting on) plus a media-fleet activity table that does not exist yet. Until
@@ -31,18 +32,18 @@ export const MEDIA_WEEKLY_CREATIVE_REVIEW_CRON = '0 14 * * THU';
 
 export interface MediaWeeklyCreativeReviewResult {
   status: 'pending-runner-port';
-  ownerSlug: 'media-creative-director';
+  ownerSlug: 'creative-director';
   reason: string;
 }
 
 export async function runMediaWeeklyCreativeReview(): Promise<MediaWeeklyCreativeReviewResult> {
   return {
     status: 'pending-runner-port',
-    ownerSlug: 'media-creative-director',
+    ownerSlug: 'creative-director',
     reason:
       'media-weekly-creative-review seam registered 2026-06-06. Real body (drive ' +
-      'media-creative-director over in-flight assets → draft a creative-review queue) ' +
-      'is gated on the CronDefinition runner port + a media-fleet activity table. ' +
+      'creative-director over in-flight assets → draft a creative-review queue) ' +
+      'is gated on the CronDefinition runner port + a fleet activity table. ' +
       'Disable flag remains the control surface once the runner lands.',
   };
 }

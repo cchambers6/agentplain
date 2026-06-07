@@ -1,30 +1,27 @@
-// /operator/fleet/media — the Media discipline (distribution) activity surface.
+// /operator/fleet/creative — the Creative discipline (production) activity surface.
 //
-// Media is agentplain's OWN distribution org: it routes finished creative to
-// audiences — buys, earns, and measures placement. It is the peer of the
-// Creative discipline (which MAKES the work — see /operator/fleet/creative).
-// Both are arms of the `marketing` customer discipline, not customer-sellable
-// disciplines of their own. This panel makes the Media arm observable without
-// contaminating the locked customer disciplines surface.
+// Creative is agentplain's OWN production org: it MAKES the work — an asset goes
+// from brief to finished file. It is the peer of the Media discipline (which
+// distributes the work — see /operator/fleet/media). Both are arms of the
+// `marketing` customer discipline, not customer-sellable disciplines of their
+// own. The discipline's spine is the creative-router ("ask first, improvise
+// never"), which routes every request to the right tool or to a human via the
+// CreatorBrief handoff (/operator/creative-briefs).
 //
 // Gate: lives under app/(operator)/layout.tsx which redirects non-operators to
 // /app; we re-assert isOperator here for defense in depth.
 //
-// Data sourcing per feedback_no_guesses_no_estimates.md:
-//   - org chart + reporting lines → real (lib/fleet/roster.ts, Media arm)
-//   - standing crons + schedules  → real (lib/fleet/roster.ts listMediaCrons)
-//   - per-agent activity          → NOT YET REAL. The crons ship as honest
-//                                    stubs; the activity section shows a
-//                                    labelled "wires up when the runner lands"
-//                                    state — no fabricated metrics.
+// Data sourcing per feedback_no_guesses_no_estimates.md: org chart + crons are
+// real (lib/fleet/roster.ts, Creative arm); per-agent activity is not yet real
+// (the weekly creative review cron is an honest stub awaiting the runner port).
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ApEyebrow, ApPaperCard, PlainoAvatar } from "@/components/ui/ap";
 import { requireUser } from "@/lib/auth/server";
 import {
-  listMediaByTier,
-  listMediaCrons,
+  listCreativeByTier,
+  listCreativeCrons,
   getFleetAgent,
   type FleetAgent,
   type FleetTier,
@@ -35,17 +32,14 @@ export const runtime = "nodejs";
 
 const TIER_LABEL: Partial<Record<FleetTier, string>> = {
   leadership: "Leadership · Class B",
-  platform: "Platform specialists · Class C",
-  earned: "Earned + measurement · Class C",
+  production: "Production pool · Class C",
 };
 
 const TIER_BLURB: Partial<Record<FleetTier, string>> = {
   leadership:
-    "Owns distribution strategy, channel-budget allocation, and attribution. Final approver before media work reaches Conner.",
-  platform:
-    "One specialist per platform — owns ads-manager planning, audiences, and algorithm-fit organic. Plans only; no spend.",
-  earned:
-    "Influencer partnerships, PR / earned media, and the analytics + attribution that measures where every placement landed.",
+    "Owns brand expression in every asset, sets production guardrails, and runs the acceptance review on human-creator deliveries. Peer to the Head of Media.",
+  production:
+    "The makers — video, static, long-form + direct-response copy, voice — plus the creative-router that picks the right tool for each job and hands brand-defining work to a human. Drafts only; nothing reaches distribution until the Creative Director signs it.",
 };
 
 function reportsToName(agent: FleetAgent): string {
@@ -53,37 +47,38 @@ function reportsToName(agent: FleetAgent): string {
   return getFleetAgent(agent.reportsTo)?.name ?? agent.reportsTo;
 }
 
-export default async function OperatorMediaFleetPage() {
+export default async function OperatorCreativeFleetPage() {
   const session = await requireUser();
   if (!session.isOperator) {
     redirect("/app");
   }
 
-  const leadership = listMediaByTier("leadership");
-  const platform = listMediaByTier("platform");
-  const earned = listMediaByTier("earned");
-  const crons = listMediaCrons();
-  const totalAgents = leadership.length + platform.length + earned.length;
+  const leadership = listCreativeByTier("leadership");
+  const production = listCreativeByTier("production");
+  const crons = listCreativeCrons();
+  const totalAgents = leadership.length + production.length;
 
   return (
     <div className="container-wide space-y-12 py-10">
       <header className="border-b border-rule pb-6">
-        <ApEyebrow>operator · media discipline</ApEyebrow>
+        <ApEyebrow>operator · creative discipline</ApEyebrow>
         <h1 className="mt-2 font-display text-3xl leading-tight text-ink md:text-4xl">
-          The fleet that distributes the work.
+          The fleet that makes the work.
         </h1>
         <p className="mt-3 flex max-w-2xl items-start gap-3 text-[15px] leading-relaxed text-ink-soft">
           <PlainoAvatar size="md" className="shrink-0" />
           <span>
-            agentplain&rsquo;s own distribution org — it takes finished creative
-            and decides where, how, and when it runs: paid, earned, and measured.
-            Media is the peer of the{" "}
-            <Link href="/operator/fleet/creative" className="underline-offset-2 hover:text-ink hover:underline">
-              Creative discipline
+            agentplain&rsquo;s own production org — it turns a brief into a
+            finished asset: films, statics, copy, voice. Its spine is the{" "}
+            <strong>creative-router</strong> (&ldquo;ask first, improvise
+            never&rdquo;): every request is routed to the right tool or handed to
+            a human. Creative is the peer of the{" "}
+            <Link href="/operator/fleet/media" className="underline-offset-2 hover:text-ink hover:underline">
+              Media discipline
             </Link>{" "}
-            that makes the work. Both are arms of the <strong>marketing</strong>{" "}
-            discipline, not customer-sellable disciplines of their own. Every
-            agent drafts and proposes; Conner executes any paid placement.
+            that distributes the work. Both are arms of the{" "}
+            <strong>marketing</strong> discipline. Every agent drafts and
+            proposes; nothing brand-defining is rendered by an agent.
           </span>
         </p>
         <p className="mt-3 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
@@ -93,23 +88,44 @@ export default async function OperatorMediaFleetPage() {
         </p>
       </header>
 
-      <section aria-labelledby="media-totals-heading" className="space-y-4">
-        <ApEyebrow id="media-totals-heading">discipline · totals</ApEyebrow>
+      <section aria-labelledby="creative-totals-heading" className="space-y-4">
+        <ApEyebrow id="creative-totals-heading">discipline · totals</ApEyebrow>
         <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-4">
-          <Stat label="media agents" value={totalAgents.toString()} />
+          <Stat label="creative agents" value={totalAgents.toString()} />
           <Stat label="leadership · class B" value={leadership.length.toString()} />
-          <Stat label="specialists · class C" value={(platform.length + earned.length).toString()} />
+          <Stat label="production · class C" value={production.length.toString()} />
           <Stat
             label="standing crons"
             value={crons.length.toString()}
-            hint="stubs awaiting runner port"
+            hint="stub awaiting runner port"
           />
         </div>
       </section>
 
+      <section aria-labelledby="capability-heading" className="space-y-3">
+        <ApEyebrow id="capability-heading">creative-asset capability</ApEyebrow>
+        <ApPaperCard density="default">
+          <p className="text-[14px] leading-relaxed text-ink-soft">
+            The discipline does <strong>not</strong> improvise brand assets in
+            raw SVG/PNG. Every request runs through the creative-router, which
+            reads the{" "}
+            <code className="font-mono text-ink">JOB_TO_TOOL_MATRIX</code> and
+            picks the right tool — or, for brand-defining work, assembles a brief
+            for an outside human creator. Open briefs and acceptance reviews live
+            on the{" "}
+            <Link
+              href="/operator/creative-briefs"
+              className="text-clay underline-offset-2 hover:underline"
+            >
+              creative-briefs queue
+            </Link>
+            .
+          </p>
+        </ApPaperCard>
+      </section>
+
       <TierSection tier="leadership" agents={leadership} />
-      <TierSection tier="platform" agents={platform} />
-      <TierSection tier="earned" agents={earned} />
+      <TierSection tier="production" agents={production} />
 
       <section aria-labelledby="crons-heading" className="space-y-4">
         <header>
@@ -118,10 +134,9 @@ export default async function OperatorMediaFleetPage() {
             The cadence the fleet runs.
           </h2>
           <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink-soft">
-            Two Inngest crons, registered and observable. They ship as honest
-            stubs — they cost zero Anthropic tokens until the CronDefinition
-            runner lands (the same port the b2b-* crons wait on). Schedules are
-            real; nothing publishes or spends.
+            One Inngest cron, registered and observable. It ships as an honest
+            stub — zero Anthropic tokens until the CronDefinition runner lands.
+            Schedule is real; nothing publishes.
           </p>
         </header>
         <ul className="divide-y divide-rule border border-rule bg-paper">
@@ -163,27 +178,30 @@ export default async function OperatorMediaFleetPage() {
         <ApEyebrow id="cascade-heading">approval cascade</ApEyebrow>
         <ApPaperCard density="default">
           <p className="text-[14px] leading-relaxed text-ink-soft">
-            A distribution plan climbs the chain before any dollar is spent:
+            An asset climbs the chain before it ships to distribution:
           </p>
           <ol className="mt-3 space-y-1 text-[14px] leading-relaxed text-ink">
             <li>
               <span className="font-mono text-[11px] text-mute">1 ·</span>{" "}
-              <strong>Specialist</strong> drafts the channel plan (Class C).
+              <strong>Creative-router</strong> picks the tool — or files a
+              CreatorBrief for a human.
             </li>
             <li>
               <span className="font-mono text-[11px] text-mute">2 ·</span>{" "}
-              <strong>Media Director</strong> reviews the plan + budget split
-              (Class B).
+              <strong>Maker</strong> produces with the named tool (Class C).
             </li>
             <li>
               <span className="font-mono text-[11px] text-mute">3 ·</span>{" "}
-              <strong>Head of Media</strong> greenlights the campaign.
+              <strong>Creative Director</strong> reviews every asset for brand
+              expression and accepts human deliveries (Class B).
             </li>
             <li>
               <span className="font-mono text-[11px] text-mute">4 ·</span>{" "}
-              <strong>CEO tier → Conner</strong> approves spend. Paid placement
-              is executed by Conner (or the customer&rsquo;s system) — never by an
-              agent.
+              Approved asset is handed to{" "}
+              <Link href="/operator/fleet/media" className="underline-offset-2 hover:text-ink hover:underline">
+                Media
+              </Link>{" "}
+              for distribution.
             </li>
           </ol>
         </ApPaperCard>
@@ -192,13 +210,12 @@ export default async function OperatorMediaFleetPage() {
       <section aria-labelledby="activity-heading" className="space-y-4">
         <ApEyebrow id="activity-heading">discipline · activity</ApEyebrow>
         <div className="border border-dashed border-rule bg-paper p-6 text-[13px] leading-relaxed text-mute">
-          No media-fleet activity yet. The crons above register and fire on
-          schedule, but they record no work until the CronDefinition runner port
-          + a fleet activity table land (tracked alongside the b2b-* runner
-          port). When that ships, drafted digests and plans will appear here and
-          in the cross-vertical{" "}
-          <Link href="/operator/fleet" className="underline-offset-2 hover:text-ink hover:underline">
-            fleet feed
+          No creative-fleet activity yet. The cron above registers and fires on
+          schedule, but it records no work until the CronDefinition runner port +
+          a fleet activity table land. CreatorBrief deliveries, by contrast, are
+          real now — see the{" "}
+          <Link href="/operator/creative-briefs" className="underline-offset-2 hover:text-ink hover:underline">
+            creative-briefs queue
           </Link>
           . No fabricated numbers until then.
         </div>
@@ -212,7 +229,7 @@ export default async function OperatorMediaFleetPage() {
           read-only here — edit{" "}
           <code className="font-mono">lib/fleet/roster.ts</code> to change agents
           or reporting lines; agent definitions live in{" "}
-          <code className="font-mono">~/.claude/skills/media-*</code>.
+          <code className="font-mono">~/.claude/skills/creative-*</code>.
         </p>
       </footer>
     </div>

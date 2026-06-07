@@ -97,7 +97,7 @@ connection is stood up.**
 | Skill | Role in the creative pipeline |
 |---|---|
 | `marketing:content-creation`, `marketing:draft-content`, `marketing:brand-review` | Copy + brand QA upstream of any visual. |
-| `media-*` (our own fleet) | The discipline that *owns* the routing — see Phase 3 + `ARCHITECTURE.md`. |
+| `creative-*` (our own fleet) | The **Creative** discipline *owns* the routing (Creative makes; Media distributes) — see `ARCHITECTURE.md` + `docs/fleet/creative-discipline-2026-06-06.md`. |
 | `pdf-viewer:*` (MCP **connected**) | Review/annotate/sign generated PDFs — works today. |
 | `Claude_in_Chrome` / `computer-use` (MCP **connected**) | Could drive a browser-based design tool (Canva/Figma web) by hand if the dedicated MCP is absent — slow fallback, last resort. |
 | `frontend-design` (installed) | Real UI/landing craft today. |
@@ -132,7 +132,7 @@ routes there, not to this audit.
    the whole point of `lib/creative-handoff/` and `/operator/creative-briefs`.
 4. **Never let an agent improvise a brand asset in raw SVG/PNG again** —
    codified in `feedback_creative_assets_use_tools_or_humans` and gated by
-   `media-creative-router`.
+   `creative-router`.
 
 > **To upgrade this audit from inferred-from-name to cited-from-source:** install
 > the creative plugins (so their `SKILL.md` lands under

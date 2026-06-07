@@ -16,10 +16,10 @@ export const rule: ComplianceRule = {
   scope: { kind: "federal" },
   citation: {
     source: "31 CFR § 10.29",
-    url: "https://www.ecfr.gov/current/title-31/subtitle-A/part-10/subpart-B/section-10.29",
-    accessedAt: "2026-05-12",
+    url: "https://www.law.cornell.edu/cfr/text/31/10.29",
+    accessedAt: "2026-06-06",
   },
-  literalText: `[UNVERIFIED — needs counsel] Substance of 31 CFR § 10.29:
+  literalText: `31 CFR § 10.29 — Conflicting interests.
 
 (a) Except as provided by paragraph (b) of this section, a practitioner shall not represent a client before the Internal Revenue Service if the representation involves a conflict of interest. A conflict of interest exists if—
   (1) The representation of one client will be directly adverse to another client; or
@@ -29,7 +29,11 @@ export const rule: ComplianceRule = {
   (2) The representation is not prohibited by law; and
   (3) Each affected client waives the conflict of interest and gives informed consent, confirmed in writing by each affected client, at the time the existence of the conflict of interest is known by the practitioner. The confirmation may be made within a reasonable period after the informed consent, but in no event later than 30 days.
 (c) Copies of the written consents must be retained by the practitioner for at least 36 months from the date of the conclusion of the representation of the affected clients, and the written consents must be provided to any officer or employee of the Internal Revenue Service on request.`,
-  unverified: true,
+  purpose: "counsel-reference",
+  severity: "advisory",
+  counselReviewStatus: "draft",
+  safeRewrite:
+    "When a draft proposes representing two parties with adverse or potentially competing interests (e.g. both spouses in a contested matter, a business and a departing partner, buyer and seller), do not imply the engagement can proceed without the § 10.29(b)(3) informed written consent of each affected client. Strike language promising to act for 'both sides' or to keep one client's information from another. Confirm written consents are obtained and retained 36 months before the engagement proceeds.",
   drafterNotes:
-    "Counsel: please verify the 36-month retention requirement and 30-day confirmation window — these are the operationally load-bearing details sentinel would flag against.",
+    "Verified 2026-06-06 against Cornell LII mirror of 31 CFR § 10.29 — the (a)/(b)/(c) wording, the 30-day confirmation window in (b)(3), and the 36-month retention in (c) all match the published text. Counsel-reference: conflict detection requires judgment about the parties' interests, so sentinel does not auto-match it.",
 };

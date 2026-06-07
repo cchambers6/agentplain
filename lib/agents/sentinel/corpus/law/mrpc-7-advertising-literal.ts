@@ -18,7 +18,7 @@ export const rule: ComplianceRule = {
   citation: {
     source: "ABA Model Rules of Professional Conduct, Rules 7.1, 7.2, 7.3",
     url: "https://www.americanbar.org/groups/professional_responsibility/publications/model_rules_of_professional_conduct/rule_7_1_communication_concerning_a_lawyer_s_services/",
-    accessedAt: "2026-05-12",
+    accessedAt: "2026-06-06",
   },
   literalText: `Rule 7.1: Communications Concerning a Lawyer's Services
 A lawyer shall not make a false or misleading communication about the lawyer or the lawyer's services. A communication is false or misleading if it contains a material misrepresentation of fact or law, or omits a fact necessary to make the statement considered as a whole not materially misleading.
@@ -47,4 +47,12 @@ Rule 7.3: Solicitation of Clients
 (c) A lawyer shall not solicit professional employment even when not otherwise prohibited by paragraph (b), if:
   (1) the target of the solicitation has made known to the lawyer a desire not to be solicited by the lawyer; or
   (2) the solicitation involves coercion, duress or harassment.`,
+  purpose: "counsel-reference",
+  severity: "advisory",
+  counselReviewStatus: "draft",
+  category: "advertising",
+  safeRewrite:
+    "Keep communications about the lawyer's services truthful and non-misleading — no material misrepresentation and no omission that makes the statement as a whole misleading (Rule 7.1). Include the name and contact information of at least one responsible lawyer/firm (7.2(d)). Do not pay for referrals beyond the narrow 7.2(b) exceptions, and do not claim specialist certification unless certified by a state-approved/ABA-accredited body named in the same communication (7.2(c)). For solicitation, see mrpc-7-3-solicitation. Specific candidate trigger phrases live in mrpc-7-1-advertising-candidates.",
+  drafterNotes:
+    "Counsel-reference master rule for the 7.x advertising/solicitation family: the misleading/material-omission tests are generative judgments, so this never auto-flags. Concrete literal candidates are carried separately in mrpc-7-1-advertising-candidates (advertising) and the live-contact bar in mrpc-7-3-solicitation. ABA Model Rule text (7.1/7.2/7.3) re-verified 2026-06-06 against americanbar.org.",
 };

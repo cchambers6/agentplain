@@ -19,10 +19,15 @@ export const rule: ComplianceRule = {
   citation: {
     source: "O.C.G.A. § 33-7-8 (title insurance); Rules of the Department of Insurance, Chapter 120",
     url: "https://law.justia.com/codes/georgia/title-33/chapter-7/",
-    accessedAt: "2026-05-12",
+    accessedAt: "2026-06-06",
   },
   literalText: `[UNVERIFIED — needs counsel] Substance: O.C.G.A. § 33-7-8 places title insurance under the Title 33 (Insurance) regulatory umbrella. Title insurance is one of the kinds of insurance authorized under the Code. Title insurers must obtain a certificate of authority from the Commissioner, file rates and forms, and comply with the Unfair Trade Practices provisions (O.C.G.A. § 33-6) that apply to all insurers. The Department of Insurance has further rulemaking authority over title insurers via Chapter 120 of the Department rules.`,
+  purpose: "counsel-reference",
+  severity: "info",
+  counselReviewStatus: "draft",
   unverified: true,
+  safeRewrite:
+    "Scope/licensure rule — no draft-text fix. Confirm the title insurer/agent holds a current GA certificate of authority and that any rate or form referenced is on file with the Commissioner before drafts reference GA title-insurance pricing or coverage.",
   drafterNotes:
     "Counsel: please pull the operative text of O.C.G.A. § 33-7-8 and replace placeholder. Confirm whether the Title Insurance Agents licensing structure (separate from the title insurer itself) is captured at a different citation that should also be added.",
 };

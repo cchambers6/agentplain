@@ -13,9 +13,9 @@ export const rule: ComplianceRule = {
   jurisdiction: "professional-pronouncement",
   scope: { kind: "professional-body", body: "AICPA" },
   citation: {
-    source: "AICPA Code of Professional Conduct § 0.300.060 (Due Care Principle, Article V)",
-    url: "https://us.aicpa.org/research/standards/codeofconduct",
-    accessedAt: "2026-05-12",
+    source: "AICPA Code of Professional Conduct § 0.300.060 (Due Care Principle, Article V), effective December 15, 2014",
+    url: "https://pub.aicpa.org/codeofconduct/ethicsresources/et-cod.pdf",
+    accessedAt: "2026-06-06",
   },
   literalText: `[UNVERIFIED — needs counsel] Substance of AICPA Code § 0.300.060 (Due Care):
 
@@ -28,5 +28,12 @@ export const rule: ComplianceRule = {
 .04 Members should be diligent in discharging responsibilities to clients, employers, and the public. Diligence imposes the responsibility to render services promptly and carefully, to be thorough, and to observe applicable technical and ethical standards.
 
 .05 Due care requires a member to plan and supervise adequately any professional activity for which he or she is responsible.`,
+  purpose: "counsel-reference",
+  severity: "info",
+  counselReviewStatus: "draft",
   unverified: true,
+  safeRewrite:
+    "When a draft promises services outside the member's demonstrated competence ('we handle every kind of tax matter', 'no engagement too complex') or implies work will be delivered without adequate planning/supervision, surface the Due Care principle: competence has limits, and consultation or referral may be required when an engagement exceeds personal competence. Rewrite to scope the offer to the firm's actual competencies.",
+  drafterNotes:
+    "Left unverified: 2026-06-06 — the Due Care Principle is published in the AICPA Code (Article V, 0.300.060 in the post-2014 codification; 1.300.060 is the related Due Professional Care interpretation under the General Standards Rule). Verbatim text could not be machine-pulled from a stable authoritative URL (copyrighted pronouncement); citation points at AICPA's et-cod.pdf. Counsel: confirm whether sentinel should anchor to the 0.300.060 Principle or the 1.300.060 interpretation (or both).",
 };

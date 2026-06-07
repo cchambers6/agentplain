@@ -18,7 +18,7 @@ export const rule: ComplianceRule = {
   citation: {
     source: "15 USC § 80b-3a (Section 203A — state and federal responsibilities); 17 CFR § 275.203A-1 (mid-sized adviser threshold)",
     url: "https://www.law.cornell.edu/uscode/text/15/80b-3a",
-    accessedAt: "2026-05-12",
+    accessedAt: "2026-06-06",
   },
   literalText: `[UNVERIFIED — needs counsel] Substance of 15 USC § 80b-3a (Section 203A) as amended by Dodd-Frank:
 
@@ -35,7 +35,13 @@ No investment adviser described in subparagraph (A) shall register under section
   (B) is exempt from registration with the securities commissioner of the State in which it maintains its principal office and place of business.
 
 Implementing rule (17 CFR § 275.203A-1) provides a $100M/$110M buffer that requires advisers crossing the threshold to switch to SEC registration only after their AUM has exceeded $110M on the most recent annual updating amendment.`,
+  purpose: "counsel-reference",
+  severity: "info",
+  counselReviewStatus: "draft",
+  category: "registration",
   unverified: true,
+  safeRewrite:
+    "Routing/scope rule — no client-facing draft text to rewrite. Use it to confirm a draft does not misstate the adviser's registration status (e.g. calling a state-registered adviser 'SEC-registered' or implying SEC registration confers approval — see `ria-marketing-candidates` and § 208(a)).",
   drafterNotes:
     "Counsel: please verify the $100M / $110M buffer and the 15-state multistate exception in 15 USC § 80b-3a(a)(2)(A). The internet-adviser exemption (17 CFR § 275.203A-2(e)) is a common SEC-registration path; counsel: should sentinel include a companion literal?",
 };

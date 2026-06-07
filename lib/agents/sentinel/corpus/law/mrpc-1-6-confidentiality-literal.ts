@@ -18,7 +18,7 @@ export const rule: ComplianceRule = {
   citation: {
     source: "ABA Model Rules of Professional Conduct, Rule 1.6",
     url: "https://www.americanbar.org/groups/professional_responsibility/publications/model_rules_of_professional_conduct/rule_1_6_confidentiality_of_information/",
-    accessedAt: "2026-05-12",
+    accessedAt: "2026-06-06",
   },
   literalText: `Rule 1.6: Confidentiality of Information
 
@@ -34,4 +34,12 @@ export const rule: ComplianceRule = {
   (7) to detect and resolve conflicts of interest arising from the lawyer's change of employment or from changes in the composition or ownership of a firm, but only if the revealed information would not compromise the attorney-client privilege or otherwise prejudice the client.
 
 (c) A lawyer shall make reasonable efforts to prevent the inadvertent or unauthorized disclosure of, or unauthorized access to, information relating to the representation of a client.`,
+  purpose: "counsel-reference",
+  severity: "blocking",
+  counselReviewStatus: "draft",
+  category: "confidentiality",
+  safeRewrite:
+    "Do not reveal information relating to a representation without the client's informed consent, implied authorization to carry out the representation, or a narrow 1.6(b) exception. Strike any draft that discloses client identity, matter facts, or strategy to a third party, CC's an outside recipient on privileged content, or routes client data to a vendor without the 1.6(c) reasonable-safeguards basis. When in doubt, redact identifying detail and route to a lawyer.",
+  drafterNotes:
+    "Counsel-reference: whether a given disclosure is 'impliedly authorized' or covered by a 1.6(b) exception is a legal judgment, so this never auto-flags. Rule 1.6(c) (safeguarding) is the technology-handling anchor sentinel uses on cross-border data-flow and vendor-disclosure flags. ABA Model Rule text re-verified 2026-06-06 against americanbar.org.",
 };

@@ -9,7 +9,13 @@
  * Provider selection rule (per `feedback_no_silent_vendor_lock` +
  * `feedback_no_prod_secrets_in_dev`):
  *   - `LLM_PROVIDER=test` → always returns the TestLlmProvider.
- *   - Otherwise, and when `ANTHROPIC_API_KEY` is set → AnthropicProvider.
+ *   - Otherwise, when `ANTHROPIC_API_KEY` is the paused sentinel
+ *     (`sk-ant-PAUSED-…`) → PausedLlmProvider, which refuses the call
+ *     before any network request (`lib/llm/paused.ts`). This is the
+ *     state prod runs in while spend is paused; short-circuiting here
+ *     means the doomed 401 round-trip is never burned and customer
+ *     surfaces get a clean `PAUSED` signal instead of a generic error.
+ *   - Otherwise, when `ANTHROPIC_API_KEY` is set → AnthropicProvider.
  *   - Otherwise → TestLlmProvider with no seed (heuristic mode), so the
  *     skill chain remains exercisable in environments that have not yet
  *     wired up Anthropic credentials.
@@ -37,6 +43,7 @@ import { persistUsageRecorder } from '../billing/usage/recorder';
 import { AnthropicProvider } from './anthropic-provider';
 import { CachingLlmProvider } from './cache-wrapper';
 import { LoggingLlmProvider } from './logging-provider';
+import { isPausedApiKey, PausedLlmProvider } from './paused';
 import { TestLlmProvider, TestLlmSeed } from './test-provider';
 import type { LlmProvider } from './types';
 
@@ -75,6 +82,12 @@ function buildInnerProvider(): LlmProvider {
     return new TestLlmProvider();
   }
   const apiKey = process.env.ANTHROPIC_API_KEY;
+  // Spend is paused: the key is the `sk-ant-PAUSED-…` sentinel. Refuse the
+  // call before building the Anthropic client so we never burn the 401
+  // round-trip, and hand callers a clean `PAUSED` result to translate.
+  if (isPausedApiKey(apiKey)) {
+    return new PausedLlmProvider();
+  }
   if (apiKey && apiKey.length > 0) {
     return new AnthropicProvider({
       apiKey,
@@ -109,3 +122,9 @@ export { TestLlmProvider, digestRequest } from './test-provider';
 export { AnthropicProvider } from './anthropic-provider';
 export { CachingLlmProvider, autoCacheRequest, DEFAULT_MIN_SYSTEM_CHARS } from './cache-wrapper';
 export { LoggingLlmProvider } from './logging-provider';
+export {
+  PausedLlmProvider,
+  LlmPausedError,
+  isPausedApiKey,
+  PAUSED_API_KEY_PREFIX,
+} from './paused';

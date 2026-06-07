@@ -77,6 +77,13 @@ import { mcpConnectedSeedInboxFn } from "@/lib/inngest/functions/mcp-connected-s
 // skill+category that crosses the threshold. The /briefings "what we
 // learned" section + the operator leadership board read the same substrate.
 import { customerFeedbackDriftSweepFn } from "@/lib/inngest/functions/customer-feedback-drift-sweep";
+// Media discipline — internal GTM media fleet standing work (see
+// lib/fleet/roster.ts + docs/fleet/media-discipline-2026-06-06.md). Honest
+// stubs awaiting the same CronDefinition runner port as the b2b-* crons;
+// they register cleanly and cost zero Anthropic tokens until the runner lands.
+import { mediaWeeklyCreativeReviewFn } from "@/lib/inngest/functions/media-weekly-creative-review";
+import { mediaPlatformPerformanceDigestFn } from "@/lib/inngest/functions/media-platform-performance-digest";
+import { mediaMonthlyMediaPlanFn } from "@/lib/inngest/functions/media-monthly-media-plan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -112,5 +119,8 @@ export const { GET, POST, PUT } = serve({
     onboardingBackfillPickSkillsFn,
     mcpConnectedSeedInboxFn,
     customerFeedbackDriftSweepFn,
+    mediaWeeklyCreativeReviewFn,
+    mediaPlatformPerformanceDigestFn,
+    mediaMonthlyMediaPlanFn,
   ],
 });

@@ -119,7 +119,7 @@ export const titleEscrow: VerticalContent = {
 
   metaTitle: "for local title and escrow agencies",
   metaDescription:
-    "An agentic fleet for the 3–20 person title and escrow operation. File intake from realtor + lender channels, milestone tracking, closing-day prep, recording follow-up, and CFPB-aware customer communication — drafted for the closer's review and sent from your own systems.",
+    "File intake from realtor/lender channels, milestone tracking, closing-day prep, recording follow-up, and CFPB-aware comms — for the 3–20 person title shop.",
 
   jtbdTables: [
     {

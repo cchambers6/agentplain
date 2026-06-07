@@ -2,11 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Section from "@/components/Section";
 import RoiCalculator from "@/components/RoiCalculator";
+import JsonLd from "@/components/seo/JsonLd";
+import { FaqList, pricingFaqItems } from "@/components/FAQ";
+import { faqPageJsonLd } from "@/lib/seo/structured-data";
+import { alternatesFor } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Three service-partnership tiers, per-seat, month-to-month. Regular $199 → $99, Partner $299 → $199, Max quoted to scope. First month free. Bespoke engagements live on /custom.",
+    "Three per-seat service-partnership tiers, month-to-month. Regular $199→$99, Partner $299→$199, Max quoted. First month free. Custom engagements on /custom.",
+  alternates: alternatesFor("/pricing"),
 };
 
 // Pricing page. Anchored to the service-partnership three-tier model
@@ -113,8 +118,16 @@ const SBM_COMPARISON: { dimension: string; diy: string; us: string }[] = [
 ];
 
 export default function PricingPage() {
+  const faqItems = pricingFaqItems();
   return (
     <>
+      {/* FAQPage structured data — the pricing-topic subset of FAQ_ITEMS,
+          which is ALSO rendered visibly below (Google requires FAQ JSON-LD to
+          mirror on-page content). */}
+      <JsonLd
+        id="ld-pricing-faqpage"
+        data={faqPageJsonLd(faqItems)}
+      />
       <section className="border-b border-rule bg-paper">
         <div className="container-wide py-20 md:py-28">
           <p className="eyebrow mb-6">Pricing</p>
@@ -308,6 +321,15 @@ export default function PricingPage() {
             </Link>
           </div>
         </div>
+      </Section>
+
+      <Section
+        id="faq"
+        eyebrow="Pricing questions"
+        title="The honest version on cost."
+        intro="The five questions buyers actually ask about price, tiers, and ROI. The full FAQ lives on the homepage."
+      >
+        <FaqList items={faqItems} />
       </Section>
 
       <section className="border-b border-rule bg-ink text-paper">

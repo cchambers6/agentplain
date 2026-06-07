@@ -132,7 +132,7 @@ export const ria: VerticalContent = {
 
   metaTitle: "for independent RIAs and wealth advisors",
   metaDescription:
-    "An agentic fleet for the 1–10 advisor independent registered investment advisor firm. Client-meeting prep, post-meeting note + task drafting, financial-plan refresh cadence, fiduciary-aware communication review, billing on AUM cycle, and ADV-aware compliance — drafted for the advisor's review and sent from your own systems.",
+    "Client-meeting prep, post-meeting notes and tasks, plan-refresh cadence, and fiduciary-aware comms review — for the 1–10 advisor independent RIA firm.",
 
   jtbdTables: [
     {

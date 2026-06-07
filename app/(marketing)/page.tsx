@@ -22,11 +22,24 @@ import {
 import {
   organizationJsonLd,
   serviceJsonLd,
+  softwareApplicationJsonLd,
   faqPageJsonLd,
 } from "@/lib/seo/structured-data";
+import { alternatesFor } from "@/lib/seo/metadata";
 import { getAllVerticals, getVerticalContent } from "@/lib/verticals";
 import { tokens } from "@/lib/brand/tokens";
 import { SEED_COUNTS } from "@/lib/knowledge/seed-data";
+import type { Metadata } from "next";
+
+// Apex homepage metadata. Title inherits the root-layout default (locked
+// wordmark + tagline); a homepage-specific description (≤155 chars,
+// value-prop-led) overrides the longer site-wide default, plus the
+// self-referential canonical + hreflang stub.
+export const metadata: Metadata = {
+  description:
+    "The service layer on top of Claude for local businesses — pre-built fleet, your tools connected, run for you. Built on Claude, configured by us.",
+  alternates: alternatesFor("/"),
+};
 
 // Marketing home.
 //
@@ -58,6 +71,7 @@ export default function HomePage() {
           Per `lib/seo/structured-data.ts`: no invented claims, no review
           counts, no schema we can't substantiate from existing content. */}
       <JsonLd id="ld-organization" data={organizationJsonLd()} />
+      <JsonLd id="ld-software" data={softwareApplicationJsonLd()} />
       <JsonLd id="ld-service" data={serviceJsonLd()} />
       <JsonLd id="ld-faqpage" data={faqPageJsonLd(FAQ_ITEMS)} />
 

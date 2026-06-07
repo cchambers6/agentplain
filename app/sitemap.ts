@@ -21,43 +21,62 @@ import { VERTICAL_SLUGS, ON_RAMP_SLUGS } from "@/lib/verticals";
 //   in its own metadata; confirmation surface, not search-discoverable.
 // - `/trust` — not built yet (needs design judgment); revisit when it
 //   ships.
-// - `/app/*`, `/operator/*`, `/api/*` — gated/internal; covered by
-//   `app/robots.ts` Disallow rules.
+// - `/app/*`, `/operator/*`, `/api/*`, `/promo/*` — gated/internal; covered
+//   by `app/robots.ts` Disallow rules. NONE are enumerated here, so no
+//   operator/app route can leak into the sitemap.
+//
+// `lastModified`: this SEO/marketing pack (PR following #158 SBM-wrapper +
+// #159 ROI softening) touched the copy + structured data on every marketing
+// route, so all entries carry a fixed 2026-06-06 lastmod. A fixed date (not
+// `new Date()`) is the correct SEO signal — it reports when the CONTENT
+// actually changed, not when the build ran. Bump `LAST_UPDATED` on the next
+// content pass.
 //
 // `metadataBase` is set in `app/layout.tsx` to https://agentplain.com.
 // Per Next.js sitemap convention, the URL in each entry is the absolute URL.
 const BASE = "https://agentplain.com";
 
+// Content-change date for this refresh. ISO date → Next.js serializes it as
+// the `<lastmod>` value. Update when marketing content materially changes.
+const LAST_UPDATED = "2026-06-06";
+
+// Priority weighting per the SEO pack brief:
+//   homepage 1.0 · vertical pages 0.9 · /pricing 0.9 · /verticals 0.9
+//   /about 0.7 · /custom 0.7 · /privacy /terms /security 0.3
+// (The brief also lists /how-it-works 0.8 and /agents 0.7 — neither exists
+//  as a marketing route today: how-it-works is the homepage `#how` anchor,
+//  and /agents is a gated product route excluded by robots. Flagged in the
+//  PR description rather than inventing routes.)
 const MARKETING_ROUTES: Array<{
   path: string;
   changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"];
   priority: number;
 }> = [
   { path: "/", changeFrequency: "weekly", priority: 1.0 },
-  { path: "/about", changeFrequency: "monthly", priority: 0.7 },
   { path: "/pricing", changeFrequency: "monthly", priority: 0.9 },
   { path: "/verticals", changeFrequency: "weekly", priority: 0.9 },
+  { path: "/about", changeFrequency: "monthly", priority: 0.7 },
   { path: "/custom", changeFrequency: "monthly", priority: 0.7 },
-  { path: "/privacy", changeFrequency: "yearly", priority: 0.4 },
-  { path: "/terms", changeFrequency: "yearly", priority: 0.4 },
-  { path: "/security", changeFrequency: "monthly", priority: 0.5 },
+  { path: "/privacy", changeFrequency: "yearly", priority: 0.3 },
+  { path: "/terms", changeFrequency: "yearly", priority: 0.3 },
+  { path: "/security", changeFrequency: "monthly", priority: 0.3 },
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const lastModified = new Date();
-
   const marketing = MARKETING_ROUTES.map((r) => ({
     url: `${BASE}${r.path}`,
-    lastModified,
+    lastModified: LAST_UPDATED,
     changeFrequency: r.changeFrequency,
     priority: r.priority,
   }));
 
+  // The ten ratified vertical landing pages — top organic-acquisition
+  // surface, so 0.9 (just under the homepage).
   const verticals = VERTICAL_SLUGS.map((slug) => ({
     url: `${BASE}/${slug}`,
-    lastModified,
+    lastModified: LAST_UPDATED,
     changeFrequency: "weekly" as const,
-    priority: 0.8,
+    priority: 0.9,
   }));
 
   // On-ramp surfaces (currently `/general`) — same route shape, lower
@@ -65,7 +84,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // catch-all fallback for businesses outside the ten.
   const onRamps = ON_RAMP_SLUGS.map((slug) => ({
     url: `${BASE}/${slug}`,
-    lastModified,
+    lastModified: LAST_UPDATED,
     changeFrequency: "monthly" as const,
     priority: 0.6,
   }));

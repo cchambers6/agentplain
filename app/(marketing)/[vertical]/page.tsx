@@ -20,7 +20,9 @@ import JsonLd from "@/components/seo/JsonLd";
 import {
   verticalBreadcrumbJsonLd,
   verticalServiceJsonLd,
+  verticalProductJsonLd,
 } from "@/lib/seo/structured-data";
+import { alternatesFor } from "@/lib/seo/metadata";
 
 // Static generation for all 10 verticals plus on-ramp surfaces (e.g.
 // `/general`) — no runtime DB lookups, no ISR cache churn. Adding an
@@ -43,6 +45,7 @@ export function generateMetadata({
   return {
     title: content.metaTitle,
     description: content.metaDescription,
+    alternates: alternatesFor(`/${content.slug}`),
   };
 }
 
@@ -66,6 +69,12 @@ export default function VerticalPage({
       <JsonLd
         id={`ld-vertical-service-${content.slug}`}
         data={verticalServiceJsonLd(content)}
+      />
+      {/* Product payload — softened ROI band (15–50× cap; 107× never emitted)
+          + a real per-seat Offer from the locked pricing ladder. */}
+      <JsonLd
+        id={`ld-vertical-product-${content.slug}`}
+        data={verticalProductJsonLd(content)}
       />
       <VerticalHero content={content} />
       {content.valueLoopExample ? (

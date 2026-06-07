@@ -6,24 +6,56 @@
  *   - Organization / wordmark / tagline → `lib/brand/tokens.ts`
  *   - Service / verticals               → `lib/verticals/*` (locked ten + on-ramp)
  *   - FAQPage                           → `components/FAQ.tsx` (exported items)
+ *   - Pricing / Offer bands             → `lib/pricing/tiers.ts`
  *
  * Per `feedback_no_guesses_no_estimates.md`: nothing here makes up reviewer
  * counts, ratings, pricing not already locked, or claims not present in the
  * memory rules. Per `feedback_no_silent_vendor_lock.md`: this lives behind a
  * pure builder boundary — components consume the typed shape, never schema.org
  * vocabulary directly.
+ *
+ * 2026-06-06 refresh (SEO/marketing pack following PR #158 SBM-wrapper
+ * positioning + PR #159 ROI softening):
+ *   - Organization description reframed to the SBM-wrapper thesis ("service
+ *     layer on top of Claude") per `project_sbm_wrapper_positioning_2026_06_06.md`.
+ *   - New `softwareApplicationJsonLd()` — acknowledges the built-on-Claude
+ *     relationship via `isBasedOn` (true + verifiable; Anthropic is named as
+ *     the upstream provider, never as a competitor we replace).
+ *   - New `verticalProductJsonLd()` — per-vertical Product with the softened
+ *     ROI band (15–50× cap; the retired 107× claim is never emitted) and a
+ *     real per-seat Offer derived from the locked pricing ladder.
  */
 
 import { tokens } from "@/lib/brand/tokens";
 import { getAllVerticals } from "@/lib/verticals";
 import type { VerticalContent } from "@/lib/verticals/types";
+import {
+  PER_SEAT_MONTHLY_USD_CENTS,
+  isSelfServeTier,
+  tierDisplayName,
+  type TierName,
+} from "@/lib/pricing/tiers";
 
 export const BASE_URL = "https://agentplain.com";
+
+/**
+ * The softened ROI band, stated once so every Product payload and the
+ * FAQ-derived copy read identically. Per PR #159 (`feat/roi-soften-violation
+ * -anchor`) + the competitive audit in PR #155: the headline band is capped
+ * at 50× and paired with the violation-avoidance anchor. The retired 107×
+ * figure must never appear in any structured-data payload.
+ */
+export const ROI_BAND = "15–50× per workflow";
+export const ROI_FRAME =
+  "Typically 15–50× ROI per workflow — plus the regulatory violations a draft-then-approve loop catches as a draft and never sends, the one thing an auto-execution tool can't promise to dodge.";
 
 /**
  * Organization payload — names agentplain as the publisher across every
  * surface. Logo/sameAs are intentionally omitted until we have canonical
  * URLs to point at (no invented LinkedIn/X handles).
+ *
+ * Description carries the SBM-wrapper frame: agentplain is the service layer
+ * on top of Claude, not a competitor to it.
  */
 export function organizationJsonLd(): Record<string, unknown> {
   return {
@@ -35,8 +67,71 @@ export function organizationJsonLd(): Record<string, unknown> {
     url: BASE_URL,
     slogan: tokens.tagline,
     description:
-      "agentplain is a service partnership for local businesses. A service team installs a fleet of capable AI partners inside your shop, configures it for your vertical, and customizes the agents as your ops shift. Built for ten verticals: real estate, mortgage, insurance, property management, title & escrow, recruiting, home services, CPA / tax, law, and RIA.",
+      "agentplain is the service layer on top of Claude for local businesses. We bring the pre-built skills and agents a shop would otherwise build itself, curate the memory that keeps it useful, connect the tools you already run, and operate the whole thing for a low flat fee — built on Claude, configured by us. Built for ten verticals: real estate, mortgage, insurance, property management, title & escrow, recruiting, home services, CPA / tax, law, and RIA.",
     knowsAbout: getAllVerticals().map((v) => v.name),
+  };
+}
+
+/**
+ * SoftwareApplication payload — acknowledges the built-on-Claude relationship
+ * honestly and verifiably (per `project_sbm_wrapper_positioning_2026_06_06.md`:
+ * "built on Claude, configured by us" is the approved frame; competitor /
+ * replacement framings are banned). `isBasedOn` names Anthropic's Claude as
+ * the upstream model the service is configured on top of — a true statement a
+ * crawler can corroborate, not a marketing claim.
+ *
+ * `offers` is an AggregateOffer spanning the self-serve per-seat ladder
+ * (Regular $99–$199, Partner $199–$299) sourced from the locked pricing
+ * tiers. Max is quote-based and excluded by design.
+ */
+export function softwareApplicationJsonLd(): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "@id": `${BASE_URL}/#software`,
+    name: tokens.wordmark,
+    applicationCategory: "BusinessApplication",
+    applicationSubCategory: "Managed AI operations for local businesses",
+    operatingSystem: "Web",
+    url: BASE_URL,
+    provider: { "@id": `${BASE_URL}/#organization` },
+    description:
+      "A managed, vertical-aware fleet of AI partners that reads your email, calendar, CRM, and documents, then drafts what you'd otherwise type — installed, run, and customized for you by a human service team. Built on Claude, configured by us; you stay in control because the fleet drafts and you approve.",
+    // True + verifiable upstream relationship — agentplain is configured on
+    // top of Anthropic's Claude. NOT a competitor/replacement framing.
+    isBasedOn: {
+      "@type": "SoftwareApplication",
+      name: "Claude",
+      applicationCategory: "BusinessApplication",
+      provider: {
+        "@type": "Organization",
+        name: "Anthropic",
+        url: "https://www.anthropic.com",
+      },
+    },
+    offers: selfServeAggregateOffer(),
+  };
+}
+
+/**
+ * AggregateOffer across the self-serve per-seat ladder. Min = the cheapest
+ * Regular seat (50–99 band), max = the most expensive Partner seat (solo).
+ * Sourced from `PER_SEAT_MONTHLY_USD_CENTS`; quote-based Max is excluded.
+ */
+function selfServeAggregateOffer(): Record<string, unknown> {
+  const selfServe: TierName[] = (["regular", "plus"] as TierName[]).filter(
+    isSelfServeTier,
+  );
+  const prices = selfServe.flatMap((t) =>
+    Object.values(PER_SEAT_MONTHLY_USD_CENTS[t]).map((c) => c / 100),
+  );
+  return {
+    "@type": "AggregateOffer",
+    priceCurrency: "USD",
+    lowPrice: Math.min(...prices),
+    highPrice: Math.max(...prices),
+    offerCount: prices.length,
+    unitText: "per seat per month",
   };
 }
 
@@ -60,7 +155,7 @@ export function serviceJsonLd(): Record<string, unknown> {
     provider: { "@id": `${BASE_URL}/#organization` },
     areaServed: "United States",
     description:
-      "Managed AI ops: we install, run, and customize a vertical-aware fleet of capable AI partners inside your business. The fleet drafts; you decide. Built for ten verticals plus a /general on-ramp.",
+      "Managed AI ops: we install, run, and customize a vertical-aware fleet of capable AI partners inside your business. Built on Claude, configured by us. The fleet drafts; you decide. Built for ten verticals plus a /general on-ramp.",
     audience: {
       "@type": "BusinessAudience",
       audienceType: "Local businesses (1–99 seats)",
@@ -88,6 +183,79 @@ export function verticalServiceJsonLd(v: VerticalContent): Record<string, unknow
       "@type": "BusinessAudience",
       audienceType: v.missionSubject ?? v.name,
     },
+  };
+}
+
+/**
+ * Per-vertical Product payload — used on each `/[vertical]` page alongside the
+ * Service payload. Carries the softened ROI band (capped at 50×; the retired
+ * 107× claim is never emitted) as a `PropertyValue`, plus a real per-seat
+ * `Offer` derived from the vertical's locked tier.
+ *
+ * Offer rules (truthful pricing only):
+ *   - Regular / Partner (self-serve) → AggregateOffer with the tier's own
+ *     per-seat band from `PER_SEAT_MONTHLY_USD_CENTS`.
+ *   - Max (law, ria) → quote-based; NO price Offer is emitted (we never
+ *     invent a seat price for a quoted engagement). The Product still ships
+ *     so the ROI + brand signal lands; pricing surfaces on /pricing + /custom.
+ *
+ * The per-vertical `multiplier` (e.g. "26x", "11x–23x") is asserted ≤ 50× by
+ * the content audit; we surface it verbatim. The ROI_FRAME copy states the
+ * 15–50× band + violation anchor identically to the FAQ and pricing surfaces.
+ */
+export function verticalProductJsonLd(v: VerticalContent): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "@id": `${BASE_URL}/${v.slug}/#product`,
+    name: `${tokens.wordmark} for ${v.name.toLowerCase()}`,
+    category: "Managed AI operations",
+    brand: { "@id": `${BASE_URL}/#organization` },
+    url: `${BASE_URL}/${v.slug}`,
+    description: `${v.hero.valueProp} ${ROI_FRAME}`,
+    additionalProperty: [
+      {
+        "@type": "PropertyValue",
+        name: "ROI band",
+        value: ROI_BAND,
+      },
+      {
+        "@type": "PropertyValue",
+        name: "Vertical ROI multiplier",
+        value: v.roi.multiplier,
+      },
+      {
+        "@type": "PropertyValue",
+        name: "Service tier",
+        value: tierDisplayName(v.tier),
+      },
+    ],
+  };
+
+  const offer = verticalOffer(v.tier);
+  if (offer) payload.offers = offer;
+
+  return payload;
+}
+
+/**
+ * Per-seat Offer for a vertical's tier. Returns null for quote-based Max so
+ * we never publish an invented seat price. Self-serve tiers (Regular,
+ * Partner) get an AggregateOffer spanning their own seat band.
+ */
+function verticalOffer(tier: TierName): Record<string, unknown> | null {
+  if (!isSelfServeTier(tier)) return null;
+  const prices = Object.values(PER_SEAT_MONTHLY_USD_CENTS[tier]).map(
+    (c) => c / 100,
+  );
+  return {
+    "@type": "AggregateOffer",
+    priceCurrency: "USD",
+    lowPrice: Math.min(...prices),
+    highPrice: Math.max(...prices),
+    offerCount: prices.length,
+    unitText: "per seat per month",
+    availability: "https://schema.org/InStock",
   };
 }
 
@@ -126,6 +294,11 @@ export function verticalBreadcrumbJsonLd(v: VerticalContent): Record<string, unk
  * FAQPage payload — built from a list of {q, a} pairs the FAQ component
  * exports. Keeping the shape this loose lets the same builder drive a
  * sub-FAQ on a vertical page later without a schema change.
+ *
+ * Google requires FAQPage structured data to mirror FAQ content VISIBLE on
+ * the page — so every caller must render the same items it passes here
+ * (the homepage renders all of FAQ_ITEMS; /pricing renders + emits only the
+ * pricing-topic subset).
  */
 export function faqPageJsonLd(items: Array<{ q: string; a: string }>): Record<string, unknown> {
   return {

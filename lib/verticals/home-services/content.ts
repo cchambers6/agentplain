@@ -134,7 +134,7 @@ export const homeServices: VerticalContent = {
 
   metaTitle: "for home services — roofing, HVAC, GC remodel, landscaping",
   metaDescription:
-    "An agentic fleet for the 5–25 crew residential trades operation. Lead routing across inbound sources, estimate drafting from measurement data, insurance-supplement drafting for storm work, project coordination, and review-and-referral cadence — drafted for the owner's review and sent from your own systems.",
+    "Lead routing, estimate drafting from measurement data, insurance-supplement drafts for storm work, and project coordination — for the 5–25 crew trades op.",
 
   jtbdTables: [
     {

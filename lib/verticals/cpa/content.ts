@@ -119,7 +119,7 @@ export const cpa: VerticalContent = {
 
   metaTitle: "for CPA firms — 2–10 person practices",
   metaDescription:
-    "An agentic fleet for the solo or 2–10 partner CPA firm doing 1040s + 1120-S + bookkeeping retainers. Engagement-letter onboarding, document chase, compliance review, books reconciliation, and milestone billing — drafted for the partner's review and sent from your own systems.",
+    "1040s, 1120-S, and bookkeeping retainers, drafted for the partner — engagement onboarding, document chase, compliance, books, and milestone billing.",
 
   jtbdTables: [
     {

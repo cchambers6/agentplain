@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { alternatesFor } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
   title: "Security",
   description:
-    "How agentplain protects customer data — encryption at rest, workspace isolation, OAuth scope minimization, audit logs, and incident response.",
+    "How agentplain protects your data — encryption at rest, workspace isolation, OAuth scope minimization, audit logs, and incident response.",
+  alternates: alternatesFor("/security"),
 };
 
 // Security page. Architecture-grounded — every claim here matches what's

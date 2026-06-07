@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { alternatesFor } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
   title: "Privacy",
   description:
-    "How agentplain collects, uses, and protects customer data. Encryption at rest, workspace-scoped isolation, no resale, no training on your data.",
+    "How agentplain collects, uses, and protects your data — encryption at rest, per-workspace isolation, no resale, no training on your data.",
+  alternates: alternatesFor("/privacy"),
 };
 
 // Privacy policy. Required for Google OAuth verification + customer trust.

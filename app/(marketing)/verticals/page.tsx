@@ -3,11 +3,13 @@ import Link from "next/link";
 
 import Section from "@/components/Section";
 import { getAllVerticals } from "@/lib/verticals";
+import { alternatesFor } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
   title: "Verticals",
   description:
-    "agentplain is a service partnership built for ten locked verticals. Three tiers (Regular $199 → $99, Partner $299 → $199, Max quoted) cover every vertical; bespoke engagements live on /custom.",
+    "One managed AI fleet, ten verticals — real estate to RIA. Per-seat service partnership from $99/seat; bespoke scope on /custom. Built on Claude.",
+  alternates: alternatesFor("/verticals"),
 };
 
 // Verticals index page. Anchored to the simplified pricing model per

@@ -111,7 +111,7 @@ export const realEstate: VerticalContent = {
 
   metaTitle: "for independent real-estate brokerages",
   metaDescription:
-    "The fleet for the 5–25-agent independent real-estate brokerage. Listing intake, buyer routing, showings, compliance, CRM hygiene, production reporting, and recruiting — coordinated by a pre-trained fleet that sits on top of the tools you already use.",
+    "Listing intake, buyer routing, showings, compliance, CRM hygiene, and production reporting — for the 5–25-agent independent real-estate brokerage.",
 
   jtbdTables: [
     {

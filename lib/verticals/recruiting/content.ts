@@ -127,7 +127,7 @@ export const recruiting: VerticalContent = {
 
   metaTitle: "for boutique recruiting firms and in-house talent teams",
   metaDescription:
-    "An agentic fleet for the 2–10 recruiter boutique firm or in-house talent team. Sourcing against public production data, drafted outreach with one substantiated reference per touch, opt-out compliance, pipeline tracking, and offer-package assembly — drafted for the recruiter's review and sent from your own systems.",
+    "Sourcing on public data, drafted outreach with a substantiated reference, opt-out compliance, and pipeline tracking — for the 2–10 recruiter boutique firm.",
 
   jtbdTables: [
     {

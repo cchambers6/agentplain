@@ -124,16 +124,22 @@ export default function PlainoWidget() {
 
   return (
     <>
+      {/* Launcher. Below sm it's a compact icon-only clay circle tucked in the
+          corner so it doesn't sit on top of body copy the way the full chip
+          did on narrow phones; from sm up it's the editorial chip with its
+          mono label. */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={open ? "Close chat with Plaino" : "Chat with Plaino"}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 border border-clay bg-clay px-4 py-3 font-mono text-[12px] uppercase tracking-eyebrow text-paper shadow-sm transition hover:bg-clay-deep focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+        className="fixed bottom-5 right-5 z-50 flex h-12 w-12 items-center justify-center rounded-full border border-clay bg-clay text-paper shadow-sm transition hover:bg-clay-deep focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:bottom-6 sm:right-6 sm:h-auto sm:w-auto sm:gap-2 sm:rounded-none sm:px-4 sm:py-3 sm:font-mono sm:text-[12px] sm:uppercase sm:tracking-eyebrow"
       >
         <Plaino state="head-icon" size={20} />
-        {open ? "close" : "chat with Plaino"}
+        <span className="hidden sm:inline">
+          {open ? "close" : "chat with Plaino"}
+        </span>
       </button>
 
       {open ? (

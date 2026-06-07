@@ -26,10 +26,21 @@ export default function LogoLockup({
   className = "",
   asLink = true,
 }: LogoLockupProps) {
+  // The wordmark steps down a size below `sm` (640px) so the lockup fits
+  // alongside the trial CTA + hamburger on iPhone widths without overlapping.
+  // Logo's `sm` size sets the base text-[1.25rem]; the sm: override restores
+  // the full md wordmark from 640px up, so desktop is unchanged. (A single
+  // responsive class — not two competing base classes — keeps it deterministic
+  // regardless of Tailwind's utility ordering.)
   const inner = (
     <>
       <Plaino state="head-icon" size={size} />
-      <Logo asLink={false} variant={variant} />
+      <Logo
+        asLink={false}
+        variant={variant}
+        size="sm"
+        className="sm:text-[1.6rem]"
+      />
     </>
   );
 

@@ -14,6 +14,7 @@ import { getWebAuthnProvider } from "./webauthn";
 import type {
   GeneratedOptions,
   StoredCredentialRef,
+  WebAuthnProvider,
 } from "./webauthn";
 
 const userCtx = (userId: string): RlsContext => ({
@@ -54,6 +55,7 @@ export async function buildRegistrationOptions(
   userId: string,
   userName: string,
   userDisplayName: string | null,
+  provider: WebAuthnProvider = getWebAuthnProvider(),
 ): Promise<GeneratedOptions> {
   const existing = await withRls(userCtx(userId), (tx) =>
     tx.webAuthnCredential.findMany({
@@ -65,7 +67,7 @@ export async function buildRegistrationOptions(
     credentialId: c.credentialId,
     transports: c.transports,
   }));
-  return getWebAuthnProvider().generateRegistrationOptions({
+  return provider.generateRegistrationOptions({
     userId,
     userName,
     userDisplayName,
@@ -83,8 +85,10 @@ export async function verifyAndPersistRegistration(input: {
   responseJSON: unknown;
   expectedChallenge: string;
   label?: string | null;
+  provider?: WebAuthnProvider;
 }): Promise<PersistPasskeyResult> {
-  const verified = await getWebAuthnProvider().verifyRegistration({
+  const provider = input.provider ?? getWebAuthnProvider();
+  const verified = await provider.verifyRegistration({
     responseJSON: input.responseJSON,
     expectedChallenge: input.expectedChallenge,
   });
@@ -150,6 +154,7 @@ export interface PasskeyAuthResolution {
 export async function verifyAuthentication(input: {
   responseJSON: unknown;
   expectedChallenge: string;
+  provider?: WebAuthnProvider;
 }): Promise<PasskeyAuthResolution | null> {
   const credentialId = extractCredentialId(input.responseJSON);
   if (!credentialId) return null;
@@ -163,7 +168,8 @@ export async function verifyAuthentication(input: {
   );
   if (!credential) return null;
 
-  const result = await getWebAuthnProvider().verifyAuthentication({
+  const provider = input.provider ?? getWebAuthnProvider();
+  const result = await provider.verifyAuthentication({
     responseJSON: input.responseJSON,
     expectedChallenge: input.expectedChallenge,
     credential: {

@@ -54,3 +54,67 @@ export function getWebAuthnConfig(): WebAuthnConfig {
     expectedOrigins,
   };
 }
+
+const stripPort = (host: string): string => host.split(":")[0];
+
+/**
+ * The registrable parent domains we collapse subdomains onto. A passkey's
+ * rpID MUST equal the page's host or be a registrable-PARENT of it, else the
+ * browser throws SecurityError on navigator.credentials.get()/create(). The
+ * app is served on BOTH the apex (agentplain.com) and the app subdomain
+ * (app.agentplain.com) from one deployment, so a fixed rpID of
+ * "app.agentplain.com" is INVALID on the apex (a child can't be the rpID of
+ * its parent). Collapsing every agentplain host to "agentplain.com" makes one
+ * credential work across apex + www + app. Add future production parents here.
+ */
+const REGISTRABLE_PARENTS = ["agentplain.com"] as const;
+
+/**
+ * Resolve the WebAuthn rpID for the host a request is actually served on.
+ *   - RP_ID env, when set, always wins (explicit pin / escape hatch).
+ *   - A host equal to or under a known registrable parent → that parent, so a
+ *     single passkey works across apex, www, and app.
+ *   - Anything else (preview *.vercel.app, localhost) → the full host, which is
+ *     always a valid rpID for its own origin. This is why passkeys are
+ *     testable on Vercel previews now: rpID follows the preview host instead of
+ *     being pinned to a domain the preview isn't served on.
+ */
+export function resolveRpId(host: string): string {
+  const override = env.webauthnRpId();
+  if (override) return override;
+  const bare = stripPort(host);
+  for (const parent of REGISTRABLE_PARENTS) {
+    if (bare === parent || bare.endsWith(`.${parent}`)) return parent;
+  }
+  return bare || "localhost";
+}
+
+export interface RequestOriginInfo {
+  /** Host header as served (may include a port in dev). */
+  host: string;
+  /** Full origin the browser used, e.g. https://app.agentplain.com. */
+  origin: string;
+}
+
+/**
+ * Per-request WebAuthn config. rpID follows the request host (see resolveRpId);
+ * expectedOrigins is the union of the request's own origin, the canonical app
+ * origin, and any WEBAUTHN_ALLOWED_ORIGINS — so an assertion verifies on
+ * whichever host the user is on without pre-listing every host.
+ */
+export function getWebAuthnConfigForRequest(
+  req: RequestOriginInfo,
+): WebAuthnConfig {
+  const canonicalOrigin = env.appPublicOrigin().replace(/\/$/, "");
+  const requestOrigin = req.origin.replace(/\/$/, "");
+  const allowed = env.webauthnAllowedOrigins();
+  const expectedOrigins = Array.from(
+    new Set([requestOrigin, canonicalOrigin, ...allowed].filter(Boolean)),
+  );
+  return {
+    rpID: resolveRpId(req.host),
+    rpName: env.webauthnRpName(),
+    canonicalOrigin,
+    expectedOrigins,
+  };
+}

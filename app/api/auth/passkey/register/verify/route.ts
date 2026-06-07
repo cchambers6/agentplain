@@ -7,7 +7,12 @@
 import { NextResponse } from "next/server";
 import { readSession } from "@/lib/auth/session";
 import { verifyAndPersistRegistration } from "@/lib/auth/passkey";
-import { clearChallenge, readChallenge } from "@/lib/auth/webauthn";
+import {
+  clearChallenge,
+  getWebAuthnProviderForRequest,
+  readChallenge,
+  requestOriginInfo,
+} from "@/lib/auth/webauthn";
 
 export const runtime = "nodejs";
 
@@ -32,11 +37,13 @@ export async function POST(req: Request): Promise<NextResponse> {
     );
   }
 
+  const provider = getWebAuthnProviderForRequest(await requestOriginInfo());
   const result = await verifyAndPersistRegistration({
     userId: session.userId,
     responseJSON: body.response,
     expectedChallenge: challenge.challenge,
     label: body.label ?? null,
+    provider,
   });
   await clearChallenge();
 

@@ -7,6 +7,11 @@ import {
 } from "@simplewebauthn/browser";
 import { useEffect, useState } from "react";
 import { ApHeritageButton } from "@/components/ui/ap";
+import {
+  describeWebAuthnError,
+  logWebAuthnFailure,
+  warnOnRpIdMismatch,
+} from "@/lib/auth/webauthn-client";
 
 // Passkey sign-in — the "no email" path. Two ways in, both feeding the same
 // verify endpoint:
@@ -74,7 +79,25 @@ export function PasskeySignInButton() {
       method: "POST",
     });
     if (!res.ok) throw new Error("options");
-    return res.json();
+    const optionsJSON = (await res.json()) as { rpId?: string };
+    // Self-diagnose the exact config bug that throws SecurityError: if the
+    // server handed us an rpId that isn't valid on this origin, say so in the
+    // console BEFORE the ceremony fails, so the cause is one click away.
+    warnOnRpIdMismatch(optionsJSON?.rpId);
+    return optionsJSON;
+  };
+
+  // Log the real DOMException + show a message that distinguishes "our config
+  // is wrong" (SecurityError) from a generic browser block.
+  const surfaceError = (stage: "authenticate", err: unknown): void => {
+    logWebAuthnFailure(stage, err);
+    const { name } = describeWebAuthnError(err);
+    setStatus("error");
+    setMessage(
+      name === "SecurityError"
+        ? "This site's passkey settings need an update on our side — we've logged it. Use your email link for now."
+        : "Your browser blocked that passkey request. If this keeps happening, sign in with your email instead.",
+    );
   };
 
   // Mount: feature-detect, then kick off the conditional (autofill) ceremony.
@@ -107,10 +130,7 @@ export function PasskeySignInButton() {
         if (cancelled || isQuietCeremonyError(err)) return;
         // A real config error on the conditional path — surface it so the
         // failure is diagnosable rather than silent.
-        setStatus("error");
-        setMessage(
-          "Your browser blocked the passkey request. If this keeps happening, sign in with your email instead.",
-        );
+        surfaceError("authenticate", err);
       }
     })();
     return () => {
@@ -142,10 +162,7 @@ export function PasskeySignInButton() {
         setStatus("idle");
         return;
       }
-      setStatus("error");
-      setMessage(
-        "Your browser blocked that passkey request. If this keeps happening, sign in with your email instead.",
-      );
+      surfaceError("authenticate", err);
     }
   };
 

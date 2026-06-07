@@ -7,15 +7,19 @@
 
 import { NextResponse } from "next/server";
 import {
-  getWebAuthnProvider,
+  getWebAuthnProviderForRequest,
+  requestOriginInfo,
   writeChallenge,
 } from "@/lib/auth/webauthn";
 
 export const runtime = "nodejs";
 
 export async function POST(): Promise<NextResponse> {
+  // rpID follows the host this request is served on (apex/app/preview/local),
+  // so the challenge the browser receives is valid for the current origin.
+  const provider = getWebAuthnProviderForRequest(await requestOriginInfo());
   const { optionsJSON, challenge } =
-    await getWebAuthnProvider().generateAuthenticationOptions({});
+    await provider.generateAuthenticationOptions({});
   await writeChallenge({ challenge, kind: "authenticate" });
   return NextResponse.json(optionsJSON);
 }

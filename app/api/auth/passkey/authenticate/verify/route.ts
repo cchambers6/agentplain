@@ -9,7 +9,12 @@
 import { NextResponse } from "next/server";
 import { writeSession, type SessionPayload } from "@/lib/auth/session";
 import { verifyAuthentication } from "@/lib/auth/passkey";
-import { clearChallenge, readChallenge } from "@/lib/auth/webauthn";
+import {
+  clearChallenge,
+  getWebAuthnProviderForRequest,
+  readChallenge,
+  requestOriginInfo,
+} from "@/lib/auth/webauthn";
 
 export const runtime = "nodejs";
 
@@ -29,9 +34,11 @@ export async function POST(req: Request): Promise<NextResponse> {
     );
   }
 
+  const provider = getWebAuthnProviderForRequest(await requestOriginInfo());
   const resolution = await verifyAuthentication({
     responseJSON: body.response,
     expectedChallenge: challenge.challenge,
+    provider,
   });
   await clearChallenge();
 

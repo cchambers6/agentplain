@@ -8,6 +8,9 @@ import { rule as mrpc7 } from "./mrpc-7-advertising-literal";
 import { rule as gaRpc } from "./ga-rules-professional-conduct-literal";
 import { rule as attorneyClientPrivilege } from "./attorney-client-privilege-literal";
 import { rule as mrpc71AdvertisingCandidates } from "./mrpc-7-1-advertising-candidates-literal";
+import { rule as mrpc17Conflict } from "./mrpc-1-7-conflict-current-clients-literal";
+import { rule as mrpc115TrustAccount } from "./mrpc-1-15-trust-account-literal";
+import { rule as mrpc73Solicitation } from "./mrpc-7-3-solicitation-literal";
 
 export const lawCorpus: CorpusBundle = {
   verticalSlug: "law",
@@ -21,5 +24,8 @@ export const lawCorpus: CorpusBundle = {
     gaRpc,
     attorneyClientPrivilege,
     mrpc71AdvertisingCandidates,
+    mrpc17Conflict,
+    mrpc115TrustAccount,
+    mrpc73Solicitation,
   ],
 };

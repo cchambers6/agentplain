@@ -14,11 +14,11 @@ export const rule: ComplianceRule = {
   jurisdiction: "federal-regulation",
   scope: { kind: "federal" },
   citation: {
-    source: "17 CFR § 275.204A-1",
-    url: "https://www.ecfr.gov/current/title-17/chapter-II/part-275/section-275.204A-1",
-    accessedAt: "2026-05-12",
+    source: "17 CFR § 275.204A-1 (Investment adviser codes of ethics)",
+    url: "https://www.law.cornell.edu/cfr/text/17/275.204A-1",
+    accessedAt: "2026-06-06",
   },
-  literalText: `[UNVERIFIED — needs counsel] Substance of 17 CFR § 275.204A-1:
+  literalText: `17 CFR § 275.204A-1 — Investment adviser codes of ethics:
 
 (a) Adoption and enforcement of code of ethics. If you are an investment adviser registered or required to be registered under section 203 of the Act (15 U.S.C. 80b-3), you must establish, maintain and enforce a written code of ethics that, at a minimum, includes:
 
@@ -42,7 +42,11 @@ export const rule: ComplianceRule = {
 (ii) Timing of holdings reports. Your access persons must submit a holdings report:
   (A) No later than 10 days after the person becomes an access person, and the information must be current as of a date no more than 45 days prior to the date the person becomes an access person.
   (B) At least once during each 12-month period thereafter on a date you select, and the information must be current as of a date no more than 45 days prior to the date the report was submitted.`,
-  unverified: true,
+  purpose: "counsel-reference",
+  severity: "info",
+  counselReviewStatus: "draft",
+  safeRewrite:
+    "No client-facing draft text to rewrite — this is a firm-policy obligation (the adviser must adopt and enforce a written code of ethics). Route any draft that asserts personal-trading, access-person, or code-of-ethics claims to compliance for confirmation against the firm's adopted code.",
   drafterNotes:
     "Counsel: 17 CFR § 275.204A-1 also has paragraphs (b)(2) (transaction reports — within 30 days of quarter end), (c) (pre-approval of IPOs and limited offerings), (d) (recordkeeping cross-reference to Rule 204-2), and (e) (definitions). Recommend separate literals for those subsections.",
 };

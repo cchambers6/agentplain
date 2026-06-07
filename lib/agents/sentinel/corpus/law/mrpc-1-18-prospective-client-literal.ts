@@ -17,7 +17,7 @@ export const rule: ComplianceRule = {
   citation: {
     source: "ABA Model Rules of Professional Conduct, Rule 1.18",
     url: "https://www.americanbar.org/groups/professional_responsibility/publications/model_rules_of_professional_conduct/rule_1_18_duties_of_prospective_client/",
-    accessedAt: "2026-05-12",
+    accessedAt: "2026-06-06",
   },
   literalText: `Rule 1.18: Duties to Prospective Client
 
@@ -32,4 +32,12 @@ export const rule: ComplianceRule = {
   (2) the lawyer who received the information took reasonable measures to avoid exposure to more disqualifying information than was reasonably necessary to determine whether to represent the prospective client; and
     (i) the disqualified lawyer is timely screened from any participation in the matter and is apportioned no part of the fee therefrom; and
     (ii) written notice is promptly given to the prospective client.`,
+  purpose: "counsel-reference",
+  severity: "advisory",
+  counselReviewStatus: "draft",
+  category: "prospective-client",
+  safeRewrite:
+    "Treat intake conversations and consultation notes as confidential even if no engagement follows — do not use or reveal information learned from a prospective client, and do not draft work for a matter adverse to that person in the same or a substantially related matter where the information could be significantly harmful. In intake drafts, avoid soliciting more detail than needed to run the conflict check, and route a possible adverse-matter conflict to a lawyer for screening / written-consent steps before proceeding.",
+  drafterNotes:
+    "Counsel-reference: whether information 'could be significantly harmful' or matters are 'substantially related' is a legal judgment, so this never auto-flags. Sentinel anchor for intake-form processing: even a brief consultation that doesn't ripen into representation triggers limited confidentiality and conflict obligations. ABA Model Rule text re-verified 2026-06-06 against americanbar.org.",
 };

@@ -14,10 +14,15 @@ export const rule: ComplianceRule = {
   citation: {
     source: "O.C.G.A. Title 43, Chapter 3 (Public Accountancy); Rules of the Georgia State Board of Accountancy, Chapter 20",
     url: "https://gsba.georgia.gov/",
-    accessedAt: "2026-05-12",
+    accessedAt: "2026-06-06",
   },
   literalText: `[UNVERIFIED — needs counsel] Substance: O.C.G.A. Title 43, Chapter 3 establishes the Georgia State Board of Accountancy and vests it with authority to license certified public accountants and registered firms practicing in Georgia. Grounds for disciplinary action enumerated in the chapter include: practice without a valid license; conviction of any felony or crime involving moral turpitude; fraud or deceit in obtaining a license; dishonesty, fraud, or gross negligence in the performance of professional services; violation of any rule of professional conduct promulgated by the Board; failure to comply with continuing professional education requirements; and conduct discreditable to the public accounting profession. Implementing rules at Rules of the Georgia State Board of Accountancy (Chapter 20-X) elaborate on professional standards, peer review, and CPE.`,
+  purpose: "counsel-reference",
+  severity: "info",
+  counselReviewStatus: "draft",
   unverified: true,
+  safeRewrite:
+    "When a draft implies a person may 'practice as a CPA', 'provide CPA / attest services', or hold themselves out as licensed in Georgia, confirm the workspace holds a current Georgia license and firm registration before the language goes out — unlicensed practice and holding out are grounds for discipline under O.C.G.A. Title 43, Chapter 3. Route licensure/CPE-status questions to the operator rather than asserting them in a draft.",
   drafterNotes:
-    "Counsel: please pull canonical text of the grounds-for-discipline section (likely O.C.G.A. § 43-3-19) and replace placeholder. Confirm the current Rules-of-the-Board chapter numbering.",
+    "Left unverified 2026-06-06: O.C.G.A. is hosted on LexisNexis/state portals that block automated fetch, so the grounds-for-discipline wording (likely O.C.G.A. § 43-3-19) could not be machine-verified this wave. Per the corpus convention literalText keeps the [UNVERIFIED] placeholder. Counsel: pull the canonical grounds-for-discipline section and confirm the current Rules-of-the-Board (Chapter 20-X) numbering.",
 };

@@ -44,6 +44,11 @@ const OUT_DIR = path.resolve(process.cwd(), "outputs/counsel-handoff-packets");
 const DATED_BUNDLES: Array<{ slug: string; label: string; date: string }> = [
   { slug: "mortgage", label: "Mortgage", date: "2026-06-03" },
   { slug: "insurance", label: "Insurance", date: "2026-06-03" },
+  // 4-corpora tightening wave (feat/4-corpora-tightening-2026-06-06).
+  { slug: "cpa", label: "CPA", date: "2026-06-06" },
+  { slug: "ria", label: "RIA", date: "2026-06-06" },
+  { slug: "law", label: "Law", date: "2026-06-06" },
+  { slug: "title-escrow", label: "Title & Escrow", date: "2026-06-06" },
 ];
 
 const VERTICAL_LABELS: Record<string, string> = {

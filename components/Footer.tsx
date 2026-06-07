@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Logo from "./brand/Logo";
+import LogoLockup from "./brand/LogoLockup";
 import { tokens } from "@/lib/brand/tokens";
 import { getAllVerticals } from "@/lib/verticals";
 
@@ -21,7 +21,7 @@ export default function Footer() {
     <footer className="border-t border-rule bg-paper-deep">
       <div className="container-wide grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div>
-          <Logo />
+          <LogoLockup />
           <p className="mt-5 max-w-sm font-display text-2xl leading-snug text-ink">
             {tokens.tagline}
           </p>

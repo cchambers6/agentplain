@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Logo from "./brand/Logo";
+import LogoLockup from "./brand/LogoLockup";
 
 // Marketing chrome navigation. Brand tokens only — no hardcoded hex.
 //
@@ -39,7 +39,7 @@ export default function Header() {
   return (
     <header className="border-b border-rule bg-paper">
       <div className="container-wide flex items-center justify-between py-5">
-        <Logo />
+        <LogoLockup />
         <nav className="flex items-center gap-6 text-sm" aria-label="primary">
           {/* Desktop nav — links inline at md+ */}
           {PRIMARY_NAV.map((item) => (

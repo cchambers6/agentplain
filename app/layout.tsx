@@ -43,6 +43,18 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  // Favicons + touch icons — the 8-bit robot-dog mark (public brand mark
+  // ratified 2026-06-06). direction-1 is the wired default; flips to whichever
+  // direction Conner picks from the PR preview.
+  icons: {
+    icon: [
+      { url: "/brand/direction-1/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/brand/direction-1/favicon-16.png", sizes: "16x16", type: "image/png" },
+      { url: "/brand/direction-1/logo-icon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/brand/direction-1/favicon.ico",
+    apple: { url: "/brand/direction-1/apple-touch-icon.png", sizes: "180x180" },
+  },
 };
 
 export default function RootLayout({

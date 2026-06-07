@@ -27,19 +27,29 @@ export function SignInForm() {
         name="email"
         type="email"
         required
-        autoComplete="email"
+        // "webauthn" token lets iOS Safari / Chrome surface a saved passkey in
+        // this field's autofill — the conditional-UI ceremony started by
+        // PasskeySignInButton hooks into it, so the user can sign in with a
+        // passkey straight from the email field, no button, no email typed.
+        autoComplete="email webauthn"
         error={state.error ?? undefined}
         helper="We email you a sign-in link. Good for 15 minutes."
       />
-      <label className="flex items-start gap-2 text-[13px] leading-relaxed text-ink-soft">
+      <label className="flex items-start gap-3 border border-rule bg-paper-deep p-3 text-[14px] leading-relaxed text-ink">
         <input
           type="checkbox"
           name="remember"
           value="1"
           defaultChecked
-          className="mt-[3px]"
+          className="mt-[3px] h-4 w-4 accent-ink"
         />
-        <span>Keep me signed in for 30 days on this device.</span>
+        <span>
+          <span className="font-medium">Stay signed in on this device.</span>{" "}
+          <span className="text-ink-soft">
+            We&rsquo;ll keep you signed in for 30 days so you skip the email
+            link next time.
+          </span>
+        </span>
       </label>
       <Submit />
     </form>

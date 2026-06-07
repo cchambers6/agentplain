@@ -29,5 +29,11 @@ export type {
   BriefingItem,
   ApprovalItem,
   ExchangeResponse,
+  IntegrationTile,
+  ChatTurn,
+  SupportChatResponse,
+  FeedbackCategory,
+  AppleSignInInput,
+  RegisterPushInput,
 } from "@shared/lib/mobile/api-client";
 export { ApiError } from "@shared/lib/mobile/api-client";

@@ -21,7 +21,13 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { api, setUnauthorizedHandler, type MeResponse, type MeWorkspace } from "../api";
+import {
+  api,
+  setUnauthorizedHandler,
+  type MeResponse,
+  type MeWorkspace,
+  type AppleSignInInput,
+} from "../api";
 import { clearToken, setToken } from "./session-store";
 
 type Status = "loading" | "signedOut" | "signedIn";
@@ -33,6 +39,8 @@ interface AuthState {
   activeWorkspace: MeWorkspace | null;
   /** Exchange a raw magic-link token for a sealed session and load identity. */
   signInWithToken: (rawToken: string, remember?: boolean) => Promise<void>;
+  /** Exchange an Apple identity token for a sealed session and load identity. */
+  signInWithApple: (input: AppleSignInInput) => Promise<void>;
   selectWorkspace: (workspaceId: string) => void;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -88,6 +96,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [applyMe],
   );
 
+  const signInWithApple = useCallback(
+    async (input: AppleSignInInput) => {
+      const exchanged = await api.appleSignIn(input);
+      await setToken(exchanged.token);
+      setActiveWorkspaceId(exchanged.activeWorkspaceId);
+      const data = await api.me();
+      applyMe(data);
+    },
+    [applyMe],
+  );
+
   const selectWorkspace = useCallback((workspaceId: string) => {
     setActiveWorkspaceId(workspaceId);
   }, []);
@@ -123,11 +142,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       activeWorkspaceId,
       activeWorkspace,
       signInWithToken,
+      signInWithApple,
       selectWorkspace,
       signOut,
       refresh,
     };
-  }, [status, me, activeWorkspaceId, signInWithToken, selectWorkspace, signOut, refresh]);
+  }, [
+    status,
+    me,
+    activeWorkspaceId,
+    signInWithToken,
+    signInWithApple,
+    selectWorkspace,
+    signOut,
+    refresh,
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

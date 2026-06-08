@@ -2,6 +2,7 @@ import Link from "next/link";
 import Section from "@/components/Section";
 import FAQ, { FAQ_ITEMS } from "@/components/FAQ";
 import RoiCalculator from "@/components/RoiCalculator";
+import { ValueLoopDiagram } from "@/components/explainers/ValueLoopDiagram";
 import JsonLd from "@/components/seo/JsonLd";
 import {
   Step,
@@ -193,6 +194,21 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* V01 — The value loop (docs/explainer-visual-system-2026-06-07.md §3).
+          The 30-second answer to "what even is this?" sits directly under the
+          hero: a closed loop where the human (your approval queue) is the clay
+          node — nothing leaves until your name is on it. CODE-SVG, so the five
+          labels stay matched to the no-outbound architecture. */}
+      <Section
+        eyebrow="The shape of it"
+        title="Your tools in. Drafts out. You approve. Nothing sends on its own."
+        intro="The fleet reads what's already in your systems, does the work that lives between your tools, and lands every result in your queue. You stay the only one who hits send."
+      >
+        <div className="border border-rule bg-paper p-4 md:p-8">
+          <ValueLoopDiagram />
+        </div>
+      </Section>
 
       {/* SBM-WRAPPER FRAME — near the top, by design.
           Ratified 2026-06-06 (project_sbm_wrapper_positioning_2026_06_06) as

@@ -49,6 +49,20 @@ export const env = {
     oneOf("KNOWLEDGE_EMBEDDING_PROVIDER", ["openai", "test"] as const, "openai"),
   knowledgeEmbeddingModel: () =>
     optional("OPENAI_EMBEDDING_MODEL") ?? "text-embedding-3-small",
+  // Competitive-signal feed (lib/competitive-signals — Wave-8, audit theme #18).
+  // `fixture` (default) runs the feed off the deterministic seed corpus with NO
+  // network — correct for dev / preview / tests. `web` selects the live
+  // web-research adapter (Bright Data MCP search port). The live adapter still
+  // falls back to fixtures + names the gap until the MCP dispatch is wired, so
+  // setting `web` without a dispatch is safe (never fabricates live claims).
+  competitiveSignalProvider: () =>
+    oneOf("COMPETITIVE_SIGNAL_PROVIDER", ["fixture", "web"] as const, "fixture"),
+  // Optional internal fleet workspace the competitive-signal cron runs the
+  // fire-gate against (vacation/PTO/schedule-window). When unset the cron
+  // fails OPEN — the feed is internal GTM work, not customer-workspace work,
+  // so there is no customer to pause by default.
+  competitiveSignalFleetWorkspaceId: () =>
+    optional("COMPETITIVE_SIGNAL_FLEET_WORKSPACE_ID"),
 
   // App
   appPublicOrigin: () => optional("APP_PUBLIC_ORIGIN") ?? "http://localhost:3000",

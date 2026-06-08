@@ -106,6 +106,25 @@ export type {
 } from "./types";
 export { scanCorpus } from "./scanner";
 export type { ComplianceFlag, ScanInput, ScanResult } from "./scanner";
+export { stageRewrites, deterministicFallback } from "./rewrite";
+export type {
+  StagedRewrite,
+  StageRewritesInput,
+  RewriteSource,
+} from "./rewrite";
+export {
+  InMemoryRedlineStore,
+  normalizeClausePattern,
+  reduceLearnedLanguage,
+  LEARNED_LANGUAGE_THRESHOLD,
+} from "./redline-store";
+export type {
+  RedlineStore,
+  CounselRedline,
+  ProposedCounselRedline,
+  LearnedClauseLanguage,
+} from "./redline-store";
+export { PrismaRedlineStore } from "./prisma-redline-store";
 export { buildCounselHandoffPacket } from "./counsel-packet";
 export type {
   CounselHandoffPacket,

@@ -1089,6 +1089,28 @@ function renderComplianceDigest(p: Record<string, unknown>): RenderedApproval {
       const label = pickString(m, ["ruleLabel"]);
       const kind = pickString(m, ["approvalKind"]);
       lines.push(`• [${sev ?? "?"}] ${label ?? "match"}${kind ? ` — ${kind}` : ""}`);
+      // Rewrite-and-stage (pride-audit theme #9): when Plaino drafted a
+      // compliant replacement, surface it as a one-tap fix directly under
+      // the match — alert → fix. `learned`/`llm`/`fallback` carry copy;
+      // `gated` shows the counsel-handoff note instead.
+      const excerpt = pickString(m, ["excerpt"]);
+      if (excerpt) lines.push(`    flagged: "${excerpt}"`);
+      const replacement = pickString(m, ["suggestedReplacement"]);
+      const source = pickString(m, ["rewriteSource"]);
+      const citation = pickString(m, ["rewriteCitation"]);
+      const gateNote = pickString(m, ["rewriteGateNote"]);
+      if (replacement) {
+        lines.push(`    suggested fix: ${replacement}`);
+        const tag = [
+          source ? `via ${source}` : null,
+          citation ? `cite ${citation}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+        if (tag) lines.push(`    (${tag})`);
+      } else if (source === "gated" && gateNote) {
+        lines.push(`    rewrite withheld — ${gateNote}`);
+      }
     }
   }
   const metaParts: string[] = [];

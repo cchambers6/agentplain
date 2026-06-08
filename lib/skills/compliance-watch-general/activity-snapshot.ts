@@ -18,8 +18,11 @@
 import type { DbTransactionClient } from '@/lib/db';
 import { withSystemContext as defaultWithSystemContext } from '@/lib/db';
 import { loadCorpusFor, scanCorpus } from '@/lib/agents/sentinel';
+import { stageRewrites } from '@/lib/agents/sentinel/rewrite';
+import type { RedlineStore } from '@/lib/agents/sentinel/redline-store';
 import { decryptPayloadForRead } from '@/lib/security/payload-crypto';
 import { verticalSlugFromEnum } from '@/lib/auth/vertical-enum';
+import type { LlmProvider } from '@/lib/llm/types';
 import type {
   ComplianceMatch,
   ComplianceSnapshot,
@@ -36,6 +39,21 @@ export interface BuildComplianceSnapshotInput {
   systemContext?: SystemContextRunner;
   /** Cap on matches to ride in the snapshot. Default 50. */
   maxMatches?: number;
+  /**
+   * LlmProvider for rewrite-and-stage. When provided, sentinel corpus
+   * matches carry a `suggestedReplacement` grounded in the rule that
+   * fired (pride-audit theme #9). Omit for the deterministic-fallback
+   * path — matches still carry a no-LLM compliant rewrite. PII matches
+   * never carry a rewrite (no corpus rule to ground one).
+   */
+  llm?: LlmProvider;
+  /**
+   * Durable counsel-redline store for the learned-language loop
+   * (pride-audit theme #14). When a (rule, clause) bucket has cleared the
+   * threshold, the rewrite uses counsel's converged language verbatim.
+   * Omit to skip the learned path (rewrites still generate via LLM/fallback).
+   */
+  redlineStore?: RedlineStore;
 }
 
 const MAX_EXCERPT_CHARS = 120;
@@ -116,15 +134,30 @@ export async function buildComplianceSnapshot(
       // Sentinel literal-match rules — if the vertical has a corpus.
       if (corpus) {
         const scan = scanCorpus({ subject: subjectStr, body: bodyStr, corpus });
-        for (const flag of scan.flags) {
+        // Rewrite-and-stage: upgrade every flag into a one-tap fix carrying
+        // the compliant replacement sentence + rule citation. Degrades to
+        // the deterministic fallback when no LLM is wired; gates per vertical.
+        const staged = await stageRewrites({
+          verticalSlug,
+          flags: scan.flags,
+          corpus,
+          workspaceId: input.workspaceId,
+          llm: input.llm,
+          redlineStore: input.redlineStore,
+        });
+        for (const s of staged) {
           if (matches.length >= maxMatches) break;
           matches.push({
             approvalItemId: a.id,
             approvalKind: a.kind,
-            ruleId: flag.ruleId,
+            ruleId: s.flag.ruleId,
             ruleSeverity: 'MEDIUM',
-            ruleLabel: flag.ruleTitle,
-            excerpt: trimExcerpt(flag.matchedText),
+            ruleLabel: s.flag.ruleTitle,
+            excerpt: trimExcerpt(s.flag.matchedText),
+            suggestedReplacement: s.gated ? null : s.suggestedReplacement,
+            rewriteSource: s.source,
+            rewriteCitation: s.ruleCitation.source,
+            rewriteGateNote: s.gated ? (s.gateNote ?? null) : null,
           });
         }
       }

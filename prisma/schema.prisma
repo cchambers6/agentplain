@@ -644,6 +644,9 @@ model Workspace {
   /// Wave-6 — every cron / Inngest entry seam writes a SkillRun row so
   /// scorecards report skipped + failed fires honestly, not just drafts.
   skillRuns                SkillRun[]
+  /// Wave-4 (compliance rewrite-and-stage) — counsel red-lines feeding the
+  /// learned-language rewrite loop. See CounselRedline.
+  counselRedlines          CounselRedline[]
 
   @@index([slug])
   @@index([vertical])
@@ -1790,6 +1793,52 @@ model WorkspaceMemoryEntry {
   /// a sort step.
   @@index([workspaceId, kind, pinned, createdAt])
   @@index([workspaceId, pinned, updatedAt])
+}
+
+/// Wave-4 — counsel-feedback redline loop for compliance rewrite-and-stage
+/// (`lib/agents/sentinel/redline-store.ts`). When counsel red-lines a
+/// sentinel rewrite suggestion (or hand-corrects a flagged phrase), the
+/// operator records ONE row here capturing the rule that fired, the
+/// normalized clause pattern, and the language counsel ACTUALLY wants used.
+/// Once a (workspace, vertical, rule, clausePattern) bucket accumulates
+/// LEARNED_LANGUAGE_THRESHOLD (5) agreeing red-lines, the rewrite engine
+/// embeds that learned language VERBATIM in future suggestions — no LLM
+/// call, no re-derivation. This is the durable state that makes the loop
+/// cold-start-safe: the engine re-reads it on every fire.
+///
+/// `id` is created WITHOUT a DB default (Prisma generates @default(uuid())
+/// client-side) so this table adds ZERO entries to prisma/schema-drift-
+/// baseline.sql — matching the PlainoConversation / LeadCapture convention.
+///
+/// RLS: operator-only (mirrors LeadCapture). The compliance sweep + the
+/// operator counsel-review console run under withSystemContext; a customer
+/// never reads another workspace's counsel corrections.
+model CounselRedline {
+  id                String    @id @default(uuid()) @db.Uuid
+  workspaceId       String    @db.Uuid
+  /// Vertical slug the red-line buckets under (`real-estate`, `mortgage`…).
+  verticalSlug      String    @db.VarChar(64)
+  /// Corpus rule id that fired the flag this red-line corrects
+  /// (e.g. `fha-hud-literal-triggers`).
+  ruleId            String    @db.VarChar(128)
+  /// Normalized clause pattern (lowercased, whitespace-collapsed matched
+  /// phrase). The rewrite engine looks up learned language by this key, so
+  /// the recorder MUST normalize identically (normalizeClausePattern).
+  clausePattern     String
+  /// The language counsel wants used in place of the offending phrase. Plain
+  /// text; generic clause language, NOT a specific customer draft (no PII).
+  preferredLanguage String
+  /// Optional counsel rationale, surfaced to the operator on review.
+  rationale         String?
+  /// Who recorded it — counsel name / bar # or operator id. Audit only.
+  recordedBy        String?
+  createdAt         DateTime  @default(now())
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  /// The learned-language reducer reads "all red-lines for this rule in this
+  /// workspace+vertical, newest first" on every rewrite fire — this index
+  /// satisfies that filter + ORDER BY without a scan.
+  @@index([workspaceId, verticalSlug, ruleId, createdAt])
 }
 
 /// Wave-2 skill marketplace. One row per workspace × skill that the

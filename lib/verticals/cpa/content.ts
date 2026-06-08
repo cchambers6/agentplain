@@ -292,10 +292,24 @@ export const cpa: VerticalContent = {
   },
 
   integrations: {
-    shipped: [],
+    // Live today — TaxDome + Karbon connect with a pasted API key;
+    // QuickBooks + Outlook/M365 via OAuth. See
+    // `lib/integrations/marketplace.ts` (status: 'available').
+    shipped: [
+      {
+        name: "TaxDome",
+        category: "Practice mgmt",
+        note: "Reads the docs your clients upload, surfaces what is pending review, and brings client-document state into your close drafts.",
+      },
+      {
+        name: "Karbon",
+        category: "Practice mgmt",
+        note: "Reads workflows, jobs, and recurring tasks so close drafts reflect what is actually in flight.",
+      },
+      { name: "QuickBooks Online", category: "Accounting" },
+      { name: "Outlook + M365 Graph", category: "Email + calendar" },
+    ],
     planned: [
-      { name: "TaxDome", category: "Practice mgmt" },
-      { name: "Karbon", category: "Practice mgmt" },
       { name: "Canopy", category: "Practice mgmt" },
       { name: "Lacerte", category: "Tax prep" },
       { name: "UltraTax", category: "Tax prep" },
@@ -303,10 +317,8 @@ export const cpa: VerticalContent = {
       { name: "ProSeries", category: "Tax prep" },
       { name: "CCH ProSystem fx Engagement", category: "Audit workpapers" },
       { name: "CaseWare", category: "Audit workpapers" },
-      { name: "QuickBooks Online", category: "Accounting" },
       { name: "Xero", category: "Accounting" },
       { name: "SmartVault / Box", category: "Document storage" },
-      { name: "Outlook + M365 Graph", category: "Email + calendar" },
     ],
     plannedWindow: "Q4 2026",
   },

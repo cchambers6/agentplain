@@ -270,15 +270,26 @@ export const insurance: VerticalContent = {
   },
 
   integrations: {
-    shipped: [],
+    // Live today via OAuth — see `lib/integrations/marketplace.ts`.
+    shipped: [
+      { name: "Outlook + M365 Graph", category: "Email + calendar" },
+    ],
+    // Adapter built + tested behind the `PolicyLookup` port (wave-1b,
+    // `lib/integrations/ezlynx-mcp/`). Going live needs EZLynx partner OAuth
+    // credentials + `EZLYNX_ADAPTER_LIVE=on`.
+    supported: [
+      {
+        name: "EZLynx",
+        category: "AMS",
+        note: "Reads the policy behind the certificate-of-insurance request loop. Connecting your EZLynx credential turns it on.",
+      },
+    ],
     planned: [
-      { name: "EZLynx", category: "AMS" },
       { name: "Applied Epic", category: "AMS" },
       { name: "AMS360", category: "AMS" },
       { name: "HawkSoft", category: "AMS" },
       { name: "Vertafore PL Rating", category: "Comparative rater" },
       { name: "AgencyZoom", category: "Retention" },
-      { name: "Outlook + M365 Graph", category: "Email + calendar" },
       { name: "Top-12 carrier portals", category: "Carrier" },
     ],
     plannedWindow: "Q3 2026",

@@ -285,14 +285,25 @@ export const propertyManagement: VerticalContent = {
   },
 
   integrations: {
-    shipped: [],
+    // Live today via OAuth — see `lib/integrations/marketplace.ts`.
+    shipped: [
+      { name: "QuickBooks Online", category: "Accounting" },
+      { name: "Outlook + M365 Graph", category: "Email + calendar" },
+    ],
+    // Adapter built + tested behind the `RentRollLookup` port (wave-1,
+    // `lib/integrations/buildium-mcp/` — the reference adapter). Going live
+    // needs your Buildium API key + `BUILDIUM_ADAPTER_LIVE=on`.
+    supported: [
+      {
+        name: "Buildium",
+        category: "PMS",
+        note: "Reads the rent roll behind the rent-collection chase loop. Pasting your Buildium API key turns it on.",
+      },
+    ],
     planned: [
-      { name: "Buildium", category: "PMS" },
       { name: "AppFolio", category: "PMS" },
       { name: "Propertyware", category: "PMS" },
       { name: "Yardi Breeze", category: "PMS" },
-      { name: "QuickBooks Online", category: "Accounting" },
-      { name: "Outlook + M365 Graph", category: "Email + calendar" },
       { name: "Twilio Voice (inbound triage receiver)", category: "Telephony — inbound only" },
     ],
     plannedWindow: "Q3 2026",

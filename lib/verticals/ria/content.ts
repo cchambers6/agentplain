@@ -302,7 +302,10 @@ export const ria: VerticalContent = {
   },
 
   integrations: {
-    shipped: [],
+    // Live today via OAuth — see `lib/integrations/marketplace.ts`.
+    shipped: [
+      { name: "Outlook + M365 Graph", category: "Email + calendar" },
+    ],
     planned: [
       { name: "Wealthbox", category: "CRM" },
       { name: "Redtail", category: "CRM" },
@@ -314,7 +317,6 @@ export const ria: VerticalContent = {
       { name: "Black Diamond", category: "Portfolio mgmt" },
       { name: "Envestnet Tamarac", category: "Portfolio mgmt" },
       { name: "Schwab / Fidelity / Pershing", category: "Custodian (read-only)" },
-      { name: "Outlook + M365 Graph", category: "Email + calendar" },
     ],
     plannedWindow: "Q1 2027",
   },

@@ -219,12 +219,15 @@ export const general: VerticalContent = {
   },
 
   integrations: {
-    shipped: [],
-    planned: [
+    // Live today — the horizontal connectors every business shares, all via
+    // OAuth. See `lib/integrations/marketplace.ts` (status: 'available').
+    shipped: [
       { name: "Gmail", category: "Email" },
       { name: "Microsoft 365 / Outlook", category: "Email + calendar" },
       { name: "Google Calendar", category: "Calendar" },
       { name: "QuickBooks Online", category: "Accounting (read-only)" },
+    ],
+    planned: [
       {
         name: "Generic CRM webhook receiver",
         category: "Catch-all",

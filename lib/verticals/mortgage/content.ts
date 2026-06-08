@@ -249,15 +249,26 @@ export const mortgage: VerticalContent = {
   },
 
   integrations: {
-    shipped: [],
+    // Live today via OAuth — see `lib/integrations/marketplace.ts`.
+    shipped: [
+      { name: "Outlook + M365 Graph", category: "Email + calendar" },
+    ],
+    // Adapter built + tested behind the `LoanFileLookup` port (wave-1b,
+    // `lib/integrations/encompass-mcp/`). Going live needs ICE Developer
+    // Connect partner credentials + `ENCOMPASS_ADAPTER_LIVE=on`.
+    supported: [
+      {
+        name: "Encompass",
+        category: "LOS",
+        note: "Reads the loan file behind the document-chase loop. Connecting your ICE Developer Connect credential turns it on.",
+      },
+    ],
     planned: [
-      { name: "Encompass", category: "LOS" },
       { name: "Calyx Point", category: "LOS" },
       { name: "LendingPad", category: "LOS" },
       { name: "Optimal Blue", category: "Pricing engine" },
       { name: "DU / LP", category: "AUS" },
       { name: "Wholesale lender portals", category: "Lender" },
-      { name: "Outlook + M365 Graph", category: "Email + calendar" },
       { name: "Total Expert", category: "Marketing CRM" },
     ],
     plannedWindow: "Q3 2026",

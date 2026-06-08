@@ -32,6 +32,23 @@ export interface ComplianceMatch {
   ruleLabel: string;
   /** Excerpt of the matched span. Truncated to 120 chars for the payload. */
   excerpt: string;
+  /**
+   * Rewrite-and-stage (pride-audit theme #9). The compliant replacement
+   * sentence Plaino drafted for the flagged span — turns the alert into a
+   * one-tap fix on /approvals. Null when no rewrite was produced (a PII
+   * pattern with no corpus rule, or a counsel-gated vertical). Only sentinel
+   * corpus matches carry a rewrite; the suggestion is grounded in the rule
+   * that fired and rides with `rewriteCitation`.
+   */
+  suggestedReplacement?: string | null;
+  /** Where the rewrite came from — `learned` (counsel red-line loop),
+   *  `llm`, `fallback` (deterministic, no-LLM), or `gated` (counsel
+   *  sign-off pending). Absent for non-rewrite matches (PII patterns). */
+  rewriteSource?: 'learned' | 'llm' | 'fallback' | 'gated';
+  /** Formal citation grounding the rewrite (the rule's source ref). */
+  rewriteCitation?: string | null;
+  /** Counsel-handoff note when the vertical is gated (rewriteSource='gated'). */
+  rewriteGateNote?: string | null;
 }
 
 export interface ComplianceSnapshot {

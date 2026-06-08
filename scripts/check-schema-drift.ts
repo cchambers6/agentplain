@@ -65,11 +65,29 @@
  *
  * Then `git diff prisma/schema-drift-baseline.sql` and explain the
  * change in the PR description + the baseline README.
+ *
+ * ## Auto-heal (Wave-7, theme #19)
+ *
+ * The dominant cause of a red drift check is a NEW raw-SQL index migration
+ * (GIN/trgm/pgvector) whose `DROP INDEX "..."` line isn't yet in the
+ * baseline — the documented fix is a hand-append, and the only way to land
+ * the migration before that append was the `HUSKY=0` jailbreak. The
+ * `--auto-heal-raw-indexes` flag automates exactly that one append:
+ *
+ *   SHADOW_DATABASE_URL=… npm run check:schema-drift -- --auto-heal-raw-indexes
+ *
+ * When the ONLY difference between the current diff and the baseline is
+ * added `-- DropIndex` / `DROP INDEX "..."` pairs, the script appends them
+ * to the baseline's DropIndex section (idempotently) and re-verifies. ANY
+ * other drift (a forgotten column, a renamed index, a removed baseline
+ * line) is `unhealable` — the script fails loudly exactly as before. The
+ * check is NEVER weakened; only the known, documented append is automated.
  */
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { analyzeDrift } from "../lib/ops/schema-drift-autoheal";
 
 const REPO_ROOT = resolve(__dirname, "..");
 const SCHEMA_PATH = resolve(REPO_ROOT, "prisma", "schema.prisma");
@@ -179,6 +197,7 @@ function main(): void {
   ensurePathExists(MIGRATIONS_DIR, "Migrations directory");
 
   const updateBaseline = process.argv.includes("--update-baseline");
+  const autoHealRawIndexes = process.argv.includes("--auto-heal-raw-indexes");
 
   const shadowUrl = process.env.SHADOW_DATABASE_URL;
   if (!shadowUrl) {
@@ -234,6 +253,47 @@ function main(): void {
       );
     }
     return;
+  }
+
+  // Diverged from baseline. Before failing, try the narrow auto-heal for
+  // the known raw-index pattern (Wave-7, theme #19) when requested.
+  const analysis = analyzeDrift(currentNorm, baselineNorm);
+  if (autoHealRawIndexes && analysis.kind === "healable") {
+    writeBaseline(analysis.healedBaseline);
+    console.log(
+      `schema-drift: ✓ auto-healed ${analysis.added.length} raw-index DROP INDEX ` +
+        `entr${analysis.added.length === 1 ? "y" : "ies"} into the baseline:`,
+    );
+    for (const d of analysis.added) {
+      console.log(`             + DROP INDEX "${d.indexName}";`);
+    }
+    // Re-verify so a partial / wrong heal can never pass silently.
+    const reBaseline = readBaseline();
+    if (currentNorm !== reBaseline) {
+      console.error(
+        "schema-drift: ✗ auto-heal did not fully reconcile the diff — " +
+          "failing loud. Inspect prisma/schema-drift-baseline.sql.",
+      );
+      process.exit(2);
+    }
+    console.log(
+      "schema-drift: ✓ baseline now matches the current diff. Commit " +
+        "prisma/schema-drift-baseline.sql + note the raw index in the README.",
+    );
+    return;
+  }
+  if (autoHealRawIndexes && analysis.kind === "unhealable") {
+    console.error("");
+    console.error(
+      "schema-drift: ✗ --auto-heal-raw-indexes refused — drift is NOT the " +
+        "known raw-index pattern.",
+    );
+    console.error(`             reason: ${analysis.reason}`);
+    console.error(
+      "             The gate is unchanged: resolve this drift by hand " +
+        "(migrate dev) or via --update-baseline with a README note.",
+    );
+    // Fall through to the standard failure output below.
   }
 
   // Diverged from baseline — print the current diff so the CI log shows

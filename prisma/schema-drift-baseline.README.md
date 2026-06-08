@@ -120,3 +120,32 @@ the right path after the reconciliation migration above.
 If the CI gate goes red and the new lines look like real, accidental
 schema drift (a column you added without `prisma migrate dev`), DO NOT
 update the baseline — generate a real migration instead.
+
+## Raw-index auto-heal (Wave-7, theme #19)
+
+The dominant red-gate cause is a NEW raw-SQL index migration
+(GIN/trgm/pgvector) whose `DROP INDEX "..."` line isn't yet in this
+baseline. The documented fix has always been "append the `DROP INDEX`
+line here" — but until that hand-edit happened, the only way to land the
+migration was the `HUSKY=0` bypass, which is exactly the jailbreak that
+let *un-baselined* drift slip through.
+
+`check-schema-drift.ts` now supports `--auto-heal-raw-indexes`:
+
+```sh
+SHADOW_DATABASE_URL=… npm run check:schema-drift -- --auto-heal-raw-indexes
+```
+
+When the **only** difference between the current diff and this baseline is
+added `-- DropIndex` / `DROP INDEX "..."` pairs, the script rewrites the
+baseline to the current diff (so the new lines are captured verbatim, in
+Prisma's own ordering) and re-verifies. It is idempotent (a second run is
+a clean no-op) and refuses **any** other drift — a forgotten column, a
+renamed index, or a removed baseline line all still fail loud. The gate is
+never weakened; only the one documented append is automated.
+
+The pre-push hook runs this mode automatically when `SHADOW_DATABASE_URL`
+is set, and blocks the push if the auto-heal changed this file (so you
+commit the healed baseline) — replacing the `HUSKY=0` bypass for the
+raw-index case. The heal logic lives in `lib/ops/schema-drift-autoheal.ts`
+(pure, unit-tested without a shadow DB).

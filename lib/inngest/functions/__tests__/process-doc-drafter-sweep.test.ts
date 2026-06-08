@@ -33,6 +33,13 @@ import type {
   ProcessDocSnapshot,
 } from '@/lib/skills/process-doc-drafter-general';
 import { skillError, skillOk, type SkillResult } from '@/lib/skills/types';
+import type { AgentActivationResult } from '@/lib/fleet/activation';
+
+/** Wave-7: this charter is dormant by default. The behavior tests below
+ *  exercise the post-activation path, so they opt the agent ON. Default-OFF
+ *  is pinned separately in finance-pulse-sweep-activation.test.ts (shared
+ *  gate seam, same for all five sweeps). */
+const ACTIVE: AgentActivationResult = { active: true, reason: 'active', detail: '' };
 
 const WORKSPACE_GOOGLE = '11111111-1111-1111-1111-111111111111';
 const WORKSPACE_DISABLED = '33333333-3333-3333-3333-333333333333';
@@ -111,6 +118,7 @@ describe('runProcessDocDrafterSweep — race-condition NOT_CONFIGURED is a clean
         },
       ],
       buildFetcher: () => new RaceConditionFetcher(),
+      isActivated: async () => ACTIVE,
     });
     assert.equal(result.workspacesConsidered, 1);
     assert.equal(result.workspacesSkippedUnconfigured, 1);

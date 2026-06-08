@@ -23,6 +23,7 @@ import { asDisciplineId } from '@/lib/disciplines';
 import { runFinancePulseForWorkspace } from '@/lib/skills/finance-pulse-general';
 import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
 import { isWorkspacePaused } from '@/lib/billing/workspace-paused-gate';
+import { shouldSweepFire, type SweepGateArgs } from '../sweep-fire-gate';
 import type { Vertical } from '@prisma/client';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
@@ -42,6 +43,8 @@ export const FINANCE_PULSE_SWEEP_TRIGGER_EVENT =
 
 const FINANCE_PULSE_DISCIPLINE_ID = 'finance';
 const FINANCE_PULSE_SKILL_SLUG = 'finance-pulse-general';
+/** Wave-7 activation slug — DORMANT until deliberately flipped on. */
+const FINANCE_PULSE_AGENT_SLUG = 'finance-pulse';
 
 export interface FinancePulseSweepResult {
   workspacesConsidered: number;
@@ -49,6 +52,10 @@ export interface FinancePulseSweepResult {
   workspacesSkippedDisciplineDisabled: number;
   workspacesSkippedNotInstalled: number;
   workspacesSkippedPausedForBilling: number;
+  /** Wave-7: agent not activated (default-OFF). */
+  workspacesSkippedDormant: number;
+  /** Wave-7: customer pause/schedule blocked an activated agent. */
+  workspacesSkippedFireGate: number;
   failures: Array<{ workspaceId: string; reason: string }>;
 }
 
@@ -70,6 +77,9 @@ export interface RunFinancePulseSweepArgs {
   isInstalled?: (workspaceId: string, vertical: Vertical) => Promise<boolean>;
   /** Override the paused-for-billing check. Tests inject. */
   isPaused?: (workspaceId: string) => Promise<boolean>;
+  /** Wave-7 activation + customer fire-gate overrides. Tests inject. */
+  isActivated?: SweepGateArgs['isActivated'];
+  gateFire?: SweepGateArgs['gateFire'];
   /** Fixed clock for tests. */
   now?: Date;
 }
@@ -87,6 +97,8 @@ export async function runFinancePulseSweep(
     workspacesSkippedDisciplineDisabled: 0,
     workspacesSkippedNotInstalled: 0,
     workspacesSkippedPausedForBilling: 0,
+    workspacesSkippedDormant: 0,
+    workspacesSkippedFireGate: 0,
     failures: [],
   };
 
@@ -120,6 +132,21 @@ export async function runFinancePulseSweep(
         }).catch(() => true));
     if (!installed) {
       result.workspacesSkippedNotInstalled += 1;
+      continue;
+    }
+    // Wave-7 gate: activation (default-OFF) then customer fire gate.
+    const decision = await shouldSweepFire({
+      workspaceId: ws.id,
+      agentSlug: FINANCE_PULSE_AGENT_SLUG,
+      skillSlug: FINANCE_PULSE_SKILL_SLUG,
+      disciplineId: FINANCE_PULSE_DISCIPLINE_ID,
+      now,
+      isActivated: args.isActivated,
+      gateFire: args.gateFire,
+    });
+    if (!decision.fire) {
+      if (decision.gate === 'activation') result.workspacesSkippedDormant += 1;
+      else result.workspacesSkippedFireGate += 1;
       continue;
     }
     try {
@@ -220,6 +247,8 @@ export const financePulseSweepFn = inngest.createFunction(
                 skipped_not_installed: out.workspacesSkippedNotInstalled,
                 skipped_paused_for_billing:
                   out.workspacesSkippedPausedForBilling,
+                skipped_dormant: out.workspacesSkippedDormant,
+                skipped_fire_gate: out.workspacesSkippedFireGate,
                 failed: out.failures.length,
               });
               return out;

@@ -24,6 +24,7 @@ import { asDisciplineId } from '@/lib/disciplines';
 import { runAnalyticsPulseForWorkspace } from '@/lib/skills/analytics-weekly-pulse-general';
 import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
 import { isWorkspacePaused } from '@/lib/billing/workspace-paused-gate';
+import { shouldSweepFire, type SweepGateArgs } from '../sweep-fire-gate';
 import type { Vertical } from '@prisma/client';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
@@ -42,6 +43,9 @@ export const ANALYTICS_PULSE_SWEEP_TRIGGER_EVENT =
 
 const PULSE_DISCIPLINE_ID = 'analytics';
 const PULSE_SKILL_SLUG = 'analytics-weekly-pulse-general';
+/** Wave-7 activation slug — keeps this charter DORMANT until deliberately
+ *  flipped on (see `lib/fleet/activation.ts`). */
+const PULSE_AGENT_SLUG = 'analytics-weekly-pulse';
 
 export interface AnalyticsPulseSweepResult {
   workspacesConsidered: number;
@@ -49,6 +53,12 @@ export interface AnalyticsPulseSweepResult {
   workspacesSkippedDisciplineDisabled: number;
   workspacesSkippedNotInstalled: number;
   workspacesSkippedPausedForBilling: number;
+  /** Wave-7: agent not activated (default-OFF) — the dominant skip until
+   *  Conner flips this charter live. */
+  workspacesSkippedDormant: number;
+  /** Wave-7: customer /settings/pause (vacation) or /settings/schedule
+   *  window blocked the fire for an already-activated agent. */
+  workspacesSkippedFireGate: number;
   failures: Array<{ workspaceId: string; reason: string }>;
 }
 
@@ -68,6 +78,11 @@ export interface RunAnalyticsPulseSweepArgs {
   }) => Promise<{ ok: boolean; sunk: boolean; reason?: string }>;
   /** Override the marketplace install check. Tests inject. */
   isInstalled?: (workspaceId: string, vertical: Vertical) => Promise<boolean>;
+  /** Wave-7 activation + customer fire-gate overrides. Tests inject; in
+   *  production both run live (default-OFF activation + WorkspacePauseConfig
+   *  + SkillScheduleWindow). */
+  isActivated?: SweepGateArgs['isActivated'];
+  gateFire?: SweepGateArgs['gateFire'];
   /** Fixed clock for tests. */
   now?: Date;
 }
@@ -85,6 +100,8 @@ export async function runAnalyticsPulseSweep(
     workspacesSkippedDisciplineDisabled: 0,
     workspacesSkippedNotInstalled: 0,
     workspacesSkippedPausedForBilling: 0,
+    workspacesSkippedDormant: 0,
+    workspacesSkippedFireGate: 0,
     failures: [],
   };
 
@@ -114,6 +131,24 @@ export async function runAnalyticsPulseSweep(
         }).catch(() => true));
     if (!installed) {
       result.workspacesSkippedNotInstalled += 1;
+      continue;
+    }
+    // Wave-7 gate: (1) activation (default-OFF) keeps this charter dormant
+    // until deliberately flipped on; (2) gateSkillFire honors the
+    // customer's /settings/pause + /settings/schedule for an activated
+    // agent. A dormant agent never reads the pause/schedule tables.
+    const decision = await shouldSweepFire({
+      workspaceId: ws.id,
+      agentSlug: PULSE_AGENT_SLUG,
+      skillSlug: PULSE_SKILL_SLUG,
+      disciplineId: PULSE_DISCIPLINE_ID,
+      now,
+      isActivated: args.isActivated,
+      gateFire: args.gateFire,
+    });
+    if (!decision.fire) {
+      if (decision.gate === 'activation') result.workspacesSkippedDormant += 1;
+      else result.workspacesSkippedFireGate += 1;
       continue;
     }
     try {
@@ -207,6 +242,8 @@ export const analyticsPulseSweepFn = inngest.createFunction(
                 with_pulse: out.workspacesWithPulse,
                 skipped_discipline_disabled: out.workspacesSkippedDisciplineDisabled,
                 skipped_not_installed: out.workspacesSkippedNotInstalled,
+                skipped_dormant: out.workspacesSkippedDormant,
+                skipped_fire_gate: out.workspacesSkippedFireGate,
                 failed: out.failures.length,
               });
               return out;

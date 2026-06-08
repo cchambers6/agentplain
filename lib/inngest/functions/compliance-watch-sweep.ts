@@ -16,6 +16,7 @@ import { asDisciplineId } from '@/lib/disciplines';
 import { runComplianceWatchForWorkspace } from '@/lib/skills/compliance-watch-general';
 import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
 import { isWorkspacePaused } from '@/lib/billing/workspace-paused-gate';
+import { shouldSweepFire, type SweepGateArgs } from '../sweep-fire-gate';
 import type { Vertical } from '@prisma/client';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
@@ -33,6 +34,8 @@ export const COMPLIANCE_WATCH_SWEEP_TRIGGER_EVENT =
 
 const COMPLIANCE_DISCIPLINE_ID = 'legal';
 const COMPLIANCE_SKILL_SLUG = 'compliance-watch-general';
+/** Wave-7 activation slug — DORMANT until deliberately flipped on. */
+const COMPLIANCE_AGENT_SLUG = 'compliance-watch';
 
 export interface ComplianceWatchSweepResult {
   workspacesConsidered: number;
@@ -41,6 +44,10 @@ export interface ComplianceWatchSweepResult {
   workspacesSkippedDisciplineDisabled: number;
   workspacesSkippedNotInstalled: number;
   workspacesSkippedPausedForBilling: number;
+  /** Wave-7: agent not activated (default-OFF). */
+  workspacesSkippedDormant: number;
+  /** Wave-7: customer pause/schedule blocked an activated agent. */
+  workspacesSkippedFireGate: number;
   failures: Array<{ workspaceId: string; reason: string }>;
 }
 
@@ -57,6 +64,9 @@ export interface RunComplianceWatchSweepArgs {
     now?: Date;
   }) => Promise<{ ok: boolean; sunk: boolean; hadMatches: boolean; reason?: string }>;
   isInstalled?: (workspaceId: string, vertical: Vertical) => Promise<boolean>;
+  /** Wave-7 activation + customer fire-gate overrides. Tests inject. */
+  isActivated?: SweepGateArgs['isActivated'];
+  gateFire?: SweepGateArgs['gateFire'];
   now?: Date;
 }
 
@@ -74,6 +84,8 @@ export async function runComplianceWatchSweep(
     workspacesSkippedDisciplineDisabled: 0,
     workspacesSkippedNotInstalled: 0,
     workspacesSkippedPausedForBilling: 0,
+    workspacesSkippedDormant: 0,
+    workspacesSkippedFireGate: 0,
     failures: [],
   };
 
@@ -101,6 +113,21 @@ export async function runComplianceWatchSweep(
         }).catch(() => true));
     if (!installed) {
       result.workspacesSkippedNotInstalled += 1;
+      continue;
+    }
+    // Wave-7 gate: activation (default-OFF) then customer fire gate.
+    const decision = await shouldSweepFire({
+      workspaceId: ws.id,
+      agentSlug: COMPLIANCE_AGENT_SLUG,
+      skillSlug: COMPLIANCE_SKILL_SLUG,
+      disciplineId: COMPLIANCE_DISCIPLINE_ID,
+      now,
+      isActivated: args.isActivated,
+      gateFire: args.gateFire,
+    });
+    if (!decision.fire) {
+      if (decision.gate === 'activation') result.workspacesSkippedDormant += 1;
+      else result.workspacesSkippedFireGate += 1;
       continue;
     }
     try {
@@ -205,6 +232,8 @@ export const complianceWatchSweepFn = inngest.createFunction(
                 with_no_matches: out.workspacesWithNoMatches,
                 skipped_discipline_disabled: out.workspacesSkippedDisciplineDisabled,
                 skipped_not_installed: out.workspacesSkippedNotInstalled,
+                skipped_dormant: out.workspacesSkippedDormant,
+                skipped_fire_gate: out.workspacesSkippedFireGate,
                 failed: out.failures.length,
               });
               return out;

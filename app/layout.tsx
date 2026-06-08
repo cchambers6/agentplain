@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Source_Serif_4, Inter, JetBrains_Mono } from "next/font/google";
 import { tokens } from "@/lib/brand/tokens";
 import "./globals.css";
@@ -43,6 +43,20 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  // PWA: name the app for the iOS "Add to Home Screen" splash. The web app
+  // manifest (app/manifest.ts) and the apple-icon (app/apple-icon.png) are
+  // auto-linked by the App Router; this names the installed experience.
+  appleWebApp: {
+    capable: true,
+    title: tokens.wordmark,
+    statusBarStyle: "default",
+  },
+};
+
+// Brand theme colour for the browser/PWA chrome — Ink #1A1A1F, no blue.
+// In Next 14 themeColor lives on the viewport export, not metadata.
+export const viewport: Viewport = {
+  themeColor: tokens.colors.ink.hex,
 };
 
 export default function RootLayout({

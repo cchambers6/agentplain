@@ -258,6 +258,25 @@ export const env = {
   notionOAuthClientId: () => optional("NOTION_OAUTH_CLIENT_ID"),
   notionOAuthClientSecret: () => optional("NOTION_OAUTH_CLIENT_SECRET"),
 
+  // ── Wave-1b vertical adapter OAuth — EZLynx (insurance AMS) + Encompass
+  // (ICE Mortgage LOS) ────────────────────────────────────────────────────
+  // Both are OAuth2 vendors whose API access is partner-gated (the agency /
+  // lender enrolls in the vendor's developer program to obtain a client
+  // id + secret). The per-workspace refresh token is stored on the
+  // credential; these are the app-level client credentials used to refresh.
+  // Live calls only fire when EZLYNX_ADAPTER_LIVE / ENCOMPASS_ADAPTER_LIVE is
+  // `on` AND a connected credential exists — fixtures by default.
+  ezlynxOAuthClientId: () => optional("EZLYNX_OAUTH_CLIENT_ID"),
+  ezlynxOAuthClientSecret: () => optional("EZLYNX_OAUTH_CLIENT_SECRET"),
+  /** EZLynx OAuth token host. Defaults to the documented production host. */
+  ezlynxTokenHost: () =>
+    optional("EZLYNX_TOKEN_HOST") ?? "https://api.ezlynx.com",
+  encompassOAuthClientId: () => optional("ENCOMPASS_OAUTH_CLIENT_ID"),
+  encompassOAuthClientSecret: () => optional("ENCOMPASS_OAUTH_CLIENT_SECRET"),
+  /** Encompass (ICE) OAuth token host. Defaults to the documented host. */
+  encompassTokenHost: () =>
+    optional("ENCOMPASS_TOKEN_HOST") ?? "https://api.elliemae.com",
+
   // Custom-inquiry destination. Submissions from `/custom`'s contact form
   // are emailed to this address. Defaults to the public hello@ inbox so
   // dev/preview submissions don't silently disappear when the var is unset.

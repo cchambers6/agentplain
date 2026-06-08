@@ -1,5 +1,12 @@
 export { runSkill } from './skill';
 export { JsonClosingFileFetcher } from './json-fetcher';
+export {
+  QualiaClosingFileFetcher,
+  QUALIA_NOT_CONNECTED_MESSAGE,
+  toClosingFile,
+  toChecklistItem,
+  toReceivedDoc,
+} from './qualia-fetcher';
 export type {
   ChecklistItem,
   ChecklistItemStatus,

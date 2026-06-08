@@ -57,6 +57,7 @@ import { SKILL_DISCIPLINE } from '@/lib/disciplines/skill-mapping';
 import { runChiefOfStaffForWorkspace } from '@/lib/skills/chief-of-staff-scheduler';
 import { ChiefOfStaffMcpFetcher } from '@/lib/skills/scheduler/chief-of-staff-fetcher';
 import type { CalendarFetcher } from '@/lib/skills/scheduler/types';
+import type { InboxSnapshotFetcher } from '@/lib/integrations/inbox';
 import {
   DEFAULT_CHIEF_OF_STAFF_CONFIG,
   readChiefOfStaffConfig,
@@ -127,6 +128,12 @@ export interface RunSchedulerSweepArgs {
    *  a stub here so the cron flow can be exercised without standing up
    *  the Google / Microsoft MCP servers. */
   buildCalendarFetcher?: (workspaceId: string) => CalendarFetcher;
+  /** Wave-2: override the per-workspace inbox-snapshot fetcher factory.
+   *  Tests inject a deterministic (e.g. empty) inbox so the sweep flow is
+   *  exercised without the live mailbox read. Production leaves this
+   *  undefined and `ChiefOfStaffMcpFetcher` builds one via the
+   *  `lib/integrations/inbox` factory (fixtures unless LIVE_INBOX_FETCH). */
+  buildInboxFetcher?: (workspaceId: string) => InboxSnapshotFetcher;
   /** Clock injection for deterministic tests. */
   now?: Date;
   /** Lookahead window in days. Defaults to 7. */
@@ -241,6 +248,12 @@ export async function runSchedulerSweep(
     const fetcher = new ChiefOfStaffMcpFetcher({
       workspaceId: ws.id,
       calendarFetcher,
+      // Wave-2: the inbox arm reads the workspace's real mailbox (live
+      // behind LIVE_INBOX_FETCH, fixtures otherwise). Prefer the Google
+      // credential when both are present — the inbox factory picks the
+      // matching MCP server. Tests inject `buildInboxFetcher`.
+      inboxFetcher: args.buildInboxFetcher?.(ws.id),
+      inboxProvider: ws.hasGoogle ? 'GOOGLE' : 'M365',
     });
 
     // Wave-2 per-skill config: read scheduler knobs at fire time. The

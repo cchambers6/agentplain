@@ -68,16 +68,32 @@ describe('inbox-triage — LLM refinement seam (wave-4)', () => {
     assert.notEqual(proposal.priority, 'urgent');
   });
 
-  it('with LLM provided but empty FEEDBACK rules block, NO LLM call is made (cost guard)', async () => {
-    let llmCalls = 0;
+  it('wave-2: LLM IS called for per-message classification even when FEEDBACK is empty', async () => {
+    // Wave-2 changed the contract: the LLM is the PRIMARY per-message
+    // classifier, so it fires on every snapshot regardless of FEEDBACK
+    // rules. The refine seam (FEEDBACK overrides) remains separately gated
+    // on a non-empty rules block — but classification is unconditional.
+    let classifyCalls = 0;
     const stubLlm: LlmProvider = {
       name: 'test',
-      complete: async () => {
-        llmCalls += 1;
+      complete: async (req) => {
+        // The classify call carries the classifier system prompt; the
+        // refine call carries the refiner prompt. Empty FEEDBACK → only
+        // the classify call should ever land.
+        if (/inbox-triage classifier/i.test(req.system)) classifyCalls += 1;
         return {
           ok: true,
           value: {
-            text: '{"overrides":[]}',
+            text: JSON.stringify({
+              classifications: [
+                {
+                  messageId: 'msg-1',
+                  priority: 'needs-decision',
+                  confidence: 0.8,
+                  reason: 'County clerk requesting verification of a filing.',
+                },
+              ],
+            }),
             stopReason: 'end_turn',
             usage: null,
             model: 'test-stub',
@@ -90,11 +106,15 @@ describe('inbox-triage — LLM refinement seam (wave-4)', () => {
       workspaceId: WORKSPACE_ID,
       fetcher: new StubFetcher(snapshot),
       llm: stubLlm,
-      feedbackRulesBlock: '   ', // whitespace-only — treated as empty
+      feedbackRulesBlock: '   ', // whitespace-only — refine stays skipped
       now: new Date('2026-05-30T12:00:00.000Z'),
     });
     assert.ok(res.ok);
-    assert.equal(llmCalls, 0, 'LLM must not be called when FEEDBACK is empty');
+    assert.equal(classifyCalls, 1, 'classifier must fire once for the snapshot');
+    // The LLM classification drives the priority (keyword alone would be noise).
+    const [proposal] = res.value.proposals;
+    assert.equal(proposal.priority, 'needs-decision');
+    assert.match(proposal.reasoning, /LLM:/);
   });
 
   it('FEEDBACK rule + LLM override changes priority to URGENT', async () => {

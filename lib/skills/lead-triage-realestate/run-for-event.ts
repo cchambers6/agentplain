@@ -11,12 +11,13 @@
  * events.
  *
  * Per `project_no_outbound_architecture.md`: triage produces a routing
- * recommendation + first-touch DRAFT. The persister parameter is null
- * by default — drafts ride into /approvals via the
- * `PrismaLeadTriageApprovalSink`, not into Gmail's drafts folder. (We
- * pass null so the broker reviews the routing decision before any
- * mailbox-side write — the wave-1 design defers the Gmail-drafts
- * persistence to wave 2.)
+ * recommendation + first-touch DRAFT. Wave 2 auto-pushes that draft into
+ * the broker's Gmail / M365 Drafts folder for HOT and WARM leads (via
+ * `./drafts-persister.ts`, gated by `LIVE_INBOX_FETCH`, fixtures in dev);
+ * cold + nurture drafts still ride into /approvals only. A Gmail DRAFT is
+ * the allowed RECEIVE-shape write (`users.drafts.create`) — the broker
+ * still presses send. The lead-triage approval row ALSO lands regardless,
+ * so the routing decision stays reviewable.
  *
  * Per the honesty bar — when the inbound message can't be derived into
  * a LeadRecord (no body, no-reply sender, etc.) the skill cleanly
@@ -26,7 +27,7 @@
 
 import type { WebhookEvent } from '@prisma/client';
 import { skillError, skillOk, type SkillResult } from '../types';
-import type { MessageFetcher } from '../types';
+import type { DraftPersister, MessageFetcher } from '../types';
 import { SYSTEM_OPERATOR_CONTEXT } from '@/lib/db';
 import { PrismaMemoryStore } from '@/lib/plaino/memory';
 import { getLlmProvider } from '@/lib/llm';
@@ -36,6 +37,10 @@ import type { LlmProvider } from '@/lib/llm/types';
 import { ParsedMessageLeadFetcher } from './parsed-message-fetcher';
 import { PrismaLeadTriageApprovalSink } from './prisma-approval-sink';
 import type { LeadTriageApprovalSink } from './prisma-approval-sink';
+import {
+  buildLeadDraftPersister,
+  HOT_WARM_PERSIST_THRESHOLD,
+} from './drafts-persister';
 import { runSkill } from './skill';
 import type { LeadTriageOutput } from './types';
 
@@ -62,6 +67,16 @@ export interface RunLeadTriageForEventInput {
   /** Wave-4 — override the LLM provider. Defaults to getLlmProvider();
    *  pass null to skip LLM refinement entirely (heuristic-only). */
   llm?: LlmProvider | null;
+  /** Wave-2 — the live Gmail / Outlook draft adapter (the same adapter the
+   *  webhook sweep built). Used to auto-push the first-touch draft into the
+   *  broker's Drafts folder for hot/warm leads when `LIVE_INBOX_FETCH` is
+   *  on. When omitted / off, the fixture persister records the draft so the
+   *  seam runs in dev. */
+  draftAdapter?: DraftPersister | null;
+  /** Wave-2 — override the first-touch drafts persister entirely (tests
+   *  pass a recording persister to assert what would be pushed). When set,
+   *  the flag + `draftAdapter` are ignored. */
+  persister?: DraftPersister | null;
 }
 
 export interface RunLeadTriageForEventOutput {
@@ -134,10 +149,24 @@ export async function runLeadTriageForEvent(
         : null
       : input.llm;
 
+  // Wave-2 — auto-push first-touch drafts to Gmail/M365 Drafts for
+  // hot/warm leads. The persister resolves to the live adapter only when
+  // `LIVE_INBOX_FETCH` is on AND a live adapter was supplied; otherwise the
+  // fixture persister records the draft (dev) so the seam runs end-to-end
+  // with no live OAuth. The `HOT_WARM_PERSIST_THRESHOLD` (0.7) is what
+  // scopes the push to hot/warm — cold/nurture drafts still ride into
+  // /approvals but skip the mailbox-side write. Tests pass `persister`
+  // explicitly to assert what would be pushed.
+  const persister =
+    input.persister !== undefined
+      ? input.persister
+      : buildLeadDraftPersister({ liveAdapter: input.draftAdapter ?? null });
+
   const skillRes = await runSkill({
     workspaceId: input.workspaceId,
     fetcher: leadFetcher,
-    persister: null,
+    persister,
+    persistThreshold: HOT_WARM_PERSIST_THRESHOLD,
     now: input.now,
     llm: llmForRefine ?? undefined,
     feedbackRulesBlock,

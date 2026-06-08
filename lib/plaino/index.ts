@@ -31,6 +31,22 @@ export {
   buildCapabilitySnapshotSync,
 } from './capabilities';
 export {
+  buildBeforeAfterCard,
+  type BuildBeforeAfterArgs,
+} from './before-after';
+export {
+  buildDecisionTreeCard,
+  type BuildDecisionTreeArgs,
+} from './decision-tree';
+export {
+  buildCompliancePostureCard,
+  type BuildCompliancePostureArgs,
+} from './compliance-posture';
+export {
+  buildOnboardingProgressCard,
+  type BuildOnboardingProgressArgs,
+} from './onboarding-progress';
+export {
   PrismaChatStore,
   PLAINO_INSTRUCTION_AGENT_SLUG,
   PLAINO_INSTRUCTION_REF_TABLE,
@@ -79,6 +95,27 @@ export type {
   PlainoTurnOutput,
   SupportContextSnippet,
 } from './types';
+export type {
+  BeforeAfterCard,
+  BeforeAfterRow,
+  CapabilityCard,
+  ComplianceArea,
+  CompliancePostureCard,
+  ConnectCta,
+  DecisionBranch,
+  DecisionTreeCard,
+  NavCard,
+  NavTarget,
+  NextStep,
+  NextStepsCard,
+  OnboardingMilestone,
+  OnboardingProgressCard,
+  PlainoCard,
+  PlainoCardInstructionState,
+  QueueGlance,
+  WorkStatusCard,
+} from './visual-card';
+export { parsePlainoCard } from './visual-card';
 export {
   CUSTOMER_MESSAGE_CHAR_CAP,
   DEFAULT_ANSWER_FLOOR,

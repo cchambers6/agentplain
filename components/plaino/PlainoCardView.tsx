@@ -26,9 +26,13 @@
 import React from "react";
 import type { ReactNode } from "react";
 import type {
+  BeforeAfterCard,
   CapabilityCard,
+  CompliancePostureCard,
+  DecisionTreeCard,
   NavCard,
   NextStepsCard,
+  OnboardingProgressCard,
   PlainoCard,
   PlainoCardInstructionState,
   WorkStatusCard,
@@ -50,6 +54,14 @@ export function PlainoCardView({ card }: PlainoCardViewProps) {
       return <WorkStatusView card={card} />;
     case "nav":
       return <NavView card={card} />;
+    case "before-after":
+      return <BeforeAfterView card={card} />;
+    case "decision-tree":
+      return <DecisionTreeView card={card} />;
+    case "compliance-posture":
+      return <CompliancePostureView card={card} />;
+    case "onboarding-progress":
+      return <OnboardingProgressView card={card} />;
     default:
       return null;
   }
@@ -238,6 +250,223 @@ function NavView({ card }: { card: NavCard }) {
         </a>
       ))}
     </nav>
+  );
+}
+
+// ── V31 before-after ────────────────────────────────────────────────────────
+
+function BeforeAfterView({ card }: { card: BeforeAfterCard }) {
+  return (
+    <section
+      className="mt-3 border border-rule bg-paper"
+      aria-label="Before and after agentplain"
+    >
+      {card.context ? (
+        <p className="border-b border-rule px-4 py-2 font-mono text-[11px] uppercase tracking-eyebrow text-mute">
+          {card.context}
+        </p>
+      ) : null}
+      <table className="w-full text-left text-[13px]">
+        <thead>
+          <tr className="border-b border-rule">
+            <th className="px-4 py-2 font-mono text-[11px] uppercase tracking-eyebrow text-mute w-1/3">
+              task
+            </th>
+            <th className="px-4 py-2 font-mono text-[11px] uppercase tracking-eyebrow text-mute w-1/3">
+              without agentplain
+            </th>
+            <th className="px-4 py-2 font-mono text-[11px] uppercase tracking-eyebrow text-clay w-1/3">
+              with agentplain
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-rule">
+          {card.rows.map((row) => (
+            <tr key={row.task}>
+              <td className="px-4 py-2.5 text-ink leading-snug">{row.task}</td>
+              <td className="px-4 py-2.5 text-mute leading-snug">{row.before}</td>
+              <td className="px-4 py-2.5 text-ink leading-snug border-l border-rule">
+                <span aria-hidden className="mr-1.5 text-clay">›</span>
+                {row.after}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+// ── V32 decision-tree ────────────────────────────────────────────────────────
+
+function DecisionTreeView({ card }: { card: DecisionTreeCard }) {
+  return (
+    <section
+      className="mt-3 border border-rule bg-paper"
+      aria-label={`Decision: ${card.question}`}
+    >
+      <p className="border-b border-rule px-4 py-3 text-[13px] font-medium text-ink leading-snug">
+        {card.question}
+      </p>
+      <ul className="divide-y divide-rule">
+        {card.branches.map((branch) => (
+          <li key={`${branch.href}:${branch.condition}`}>
+            <a
+              href={branch.href}
+              className="flex items-start gap-3 px-4 py-3 transition hover:bg-paper-deep"
+            >
+              <span aria-hidden className="mt-0.5 shrink-0">
+                <GlyphSquare />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[13px] text-mute leading-snug">
+                  {branch.condition}
+                </span>
+                <span className="mt-0.5 block text-[13px] font-medium text-clay leading-snug">
+                  {branch.outcome}
+                </span>
+              </span>
+              <span aria-hidden className="ml-auto text-mute self-center">
+                →
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// ── V33 compliance-posture ───────────────────────────────────────────────────
+
+function CompliancePostureView({ card }: { card: CompliancePostureCard }) {
+  const coveredCount = card.coverageAreas.filter((a) => a.covered).length;
+  const totalCount = card.coverageAreas.length;
+  const hasOpenFlags = card.openFlags > 0;
+
+  return (
+    <section
+      className="mt-3 border border-rule bg-paper"
+      aria-label="Compliance posture"
+    >
+      {/* Header row */}
+      <div className="flex flex-wrap items-center gap-4 border-b border-rule px-4 py-3">
+        <span className="font-mono text-[11px] uppercase tracking-eyebrow text-mute">
+          sentinel coverage
+        </span>
+        <span className="font-mono text-[11px] text-ink">
+          {coveredCount}/{totalCount} areas
+        </span>
+        {hasOpenFlags ? (
+          <span className="font-mono text-[11px] text-flag ml-auto">
+            {card.openFlags} open {card.openFlags === 1 ? "flag" : "flags"}
+          </span>
+        ) : (
+          <span className="font-mono text-[11px] text-moss ml-auto">
+            no open flags
+          </span>
+        )}
+      </div>
+      {/* Coverage area list */}
+      <ul className="divide-y divide-rule">
+        {card.coverageAreas.map((area) => (
+          <li
+            key={area.label}
+            className="flex items-center gap-3 px-4 py-2.5"
+          >
+            <span aria-hidden className="shrink-0">
+              <GlyphSquare accent={area.covered} filled={area.covered} />
+            </span>
+            <span
+              className={[
+                "text-[13px] leading-snug",
+                area.covered ? "text-ink" : "text-mute",
+              ].join(" ")}
+            >
+              {area.label}
+            </span>
+            {!area.covered ? (
+              <span className="ml-auto font-mono text-[11px] text-mute">
+                not yet
+              </span>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+      {/* Footer link */}
+      <div className="border-t border-rule px-4 py-2.5">
+        <a
+          href={card.complianceHref}
+          className="text-[13px] text-clay underline"
+        >
+          {hasOpenFlags ? "review open flags →" : "view compliance page →"}
+        </a>
+      </div>
+    </section>
+  );
+}
+
+// ── V34 onboarding-progress ──────────────────────────────────────────────────
+
+function OnboardingProgressView({ card }: { card: OnboardingProgressCard }) {
+  const allDone = card.pct === 100;
+
+  return (
+    <section
+      className="mt-3 border border-rule bg-paper px-4 py-3"
+      aria-label={`Setup progress: ${card.pct}% complete`}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <span className="font-mono text-[11px] uppercase tracking-eyebrow text-mute">
+          setup progress
+        </span>
+        <span
+          className={[
+            "font-mono text-[11px]",
+            allDone ? "text-moss" : "text-clay",
+          ].join(" ")}
+        >
+          {card.pct}%
+        </span>
+      </div>
+      {/* Progress bar — pure CSS, no gradients, brand-palette only */}
+      <div
+        className="h-1 bg-rule mb-3"
+        role="progressbar"
+        aria-valuenow={card.pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`${card.pct} percent complete`}
+      >
+        <div
+          className={["h-full", allDone ? "bg-moss" : "bg-clay"].join(" ")}
+          style={{ width: `${card.pct}%` }}
+        />
+      </div>
+      {/* Milestone list */}
+      <ol className="space-y-1.5">
+        {card.milestones.map((milestone, i) => (
+          <li key={milestone.label} className="flex items-center gap-2.5">
+            <span aria-hidden className="shrink-0">
+              <GlyphSquare accent={milestone.done} filled={milestone.done} />
+            </span>
+            {milestone.done ? (
+              <span className="text-[13px] text-ink leading-snug">
+                {i + 1}. {milestone.label}
+              </span>
+            ) : (
+              <a
+                href={milestone.href}
+                className="text-[13px] text-clay leading-snug underline"
+              >
+                {i + 1}. {milestone.label}
+              </a>
+            )}
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 

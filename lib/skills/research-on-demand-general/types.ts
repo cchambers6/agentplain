@@ -74,6 +74,12 @@ export interface ResearchSkillInput {
   topK?: number;
   /** Optional LLM provider override. Defaults to `getLlmProvider()`. */
   llm?: import('../../llm/types').LlmProvider;
+  /** Whether the bound substrate grounds on LIVE web sources (wave-5,
+   *  theme #11). When true the skill DROPS the "no web search wired" gap
+   *  and labels citations as live sources; when false (or omitted) the
+   *  honest "grounded on your knowledge base / fixture corpus only" gap is
+   *  retained. Defaults to false to preserve the pre-wave-5 behavior. */
+  groundingIsLive?: boolean;
 }
 
 export interface ResearchSkillOutput {

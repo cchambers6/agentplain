@@ -14,6 +14,11 @@ import { revalidatePath } from "next/cache";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import {
+  decideApproval,
+  ApprovalDecisionError,
+  type ApprovalDecision,
+} from "@/lib/approvals/decisions";
 
 export async function muteBriefingsAction(form: FormData): Promise<void> {
   const workspaceId = String(form.get("workspaceId") ?? "");
@@ -56,4 +61,59 @@ export async function muteBriefingsAction(form: FormData): Promise<void> {
   });
 
   revalidatePath(`/app/workspace/${workspaceId}/briefings`);
+}
+
+/**
+ * Wave-5 (theme #7 / ratif #9): one-tap decision on the briefing card's
+ * pre-staged top pending approval. Turns the briefing from a backward-
+ * looking read into a do-it-now surface.
+ *
+ * Reuses the SHARED `lib/approvals/decisions#decideApproval` core (the same
+ * one the /approvals page + the mobile app drive) so the audit trail and
+ * the preference-signal capture can never drift between surfaces. This is a
+ * decision (APPROVED/REJECTED), NOT a send — the customer's own system
+ * performs any downstream action, per project_no_outbound_architecture.md.
+ *
+ * Graceful degradation: if the pre-staged item was already decided (the
+ * customer acted on /approvals since the briefing was written), the shared
+ * core throws ALREADY_DECIDED; we swallow it and just revalidate so the
+ * stale action disappears rather than 500-ing the page.
+ */
+export async function decideTopApprovalFromBriefingAction(
+  form: FormData,
+): Promise<void> {
+  const workspaceId = String(form.get("workspaceId") ?? "");
+  const itemId = String(form.get("itemId") ?? "");
+  const decision = String(form.get("decision") ?? "") as ApprovalDecision;
+  if (!workspaceId || !itemId) {
+    throw new Error(
+      "decideTopApprovalFromBriefingAction: missing workspaceId or itemId",
+    );
+  }
+  if (decision !== "APPROVED" && decision !== "REJECTED") {
+    throw new Error(
+      `decideTopApprovalFromBriefingAction: invalid decision "${decision}"`,
+    );
+  }
+
+  const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
+  const ctx = { userId: member.userId, workspaceId, isOperator: false };
+
+  try {
+    await decideApproval(ctx, { workspaceId, itemId, decision, reason: null });
+  } catch (err) {
+    // A stale pre-staged action (already decided / removed) degrades to a
+    // no-op refresh; anything else is a real bug worth surfacing.
+    if (
+      err instanceof ApprovalDecisionError &&
+      (err.code === "ALREADY_DECIDED" || err.code === "NOT_FOUND")
+    ) {
+      revalidatePath(`/app/workspace/${workspaceId}/briefings`);
+      return;
+    }
+    throw err;
+  }
+
+  revalidatePath(`/app/workspace/${workspaceId}/briefings`);
+  revalidatePath(`/app/workspace/${workspaceId}/approvals`);
 }

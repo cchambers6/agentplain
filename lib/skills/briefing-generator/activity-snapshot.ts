@@ -16,6 +16,7 @@ import { withSystemContext as defaultWithSystemContext } from '@/lib/db';
 import type {
   BriefingActivitySnapshot,
   BriefingSummary,
+  TopPendingAction,
 } from './types';
 
 export type SystemContextRunner = <T>(
@@ -62,10 +63,12 @@ export async function buildActivitySnapshot(
         ],
       },
       select: {
+        id: true,
         kind: true,
         status: true,
         payload: true,
         proposedAt: true,
+        agentSlug: true,
       },
       orderBy: { proposedAt: 'desc' },
     });
@@ -90,13 +93,26 @@ export async function buildActivitySnapshot(
 
     // Pending-highlight titles. Pull from the payload's `title`/`subject`
     // field if the kind has one; fall back to the kind name. Cap at 5.
-    const pendingHighlights: BriefingActivitySnapshot['pendingHighlights'] = approvals
-      .filter((a) => a.status === 'PENDING')
-      .slice(0, 5)
-      .map((a) => ({
+    const pendingItems = approvals.filter((a) => a.status === 'PENDING');
+    const pendingHighlights: BriefingActivitySnapshot['pendingHighlights'] =
+      pendingItems.slice(0, 5).map((a) => ({
         kind: a.kind,
         title: extractApprovalTitle(a.payload, a.kind),
       }));
+
+    // Wave-5 (theme #7 / ratif #9): pre-stage the single top pending
+    // approval so the briefing card can offer a one-tap decision. "Top"
+    // = most recently proposed pending item (already sorted desc). Only
+    // id + kind + title leave the boundary — never the draft body.
+    const top = pendingItems[0];
+    const topPendingAction: TopPendingAction | null = top
+      ? {
+          itemId: top.id,
+          kind: top.kind,
+          title: extractApprovalTitle(top.payload, top.kind),
+          agentSlug: top.agentSlug ?? null,
+        }
+      : null;
 
     const newChatThreads = await tx.chatThread.count({
       where: {
@@ -131,6 +147,7 @@ export async function buildActivitySnapshot(
       newInstructions,
       newLearnedNotes,
       topApprovalKinds,
+      topPendingAction,
     };
 
     return {
@@ -140,6 +157,7 @@ export async function buildActivitySnapshot(
       windowTo: now.toISOString(),
       summary,
       pendingHighlights,
+      topPendingAction,
     };
   });
 }

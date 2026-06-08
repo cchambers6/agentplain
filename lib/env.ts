@@ -347,4 +347,21 @@ export const env = {
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean),
+
+  // Web-search grounding (wave-5, theme #11 / ratif #8). The research
+  // skill grounds briefs on live web sources behind IWebSearchPort.
+  // `provider` selects the adapter: `tavily` / `brightdata` reach a live
+  // provider when a key is set; `fixture` (the default) serves the
+  // committed corpus so dev + CI run with no live creds. We do NOT throw
+  // when a live provider is selected without a key — the factory falls
+  // back to the fixture adapter and the brief names the gap honestly,
+  // mirroring the LLM provider's heuristic-fallback posture.
+  webSearchProvider: () =>
+    oneOf(
+      "WEB_SEARCH_PROVIDER",
+      ["fixture", "tavily", "brightdata"] as const,
+      "fixture",
+    ),
+  tavilyApiKey: () => optional("TAVILY_API_KEY"),
+  brightDataApiKey: () => optional("BRIGHTDATA_API_KEY"),
 };

@@ -25,6 +25,12 @@ export interface BriefingSummary {
   newLearnedNotes: number;
   /** Top approval-kind buckets with counts — for the preview line. */
   topApprovalKinds: Array<{ kind: string; count: number }>;
+  /** Wave-5 (theme #7 / ratif #9): the top pending approval pre-staged for
+   *  a one-tap decision on the briefing card. Persisted on the summary JSON
+   *  so the page renders the action without re-querying. Null / absent when
+   *  nothing is pending at generation time. (The page re-validates the item
+   *  is still PENDING before acting — a stale action degrades gracefully.) */
+  topPendingAction?: TopPendingAction | null;
 }
 
 /**
@@ -46,6 +52,22 @@ export interface BriefingActivitySnapshot {
    *  generator chooses which to spotlight; nothing customer-facing
    *  beyond the title is given to the LLM. */
   pendingHighlights: Array<{ kind: string; title: string }>;
+  /** Wave-5 (theme #7 / ratif #9): the single top pending approval,
+   *  pre-staged so the briefing card can offer a ONE-TAP decision instead
+   *  of being a backward-looking read. Null when nothing is pending. The
+   *  `itemId` drives the shared `lib/approvals/decisions` core — this is a
+   *  decision, NOT a send. Only the title is surfaced (never the draft
+   *  body) so the briefing stays redacted. */
+  topPendingAction: TopPendingAction | null;
+}
+
+export interface TopPendingAction {
+  /** WorkApprovalQueueItem.id — the decision target. */
+  itemId: string;
+  kind: string;
+  title: string;
+  /** Skill that produced it, for the feedback-signal path. */
+  agentSlug: string | null;
 }
 
 export interface GenerateBriefingResult {

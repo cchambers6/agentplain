@@ -79,6 +79,8 @@ interface FakeTxStore {
   workspace: { id: string; name: string } | null;
   briefings: FakeBriefingRow[];
   approvals: Array<{
+    id?: string;
+    agentSlug?: string | null;
     workspaceId: string;
     kind: string;
     status: string;
@@ -155,10 +157,12 @@ const buildSystemContext = (store: FakeTxStore) => {
         return store.approvals
           .filter((a) => a.workspaceId === args.where.workspaceId)
           .map((a) => ({
+            id: a.id,
             kind: a.kind,
             status: a.status,
             payload: a.payload,
             proposedAt: a.proposedAt,
+            agentSlug: a.agentSlug ?? null,
           }));
       },
       count: async (args: {
@@ -216,6 +220,8 @@ describe("buildActivitySnapshot — slices last-24h activity into the LLM-ready 
     const store = buildStore({
       approvals: [
         {
+          id: "appr-top-1",
+          agentSlug: "office-admin",
           workspaceId: "ws_brief",
           kind: "INBOX_TRIAGE",
           status: "PENDING",
@@ -279,6 +285,15 @@ describe("buildActivitySnapshot — slices last-24h activity into the LLM-ready 
     const titles = snapshot.pendingHighlights.map((h) => h.title);
     assert.ok(titles.includes("Acme Q3 invoice"));
     assert.ok(titles.includes("Tour scheduling"));
+    // Wave-5 (theme #7 / ratif #9): the top pending approval is pre-staged
+    // as a one-tap action — most-recently-proposed PENDING item wins.
+    assert.ok(snapshot.topPendingAction, "top pending action is staged");
+    assert.equal(snapshot.topPendingAction?.itemId, "appr-top-1");
+    assert.equal(snapshot.topPendingAction?.title, "Acme Q3 invoice");
+    assert.equal(snapshot.topPendingAction?.agentSlug, "office-admin");
+    // It also rides on the persisted summary JSON so the page renders it
+    // without a re-query.
+    assert.equal(snapshot.summary.topPendingAction?.itemId, "appr-top-1");
   });
 });
 

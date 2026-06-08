@@ -15,6 +15,7 @@ import { asDisciplineId } from '@/lib/disciplines';
 import { runCalendarDrafterForWorkspace } from '@/lib/skills/content-calendar-drafter-general';
 import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
 import { isWorkspacePaused } from '@/lib/billing/workspace-paused-gate';
+import { shouldSweepFire, type SweepGateArgs } from '../sweep-fire-gate';
 import type { Vertical } from '@prisma/client';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
@@ -32,6 +33,8 @@ export const CONTENT_CALENDAR_SWEEP_TRIGGER_EVENT =
 
 const CALENDAR_DISCIPLINE_ID = 'marketing';
 const CALENDAR_SKILL_SLUG = 'content-calendar-drafter-general';
+/** Wave-7 activation slug — DORMANT until deliberately flipped on. */
+const CALENDAR_AGENT_SLUG = 'content-calendar-drafter';
 
 export interface ContentCalendarSweepResult {
   workspacesConsidered: number;
@@ -39,6 +42,10 @@ export interface ContentCalendarSweepResult {
   workspacesSkippedDisciplineDisabled: number;
   workspacesSkippedNotInstalled: number;
   workspacesSkippedPausedForBilling: number;
+  /** Wave-7: agent not activated (default-OFF). */
+  workspacesSkippedDormant: number;
+  /** Wave-7: customer pause/schedule blocked an activated agent. */
+  workspacesSkippedFireGate: number;
   failures: Array<{ workspaceId: string; reason: string }>;
 }
 
@@ -55,6 +62,9 @@ export interface RunContentCalendarSweepArgs {
     now?: Date;
   }) => Promise<{ ok: boolean; sunk: boolean; reason?: string }>;
   isInstalled?: (workspaceId: string, vertical: Vertical) => Promise<boolean>;
+  /** Wave-7 activation + customer fire-gate overrides. Tests inject. */
+  isActivated?: SweepGateArgs['isActivated'];
+  gateFire?: SweepGateArgs['gateFire'];
   now?: Date;
 }
 
@@ -71,6 +81,8 @@ export async function runContentCalendarSweep(
     workspacesSkippedDisciplineDisabled: 0,
     workspacesSkippedNotInstalled: 0,
     workspacesSkippedPausedForBilling: 0,
+    workspacesSkippedDormant: 0,
+    workspacesSkippedFireGate: 0,
     failures: [],
   };
 
@@ -98,6 +110,21 @@ export async function runContentCalendarSweep(
         }).catch(() => true));
     if (!installed) {
       result.workspacesSkippedNotInstalled += 1;
+      continue;
+    }
+    // Wave-7 gate: activation (default-OFF) then customer fire gate.
+    const decision = await shouldSweepFire({
+      workspaceId: ws.id,
+      agentSlug: CALENDAR_AGENT_SLUG,
+      skillSlug: CALENDAR_SKILL_SLUG,
+      disciplineId: CALENDAR_DISCIPLINE_ID,
+      now,
+      isActivated: args.isActivated,
+      gateFire: args.gateFire,
+    });
+    if (!decision.fire) {
+      if (decision.gate === 'activation') result.workspacesSkippedDormant += 1;
+      else result.workspacesSkippedFireGate += 1;
       continue;
     }
     try {
@@ -188,6 +215,8 @@ export const contentCalendarSweepFn = inngest.createFunction(
                 with_calendar: out.workspacesWithCalendar,
                 skipped_discipline_disabled: out.workspacesSkippedDisciplineDisabled,
                 skipped_not_installed: out.workspacesSkippedNotInstalled,
+                skipped_dormant: out.workspacesSkippedDormant,
+                skipped_fire_gate: out.workspacesSkippedFireGate,
                 failed: out.failures.length,
               });
               return out;

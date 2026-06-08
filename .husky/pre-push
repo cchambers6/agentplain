@@ -52,3 +52,35 @@ npm run build:no-migrate || {
   echo ""
   exit 1
 }
+
+# --- Layer 3: schema-drift gate with raw-index auto-heal (Wave-7, theme #19) ---
+# When a SHADOW_DATABASE_URL is available, run the drift check in auto-heal
+# mode. If the only drift is a new raw-SQL index migration (GIN/trgm/pgvector),
+# the check appends the DROP INDEX line to prisma/schema-drift-baseline.sql
+# automatically — the documented fix — instead of leaving HUSKY=0 as the only
+# way forward. ANY other drift still fails loud (the gate is NOT weakened).
+# Skipped entirely when no shadow DB is configured (the common local case),
+# so this never blocks a push on a machine without Postgres and never
+# interferes with a parallel wave's push.
+if [ -n "${SHADOW_DATABASE_URL:-}" ]; then
+  echo ""
+  echo "▶ Running schema-drift gate (auto-heals raw-index drift; other drift fails loud)."
+  npm run check:schema-drift -- --auto-heal-raw-indexes || {
+    echo ""
+    echo "❌ Push blocked: schema drift beyond the known raw-index pattern."
+    echo "   Resolve with 'npx prisma migrate dev' or '--update-baseline' + a README note."
+    echo "   (Do NOT use HUSKY=0 — that is the jailbreak this gate exists to remove.)"
+    echo ""
+    exit 1
+  }
+  # If the auto-heal modified the baseline, the push would otherwise ship a
+  # dirty working tree. Surface it so the developer commits the healed file.
+  if ! git diff --quiet -- prisma/schema-drift-baseline.sql; then
+    echo ""
+    echo "❌ Push blocked: schema-drift auto-heal updated prisma/schema-drift-baseline.sql."
+    echo "   Review + commit the healed baseline, then push again:"
+    echo "     git add prisma/schema-drift-baseline.sql && git commit --amend --no-edit"
+    echo ""
+    exit 1
+  fi
+fi

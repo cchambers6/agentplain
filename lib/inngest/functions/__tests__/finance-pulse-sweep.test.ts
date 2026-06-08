@@ -24,6 +24,12 @@ import {
   runFinancePulseSweep,
 } from '../finance-pulse-sweep';
 import { SKILL_DISCIPLINE } from '@/lib/disciplines/skill-mapping';
+import type { AgentActivationResult } from '@/lib/fleet/activation';
+
+/** Wave-7: these gate-behavior tests exercise the path AFTER activation, so
+ *  they opt the agent ON. The default-OFF behavior is pinned separately in
+ *  finance-pulse-sweep-activation.test.ts. */
+const ACTIVE: AgentActivationResult = { active: true, reason: 'active', detail: '' };
 
 const WORKSPACE_OK = '11111111-1111-1111-1111-111111111111';
 const WORKSPACE_PAUSED = '22222222-2222-2222-2222-222222222222';
@@ -49,6 +55,7 @@ describe('runFinancePulseSweep — gate behavior', () => {
       ],
       isPaused: async (wsId) => wsId === WORKSPACE_PAUSED,
       isInstalled: async () => true,
+      isActivated: async () => ACTIVE,
       runForWorkspace: async ({ workspaceId }) => {
         ranFor.push(workspaceId);
         return { ok: true, sunk: true };
@@ -82,6 +89,7 @@ describe('runFinancePulseSweep — gate behavior', () => {
       ],
       isPaused: async () => false,
       isInstalled: async (wsId) => wsId !== WORKSPACE_NOT_INSTALLED,
+      isActivated: async () => ACTIVE,
       runForWorkspace: async ({ workspaceId }) => {
         ranFor.push(workspaceId);
         return { ok: true, sunk: true };
@@ -104,6 +112,7 @@ describe('runFinancePulseSweep — gate behavior', () => {
       ],
       isPaused: async () => false,
       isInstalled: async () => true,
+      isActivated: async () => ACTIVE,
       runForWorkspace: async () => ({
         ok: false,
         sunk: false,

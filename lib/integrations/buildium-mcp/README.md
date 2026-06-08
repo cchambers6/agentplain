@@ -60,18 +60,28 @@ follow this exact recipe.
    is a separate productization step — the adapter + skill wiring is
    complete and tested without it.
 
-## Remaining families (same recipe, each its own PR)
+## Family status (this recipe applied across the keystone audit finding)
 
-| Vertical            | Skill port           | Vendor adapter(s) to build           |
+| Vertical            | Skill port           | First vendor adapter                  |
 | ------------------- | -------------------- | ------------------------------------- |
-| Insurance           | `PolicyLookup`       | EZLynx, HawkSoft → `insurance-coi-request` |
-| Mortgage            | `LoanFileLookup`     | Encompass, LendingPad → `mortgage-document-chase` |
-| Property management  | `RentRollLookup`     | **Buildium (this PR)**, AppFolio, Yardi Breeze → `property-management-rent-collection-chase` |
-| Title / escrow      | `ClosingFileFetcher` | SoftPro, Qualia → `title-escrow-closing-doc-chase` |
-| Real estate (lead)  | `LeadFetcher`        | **Follow Up Boss — already live** (`lib/integrations/follow-up-boss-mcp/`), dotloop/Skyslope → listing-coordinator |
+| Insurance           | `PolicyLookup`       | **EZLynx — live** (`lib/integrations/ezlynx-mcp/`, wave-1b) → `insurance-coi-request`. Next: HawkSoft, Applied Epic, AMS360. |
+| Mortgage            | `LoanFileLookup`     | **Encompass — live** (`lib/integrations/encompass-mcp/`, wave-1b) → `mortgage-document-chase`. Next: LendingPad, Calyx. |
+| Property management  | `RentRollLookup`     | **Buildium — live** (`lib/integrations/buildium-mcp/`, wave-1) → `property-management-rent-collection-chase`. Next: AppFolio, Yardi Breeze. |
+| Title / escrow      | `ClosingFileFetcher` | **Qualia — live** (`lib/integrations/qualia-mcp/`, wave-1b) → `title-escrow-closing-doc-chase`. Next: SoftPro, RamQuest. |
+| Real estate (lead)  | `LeadFetcher`        | **Follow Up Boss — already live** (`lib/integrations/follow-up-boss-mcp/`). Sierra + BoldTrail also live. |
 
 > Note on real estate: contrary to the audit's "only QuickBooks runs live"
 > framing, **Follow Up Boss was already fully wired** (MCP server,
-> `LeadFetcher` adapter, hourly write-back sweep, tests). This PR therefore
-> targets the next genuine gap — property management / Buildium — and
-> establishes this recipe so the other four ports get their first adapter.
+> `LeadFetcher` adapter, hourly write-back sweep, tests). There is no separate
+> "listing-coordinator" *runtime* port to wire — `realty-listing-coordinator`
+> is an advisory `.claude/skills` agent, not a runtime skill with a
+> `Fetcher` port + `JsonXxx` fixture; dotloop/Skyslope appear only as
+> marketplace tile names in `lib/verticals/real-estate/content.ts`. Wiring a
+> dotloop/Skyslope adapter would mean inventing a parallel path, which this
+> recipe forbids — so that "family" is intentionally not built here.
+>
+> Wave 1b (this batch) completed the three genuine "port exists, adapter does
+> not" gaps that remained — insurance, mortgage, title — each behind a
+> per-vendor `<VENDOR>_ADAPTER_LIVE=on` flag (fixtures by default), read-only,
+> with a `NOT_CONFIGURED` honesty seam and node:test coverage proving the
+> skill drafts end-to-end from vendor-shaped fixtures.

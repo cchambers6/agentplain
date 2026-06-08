@@ -109,7 +109,10 @@ export interface DecryptedCredential {
     | 'HUBSPOT'
     | 'SALESFORCE'
     | 'NOTION'
-    | 'BUILDIUM';
+    | 'BUILDIUM'
+    | 'EZLYNX'
+    | 'ENCOMPASS'
+    | 'QUALIA';
   accountId: string;
   accountEmail: string;
   accessToken: string;

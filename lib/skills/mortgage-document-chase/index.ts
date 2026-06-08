@@ -1,5 +1,11 @@
 export { runSkill } from './skill';
 export { JsonLoanFileLookup } from './json-fetcher';
+export {
+  EncompassLoanFileLookup,
+  ENCOMPASS_NOT_CONNECTED_MESSAGE,
+  toLoanFile,
+  toOutstandingDoc,
+} from './encompass-lookup';
 export type {
   BorrowerChaseDraft,
   ContactPerson,

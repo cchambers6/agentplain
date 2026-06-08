@@ -340,6 +340,31 @@ enum IntegrationProvider {
   // property-management-rent-collection-chase skill. Live calls are gated by
   // BUILDIUM_ADAPTER_LIVE=on (fixtures by default).
   BUILDIUM
+  // Wave-1b vertical adapter family — completes the keystone "port exists,
+  // adapter does not" finding for insurance / mortgage / title. Each backs a
+  // skill port that previously shipped only its JSON fixture impl, and each
+  // is gated behind a per-vendor `<VENDOR>_ADAPTER_LIVE=on` flag (fixtures by
+  // default). Read-only (`project_no_outbound_architecture.md`).
+  //
+  // EZLynx (insurance AMS): OAuth2 client-credentials/refresh — the agency
+  //   enrolls via EZLynx's partner program. Refresh token in
+  //   `refreshTokenEncrypted`; access token in `accessTokenEncrypted`.
+  //   MCP at `lib/integrations/ezlynx-mcp/`; backs the `PolicyLookup` port in
+  //   the insurance-coi-request skill. Gated by EZLYNX_ADAPTER_LIVE=on.
+  // Encompass (ICE Mortgage LOS): OAuth2 + Encompass instance id on
+  //   `providerMetadata.instanceId`. Refresh tokens rotate. MCP at
+  //   `lib/integrations/encompass-mcp/`; backs the `LoanFileLookup` port in
+  //   the mortgage-document-chase skill. Gated by ENCOMPASS_ADAPTER_LIVE=on.
+  // Qualia (title/escrow production): HTTP Basic auth (no OAuth, no refresh) —
+  //   the org id + API key the customer creates under their Qualia account.
+  //   Same API-key credential pattern as BUILDIUM: secret in
+  //   `accessTokenEncrypted`, non-secret org id in `providerMetadata.orgId`.
+  //   MCP at `lib/integrations/qualia-mcp/`; backs the `ClosingFileFetcher`
+  //   port in the title-escrow-closing-doc-chase skill. Gated by
+  //   QUALIA_ADAPTER_LIVE=on.
+  EZLYNX
+  ENCOMPASS
+  QUALIA
 }
 
 // Credential lifecycle states. ACTIVE = tokens valid and refresh-eligible.

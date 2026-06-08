@@ -54,7 +54,7 @@ export default async function ApprovalsPage({ params, searchParams }: PageProps)
       {rows.length === 0 ? (
         <div className="mt-8">
           <ApRootedEmptyState
-            motif="lone-tree"
+            scene="empty-approvals"
             reality="Nothing waiting on you."
             change="Plaino is sitting ready, fetching from your connected sources and herding work as it surfaces. New decisions land here as they cross your threshold."
           />

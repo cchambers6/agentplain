@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ApEyebrow, ApMotif } from "@/components/ui/ap";
+import { ApEyebrow, PlainoScene } from "@/components/ui/ap";
 import { PasskeySignInButton } from "./PasskeySignInButton";
 import { SignInForm } from "./SignInForm";
 
@@ -27,8 +27,12 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   return (
     <div className="container-wide py-16">
       <div className="mx-auto max-w-md">
-        <div className="mb-6 text-ink">
-          <ApMotif name="lone-tree" size={80} />
+        <div className="mb-6">
+          <PlainoScene
+            name="auth-signin"
+            alt="Plaino waiting at the gate"
+            className="h-auto w-28"
+          />
         </div>
         <ApEyebrow className="mb-4">sign in</ApEyebrow>
         <h1 className="font-display text-4xl leading-tight text-ink">

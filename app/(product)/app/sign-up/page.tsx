@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ApEyebrow, ApMotif } from "@/components/ui/ap";
+import { ApEyebrow, PlainoScene } from "@/components/ui/ap";
 import { getAllVerticals, getVerticalContent } from "@/lib/verticals";
 import { TIER_ORDER, type TierName } from "@/lib/pricing/tiers";
 import { PLAINO_PARTNER } from "@/lib/onboarding/service-partner";
@@ -37,8 +37,12 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   return (
     <div className="container-wide py-16">
       <div className="mx-auto max-w-xl">
-        <div className="mb-6 text-ink">
-          <ApMotif name="wheat" size={88} />
+        <div className="mb-6">
+          <PlainoScene
+            name="auth-signup"
+            alt="Plaino stepping forward to greet you"
+            className="h-auto w-28"
+          />
         </div>
         <ApEyebrow className="mb-4">begin with us</ApEyebrow>
         <h1 className="font-display text-4xl leading-tight text-ink">

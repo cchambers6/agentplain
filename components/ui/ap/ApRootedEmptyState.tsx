@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { ApMotif, type ApMotifName } from "./ApMotif";
+import { PlainoScene, type PlainoSceneName } from "./PlainoScene";
 
 // Empty-state card. Per design language §1.2 + §3.5:
 //   - one image cue (optional, off-center left, 64-96px)
@@ -20,8 +21,15 @@ interface ApRootedEmptyStateProps {
   change?: ReactNode;
   /** Single CTA (typically an <ApHeritageButton variant="secondary">). Optional. */
   cta?: ReactNode;
-  /** Plains motif. Omit to render without imagery. */
+  /** Plains line-art motif. Omit to render without imagery. */
   motif?: ApMotifName;
+  /**
+   * Heritage Plaino scene illustration — the partner-grade upgrade over the
+   * line-art `motif`. When set, this renders instead of `motif` so the empty
+   * state shows the named service partner, not a generic landscape. Wired to a
+   * placeholder today (see PlainoScene); a real asset swap is one-line.
+   */
+  scene?: PlainoSceneName;
 }
 
 /**
@@ -44,6 +52,7 @@ export function ApRootedEmptyState({
   change,
   cta,
   motif,
+  scene,
 }: ApRootedEmptyStateProps) {
   return (
     <section className="border border-rule bg-paper p-6 md:p-8">
@@ -52,7 +61,13 @@ export function ApRootedEmptyState({
           {eyebrow}
         </p>
       ) : null}
-      {motif ? (
+      {scene ? (
+        // Scene takes precedence over the line-art motif: the named partner
+        // beats a generic landscape in the emotional empty-state moment.
+        <div className="mb-5">
+          <PlainoScene name={scene} className="h-auto w-40 max-w-full" />
+        </div>
+      ) : motif ? (
         <div className="mb-5 text-ink">
           <ApMotif name={motif} size={96} />
         </div>

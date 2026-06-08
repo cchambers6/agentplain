@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { headers } from "next/headers";
 
 import { tokens } from "@/lib/brand/tokens";
 import {
@@ -83,10 +84,23 @@ export default async function OpenGraphImage({
   const oneLiner =
     content?.hero.sbmSubhead ?? content?.hero.eyebrow ?? tokens.tagline;
 
+  // Heritage Plaino backdrop, mirroring the root OG card (app/opengraph-image.tsx).
+  // next/og's Satori fetches it from the deployment origin at request time; a
+  // right-anchored crop keeps the left 60% clean Paper for the type, and a
+  // left-to-right Paper scrim guarantees legibility. This lifts every
+  // per-vertical share card from text-only (WEAK) to the heritage system.
+  // When per-vertical scene rasters land, swap heritageUrl to the vertical
+  // asset (public/brand/plaino-system/scenes/vertical-<slug>.png).
+  const h = headers();
+  const host = h.get("host") ?? "agentplain.com";
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  const heritageUrl = `${proto}://${host}/brand/plaino-system/heritage.png`;
+
   return new ImageResponse(
     (
       <div
         style={{
+          position: "relative",
           width: "100%",
           height: "100%",
           background: colors.paper.hex,
@@ -98,8 +112,35 @@ export default async function OpenGraphImage({
           fontFamily: "Georgia, serif",
         }}
       >
+        {/* Heritage backdrop, right-anchored — keep left 60% clean for type. */}
+        {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text -- Satori <img>, decorative */}
+        <img
+          src={heritageUrl}
+          alt=""
+          width={1200}
+          height={630}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "right center",
+          }}
+        />
+        {/* Paper scrim — left-to-right so the type column stays on paper. */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            background:
+              "linear-gradient(90deg, rgba(247,244,237,0.98) 42%, rgba(247,244,237,0.72) 64%, rgba(247,244,237,0.30) 100%)",
+          }}
+        />
         {/* TOP — wordmark + vertical name as eyebrow stack */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 14 }}>
           <div
             style={{
               fontSize: 20,
@@ -125,7 +166,7 @@ export default async function OpenGraphImage({
         </div>
 
         {/* MIDDLE — headline + value-prop one-liner */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 20 }}>
           <div
             style={{
               display: "flex",
@@ -153,7 +194,7 @@ export default async function OpenGraphImage({
 
         {/* BOTTOM — ROI claim (left) + Built on Claude stamp (right),
             over a clay accent bar */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 20 }}>
           <div style={{ width: 120, height: 4, background: colors.clay.hex }} />
           <div
             style={{

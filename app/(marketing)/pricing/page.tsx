@@ -6,6 +6,7 @@ import JsonLd from "@/components/seo/JsonLd";
 import { FaqList, pricingFaqItems } from "@/components/FAQ";
 import { faqPageJsonLd } from "@/lib/seo/structured-data";
 import { alternatesFor } from "@/lib/seo/metadata";
+import HeroBackdrop from "@/components/marketing/HeroBackdrop";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -128,8 +129,9 @@ export default function PricingPage() {
         id="ld-pricing-faqpage"
         data={faqPageJsonLd(faqItems)}
       />
-      <section className="border-b border-rule bg-paper">
-        <div className="container-wide py-20 md:py-28">
+      <section className="relative overflow-hidden border-b border-rule bg-paper">
+        <HeroBackdrop scene="pricing" />
+        <div className="relative container-wide py-20 md:py-28">
           <p className="eyebrow mb-6">Pricing</p>
           <h1 className="max-w-4xl font-display text-5xl leading-[1.05] text-ink md:text-7xl md:leading-[1.02]">
             Three ways to partner.

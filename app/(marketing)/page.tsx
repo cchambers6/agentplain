@@ -29,6 +29,7 @@ import { alternatesFor } from "@/lib/seo/metadata";
 import { getAllVerticals, getVerticalContent } from "@/lib/verticals";
 import { tokens } from "@/lib/brand/tokens";
 import { SEED_COUNTS } from "@/lib/knowledge/seed-data";
+import { PlainoScene } from "@/components/ui/ap";
 import type { Metadata } from "next";
 
 // Apex homepage metadata. Title inherits the root-layout default (locked
@@ -351,6 +352,13 @@ export default function HomePage() {
           idle hour where the crew has stopped working.
         </p>
 
+        {/* Supporting scene — Plaino herding documents through a gate.
+            Placeholder today; one-line swap when the real asset lands. */}
+        <PlainoScene
+          name="home-crew"
+          className="mt-10 hidden h-auto w-full max-w-md md:block"
+        />
+
         {/* Three honest follow-on panels — what's true TODAY, with the
             file-source line kept honest about fixtures vs. live Drive. */}
         <div className="mt-12 grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-3">
@@ -568,6 +576,13 @@ export default function HomePage() {
           Counts are computed at build time from the rows the substrate
           actually loads. Nothing here is aspirational.
         </p>
+
+        {/* Supporting scene — Plaino beside a well-kept filing cabinet.
+            Placeholder today; one-line swap when the real asset lands. */}
+        <PlainoScene
+          name="home-knowledge"
+          className="mt-10 hidden h-auto w-full max-w-md md:block"
+        />
       </Section>
 
       {/* Q6 — Why should anyone believe us? */}
@@ -689,6 +704,13 @@ export default function HomePage() {
             body="Models got good enough in 2025 to do real categorization, drafting, scheduling on real-world data — not benchmarks. Vendor APIs (Gmail, Outlook, every major CRM) stabilized enough to build multi-tenant integrations. Compliance frameworks (TCPA, GLBA) are clear enough to build per-vertical corpuses against. Early enough to define the category, late enough that the tech actually works."
           />
         </div>
+
+        {/* Closing vision scene — Plaino on watch over a growing plain.
+            Placeholder today; one-line swap when the real asset lands. */}
+        <PlainoScene
+          name="home-future"
+          className="mt-12 hidden h-auto w-full md:block"
+        />
       </Section>
 
       {/* FAQ — Q2/Q3/Q4/Q5/Q6 follow-ups in one place */}

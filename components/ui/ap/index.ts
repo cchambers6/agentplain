@@ -35,6 +35,12 @@ export { ApRootedLoader } from "./ApRootedLoader";
 export type { ApRootedLoaderKind } from "./ApRootedLoader";
 export { Plaino } from "./Plaino";
 export type { PlainoState } from "./Plaino";
+export {
+  PlainoScene,
+  isPlaceholderScene,
+  verticalSceneName,
+} from "./PlainoScene";
+export type { PlainoSceneName } from "./PlainoScene";
 export { PlainoAvatar } from "./PlainoAvatar";
 export type {
   PlainoAvatarPose,

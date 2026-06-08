@@ -13,7 +13,7 @@
 // whether the customer has clicked the magic link yet or not.
 
 import Link from "next/link";
-import { ApEyebrow, ApHeritageButton, ApMotif } from "@/components/ui/ap";
+import { ApEyebrow, ApHeritageButton, PlainoScene } from "@/components/ui/ap";
 import { PLAINO_PARTNER } from "@/lib/onboarding/service-partner";
 
 interface PageProps {
@@ -25,8 +25,12 @@ export default async function CheckoutSuccessPage({ searchParams }: PageProps) {
   return (
     <div className="container-wide py-16">
       <div className="mx-auto max-w-xl">
-        <div className="mb-6 text-ink">
-          <ApMotif name="wheat" size={88} />
+        <div className="mb-6">
+          <PlainoScene
+            name="auth-checkout"
+            alt="Plaino beside a raised flag — you're all set"
+            className="h-auto w-32"
+          />
         </div>
         <ApEyebrow className="mb-4">card on file</ApEyebrow>
         <h1 className="font-display text-3xl leading-tight text-ink">

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import Section from "@/components/Section";
+import HeroBackdrop from "@/components/marketing/HeroBackdrop";
 import { getAllVerticals } from "@/lib/verticals";
 import { alternatesFor } from "@/lib/seo/metadata";
 
@@ -24,8 +25,9 @@ export default function VerticalsIndexPage() {
 
   return (
     <>
-      <section className="border-b border-rule bg-paper">
-        <div className="container-wide py-20 md:py-28">
+      <section className="relative overflow-hidden border-b border-rule bg-paper">
+        <HeroBackdrop scene="verticals" />
+        <div className="relative container-wide py-20 md:py-28">
           <p className="eyebrow mb-6">All verticals</p>
           <h1 className="max-w-4xl font-display text-5xl leading-[1.05] text-ink md:text-7xl md:leading-[1.02]">
             Ten verticals.

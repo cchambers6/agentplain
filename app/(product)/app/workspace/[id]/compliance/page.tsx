@@ -114,7 +114,7 @@ export default async function CompliancePage({ params }: PageProps) {
       {flags.length === 0 ? (
         <div className="mt-8">
           <ApRootedEmptyState
-            motif="plow"
+            scene="empty-sentinel"
             reality={`Nothing flagged. ${partner} is reading every draft before it goes out.`}
             change="New flags surface here the moment Sentinel catches one. Severity ordered, SLA tracked."
           />

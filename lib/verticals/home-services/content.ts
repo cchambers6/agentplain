@@ -300,7 +300,10 @@ export const homeServices: VerticalContent = {
   },
 
   integrations: {
-    shipped: [],
+    // Live today via OAuth — see `lib/integrations/marketplace.ts`.
+    shipped: [
+      { name: "QuickBooks Online", category: "Accounting" },
+    ],
     planned: [
       { name: "ServiceTitan", category: "FSM (multi-trade)" },
       { name: "Jobber", category: "FSM (multi-trade SMB)" },
@@ -313,7 +316,6 @@ export const homeServices: VerticalContent = {
       { name: "EagleView", category: "Aerial measurement" },
       { name: "Xactimate", category: "Insurance estimating" },
       { name: "Local Service Ads / GBP", category: "Lead source" },
-      { name: "QuickBooks Online", category: "Accounting" },
     ],
     plannedWindow: "Q4 2026",
   },

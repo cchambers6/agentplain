@@ -245,18 +245,31 @@ export const realEstate: VerticalContent = {
   },
 
   integrations: {
-    shipped: [],
+    // Live today — the connect path is open (Follow Up Boss + Sierra via a
+    // pasted API key; M365 / Google Workspace / QuickBooks via OAuth) and
+    // Plaino reads, triages, and drafts on the real account. See
+    // `lib/integrations/marketplace.ts` (status: 'available').
+    shipped: [
+      {
+        name: "Follow Up Boss",
+        category: "CRM",
+        note: "Reads leads, triages each one, drafts a first-touch reply into /approvals, writes the decision back as a note + tag.",
+      },
+      {
+        name: "Sierra Interactive",
+        category: "CRM",
+        note: "Reads contacts, triages each lead, drafts a first-touch reply, writes the triage decision back as a private note + tag.",
+      },
+      { name: "Microsoft 365 Graph", category: "Calendar + email" },
+      { name: "Google Workspace", category: "Calendar + email" },
+      { name: "QuickBooks Online", category: "Accounting" },
+    ],
     planned: [
-      { name: "Follow Up Boss", category: "CRM" },
-      { name: "Sierra Interactive", category: "CRM" },
       { name: "dotloop", category: "Transaction management" },
       { name: "Skyslope", category: "Transaction management" },
       { name: "FMLS / GAMLS", category: "MLS (Georgia)" },
-      { name: "Microsoft 365 Graph", category: "Calendar + email" },
-      { name: "Google Workspace", category: "Calendar + email" },
       { name: "Zillow / Realtor.com", category: "Lead source" },
       { name: "RESO Web API", category: "MLS standard" },
-      { name: "QuickBooks Online", category: "Accounting" },
     ],
     plannedWindow: "Q3 2026",
   },

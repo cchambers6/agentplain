@@ -299,7 +299,10 @@ export const recruiting: VerticalContent = {
   },
 
   integrations: {
-    shipped: [],
+    // Live today via OAuth — see `lib/integrations/marketplace.ts`.
+    shipped: [
+      { name: "Outlook + M365 Graph", category: "Email + calendar" },
+    ],
     planned: [
       { name: "Bullhorn", category: "ATS" },
       { name: "Greenhouse", category: "ATS" },
@@ -309,7 +312,6 @@ export const recruiting: VerticalContent = {
       { name: "Workable", category: "ATS" },
       { name: "LinkedIn Recruiter", category: "Sourcing (read-only)" },
       { name: "Apollo", category: "Enrichment" },
-      { name: "Outlook + M365 Graph", category: "Email + calendar" },
     ],
     plannedWindow: "Q3 2026",
   },

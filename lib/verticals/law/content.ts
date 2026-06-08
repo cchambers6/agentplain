@@ -292,7 +292,10 @@ export const law: VerticalContent = {
   },
 
   integrations: {
-    shipped: [],
+    // Live today via OAuth — see `lib/integrations/marketplace.ts`.
+    shipped: [
+      { name: "Outlook + M365 Graph", category: "Email + calendar" },
+    ],
     planned: [
       { name: "Clio Manage", category: "Practice mgmt" },
       { name: "MyCase", category: "Practice mgmt" },
@@ -302,7 +305,6 @@ export const law: VerticalContent = {
       { name: "iManage Work", category: "Document management" },
       { name: "Westlaw + Lexis", category: "Legal research" },
       { name: "Court e-filing portals", category: "Court" },
-      { name: "Outlook + M365 Graph", category: "Email + calendar" },
     ],
     plannedWindow: "Q1 2027",
   },

@@ -116,14 +116,32 @@ export interface RoiAnchor {
 }
 
 /**
- * Integrations — split into "shipped" and "planned". Per
- * `project_integration_roadmap.md` + `feedback_integration_acceptance_is_functional.md`,
- * NONE are currently shipped (as of 2026-05-11). This shape future-proofs
- * the page so we can move integrations to `shipped` without changing the
- * renderer.
+ * Integrations — split into three honesty tiers: "shipped", "supported",
+ * and "planned". Per `project_integration_roadmap.md` +
+ * `feedback_integration_acceptance_is_functional.md`, the bar for each tier
+ * is deliberately different so the page never overclaims:
  *
- * `plannedWindow` is shown verbatim ("Q3 2026" etc.) so the page never
- * claims more than the roadmap commits to.
+ * - `shipped` — live end-to-end on a customer's real system TODAY: the
+ *   adapter is wired AND the connect path is open (OAuth/API-key) AND the
+ *   skill drafts from real reads. Today only the connectors marked
+ *   `status: 'available'` in `lib/integrations/marketplace.ts` qualify
+ *   (Gmail, Outlook/M365, Google Workspace, QuickBooks, Slack, and the
+ *   realty CRMs Follow Up Boss + Sierra Interactive).
+ *
+ * - `supported` — the vendor adapter is BUILT and TESTED behind the
+ *   provider port (two-implementation rule), but going live needs a
+ *   per-workspace credential and a per-vendor `<VENDOR>_ADAPTER_LIVE` flag
+ *   flip (partner-gated OAuth or a pasted API key). This is the honest
+ *   middle tier for the wave-1/1b vertical adapters (Buildium, EZLynx,
+ *   Encompass, Qualia) — real code, not vaporware, but not "live on your
+ *   system" until you connect it. Say "supported"/"ready", never "live".
+ *
+ * - `planned` — committed-with-window, not yet built. `plannedWindow` is
+ *   shown verbatim ("Q3 2026" etc.) so the page never claims more than the
+ *   roadmap commits to.
+ *
+ * The shape future-proofs the page so an integration can move
+ * planned → supported → shipped without changing the renderer.
  */
 export interface Integration {
   name: string;
@@ -133,6 +151,13 @@ export interface Integration {
 
 export interface IntegrationsSection {
   shipped: Integration[];
+  /**
+   * Adapter built + tested behind the port, but live calls need a connected
+   * credential + the per-vendor `<VENDOR>_ADAPTER_LIVE` flag. Optional for
+   * back-compat with content files written before the three-tier split;
+   * the renderer treats `undefined` as an empty array.
+   */
+  supported?: Integration[];
   planned: Integration[];
   plannedWindow: string;
 }

@@ -152,6 +152,97 @@ describe("vertical-routes", () => {
     }
   });
 
+  // Integrations honesty tiers (wave-10) — the wired adapters from
+  // wave-1/1b (#179, #182) must surface in the right tier so the page is
+  // honest: truly-live connectors (status: 'available' in
+  // `lib/integrations/marketplace.ts`) land in `shipped`; vendor adapters
+  // that are BUILT + TESTED but need a credential + `<VENDOR>_ADAPTER_LIVE`
+  // flag land in `supported`; everything else stays `planned`.
+  //
+  // This guards against (a) regressing a wired adapter back to `planned`
+  // (under-claiming) and (b) overclaiming a flag/credential-gated adapter
+  // as `shipped`/live.
+
+  it("no vertical leaves its `shipped` integrations array empty", () => {
+    // Every vertical now has at least the horizontal OAuth connectors live
+    // (Outlook/M365, Gmail, QuickBooks) per the marketplace catalog. An
+    // empty `shipped` would mean a content regression dropped them.
+    for (const slug of [...EXPECTED_SLUGS, "general"]) {
+      const c = getVerticalContent(slug);
+      assert.ok(c);
+      assert.ok(
+        c.integrations.shipped.length > 0,
+        `${slug} has an empty shipped[] — at least the live horizontal connectors should be listed (see lib/integrations/marketplace.ts status:'available')`,
+      );
+    }
+  });
+
+  it("flag/credential-gated vertical adapters land in `supported`, never `shipped`", () => {
+    // Wave-1/1b adapters that are built + tested but gated behind a per-
+    // vendor `<VENDOR>_ADAPTER_LIVE` flag + a connected credential. They
+    // are honestly "ready", not "live", so they MUST appear in `supported`
+    // and MUST NOT appear in `shipped`.
+    const SUPPORTED_BY_VERTICAL: Record<string, string> = {
+      "property-management": "Buildium",
+      insurance: "EZLynx",
+      mortgage: "Encompass",
+      "title-escrow": "Qualia",
+    };
+    for (const [slug, vendor] of Object.entries(SUPPORTED_BY_VERTICAL)) {
+      const c = getVerticalContent(slug);
+      assert.ok(c);
+      const supported = c.integrations.supported ?? [];
+      assert.ok(
+        supported.some((i) => i.name === vendor),
+        `${slug}: "${vendor}" must be in integrations.supported (adapter built + tested, gated on a credential + flag)`,
+      );
+      assert.ok(
+        !c.integrations.shipped.some((i) => i.name === vendor),
+        `${slug}: "${vendor}" must NOT be in integrations.shipped — it is flag/credential-gated, so claiming it live overclaims (say "ready", not "live")`,
+      );
+      assert.ok(
+        !c.integrations.planned.some((i) => i.name === vendor),
+        `${slug}: "${vendor}" must NOT be in integrations.planned — the adapter is built, so leaving it planned under-claims (see lib/integrations/${vendor.toLowerCase()}-mcp/)`,
+      );
+    }
+  });
+
+  it("truly-live CRMs (Follow Up Boss, Sierra) are shipped on real-estate", () => {
+    // Follow Up Boss + Sierra Interactive are status:'available' in the
+    // marketplace catalog — wired end-to-end with an open connect path —
+    // so they belong in `shipped`, not `planned`.
+    const re = getVerticalContent("real-estate");
+    assert.ok(re);
+    for (const vendor of ["Follow Up Boss", "Sierra Interactive"]) {
+      assert.ok(
+        re.integrations.shipped.some((i) => i.name === vendor),
+        `real-estate: "${vendor}" must be in shipped[] (status:'available' in marketplace.ts)`,
+      );
+      assert.ok(
+        !re.integrations.planned.some((i) => i.name === vendor),
+        `real-estate: "${vendor}" must NOT remain in planned[] — it is live`,
+      );
+    }
+    // BoldTrail is coming-soon (partner enrollment not complete) — must NOT
+    // be claimed shipped. It does not appear on the page at all today; this
+    // guards against a future edit promoting it prematurely.
+    assert.ok(
+      !re.integrations.shipped.some((i) => i.name === "BoldTrail"),
+      "real-estate: BoldTrail must not be shipped — partner enrollment is not complete (marketplace status: 'coming-soon')",
+    );
+  });
+
+  it("CPA practice-mgmt connectors (TaxDome, Karbon) are shipped", () => {
+    const cpa = getVerticalContent("cpa");
+    assert.ok(cpa);
+    for (const vendor of ["TaxDome", "Karbon"]) {
+      assert.ok(
+        cpa.integrations.shipped.some((i) => i.name === vendor),
+        `cpa: "${vendor}" must be in shipped[] (status:'available', verticalRelevance ['cpa'] in marketplace.ts)`,
+      );
+    }
+  });
+
   it("real-estate's JTBD tables remain ratified (regression guard)", () => {
     const realEstate = getVerticalContent("real-estate");
     assert.ok(realEstate);

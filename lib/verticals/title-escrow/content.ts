@@ -265,14 +265,25 @@ export const titleEscrow: VerticalContent = {
   },
 
   integrations: {
-    shipped: [],
+    // Live today via OAuth — see `lib/integrations/marketplace.ts`.
+    shipped: [
+      { name: "Outlook + M365 Graph", category: "Email + calendar" },
+    ],
+    // Adapter built + tested behind the `ClosingFileFetcher` port (wave-1b,
+    // `lib/integrations/qualia-mcp/`). Going live needs your Qualia API
+    // credential + `QUALIA_ADAPTER_LIVE=on`.
+    supported: [
+      {
+        name: "Qualia",
+        category: "Title production",
+        note: "Reads the closing file behind the closing-document chase loop. Connecting your Qualia credential turns it on.",
+      },
+    ],
     planned: [
       { name: "SoftPro", category: "Title production" },
       { name: "RamQuest", category: "Title production" },
-      { name: "Qualia", category: "Title production" },
       { name: "ResWare", category: "Title production" },
       { name: "Underwriter portals (top 4)", category: "Underwriter" },
-      { name: "Outlook + M365 Graph", category: "Email + calendar" },
       { name: "County recording portals", category: "Recording" },
     ],
     plannedWindow: "Q3 2026",

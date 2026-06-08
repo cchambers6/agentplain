@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-label="placeholder heritage scene: title-escrow · hero">
+  <!-- PLACEHOLDER — non-blocking stand-in. Real asset swaps in at public/brand/plaino-system/scenes/vertical-title-escrow.png -->
+  <rect width="1600" height="1000" fill="#F7F4ED"/>
+  <!-- low land band (Moss) -->
+  <rect x="0" y="620" width="1600" height="380" fill="#3F5C3F" opacity="0.16"/>
+  <!-- horizon line (Ink hairline) + low rise -->
+  <path d="M0 620 H1600" stroke="#1A1A1F" stroke-width="2" opacity="0.55"/>
+  <path d="M800 620 Q1152 537 1504 620" fill="none" stroke="#1A1A1F" stroke-width="2" opacity="0.35"/>
+  <!-- a single distant clay roof (the one Clay charge in the land) -->
+  <path d="M224 620 l80 0 l-40 -35 z" fill="#B65D3A" opacity="0.85"/>
+  <!-- Plaino silhouette: calm working dog, head up, watching -->
+  <g fill="#1A1A1F">
+    <!-- body -->
+    <rect x="1072" y="519" width="160" height="74" rx="19"/>
+    <!-- legs -->
+    <rect x="1091" y="580" width="19" height="40"/>
+    <rect x="1187" y="580" width="19" height="40"/>
+    <!-- head -->
+    <rect x="1168" y="469" width="54" height="63" rx="13"/>
+    <!-- ear (up, alert) -->
+    <path d="M1178 473 l0 -26 l19 18 z"/>
+    <!-- tail -->
+    <path d="M1072 528 q-29 -9 -26 -40" fill="none" stroke="#1A1A1F" stroke-width="16" stroke-linecap="round"/>
+  </g>
+  <!-- collar tag: the single Clay charge on the dog -->
+  <circle cx="1171" cy="528" r="19" fill="#B65D3A"/>
+  <!-- placeholder labelling (Mute) — makes it unmistakably a stand-in -->
+  <text x="96" y="140" font-family="ui-monospace, Menlo, monospace" font-size="28" fill="#726A5E" letter-spacing="2">PLACEHOLDER · TITLE-ESCROW · HERO</text>
+  <text x="96" y="185" font-family="ui-monospace, Menlo, monospace" font-size="20" fill="#726A5E" opacity="0.8">1600×1000 · pose fetching · awaiting real asset</text>
+</svg>

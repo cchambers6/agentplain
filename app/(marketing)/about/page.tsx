@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { tokens } from "@/lib/brand/tokens";
 import { alternatesFor } from "@/lib/seo/metadata";
+import HeroBackdrop from "@/components/marketing/HeroBackdrop";
+import { PlainoScene } from "@/components/ui/ap";
 
 export const metadata: Metadata = {
   title: "About",
@@ -24,8 +26,9 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <>
-      <section className="border-b border-rule bg-paper">
-        <div className="container-wide py-20 md:py-28">
+      <section className="relative overflow-hidden border-b border-rule bg-paper">
+        <HeroBackdrop scene="about-hero" />
+        <div className="relative container-wide py-20 md:py-28">
           <p className="eyebrow mb-3">About</p>
           <p className="font-display text-base leading-snug text-clay md:text-lg">
             {tokens.tagline}
@@ -95,6 +98,12 @@ export default function AboutPage() {
         <div className="container-wide grid gap-12 py-20 md:grid-cols-[1fr_2fr] md:py-28">
           <div>
             <p className="eyebrow mb-4">We run it on ourselves first</p>
+            {/* Dogfood scene — Plaino directing the fleet of pups. Placeholder
+                today; one-line swap when the real asset lands. */}
+            <PlainoScene
+              name="about-dogfood"
+              className="mt-2 hidden h-auto w-full max-w-[260px] md:block"
+            />
           </div>
           <div className="max-w-prose space-y-5 text-[15px] leading-relaxed text-ink-soft">
             <p>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-label="placeholder heritage scene: about · run on ourselves">
+  <!-- PLACEHOLDER — non-blocking stand-in. Real asset swaps in at public/brand/plaino-system/scenes/about-dogfood.png -->
+  <rect width="1200" height="900" fill="#F7F4ED"/>
+  <!-- low land band (Moss) -->
+  <rect x="0" y="558" width="1200" height="342" fill="#3F5C3F" opacity="0.16"/>
+  <!-- horizon line (Ink hairline) + low rise -->
+  <path d="M0 558 H1200" stroke="#1A1A1F" stroke-width="2" opacity="0.55"/>
+  <path d="M600 558 Q864 483 1128 558" fill="none" stroke="#1A1A1F" stroke-width="2" opacity="0.35"/>
+  <!-- a single distant clay roof (the one Clay charge in the land) -->
+  <path d="M168 558 l72 0 l-36 -32 z" fill="#B65D3A" opacity="0.85"/>
+  <!-- Plaino silhouette: calm working dog, head up, watching -->
+  <g fill="#1A1A1F">
+    <!-- body -->
+    <rect x="792" y="467" width="144" height="66" rx="17"/>
+    <!-- legs -->
+    <rect x="809" y="521" width="17" height="37"/>
+    <rect x="896" y="521" width="17" height="37"/>
+    <!-- head -->
+    <rect x="878" y="422" width="49" height="56" rx="12"/>
+    <!-- ear (up, alert) -->
+    <path d="M887 425 l0 -23 l17 17 z"/>
+    <!-- tail -->
+    <path d="M792 475 q-26 -8 -23 -37" fill="none" stroke="#1A1A1F" stroke-width="14" stroke-linecap="round"/>
+  </g>
+  <!-- collar tag: the single Clay charge on the dog -->
+  <circle cx="881" cy="475" r="17" fill="#B65D3A"/>
+  <!-- placeholder labelling (Mute) — makes it unmistakably a stand-in -->
+  <text x="72" y="126" font-family="ui-monospace, Menlo, monospace" font-size="25" fill="#726A5E" letter-spacing="2">PLACEHOLDER · ABOUT · RUN ON OURSELVES</text>
+  <text x="72" y="167" font-family="ui-monospace, Menlo, monospace" font-size="18" fill="#726A5E" opacity="0.8">1200×900 · pose herding · awaiting real asset</text>
+</svg>

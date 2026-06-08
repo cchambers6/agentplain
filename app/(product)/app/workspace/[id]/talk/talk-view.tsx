@@ -24,7 +24,7 @@ export function TalkEmptyState() {
   return (
     <ApRootedEmptyState
       eyebrow="your service partner"
-      motif="lone-tree"
+      scene="empty-talk"
       reality="Plaino's waiting at the workspace door."
       change="Ask a question and I'll fetch from your files and the substrate. Hand me work and I'll herd it through the team — the draft lands in your approval queue. I'll wait here in the meantime."
     />

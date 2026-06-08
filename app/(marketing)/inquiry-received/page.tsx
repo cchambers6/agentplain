@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { tokens } from "@/lib/brand/tokens";
+import { PlainoScene } from "@/components/ui/ap";
 
 // /inquiry-received — top-level confirmation surface for visitors who land
 // here via a direct link (e.g. linked from internal docs, retry from a
@@ -42,6 +43,13 @@ export default async function InquiryReceivedPage({ searchParams }: PageProps) {
   return (
     <section className="border-b border-rule bg-paper">
       <div className="container-wide py-24 md:py-32">
+        {/* Confirmation Plaino — "received, it's in good hands." Placeholder
+            today; one-line swap when the real asset lands. */}
+        <PlainoScene
+          name="inquiry-received"
+          alt="Plaino setting your inquiry safely on the porch"
+          className="mb-8 h-auto w-32"
+        />
         <p className="eyebrow mb-6">Inquiry received</p>
         <p className="font-display text-base leading-snug text-clay md:text-lg">
           {tokens.tagline}

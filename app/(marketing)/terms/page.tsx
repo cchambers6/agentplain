@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { alternatesFor } from "@/lib/seo/metadata";
+import { PlainoScene } from "@/components/ui/ap";
 
 export const metadata: Metadata = {
   title: "Terms of service",
@@ -18,6 +19,9 @@ export default function TermsPage() {
     <>
       <section className="border-b border-rule bg-paper">
         <div className="container-wide py-20 md:py-28">
+          {/* Shared legal-page motif — Plaino guarding a strongbox. Placeholder
+              today; one-line swap when the real asset lands. */}
+          <PlainoScene name="legal" className="mb-5 h-auto w-16" />
           <p className="eyebrow mb-3">Terms of service</p>
           <h1 className="mt-2 max-w-4xl font-display text-4xl leading-[1.08] text-ink sm:text-5xl md:text-[3.5rem] md:leading-[1.04]">
             The agreement between us.

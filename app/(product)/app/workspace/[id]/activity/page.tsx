@@ -71,7 +71,7 @@ export default async function WorkspaceActivityPage({
       {rows.length === 0 ? (
         <div className="mt-8">
           <ApRootedEmptyState
-            motif="horizon"
+            scene="empty-activity"
             reality={`No handoffs yet. ${partner} is watching your inbox.`}
             change="The first row lands once new mail or a webhook fires."
           />

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { VerticalContent } from "@/lib/verticals/types";
 import { tokens } from "@/lib/brand/tokens";
+import { verticalSceneName } from "@/components/ui/ap";
+import HeroBackdrop from "@/components/marketing/HeroBackdrop";
 
 // Vertical-page hero. Brand tokens only.
 //
@@ -32,9 +34,13 @@ export default function VerticalHero({
       ? "/app/sign-up"
       : `/app/sign-up?vertical=${content.slug}`;
 
+  const sceneName = verticalSceneName(content.slug);
+
   return (
-    <section className="border-b border-rule bg-paper">
-      <div className="container-wide py-20 md:py-28">
+    <section className="relative overflow-hidden border-b border-rule bg-paper">
+      {/* Per-vertical heritage backdrop (md+), mirrors the homepage hero. */}
+      <HeroBackdrop scene={sceneName} />
+      <div className="relative container-wide py-20 md:py-28">
         <p className="eyebrow mb-3">{content.hero.eyebrow}</p>
         <p className="font-display text-base leading-snug text-clay md:text-lg">
           {tokens.tagline}

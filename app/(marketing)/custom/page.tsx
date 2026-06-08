@@ -8,6 +8,7 @@ import {
   type InquiryType,
 } from "@/lib/custom-inquiry/types";
 import { alternatesFor } from "@/lib/seo/metadata";
+import HeroBackdrop from "@/components/marketing/HeroBackdrop";
 
 export const metadata: Metadata = {
   title: "Build with us — Custom engagements",
@@ -192,8 +193,9 @@ export default async function CustomPage({ searchParams }: PageProps) {
   return (
     <>
       {/* HERO */}
-      <section className="border-b border-rule bg-paper">
-        <div className="container-wide py-20 md:py-28">
+      <section className="relative overflow-hidden border-b border-rule bg-paper">
+        <HeroBackdrop scene="custom" />
+        <div className="relative container-wide py-20 md:py-28">
           <p className="eyebrow mb-6">Build with us</p>
           <p className="font-display text-base leading-snug text-clay md:text-lg">
             {tokens.tagline}

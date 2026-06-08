@@ -84,6 +84,12 @@ import { customerFeedbackDriftSweepFn } from "@/lib/inngest/functions/customer-f
 import { mediaWeeklyCreativeReviewFn } from "@/lib/inngest/functions/media-weekly-creative-review";
 import { mediaPlatformPerformanceDigestFn } from "@/lib/inngest/functions/media-platform-performance-digest";
 import { mediaMonthlyMediaPlanFn } from "@/lib/inngest/functions/media-monthly-media-plan";
+// Wave-8 (audit theme #18) — competitive-signal feed. Real, scheduled feed
+// that replaces the dormant quarterly watch-memo charters: pulls competitive
+// movements for the verticals we run a head for and drafts a digest the
+// vertical heads consume. Provider behind lib/competitive-signals (fixture
+// default; flag-gated live Bright Data MCP). Draft-and-propose, no outbound.
+import { competitiveSignalFeedSweepFn } from "@/lib/inngest/functions/competitive-signal-feed-sweep";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -122,5 +128,6 @@ export const { GET, POST, PUT } = serve({
     mediaWeeklyCreativeReviewFn,
     mediaPlatformPerformanceDigestFn,
     mediaMonthlyMediaPlanFn,
+    competitiveSignalFeedSweepFn,
   ],
 });

@@ -181,12 +181,14 @@ export async function runInboxTriageForEvent(
       );
     }
   }
-  const llmForRefine =
-    input.llm === undefined
-      ? memory && feedbackRulesBlock.length > 0
-        ? getLlmProvider()
-        : null
-      : input.llm;
+  // Wave-2: the LLM is the PRIMARY per-message classifier — resolved
+  // UNCONDITIONALLY (not gated on feedback rules) so every fire gets
+  // intent-level classification, not just keyword cues. The composed
+  // provider's kill switches (`LLM_BUDGET_ENFORCEMENT`, `LLM_SENTINEL_BYPASS`,
+  // etc.) and the skill's keyword fallback handle the "LLM off" case
+  // gracefully. Passing `null` explicitly (tests) forces heuristic-only.
+  const llm =
+    input.llm === undefined ? getLlmProvider() : input.llm;
 
   const result = await runSkill({
     workspaceId: input.workspaceId,
@@ -197,7 +199,7 @@ export async function runInboxTriageForEvent(
     extraUrgentCues: skillConfig.priorityKeywords,
     flagFromSenders: skillConfig.flagFromSenders,
     autoArchiveSenders: skillConfig.autoArchiveSenders,
-    llm: llmForRefine ?? undefined,
+    llm: llm ?? undefined,
     feedbackRulesBlock,
   });
   if (!result.ok) return result;

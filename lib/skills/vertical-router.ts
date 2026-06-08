@@ -46,7 +46,21 @@ import { asDisciplineId } from '@/lib/disciplines';
 import { SKILL_DISCIPLINE } from '@/lib/disciplines/skill-mapping';
 import { runLeadTriageForEvent } from './lead-triage-realestate/run-for-event';
 import { isSkillInstalledForWorkspace } from './marketplace';
-import type { MessageFetcher } from './types';
+import type { DraftPersister, MessageFetcher } from './types';
+
+/** The webhook sweep's email adapters (`GmailMessageAdapter` /
+ *  `OutlookMessageAdapter`) implement BOTH `MessageFetcher` and
+ *  `DraftPersister`. This guard lets the router pass the same instance as
+ *  the lead-triage draft persister without widening the public router
+ *  signature. A read-only fetcher (no `persistDraft`) fails the guard and
+ *  lead-triage falls back to the fixture persister. */
+function isDraftPersister(
+  fetcher: MessageFetcher,
+): fetcher is MessageFetcher & DraftPersister {
+  return (
+    typeof (fetcher as Partial<DraftPersister>).persistDraft === 'function'
+  );
+}
 
 export type RouterDispatchOutcome =
   | { status: 'dispatched'; skillSlug: string; result: unknown }
@@ -108,6 +122,12 @@ const REGISTRATIONS: VerticalRouterRegistration[] = [
         fetcher: args.fetcher,
         event: args.event,
         now: args.now,
+        // Wave-2: the same adapter is a `DraftPersister`. Pass it so the
+        // first-touch draft can be auto-pushed to the broker's Drafts
+        // folder for hot/warm leads when `LIVE_INBOX_FETCH` is on. When the
+        // adapter is read-only or the flag is off, the fixture persister
+        // records the draft instead (no live mailbox write).
+        draftAdapter: isDraftPersister(args.fetcher) ? args.fetcher : null,
       });
       return { result };
     },

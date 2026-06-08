@@ -17,6 +17,8 @@ import type { FireGateOutcome } from '@/lib/skills/fire-gate';
 import type { CalendarFetcher } from '@/lib/skills/scheduler/types';
 import type { CalendarEvent } from '@/lib/skills/chief-of-staff-scheduler/types';
 import { skillOk, type SkillResult } from '@/lib/skills/types';
+import type { ParsedMessage } from '@/lib/skills/types';
+import type { InboxSnapshotFetcher } from '@/lib/integrations/inbox';
 
 const WORKSPACE = '55555555-5555-5555-5555-555555555555';
 
@@ -24,6 +26,16 @@ class HappyCalendarFetcher implements CalendarFetcher {
   readonly name = 'happy-stub' as const;
   readonly provider = 'google' as const;
   async fetchEvents(): Promise<SkillResult<CalendarEvent[]>> {
+    return skillOk([]);
+  }
+}
+
+/** Wave-2: an empty inbox arm — keeps these gate tests focused on the
+ *  gate, not on inbox-derived proposals (which would otherwise hit the
+ *  Prisma sink outside a DB context). */
+class EmptyInboxFetcher implements InboxSnapshotFetcher {
+  readonly name = 'empty-inbox' as const;
+  async fetchInbox(): Promise<SkillResult<ParsedMessage[]>> {
     return skillOk([]);
   }
 }
@@ -43,6 +55,7 @@ describe('runSchedulerSweep — fire gate (pause / schedule window)', () => {
     const result = await runSchedulerSweep({
       listCandidates: async () => [candidate()],
       buildCalendarFetcher: () => new HappyCalendarFetcher(),
+      buildInboxFetcher: () => new EmptyInboxFetcher(),
       gateFire: async (): Promise<FireGateOutcome> => ({
         allowed: false,
         reason: 'workspace-paused',
@@ -60,6 +73,7 @@ describe('runSchedulerSweep — fire gate (pause / schedule window)', () => {
     const result = await runSchedulerSweep({
       listCandidates: async () => [candidate()],
       buildCalendarFetcher: () => new HappyCalendarFetcher(),
+      buildInboxFetcher: () => new EmptyInboxFetcher(),
       gateFire: async (): Promise<FireGateOutcome> => ({ allowed: true }),
     });
     assert.equal(result.workspacesSkippedFireGate, 0);

@@ -14,14 +14,20 @@
  *   - confidence below `noiseConfidenceFloor` demotes to `noise`.
  *   - no Gmail / Outlook / vendor SDK calls live in this file.
  *
- * The classifier is regex / keyword based and deliberately conservative.
- * False positives at this layer create operator noise; the operator
- * always sees the message regardless, so a missed urgency just leaves
- * the message in `needs-decision` for owner review.
+ * Wave-2: the PRIMARY classifier is now per-message LLM classification
+ * (`./llm-classify.ts`) using the composed `LlmProvider` seam — the LLM
+ * reasons about intent + urgency per message rather than matching cues.
+ * The keyword classifier below (`classify`) is the DETERMINISTIC FALLBACK:
+ * it runs for any message the LLM didn't classify (LLM bypassed via the
+ * `LLM_*` kill switches, call errored, or malformed JSON). Customer-
+ * configured priority keywords (`extraUrgentCues`) remain a deterministic
+ * override on TOP of either path — the customer's own vocabulary is
+ * load-bearing and never overruled by the model.
  */
 
 import { randomUUID } from 'node:crypto';
 import { skillError, skillOk, type SkillResult } from '../types';
+import { classifyMessagesWithLlm, type MessageClassification } from './llm-classify';
 import { maybeRefineTriage } from './llm-refine';
 import {
   DEFAULT_NOISE_CONFIDENCE_FLOOR,
@@ -143,6 +149,23 @@ export async function runSkill(
   if (!snapshotRes.ok) return snapshotRes;
   const snapshot = snapshotRes.value;
 
+  // Wave-2 — per-message LLM classification is the PRIMARY signal. One
+  // batched call classifies every message by intent + urgency. When the
+  // caller passes no `llm`, the LLM layer is bypassed, the call errors, or
+  // the JSON is malformed, `byMessageId` is empty and each message falls
+  // back to the deterministic keyword `classify` inside `buildProposal`.
+  let classifyNote = '';
+  let llmClassifications = new Map<string, MessageClassification>();
+  if (input.llm && snapshot.inbox.length > 0) {
+    const classified = await classifyMessagesWithLlm({
+      llm: input.llm,
+      messages: snapshot.inbox,
+      workspaceId: input.workspaceId,
+    });
+    llmClassifications = classified.byMessageId;
+    classifyNote = classified.note;
+  }
+
   let proposals = snapshot.inbox.map((msg) =>
     buildProposal({
       msg,
@@ -151,6 +174,7 @@ export async function runSkill(
       extraUrgentCues,
       flagFromSenders,
       autoArchiveSenders,
+      llmClassification: llmClassifications.get(msg.id) ?? null,
     }),
   );
 
@@ -187,15 +211,14 @@ export async function runSkill(
     }
   }
 
+  const extraNote = [classifyNote, refineNote].filter((n) => n.length > 0).join(' ');
   return skillOk({
     asOf: now.toISOString(),
     inboxScanned: snapshot.inbox.length,
     proposals,
     sunk,
     noOutboundNote:
-      refineNote.length > 0
-        ? `${NO_OUTBOUND_NOTE} ${refineNote}`
-        : NO_OUTBOUND_NOTE,
+      extraNote.length > 0 ? `${NO_OUTBOUND_NOTE} ${extraNote}` : NO_OUTBOUND_NOTE,
   });
 }
 
@@ -221,14 +244,34 @@ interface BuildArgs {
   extraUrgentCues: string[];
   flagFromSenders: string[];
   autoArchiveSenders: string[];
+  /** Wave-2 — per-message LLM classification, when the LLM ran for this
+   *  message. NULL → keyword fallback. A deterministic customer
+   *  instruction (sender list / priority keyword) still overrides the LLM. */
+  llmClassification: MessageClassification | null;
 }
 
 function buildProposal(args: BuildArgs): TriageProposal {
-  const { msg, noiseFloor, extraUrgentCues, flagFromSenders, autoArchiveSenders } = args;
-  const { priority, confidence, reasoning } = classify(msg, extraUrgentCues, {
+  const { msg, noiseFloor, extraUrgentCues, flagFromSenders, autoArchiveSenders, llmClassification } = args;
+  const keyword = classify(msg, extraUrgentCues, {
     flagFromSenders,
     autoArchiveSenders,
   });
+  // Precedence: a deterministic CUSTOMER INSTRUCTION (sender list or
+  // priority keyword) always wins — the customer configured it explicitly
+  // and the model must not overrule it. Otherwise the per-message LLM
+  // classification is the primary signal; the keyword body-cue result is
+  // the fallback when the LLM didn't classify this message.
+  const customerInstructed =
+    keyword.source === 'sender-list' || keyword.source === 'customer-keyword';
+  const chosen =
+    !customerInstructed && llmClassification
+      ? {
+          priority: llmClassification.priority,
+          confidence: llmClassification.confidence,
+          reasoning: `LLM: ${llmClassification.reasoning}`,
+        }
+      : keyword;
+  const { priority, confidence, reasoning } = chosen;
   const finalPriority: TriagePriority =
     confidence < noiseFloor ? 'noise' : priority;
   const ackDraft =
@@ -251,6 +294,11 @@ function buildProposal(args: BuildArgs): TriageProposal {
   };
 }
 
+/** Where a keyword-classifier decision came from. `sender-list` +
+ *  `customer-keyword` are deterministic CUSTOMER INSTRUCTIONS that win over
+ *  the LLM; `body-cue` is the heuristic fallback the LLM supersedes. */
+type ClassifySource = 'sender-list' | 'customer-keyword' | 'body-cue';
+
 function classify(
   msg: TriageMessage,
   extraUrgentCues: string[] = [],
@@ -259,6 +307,7 @@ function classify(
   priority: TriagePriority;
   confidence: number;
   reasoning: string;
+  source: ClassifySource;
 } {
   // Sender lists win over body cues — they are an explicit per-sender
   // instruction from the customer (/settings/skills → inbox triage). The
@@ -270,6 +319,7 @@ function classify(
       priority: 'urgent',
       confidence: 0.9,
       reasoning: `Flagged sender: "${flagMatch}".`,
+      source: 'sender-list',
     };
   }
   const archiveMatch = senderMatches(
@@ -281,6 +331,7 @@ function classify(
       priority: 'noise',
       confidence: 0.9,
       reasoning: `Auto-archive sender: "${archiveMatch}".`,
+      source: 'sender-list',
     };
   }
   const haystack = `${msg.subject}\n${msg.bodyText}`.toLowerCase();
@@ -296,6 +347,7 @@ function classify(
       priority: 'urgent',
       confidence: 0.85,
       reasoning: `Customer priority keyword: "${customerUrgentMatch}".`,
+      source: 'customer-keyword',
     };
   }
   const urgentMatch = URGENT_CUES.find((c) => haystack.includes(c));
@@ -304,6 +356,7 @@ function classify(
       priority: 'urgent',
       confidence: 0.78,
       reasoning: `Urgency cue: "${urgentMatch}".`,
+      source: 'body-cue',
     };
   }
   const noiseMatch = NOISE_CUES.find((c) => haystack.includes(c));
@@ -312,6 +365,7 @@ function classify(
       priority: 'noise',
       confidence: 0.7,
       reasoning: `Newsletter / no-reply cue: "${noiseMatch}".`,
+      source: 'body-cue',
     };
   }
   const decisionMatch = DECISION_CUES.find((c) => haystack.includes(c));
@@ -320,6 +374,7 @@ function classify(
       priority: 'needs-decision',
       confidence: 0.65,
       reasoning: `Decision-ask cue: "${decisionMatch}".`,
+      source: 'body-cue',
     };
   }
   const vendorMatch = VENDOR_CUES.find((c) => haystack.includes(c));
@@ -328,6 +383,7 @@ function classify(
       priority: 'vendor-pending',
       confidence: 0.55,
       reasoning: `Vendor cue: "${vendorMatch}".`,
+      source: 'body-cue',
     };
   }
   const customerMatch = CUSTOMER_CUES.find((c) => haystack.includes(c));
@@ -336,6 +392,7 @@ function classify(
       priority: 'customer-active',
       confidence: 0.6,
       reasoning: `Customer cue: "${customerMatch}".`,
+      source: 'body-cue',
     };
   }
   // No signal — low-confidence noise. Lets the operator decide.
@@ -343,6 +400,7 @@ function classify(
     priority: 'noise',
     confidence: 0.3,
     reasoning: 'No urgency, decision, customer, or vendor cue detected.',
+    source: 'body-cue',
   };
 }
 

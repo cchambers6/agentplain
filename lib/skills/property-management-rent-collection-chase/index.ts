@@ -1,5 +1,11 @@
 export { runSkill } from './skill';
 export { JsonRentRollLookup } from './json-fetcher';
+export {
+  BuildiumRentRollLookup,
+  toUnitDelinquency as toUnitDelinquencyFromBuildium,
+  BUILDIUM_NOT_CONNECTED_MESSAGE,
+  type BuildiumRentRollLookupOptions,
+} from './buildium-lookup';
 export type {
   BucketThresholds,
   ContactPerson,

@@ -108,7 +108,8 @@ export interface DecryptedCredential {
     | 'KARBON'
     | 'HUBSPOT'
     | 'SALESFORCE'
-    | 'NOTION';
+    | 'NOTION'
+    | 'BUILDIUM';
   accountId: string;
   accountEmail: string;
   accessToken: string;

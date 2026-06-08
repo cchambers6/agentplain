@@ -1,0 +1,73 @@
+/**
+ * lib/integrations/buildium-mcp/types.ts
+ *
+ * Provider-neutral types for the Buildium MCP server. Buildium is a
+ * property-management platform; this server is the FIRST real adapter
+ * behind the `RentRollLookup` port consumed by
+ * `lib/skills/property-management-rent-collection-chase` (until now that
+ * port shipped ONLY its `JsonRentRollLookup` fixture — the keystone
+ * "port exists, adapter does not" finding).
+ *
+ * Per `feedback_no_silent_vendor_lock.md`: the rest of the codebase speaks
+ * THESE shapes; raw Buildium REST JSON never leaks past `server.ts`.
+ *
+ * Buildium REST API v1 reference (stable, sandbox-available):
+ *   base   https://api.buildium.com/v1
+ *   auth   headers `x-buildium-client-id` + `x-buildium-client-secret`
+ *   leases GET /leases?leasestatuses=Active        → BuildiumLease[]
+ *   ledger GET /leases/{id}/ledger/balances        → outstanding balance
+ *   For the rent-collection use case we read active leases + their
+ *   outstanding balance + the tenant contacts on each lease.
+ */
+
+import type { McpResult } from '@/lib/integrations/mcp-core';
+
+/** A normalized Buildium lease with the fields rent-collection needs. */
+export interface BuildiumLeaseSummary {
+  /** Buildium lease id, stringified. */
+  id: string;
+  /** Display unit label assembled from property + unit number. */
+  unitLabel: string;
+  /** Outstanding balance in dollars (positive = past due). */
+  outstandingBalance: number;
+  /** ISO date the current cycle's rent was due, when Buildium reports it. */
+  rentDueDate: string | null;
+  /** Days the balance has been outstanding (derived from rentDueDate). */
+  daysPastDue: number;
+  /** Lease tenants — the first is treated as the primary leaseholder. */
+  tenants: BuildiumTenant[];
+  /** Whether Buildium has a payment plan / arrangement flag on the lease. */
+  paymentPlanInPlace: boolean;
+}
+
+export interface BuildiumTenant {
+  name: string;
+  email: string | null;
+  phone: string | null;
+}
+
+export interface ListDelinquentLeasesInput {
+  /** Cap on leases pulled per fire. The server clamps to Buildium's page max. */
+  limit?: number;
+  /** As-of date used to compute daysPastDue. Defaults to now. */
+  asOf?: string;
+}
+
+export interface ListDelinquentLeasesOutput {
+  leases: BuildiumLeaseSummary[];
+}
+
+/**
+ * The ONLY surface the rest of the app uses to read Buildium. Both the live
+ * REST server and the fixture server implement this — the two-implementation
+ * rule (`feedback_runner_portability.md`).
+ */
+export interface BuildiumMcpServer {
+  readonly name: string;
+  readonly workspaceId: string;
+  listDelinquentLeases(
+    input?: ListDelinquentLeasesInput,
+  ): Promise<McpResult<ListDelinquentLeasesOutput>>;
+}
+
+export const BUILDIUM_API_BASE = 'https://api.buildium.com/v1';

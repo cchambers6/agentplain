@@ -330,6 +330,16 @@ enum IntegrationProvider {
   HUBSPOT
   SALESFORCE
   NOTION
+  // Property-management vertical (keystone "port exists, adapter does not"
+  // wave). Buildium authenticates with a client-id + client-secret pair the
+  // customer creates under Settings → API Settings — neither rotates, so no
+  // refresh path (same API-key pattern as TAXDOME / KARBON / FOLLOW_UP_BOSS).
+  // Storage: the SECRET in `accessTokenEncrypted`; the non-secret client id
+  // in `providerMetadata.clientId`. MCP at `lib/integrations/buildium-mcp/`;
+  // it backs the `RentRollLookup` port consumed by the
+  // property-management-rent-collection-chase skill. Live calls are gated by
+  // BUILDIUM_ADAPTER_LIVE=on (fixtures by default).
+  BUILDIUM
 }
 
 // Credential lifecycle states. ACTIVE = tokens valid and refresh-eligible.

@@ -59,6 +59,7 @@ import {
   resolveVacationPause,
   type FireGateOutcome,
 } from '@/lib/skills/fire-gate';
+import { PrismaOpsFlagStore } from '@/lib/ops/prisma-flag-store';
 import {
   decideRetry,
   readyForProcessingFilter,
@@ -297,9 +298,29 @@ export async function processUnprocessedWebhookEvents(
         installedSkillSlugs,
       });
 
+      // Wave-3 — bounded auto-execute. We reach this line only AFTER the
+      // billing-pause gate (line ~151, paused → continue) and the full
+      // vacation pause (line ~202, full pause → continue) have already
+      // excluded paused/vacationing workspaces, so both standing gates
+      // are KNOWN to have passed for this fire. We thread those known
+      // outcomes into the persist site rather than re-querying — one
+      // source of truth per gate. The persist layer then applies the
+      // stricter $/risk + per-class-enable + reversibility-allowlist
+      // policy on top; default (master off / class not enabled) is no-op.
+      const boundedExecuteGates = {
+        fireGatePassed: true, // not in a full vacation pause (handled above)
+        billingActive: true, // not billing-paused (handled above)
+        // The webhook chain is a live caller, not part of the Wave-7
+        // activation opt-in, so the activation gate does not apply here.
+        activationPassed: true,
+      };
       const artifacts = await persistSkillRunArtifacts({
         workspaceId: workspace.id,
         record,
+        boundedExecute: {
+          store: new PrismaOpsFlagStore(),
+          gates: boundedExecuteGates,
+        },
       });
 
       // Inbox-triage-general runs IN ADDITION TO the vertical chain so

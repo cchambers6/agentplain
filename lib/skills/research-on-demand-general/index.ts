@@ -1,6 +1,7 @@
 export { runSkill } from './skill';
 export {
   CustomerFilesResearchSubstrate,
+  WebSearchResearchSubstrate,
   RecordingResearchSubstrate,
 } from './substrate';
 export type {

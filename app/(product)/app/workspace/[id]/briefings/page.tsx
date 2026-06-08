@@ -13,7 +13,11 @@ import {
 } from "@/lib/feedback";
 import { servicePartnerForWorkspace } from "@/lib/onboarding/service-partner";
 import { decrypt } from "@/lib/security/encryption";
-import { muteBriefingsAction } from "./actions";
+import type { TopPendingAction } from "@/lib/skills/briefing-generator/types";
+import {
+  muteBriefingsAction,
+  decideTopApprovalFromBriefingAction,
+} from "./actions";
 
 const FEEDBACK_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -85,6 +89,25 @@ export default async function BriefingsPage({ params }: PageProps) {
     generatedAt: b.generatedAt.toISOString(),
   }));
 
+  // Wave-5 (theme #7 / ratif #9): pull the top pending action off the most
+  // recent briefing's summary, then VERIFY it is still PENDING (the
+  // customer may have decided it on /approvals since the briefing was
+  // written). Only a still-pending action renders the one-tap card.
+  const stagedFromLatest = readStagedAction(decrypted[0]?.summary);
+  const stagedAction =
+    stagedFromLatest &&
+    (await withRls(ctx, async (tx) => {
+      const item = await tx.workApprovalQueueItem.findFirst({
+        where: {
+          id: stagedFromLatest.itemId,
+          workspaceId,
+          status: "PENDING",
+        },
+        select: { id: true },
+      });
+      return item ? stagedFromLatest : null;
+    }));
+
   return (
     <div>
       <ApEyebrow className="mb-3">briefings</ApEyebrow>
@@ -110,6 +133,14 @@ export default async function BriefingsPage({ params }: PageProps) {
             : "mute briefings (you can turn them back on later)"}
         </ApHeritageButton>
       </form>
+
+      {stagedAction ? (
+        <StagedActionCard
+          workspaceId={workspaceId}
+          action={stagedAction}
+          partner={partner}
+        />
+      ) : null}
 
       <FeedbackLoopSection summary={feedbackSummary} partner={partner} />
 
@@ -226,6 +257,79 @@ function FeedbackLoopSection({
       </ApPaperCard>
     </section>
   );
+}
+
+/**
+ * Wave-5 one-tap action card (theme #7 / ratif #9). Renders the top pending
+ * approval pre-staged on the latest briefing with a one-tap Approve and a
+ * Review-on-/approvals escape hatch. Both submit forms — Approve drives the
+ * SHARED `decideApproval` core via the server action; Review links out. No
+ * draft body is shown here (the briefing surface stays redacted); the
+ * customer can Review for the full draft before approving if they want.
+ */
+function StagedActionCard({
+  workspaceId,
+  action,
+  partner,
+}: {
+  workspaceId: string;
+  action: TopPendingAction;
+  partner: string;
+}) {
+  return (
+    <section className="mt-8">
+      <ApPaperCard
+        eyebrow="one tap from done"
+        title={action.title}
+      >
+        <p className="text-[14px] leading-relaxed text-ink-soft">
+          {partner} pre-staged your top pending approval here so you can clear
+          it without leaving this page.{" "}
+          <span className="font-mono text-[12px] text-mute">
+            {action.kind.toLowerCase().replace(/_/g, " ")}
+          </span>
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <form action={decideTopApprovalFromBriefingAction}>
+            <input type="hidden" name="workspaceId" value={workspaceId} />
+            <input type="hidden" name="itemId" value={action.itemId} />
+            <input type="hidden" name="decision" value="APPROVED" />
+            <ApHeritageButton type="submit">approve</ApHeritageButton>
+          </form>
+          <a
+            href={`/app/workspace/${workspaceId}/approvals`}
+            className="font-mono text-[12px] tracking-eyebrow uppercase text-ink-soft underline-offset-4 hover:underline"
+          >
+            review on approvals →
+          </a>
+        </div>
+      </ApPaperCard>
+    </section>
+  );
+}
+
+/**
+ * Read the pre-staged top pending action off a persisted briefing summary
+ * JSON. Defensive: the column is `Json`, so we narrow each field before
+ * trusting it. Returns null when absent / malformed.
+ */
+function readStagedAction(
+  summary: Record<string, unknown> | undefined,
+): TopPendingAction | null {
+  if (!summary) return null;
+  const raw = summary.topPendingAction;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const obj = raw as Record<string, unknown>;
+  const itemId = typeof obj.itemId === "string" ? obj.itemId : null;
+  const kind = typeof obj.kind === "string" ? obj.kind : null;
+  const title = typeof obj.title === "string" ? obj.title : null;
+  if (!itemId || !kind || !title) return null;
+  return {
+    itemId,
+    kind,
+    title,
+    agentSlug: typeof obj.agentSlug === "string" ? obj.agentSlug : null,
+  };
 }
 
 /**

@@ -45,6 +45,7 @@ import { skillError, skillOk, type SkillResult } from '../skills/types';
 import {
   runSkill as runResearchSkill,
   CustomerFilesResearchSubstrate,
+  WebSearchResearchSubstrate,
 } from '../skills/research-on-demand-general';
 import type {
   IResearchSubstratePort,
@@ -203,13 +204,24 @@ export async function runInstructionHandler(
   // same draftBody field the operator already reads, so the approval
   // queue surface needs no change — the row is just better grounded.
   if (discipline.id === 'research') {
-    const substrate =
-      args.researchSubstrate ?? new CustomerFilesResearchSubstrate();
+    // Wave-5 (theme #11 / ratif #8): default production grounding is now
+    // the web-search substrate so briefs cite LIVE sources. It falls back
+    // to the committed fixture corpus when no web-search key is set (the
+    // factory decides), and `groundingIsLive` flows through so the brief
+    // names its grounding honestly. Tests inject RecordingResearchSubstrate.
+    const substrate = args.researchSubstrate ?? new WebSearchResearchSubstrate();
+    const groundingIsLive =
+      substrate instanceof WebSearchResearchSubstrate
+        ? substrate.isLive
+        : substrate instanceof CustomerFilesResearchSubstrate
+          ? false
+          : false;
     const research = await runResearchSkill({
       workspaceId: item.workspaceId,
       instructionText: item.instructionText,
       dispatcherReasoning: item.reasoning,
       substrate,
+      groundingIsLive,
       feedbackRulesBlock: renderFeedbackRulesForPrompt(honoredRules),
       llm: provider,
     });

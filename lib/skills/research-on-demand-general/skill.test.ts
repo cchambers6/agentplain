@@ -161,4 +161,46 @@ describe('research-on-demand-general — skill', () => {
     assert.equal(substrate.calls[0].workspaceId, WORKSPACE_A);
     assert.equal(res.value.substrateSnippets[0]?.title, 'WS-A doc');
   });
+
+  // ── Wave-5 (theme #11 / ratif #8): live web-search grounding ──────────
+  it('DROPS the "no web search wired" gap when groundingIsLive is true', async () => {
+    const substrate = new RecordingResearchSubstrate({
+      [WORKSPACE_A]: [
+        snip({
+          title: 'Georgia Seller Property Disclosure guide',
+          sourceUrl: 'https://georgiarealtors.example.org/disclosure-guide',
+        }),
+      ],
+    });
+    const llm = stubLlm(
+      JSON.stringify({
+        summary: 'Live web sources confirm Georgia is caveat-emptor with active-concealment limits.',
+        keyFindings: [
+          'Sellers must not actively conceal known material defects.',
+          'The GAR disclosure form covers structural and environmental items.',
+        ],
+        gaps: ['Plaino does not have web search wired yet.'],
+      }),
+    );
+    const res = await runSkill({
+      workspaceId: WORKSPACE_A,
+      instructionText: 'What are Georgia seller disclosure requirements?',
+      dispatcherReasoning: 'classifier: research',
+      substrate,
+      groundingIsLive: true,
+      llm,
+    });
+    assert.ok(res.ok);
+    // The model emitted the stale gap; the skill must strip it because the
+    // brief IS now grounded on live sources.
+    assert.ok(
+      !res.value.brief.gaps.some((g) => g.toLowerCase().includes('web search')),
+      'live-grounded briefs must NOT claim web search is unwired',
+    );
+    // Citations carry the real source URL.
+    assert.equal(
+      res.value.brief.citations[0]?.sourceUrl,
+      'https://georgiarealtors.example.org/disclosure-guide',
+    );
+  });
 });

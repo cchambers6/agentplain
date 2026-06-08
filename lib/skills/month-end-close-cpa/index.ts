@@ -14,6 +14,12 @@ export {
   QuickBooksCloseFetcher,
   QUICKBOOKS_NOT_CONNECTED_MESSAGE,
 } from './quickbooks-fetcher';
+export {
+  GmailCloseFetcher,
+  buildGmailCloseFetcher,
+  categorizeAttachment,
+  type GmailCloseFetcherArgs,
+} from './gmail-close-fetcher';
 export type {
   ChaseEmailDraft,
   ChecklistCategory,

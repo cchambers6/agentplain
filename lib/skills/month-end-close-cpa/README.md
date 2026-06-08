@@ -27,11 +27,37 @@ CPA (`lib/verticals/cpa/content.ts` — CSM + Staff accountant JTBD rows). Tone 
 | Provider              | Status            | Today                                                      |
 | --------------------- | ----------------- | ---------------------------------------------------------- |
 | QuickBooks            | ❌ stubbed-json   | `JsonCloseFetcher` accepts engagement + checklist + receipts |
-| Gmail                 | ✅ built          | Doc-receipt detection via `MessageFetcher`; drafts via `DraftPersister` |
+| Gmail                 | ✅ built          | `GmailCloseFetcher` auto-detects emailed doc attachments via the Gmail MCP port + categorizes them; drafts via `DraftPersister` |
 | Outlook (M365)        | 🔄 in-flight     | Provider-neutral `DraftPersister` — swap when ready        |
 | TaxDome / Karbon      | ❌ stubbed-json   | Doc-portal events surface as `ReceivedDoc { source: 'taxdome' \| 'karbon' }` |
 
 When the QuickBooks MCP lands, a `QuickBooksCloseFetcher` impl drops in alongside `JsonCloseFetcher` — **no skill code change** (per `feedback_runner_portability.md`).
+
+### GmailCloseFetcher (wave-5, theme #12 / ratif #7)
+
+Before wave-5, `fetchReceivedDocs` had no real source, so the close kept chasing
+documents the client had already **emailed**. `GmailCloseFetcher` composes over a
+base fetcher (engagement + checklist from `JsonCloseFetcher` / QuickBooks) and
+overrides `fetchReceivedDocs` to scan the client's inbox via the Gmail MCP port,
+detect document attachments (PDF / spreadsheet / CSV / statement images), and
+categorize each against the checklist by filename + subject keyword overlap.
+Gmail-detected docs **merge** with portal docs; unmatched attachments surface as
+uncategorized receipts for the operator. A Gmail read failure degrades to
+base-only docs — the close never drops.
+
+```ts
+import {
+  GmailCloseFetcher,
+  JsonCloseFetcher,
+} from '@/lib/skills/month-end-close-cpa';
+import { buildGmailMcpServer } from '@/lib/integrations/gmail-mcp';
+
+const fetcher = new GmailCloseFetcher({
+  base: quickBooksOrJsonFetcher,
+  gmail: buildGmailMcpServer({ workspaceId }),
+  query: `has:attachment from:@${clientDomain} newer_than:60d`,
+});
+```
 
 ## Input / output shape
 

@@ -40,38 +40,48 @@ const WEB_SEARCH_GAP_NOTE =
 
 const PROMPT_VERSION = 'RESEARCH_ON_DEMAND_V1';
 
-const SYSTEM_PROMPT = [
-  PROMPT_VERSION,
-  '',
-  'You are Plaino, the workspace\'s named service partner at agentplain.',
-  'A customer asked you to research a topic. You have the customer\'s ',
-  'knowledge-base snippets below — these are the ONLY grounding you have. ',
-  'Plaino does NOT have a public web search adapter today.',
-  '',
-  'Write a brief the operator can review on /approvals. The brief has FOUR ',
-  'parts: summary, key findings, gaps, citations. Tone: calm, precise. No ',
-  'emoji. No hype. No marketing.',
-  '',
-  'Hard rules:',
-  '- Ground EVERY claim in the snippets. Do NOT fabricate facts that are ',
-  '  not in the snippets.',
-  '- If the snippets do not cover an aspect of the question, NAME that ',
-  '  gap in the "gaps" array — do not paper over it.',
-  '- ALWAYS include "Plaino does not have web search wired yet — this brief ',
-  '  is grounded on your knowledge base only." as one of the gaps. This is ',
-  '  a load-bearing scope statement, not a hedge.',
-  '- The brief is NOT a reply to the customer — it is a working document ',
-  '  the operator reads. Write it as a brief, not a chat reply.',
-  '',
-  '── OUTPUT FORMAT ──',
-  'Return STRICTLY a single JSON object — no prose outside it:',
-  '{',
-  '  "summary": string,           // one paragraph framing the question + what you found',
-  '  "keyFindings": string[],      // 3-5 single-sentence findings, each grounded in a citation',
-  '  "gaps": string[]              // 1-3 named gaps, including the "no web search" gap',
-  '}',
-  '(Citations are populated by the skill from the snippet list — do not include them in the JSON.)',
-].join('\n');
+function buildSystemPrompt(groundingIsLive: boolean): string {
+  const groundingLine = groundingIsLive
+    ? 'You have LIVE web-search results below alongside any knowledge-base ' +
+      'snippets — these are your grounding. Cite the source URLs.'
+    : "knowledge-base snippets below — these are the ONLY grounding you have. " +
+      'Plaino does NOT have a public web search adapter wired for this run.';
+  const gapRule = groundingIsLive
+    ? '- Do NOT claim Plaino lacks web search — this brief IS grounded on ' +
+      '  live web sources. Name only genuine content gaps in "gaps".'
+    : '- ALWAYS include "Plaino does not have web search wired yet — this brief ' +
+      '  is grounded on your knowledge base only." as one of the gaps. This is ' +
+      '  a load-bearing scope statement, not a hedge.';
+  return [
+    PROMPT_VERSION,
+    '',
+    "You are Plaino, the workspace's named service partner at agentplain.",
+    'A customer asked you to research a topic. You have the customer\'s ',
+    groundingLine,
+    '',
+    'Write a brief the operator can review on /approvals. The brief has FOUR ',
+    'parts: summary, key findings, gaps, citations. Tone: calm, precise. No ',
+    'emoji. No hype. No marketing.',
+    '',
+    'Hard rules:',
+    '- Ground EVERY claim in the snippets/sources. Do NOT fabricate facts ',
+    '  that are not in them.',
+    '- If the sources do not cover an aspect of the question, NAME that ',
+    '  gap in the "gaps" array — do not paper over it.',
+    gapRule,
+    '- The brief is NOT a reply to the customer — it is a working document ',
+    '  the operator reads. Write it as a brief, not a chat reply.',
+    '',
+    '── OUTPUT FORMAT ──',
+    'Return STRICTLY a single JSON object — no prose outside it:',
+    '{',
+    '  "summary": string,           // one paragraph framing the question + what you found',
+    '  "keyFindings": string[],      // 3-5 single-sentence findings, each grounded in a citation',
+    '  "gaps": string[]              // 1-3 named gaps',
+    '}',
+    '(Citations are populated by the skill from the snippet list — do not include them in the JSON.)',
+  ].join('\n');
+}
 
 const PLACEHOLDER_GAP =
   'Plaino did not find anything relevant in your knowledge base for this question. ' +
@@ -82,6 +92,9 @@ export async function runSkill(
 ): Promise<SkillResult<ResearchSkillOutput>> {
   const llm = input.llm ?? getLlmProvider();
   const topK = input.topK ?? 6;
+  // Wave-5: when the substrate grounds on live web sources, the "no web
+  // search wired" gap is no longer true — drop it.
+  const groundingIsLive = input.groundingIsLive ?? false;
 
   const snippets = await input.substrate.searchForResearch({
     workspaceId: input.workspaceId,
@@ -91,7 +104,7 @@ export async function runSkill(
 
   if (snippets.length === 0) {
     return skillOk({
-      brief: buildPlaceholderBrief(input.instructionText),
+      brief: buildPlaceholderBrief(input.instructionText, groundingIsLive),
       substrateSnippets: [],
       isPlaceholder: true,
       noOutboundNote: NO_OUTBOUND_NOTE,
@@ -99,7 +112,7 @@ export async function runSkill(
   }
 
   const completion = await llm.complete({
-    system: SYSTEM_PROMPT,
+    system: buildSystemPrompt(groundingIsLive),
     model: MODEL_OPUS,
     cacheSystem: true,
     messages: [
@@ -138,6 +151,7 @@ export async function runSkill(
       brief: buildTemplatedBrief({
         snippets,
         reason: `LLM returned malformed JSON: ${parsed.error}`,
+        groundingIsLive,
       }),
       substrateSnippets: snippets,
       isPlaceholder: false,
@@ -148,7 +162,9 @@ export async function runSkill(
   const brief: ResearchBrief = {
     summary: parsed.value.summary.trim(),
     keyFindings: parsed.value.keyFindings.map((k) => k.trim()).filter(Boolean),
-    gaps: ensureWebSearchGap(parsed.value.gaps.map((g) => g.trim()).filter(Boolean)),
+    gaps: groundingIsLive
+      ? dropWebSearchGap(parsed.value.gaps.map((g) => g.trim()).filter(Boolean))
+      : ensureWebSearchGap(parsed.value.gaps.map((g) => g.trim()).filter(Boolean)),
     citations,
   };
 
@@ -166,6 +182,12 @@ function ensureWebSearchGap(gaps: string[]): string[] {
   );
   if (hasWebSearchNote) return gaps;
   return [...gaps, WEB_SEARCH_GAP_NOTE];
+}
+
+/** When grounding IS live, strip any model-emitted "no web search" gap so
+ *  the brief doesn't contradict its own (now-real) live citations. */
+function dropWebSearchGap(gaps: string[]): string[] {
+  return gaps.filter((g) => !g.toLowerCase().includes('web search'));
 }
 
 function renderUserPrompt(args: {
@@ -196,14 +218,20 @@ function renderUserPrompt(args: {
   return lines.join('\n');
 }
 
-function buildPlaceholderBrief(instructionText: string): ResearchBrief {
+function buildPlaceholderBrief(
+  instructionText: string,
+  groundingIsLive = false,
+): ResearchBrief {
+  const sourceWord = groundingIsLive
+    ? 'live web sources or your knowledge base'
+    : "your workspace's knowledge base";
   return {
     summary:
       `You asked: "${truncate(instructionText, 240)}". Plaino did not find anything ` +
-      `relevant in your workspace's knowledge base for this question. The brief ` +
+      `relevant in ${sourceWord} for this question. The brief ` +
       `below names the gap rather than guessing — Plaino does NOT fabricate findings.`,
     keyFindings: [],
-    gaps: [PLACEHOLDER_GAP, WEB_SEARCH_GAP_NOTE],
+    gaps: groundingIsLive ? [PLACEHOLDER_GAP] : [PLACEHOLDER_GAP, WEB_SEARCH_GAP_NOTE],
     citations: [],
   };
 }
@@ -211,17 +239,20 @@ function buildPlaceholderBrief(instructionText: string): ResearchBrief {
 function buildTemplatedBrief(args: {
   snippets: SupportContextSnippet[];
   reason: string;
+  groundingIsLive?: boolean;
 }): ResearchBrief {
+  const groundingIsLive = args.groundingIsLive ?? false;
+  const sourceWord = groundingIsLive ? 'live web sources' : 'your knowledge base';
   return {
     summary:
-      `Plaino found ${args.snippets.length} relevant snippet${
+      `Plaino found ${args.snippets.length} relevant source${
         args.snippets.length === 1 ? '' : 's'
-      } in your knowledge base. The LLM-composed brief failed (${args.reason}); the ` +
-      `findings below are the raw snippet titles for the operator to read.`,
+      } in ${sourceWord}. The LLM-composed brief failed (${args.reason}); the ` +
+      `findings below are the raw source titles for the operator to read.`,
     keyFindings: args.snippets.map(
       (s) => `${s.title} — ${truncate(s.bodyExcerpt, 200)}`,
     ),
-    gaps: [WEB_SEARCH_GAP_NOTE],
+    gaps: groundingIsLive ? [] : [WEB_SEARCH_GAP_NOTE],
     citations: args.snippets.map(toCitation),
   };
 }
@@ -279,5 +310,7 @@ export const __testing = {
   buildPlaceholderBrief,
   buildTemplatedBrief,
   ensureWebSearchGap,
+  dropWebSearchGap,
+  buildSystemPrompt,
   WEB_SEARCH_GAP_NOTE,
 };

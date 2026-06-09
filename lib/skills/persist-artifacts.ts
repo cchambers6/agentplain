@@ -37,6 +37,13 @@ import {
   PENDING_DECISION,
   type ApprovalThresholdDecision,
 } from './approval-threshold';
+import {
+  decideBoundedExecute,
+  boundedExecuteStatusFlip,
+  type ComposedGateOutcomes,
+} from './bounded-execute';
+import type { OpsFlagStore } from '@/lib/ops/flag-store';
+import type { WorkApprovalKind } from '@prisma/client';
 import type { SkillRunRecord, SkillStepRecord, SkillRunOutcome } from './types';
 
 /**
@@ -98,11 +105,36 @@ export interface PersistArtifactsResult {
   approvalId: string | null;
 }
 
+/**
+ * Wave-3 bounded-auto-execute wiring. When supplied, the persist site may
+ * flip an eligible, enabled, under-ceiling approval row from PENDING to
+ * AUTO_APPROVED *and* write an immutable AuditLog row recording what was
+ * done on the owner's behalf — but ONLY if every standing gate in
+ * `gates` already passed for this fire (composition, not duplication).
+ *
+ * Omit this entirely (the default) and behavior is identical to before:
+ * no auto-execute, every row lands at the threshold-layer's decision
+ * (PENDING unless the Wave-1 confidence path already flipped it). This
+ * keeps the seam fail-closed and backward compatible — a caller has to
+ * deliberately opt in by passing a store + gate outcomes.
+ */
+export interface BoundedExecuteConfig {
+  /** DB-backed flag store holding the per-class enable + ceiling rows. */
+  store: OpsFlagStore;
+  /** Outcomes of the standing gates the CALLER already ran for this fire.
+   *  Any gate false fails bounded-execute closed. */
+  gates: ComposedGateOutcomes;
+  /** Env snapshot for the master switch. Defaults to `process.env`. */
+  env?: NodeJS.ProcessEnv;
+}
+
 export interface PersistArtifactsArgs {
   workspaceId: string;
   record: SkillRunRecord;
   /** Optional override for tests — defaults to `withRls(systemContext)`. */
   client?: Prisma.TransactionClient;
+  /** Wave-3 — opt-in bounded auto-execute. Omit to disable (default). */
+  boundedExecute?: BoundedExecuteConfig;
 }
 
 /**
@@ -123,10 +155,15 @@ export async function persistSkillRunArtifacts(
     // Test / caller-supplied transaction path: stay pure — the push trigger
     // only fires on the production (committed) path so suites stay
     // deterministic and offline.
-    return writeArtifacts(args.client, args.workspaceId, args.record);
+    return writeArtifacts(
+      args.client,
+      args.workspaceId,
+      args.record,
+      args.boundedExecute,
+    );
   }
   const result = await withRls(ctx, (tx) =>
-    writeArtifacts(tx, args.workspaceId, args.record),
+    writeArtifacts(tx, args.workspaceId, args.record, args.boundedExecute),
   );
   // The transaction has committed. Fire the approval-ready push so the
   // owner's phone lights up ("7am push → tap approve"). Best-effort and
@@ -146,6 +183,7 @@ async function writeArtifacts(
   tx: Prisma.TransactionClient,
   workspaceId: string,
   record: SkillRunRecord,
+  boundedExecute?: BoundedExecuteConfig,
 ): Promise<PersistArtifactsResult> {
   // Resolve once: the roster agent that owns this run (or null → fallback).
   // Both the handoff trace root and the approval agentSlug use it so the
@@ -169,14 +207,31 @@ async function writeArtifacts(
   let approvalId: string | null = null;
   let approvalsWritten = 0;
   if (approval) {
-    // Wave-1 audit fix §9 #2 — workspace's WorkThresholdConfig now
-    // decides PENDING vs AUTO_APPROVED. Default = PENDING (safe).
-    const decision = await applyApprovalThreshold({
+    // Wave-1 audit fix §9 #2 — workspace's WorkThresholdConfig decides
+    // PENDING vs AUTO_APPROVED on the *confidence* axis. Default = PENDING.
+    let decision = await applyApprovalThreshold({
       workspaceId,
       kind: approval.kind,
       confidence: extractConfidence(record.outcome),
       tx,
     });
+    // Wave-3 — bounded auto-execute. A second, STRICTER axis ($/risk +
+    // per-class enable + reversibility allowlist + composed standing
+    // gates). Only consulted when the row is still PENDING after the
+    // confidence layer, and only when the caller opted in. When it fires
+    // it flips to AUTO_APPROVED *and* writes an immutable AuditLog row.
+    if (decision.status === 'PENDING' && boundedExecute) {
+      decision = await applyBoundedExecuteDecision({
+        tx,
+        workspaceId,
+        kind: approval.kind,
+        refTable: approval.refTable,
+        refId: approval.refId,
+        agentSlug: approval.agentSlug,
+        boundedExecute,
+        priorDecision: decision,
+      });
+    }
     const created = await tx.workApprovalQueueItem.create({
       data: { ...approval, ...decision },
       select: { id: true },
@@ -212,6 +267,88 @@ async function writeArtifacts(
     approvalsWritten,
     approvalId,
   };
+}
+
+interface ApplyBoundedExecuteArgs {
+  tx: Prisma.TransactionClient;
+  workspaceId: string;
+  kind: WorkApprovalKind;
+  refTable: string;
+  refId: string;
+  agentSlug: string;
+  boundedExecute: BoundedExecuteConfig;
+  priorDecision: ApprovalThresholdDecision;
+}
+
+/**
+ * Run the bounded-execute policy for one approval row. On the single
+ * allow branch it returns an AUTO_APPROVED decision AND writes an
+ * immutable AuditLog row recording exactly what was auto-executed on the
+ * owner's behalf (so the activity feed + audit log surface it). On every
+ * deny branch it returns the prior (PENDING) decision unchanged.
+ *
+ * Never throws — a decision/audit failure falls back to the prior
+ * decision (PENDING, the safe default). An auto-execute that could not be
+ * audited must NOT proceed silently, so a failed AuditLog write also
+ * falls back to PENDING.
+ */
+async function applyBoundedExecuteDecision(
+  args: ApplyBoundedExecuteArgs,
+): Promise<ApprovalThresholdDecision> {
+  try {
+    const decision = await decideBoundedExecute({
+      kind: args.kind,
+      store: args.boundedExecute.store,
+      gates: args.boundedExecute.gates,
+      env: args.boundedExecute.env,
+    });
+    const flip = boundedExecuteStatusFlip(decision);
+    if (!flip) {
+      // Did not auto-execute — keep the prior PENDING decision. (We do
+      // not audit the routine "stayed in queue" case; that's the norm.)
+      return args.priorDecision;
+    }
+
+    // Auto-executed. The AuditLog row is part of the same transaction as
+    // the approval write, so an auto-approve can NEVER land without its
+    // immutable record. If this write throws, the catch below reverts the
+    // whole thing to PENDING (safe).
+    await args.tx.auditLog.create({
+      data: {
+        // System actor — no human user decided this. The null actor is
+        // exactly how the audit trail records "the fleet did this."
+        actorUserId: null,
+        workspaceId: args.workspaceId,
+        action: 'work_approval.auto_executed',
+        targetTable: 'WorkApprovalQueueItem',
+        targetId: args.refId,
+        payload: {
+          kind: args.kind,
+          agentSlug: args.agentSlug,
+          refTable: args.refTable,
+          refId: args.refId,
+          reason: decision.reason,
+          detail: decision.detail,
+          estUsd: decision.estUsd,
+          ceilingUsd: decision.ceilingUsd,
+        },
+      },
+    });
+
+    return {
+      status: flip.status,
+      decidedAt: new Date(),
+      decidedByUserId: null,
+      decisionReason: flip.decisionReason,
+    };
+  } catch (err) {
+    console.warn(
+      `bounded-execute decision failed (falling back to PENDING): ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+    return args.priorDecision;
+  }
 }
 
 interface BuildHandoffsArgs {

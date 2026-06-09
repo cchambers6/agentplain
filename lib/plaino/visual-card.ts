@@ -93,17 +93,113 @@ export interface NavCard {
   destinations: NavTarget[];
 }
 
+// ── V31 — BeforeAfterCard ───────────────────────────────────────────────────
+
+export interface BeforeAfterRow {
+  /** A specific task or pain point, e.g. "chasing overdue invoices". */
+  task: string;
+  /** How it looked before, e.g. "manual spreadsheet, 2 hrs/week". */
+  before: string;
+  /** How it looks with agentplain, e.g. "auto-drafted + queued for review". */
+  after: string;
+}
+
+/** V31 — "can it help me?" → side-by-side before/after comparison.
+ *  Max 4 rows; every row must have all three fields (text fallback is the
+ *  `text` field on the persisted message body — this card is enhancement only). */
+export interface BeforeAfterCard {
+  type: 'before-after';
+  /** Short context label, e.g. "for a property management company". */
+  context?: string;
+  rows: BeforeAfterRow[];
+}
+
+// ── V32 — DecisionTreeCard ──────────────────────────────────────────────────
+
+export interface DecisionBranch {
+  /** The condition label, e.g. "I have a contractor team". */
+  condition: string;
+  /** Where this branch routes, e.g. "contracts & scheduling". */
+  outcome: string;
+  /** Deep link into the workspace for this path. */
+  href: string;
+  /** Optional: which discipline/skill covers this branch. */
+  discipline?: string;
+}
+
+/** V32 — "which workflow fits me?" → a branching decision card.
+ *  2–4 branches; each branch is a real deep link. The question is the
+ *  routing question the card answers. */
+export interface DecisionTreeCard {
+  type: 'decision-tree';
+  /** The routing question, e.g. "Which kind of work is most urgent?" */
+  question: string;
+  branches: DecisionBranch[];
+}
+
+// ── V33 — CompliancePostureCard ─────────────────────────────────────────────
+
+export interface ComplianceArea {
+  /** Area label, e.g. "real estate license disclosures". */
+  label: string;
+  /** Whether the sentinel has coverage for this area. */
+  covered: boolean;
+}
+
+/** V33 — compliance posture mini — read-only coverage + recent flags.
+ *  Surfaces sentinel coverage state without triggering an LLM call.
+ *  `coverageAreas` is the list of areas the sentinel monitors for this
+ *  workspace's vertical; `recentFlags` is the count over the last 30 days. */
+export interface CompliancePostureCard {
+  type: 'compliance-posture';
+  vertical: string;
+  coverageAreas: ComplianceArea[];
+  recentFlags: number;
+  openFlags: number;
+  /** Deep link to the workspace's compliance page. */
+  complianceHref: string;
+}
+
+// ── V34 — OnboardingProgressCard ────────────────────────────────────────────
+
+export interface OnboardingMilestone {
+  /** Step label, e.g. "Pick your vertical". */
+  label: string;
+  /** Whether this milestone has been completed. */
+  done: boolean;
+  /** Deep link to complete this step (only relevant when !done). */
+  href: string;
+}
+
+/** V34 — onboarding progress — sequential milestone trail with completion state.
+ *  Shows the customer exactly where they are in setup and what's left.
+ *  Never throws: missing `milestones` defaults to empty (degrades to nothing). */
+export interface OnboardingProgressCard {
+  type: 'onboarding-progress';
+  /** 0–100 integer percentage (computed from milestones). */
+  pct: number;
+  milestones: OnboardingMilestone[];
+}
+
 export type PlainoCard =
   | NextStepsCard
   | CapabilityCard
   | WorkStatusCard
-  | NavCard;
+  | NavCard
+  | BeforeAfterCard
+  | DecisionTreeCard
+  | CompliancePostureCard
+  | OnboardingProgressCard;
 
 const CARD_TYPES = new Set([
   'next-steps',
   'capability',
   'work-status',
   'nav',
+  'before-after',
+  'decision-tree',
+  'compliance-posture',
+  'onboarding-progress',
 ]);
 
 /**
@@ -170,6 +266,49 @@ export function parsePlainoCard(value: unknown): PlainoCard | null {
       if (destinations.length === 0) return null;
       return { type: 'nav', destinations };
     }
+    case 'before-after': {
+      if (!Array.isArray(v.rows)) return null;
+      const rows = v.rows.filter(isBeforeAfterRow);
+      if (rows.length === 0) return null;
+      const card: BeforeAfterCard = { type: 'before-after', rows };
+      if (typeof v.context === 'string') card.context = v.context;
+      return card;
+    }
+    case 'decision-tree': {
+      if (typeof v.question !== 'string' || !Array.isArray(v.branches)) return null;
+      const branches = v.branches.filter(isDecisionBranch);
+      if (branches.length === 0) return null;
+      return { type: 'decision-tree', question: v.question, branches };
+    }
+    case 'compliance-posture': {
+      if (
+        typeof v.vertical !== 'string' ||
+        !Array.isArray(v.coverageAreas) ||
+        typeof v.recentFlags !== 'number' ||
+        typeof v.openFlags !== 'number' ||
+        typeof v.complianceHref !== 'string'
+      ) {
+        return null;
+      }
+      const coverageAreas = v.coverageAreas.filter(isComplianceArea);
+      return {
+        type: 'compliance-posture',
+        vertical: v.vertical,
+        coverageAreas,
+        recentFlags: v.recentFlags,
+        openFlags: v.openFlags,
+        complianceHref: v.complianceHref,
+      };
+    }
+    case 'onboarding-progress': {
+      if (typeof v.pct !== 'number' || !Array.isArray(v.milestones)) return null;
+      const milestones = v.milestones.filter(isOnboardingMilestone);
+      return {
+        type: 'onboarding-progress',
+        pct: Math.max(0, Math.min(100, Math.round(v.pct))),
+        milestones,
+      };
+    }
     default:
       return null;
   }
@@ -209,4 +348,40 @@ function isNavTarget(x: unknown): x is NavTarget {
   if (!x || typeof x !== 'object') return false;
   const n = x as Record<string, unknown>;
   return typeof n.label === 'string' && typeof n.href === 'string';
+}
+
+function isBeforeAfterRow(x: unknown): x is BeforeAfterRow {
+  if (!x || typeof x !== 'object') return false;
+  const r = x as Record<string, unknown>;
+  return (
+    typeof r.task === 'string' &&
+    typeof r.before === 'string' &&
+    typeof r.after === 'string'
+  );
+}
+
+function isDecisionBranch(x: unknown): x is DecisionBranch {
+  if (!x || typeof x !== 'object') return false;
+  const b = x as Record<string, unknown>;
+  return (
+    typeof b.condition === 'string' &&
+    typeof b.outcome === 'string' &&
+    typeof b.href === 'string'
+  );
+}
+
+function isComplianceArea(x: unknown): x is ComplianceArea {
+  if (!x || typeof x !== 'object') return false;
+  const a = x as Record<string, unknown>;
+  return typeof a.label === 'string' && typeof a.covered === 'boolean';
+}
+
+function isOnboardingMilestone(x: unknown): x is OnboardingMilestone {
+  if (!x || typeof x !== 'object') return false;
+  const m = x as Record<string, unknown>;
+  return (
+    typeof m.label === 'string' &&
+    typeof m.done === 'boolean' &&
+    typeof m.href === 'string'
+  );
 }

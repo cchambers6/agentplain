@@ -20,10 +20,10 @@
  * cache or the model. Keeping it in a wrapper (rather than swapping the
  * inner provider) is what lets it compose cleanly with the budget governor.
  *
- * In every case the chosen inner provider is wrapped in FOUR transparent
+ * In every case the chosen inner provider is wrapped in FIVE transparent
  * layers. The compose order is (innermost first):
  *
- *     Logging( Budget( Sentinel( Caching( inner ) ) ) )
+ *     Logging( Budget( Routing( Sentinel( Caching( inner ) ) ) ) )
  *
  *   1. `CachingLlmProvider` — auto-applies a prompt-cache breakpoint on the
  *      largest stable prefix (the system prompt) of every call that didn't
@@ -36,13 +36,21 @@
  *      Returns the no-throw `llmError('PAUSED', …)` so the ~dozen existing
  *      callers degrade gracefully. Bypass with `LLM_SENTINEL_BYPASS=on`
  *      (a dev pointing a real key through the full stack).
- *   3. `BudgetEnforcingLlmProvider` — wraps sentinel+caching so an
- *      over-budget call is short-circuited BEFORE the sentinel/cache lookup
- *      (and before the model): no tokens spent, no cache read/write, no
- *      `LlmUsageRecord` row. Blocks only when the workspace has reached its
- *      operator-set explicit cap (`OVER`); `NO_CAP`/`OK` pass through and
- *      `WARN` is logged-but-allowed. Disable with `LLM_BUDGET_ENFORCEMENT=off`.
- *   4. `LoggingLlmProvider` (outermost) — emits a `llm.usage` log line with
+ *   3. `RoutingLlmProvider` — cost-aware per-task-class model selection.
+ *      When `LLM_MODEL_ROUTING=on`, rewrites `request.model` based on
+ *      `meta.sourceSurface` (the same tag already flowing to the usage
+ *      recorder). When off (the DEFAULT), the wrapper is a pure pass-through
+ *      — byte-for-byte identical to not having the wrapper at all. Sits
+ *      OUTSIDE Sentinel (so routing applies before the sentinel check) and
+ *      INSIDE Budget (over-budget calls never reach routing). Never overrides
+ *      a model the caller already set explicitly.
+ *   4. `BudgetEnforcingLlmProvider` — wraps routing+sentinel+caching so an
+ *      over-budget call is short-circuited BEFORE routing / sentinel / cache:
+ *      no tokens spent, no cache read/write, no `LlmUsageRecord` row. Blocks
+ *      only when the workspace has reached its operator-set explicit cap
+ *      (`OVER`); `NO_CAP`/`OK` pass through and `WARN` is logged-but-allowed.
+ *      Disable with `LLM_BUDGET_ENFORCEMENT=off`.
+ *   5. `LoggingLlmProvider` (outermost) — emits a `llm.usage` log line with
  *      cache-hit metrics AND forwards usage to the Prisma `LlmUsageRecord`
  *      recorder. It wraps everything so the usage it observes already
  *      reflects the cache reads/writes the breakpoint produced, captures the
@@ -67,6 +75,7 @@ import { BudgetEnforcingLlmProvider } from './budget-enforcing-provider';
 import { CachingLlmProvider } from './cache-wrapper';
 import { LoggingLlmProvider } from './logging-provider';
 import { SentinelLlmProvider } from './paused';
+import { RoutingLlmProvider } from './routing-provider';
 import { TestLlmProvider, TestLlmSeed } from './test-provider';
 import type { LlmProvider } from './types';
 
@@ -102,19 +111,30 @@ function buildProvider(): LlmProvider {
   const sentinel = new SentinelLlmProvider(caching, {
     enabled: sentinelEnabled(),
   });
+  // Cost-aware routing: sits OUTSIDE sentinel (routing runs before the paused
+  // check; if the key is the sentinel it short-circuits anyway) and INSIDE
+  // budget (over-budget calls never reach this layer). Flag-off (the DEFAULT)
+  // makes this a pure pass-through with the SAME request reference forwarded.
+  // Flag-on rewrites `request.model` based on `meta.sourceSurface` ONLY when
+  // the caller left `model` unset — it never overrides an explicit caller
+  // choice.  See `lib/llm/routing-provider.ts` for the full policy table.
+  //
+  // Kill-switch: `LLM_MODEL_ROUTING=on` to enable; unset or `off` = identity.
+  const routed = new RoutingLlmProvider(sentinel, {
+    enabled: modelRoutingEnabled(),
+  });
   // Middle: the per-workspace token-budget governor sits IN FRONT of the
-  // sentinel + caching so an over-budget call is short-circuited before the
-  // key check, the cache lookup, and the model — no tokens spent, no cache
-  // read/write, no `LlmUsageRecord` row. It throttles only on the operator-set
-  // explicit cap (`OVER`); see `lib/billing/budget.ts` + the production+growth
-  // plan §2.
+  // routing + sentinel + caching so an over-budget call is short-circuited
+  // before routing, the key check, the cache lookup, and the model — no tokens
+  // spent, no cache read/write, no `LlmUsageRecord` row. It throttles only on
+  // the operator-set explicit cap (`OVER`); see `lib/billing/budget.ts` + the
+  // production+growth plan §2.
   //
   // Operator kill-switch: `LLM_BUDGET_ENFORCEMENT=off` disables the gate
-  // entirely (the recorder + sentinel + caching + logging stay on) — the §9
-  // "per-skill / global kill-switch" ethos applied to the cost governor.
+  // entirely (the recorder + routing + sentinel + caching + logging stay on).
   const enforced = budgetEnforcementEnabled()
-    ? new BudgetEnforcingLlmProvider(sentinel, persistBudgetGate)
-    : sentinel;
+    ? new BudgetEnforcingLlmProvider(routed, persistBudgetGate)
+    : routed;
   // Outermost: the default factory wires the Prisma-backed usage recorder so
   // every workspace-tagged LLM call writes a `LlmUsageRecord` row used by the
   // customer billing usage pane, the per-skill cache-hit-rate panel on
@@ -129,6 +149,16 @@ function buildProvider(): LlmProvider {
  *  still recorded and the operator/customer surfaces still read live). */
 function budgetEnforcementEnabled(): boolean {
   return process.env.LLM_BUDGET_ENFORCEMENT !== 'off';
+}
+
+/** Cost-aware model routing defaults OFF. `LLM_MODEL_ROUTING=on` enables it.
+ *  When off, `RoutingLlmProvider` is a pure pass-through — behavior is
+ *  byte-for-byte identical to a stack without the wrapper. This is the
+ *  pre-revenue-safe default: the margin optimization ships flag-off so it can
+ *  be audited and enabled workspace-by-workspace without any risk to the
+ *  production value loop. */
+function modelRoutingEnabled(): boolean {
+  return process.env.LLM_MODEL_ROUTING === 'on';
 }
 
 /** The sentinel short-circuit defaults ON. `LLM_SENTINEL_BYPASS` set to an
@@ -181,6 +211,13 @@ export { AnthropicProvider } from './anthropic-provider';
 export { CachingLlmProvider, autoCacheRequest, DEFAULT_MIN_SYSTEM_CHARS } from './cache-wrapper';
 export { LoggingLlmProvider } from './logging-provider';
 export { BudgetEnforcingLlmProvider } from './budget-enforcing-provider';
+export {
+  RoutingLlmProvider,
+  DEFAULT_ROUTING_POLICY,
+  resolveRoutedModel,
+  applyRouting,
+} from './routing-provider';
+export type { ModelRoutingPolicy, RoutingLlmProviderOptions } from './routing-provider';
 export {
   SentinelLlmProvider,
   PausedLlmProvider,

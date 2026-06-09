@@ -70,7 +70,7 @@ export const FAQ_ITEMS: FAQItem[] = [
   {
     q: "How does pricing work?",
     topic: "pricing",
-    a: "Three tiers of service partnership, all per seat, month-to-month, first month free. (1) Regular — standard partnership, monthly review cadence, $199 solo sliding to $99 at 50+ seats. (2) Partner — named service partner with weekly review cadence and deeper customization, $299 solo sliding to $199 at scale. (3) Max — ad-hoc service partnership for firms with non-standard scope; quoted to the engagement, sales-led. No pilot fees. No setup charges. Cancel anytime from your billing settings.",
+    a: "Three tiers of service partnership, all per seat, month-to-month, first month free. (1) Regular — standard partnership, monthly review cadence, $199 solo sliding to $99 at 50+ seats. (2) Partner — named service partner with weekly review cadence and deeper customization, $299 solo sliding to $199 at scale. (3) Max — ad-hoc service partnership for firms with non-standard scope; quoted to the engagement, sales-led. No setup charges. No long-term contract. Cancel anytime from your billing settings.",
   },
   {
     q: "What's the difference between Regular, Partner, and Max?",

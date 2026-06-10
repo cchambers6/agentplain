@@ -25,13 +25,16 @@
  *                    neutral rewrite (or, worst case, flag-only with a
  *                    redaction marker) so the signal is never lost.
  *
- * GO-LIVE GATE: rewrite-and-stage only produces staged suggestions for a
- * vertical that `isVerticalLiveAllowed()` permits (real-estate today;
- * others gated behind COMPLIANCE_CORPUS_COUNSEL_REVIEWED). For gated
- * verticals we DO NOT flip the gate — we surface the counsel handoff
- * instead (`gated: true`), so the operator sees "this needs counsel
- * sign-off before Plaino can suggest a rewrite." We never invent legal
- * language for a vertical counsel hasn't cleared.
+ * GO-LIVE GATE (pfd-5): rewrite-and-stage only drafts replacement legal text
+ * for a vertical the COUNSEL GATE clears — env kill-switch
+ * (COMPLIANCE_CORPUS_COUNSEL_REVIEWED) AND a durable per-vertical
+ * `ComplianceCounselSignoff` row, FAIL-CLOSED. No vertical is exempt
+ * (real-estate's old baseline exemption was removed). For gated verticals we
+ * DO NOT flip the gate — we surface the counsel handoff instead
+ * (`gated: true`), so the operator sees "this needs counsel sign-off before
+ * Plaino can suggest a rewrite." We never invent legal language for a vertical
+ * counsel hasn't cleared, and ANY ambiguity (unsigned/revoked/store-error/
+ * unknown vertical) resolves to gated.
  *
  * Per `feedback_cold_start_safe_agents.md`: the redline store is re-read
  * on every call; nothing is cached in process.
@@ -41,7 +44,8 @@
 
 import type { ComplianceFlag } from "./scanner";
 import type { ComplianceRule, CorpusBundle, RuleCitation } from "./types";
-import { isVerticalLiveAllowed } from "./index";
+import { defaultCounselGate } from "./index";
+import type { CounselGateResolver } from "./counsel-signoff";
 import {
   normalizeClausePattern,
   type LearnedClauseLanguage,
@@ -97,12 +101,23 @@ export interface StageRewritesInput {
   llm?: LlmProvider;
   /** Durable counsel-redline store. Omit to skip the learned-language path. */
   redlineStore?: RedlineStore;
+  /**
+   * The counsel gate: "may this vertical's rewrites fire live?" Combines the
+   * env kill-switch with the durable per-vertical sign-off, FAIL-CLOSED.
+   * Defaults to `defaultCounselGate` (Prisma-backed). Tests inject an
+   * in-memory-store-backed resolver via `makeCounselGate`. The gate is awaited
+   * once per call; its `false` answer means rewrites are withheld and the
+   * counsel-handoff note surfaces instead (NEVER replacement legal text).
+   */
+  counselGate?: CounselGateResolver;
 }
 
 const GATE_NOTE = (verticalSlug: string) =>
   `Rewrite-and-stage is counsel-gated for the "${verticalSlug}" vertical. ` +
-  `Plaino has flagged the phrase but will not suggest replacement legal ` +
-  `language until counsel signs off and ops adds "${verticalSlug}" to ` +
+  `Plaino has flagged the phrase but will not draft replacement legal ` +
+  `language until BOTH (a) an operator records the counsel sign-off for ` +
+  `"${verticalSlug}" after uploading the signed artifact (durable ` +
+  `ComplianceCounselSignoff row) AND (b) the slug is in ` +
   `COMPLIANCE_CORPUS_COUNSEL_REVIEWED. Until then this is a flag-only alert ` +
   `— route the corpus through the counsel-handoff packet for sign-off.`;
 
@@ -135,7 +150,17 @@ const SYSTEM_PROMPT = [
 export async function stageRewrites(
   input: StageRewritesInput,
 ): Promise<StagedRewrite[]> {
-  const live = isVerticalLiveAllowed(input.verticalSlug);
+  // FAIL-CLOSED: resolve the counsel gate once. Any ambiguity (unsigned,
+  // revoked, env-off, store error, unknown vertical) returns false → rewrites
+  // are withheld and we surface the counsel-handoff note instead. We never
+  // draft replacement legal text for a vertical the gate hasn't cleared.
+  const gate = input.counselGate ?? defaultCounselGate;
+  let live: boolean;
+  try {
+    live = await gate(input.verticalSlug);
+  } catch {
+    live = false; // belt-and-suspenders: a throwing gate is treated as gated.
+  }
   const ruleById = new Map<string, ComplianceRule>();
   for (const rule of input.corpus.rules) ruleById.set(rule.ruleId, rule);
 

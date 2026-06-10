@@ -19,6 +19,9 @@ import assert from "node:assert/strict";
 
 import { scanCorpus } from "./scanner";
 import { stageRewrites } from "./rewrite";
+import { makeCounselGate } from "./index";
+import { InMemoryCounselSignoffStore } from "./counsel-signoff-store";
+import type { CounselGateResolver } from "./counsel-signoff";
 import {
   InMemoryRedlineStore,
   reduceLearnedLanguage,
@@ -27,6 +30,31 @@ import {
 } from "./redline-store";
 import type { ComplianceRule, CorpusBundle } from "./types";
 import type { LlmProvider, LlmResult, LlmCompletion } from "../../llm/types";
+
+// ── counsel-gate helpers (pfd-5) ───────────────────────────────────────────
+//
+// pfd-5: rewrites fire only when the FULL gate clears — env kill-switch AND a
+// durable per-vertical sign-off row. These tests inject an in-memory-store-
+// backed gate so they exercise the rewrite logic without a DB. The caller
+// (production) uses the Prisma-backed `defaultCounselGate`.
+
+/** A gate where the given verticals have a current, un-revoked sign-off AND
+ *  are env-permitted. The caller still controls the env var. */
+function signedGate(...verticals: string[]): CounselGateResolver {
+  const store = new InMemoryCounselSignoffStore(
+    verticals.map((verticalSlug) => ({
+      verticalSlug,
+      signedAt: new Date("2026-06-01T00:00:00Z"),
+      revokedAt: null,
+      artifactRef: "blob://counsel/" + verticalSlug + ".pdf",
+      signedByEmail: "counsel@example.com",
+      signedByUserId: null,
+      note: null,
+      updatedAt: new Date("2026-06-01T00:00:00Z"),
+    })),
+  );
+  return makeCounselGate(store);
+}
 
 // ── fixtures ─────────────────────────────────────────────────────────────
 
@@ -92,10 +120,12 @@ function erroringLlm(): LlmProvider {
   };
 }
 
-// Real-estate is baseline-live; clear the env gate so other verticals are gated.
+// pfd-5: NO vertical is baseline-live anymore. real-estate must clear BOTH the
+// env kill-switch AND a durable sign-off row. We env-permit real-estate here
+// and inject a signed gate per call; other verticals stay env-gated by default.
 const ORIGINAL_GATE = process.env.COMPLIANCE_CORPUS_COUNSEL_REVIEWED;
 beforeEach(() => {
-  delete process.env.COMPLIANCE_CORPUS_COUNSEL_REVIEWED;
+  process.env.COMPLIANCE_CORPUS_COUNSEL_REVIEWED = "real-estate";
 });
 afterEach(() => {
   if (ORIGINAL_GATE === undefined) {
@@ -124,6 +154,7 @@ describe("rewrite-and-stage — LLM path", () => {
       corpus: c,
       workspaceId: "ws-1",
       llm,
+      counselGate: signedGate("real-estate"),
     });
 
     assert.equal(staged.length, scan.flags.length);
@@ -154,6 +185,7 @@ describe("rewrite-and-stage — LLM path", () => {
       corpus: c,
       workspaceId: "ws-1",
       llm,
+      counselGate: signedGate("real-estate"),
     });
     assert.equal(staged[0].suggestedReplacement, "A welcoming community for all.");
   });
@@ -170,6 +202,7 @@ describe("rewrite-and-stage — deterministic fallback (no-LLM safe)", () => {
       flags: scan.flags,
       corpus: c,
       workspaceId: "ws-1",
+      counselGate: signedGate("real-estate"),
       // no llm
     });
     assert.equal(staged.length, 1);
@@ -188,6 +221,7 @@ describe("rewrite-and-stage — deterministic fallback (no-LLM safe)", () => {
       corpus: c,
       workspaceId: "ws-1",
       llm: erroringLlm(),
+      counselGate: signedGate("real-estate"),
     });
     assert.equal(staged[0].source, "fallback");
     assert.ok(staged[0].suggestedReplacement.length > 0);
@@ -201,6 +235,7 @@ describe("rewrite-and-stage — deterministic fallback (no-LLM safe)", () => {
       flags: scan.flags,
       corpus: c,
       workspaceId: "ws-1",
+      counselGate: signedGate("real-estate"),
     });
     assert.equal(staged[0].suggestedReplacement, "Describe amenities, not occupants.");
   });
@@ -253,6 +288,7 @@ describe("counsel-feedback redline loop", () => {
       workspaceId: "ws-1",
       llm,
       redlineStore: store,
+      counselGate: signedGate("real-estate"),
     });
 
     assert.equal(staged[0].source, "learned");
@@ -284,22 +320,27 @@ describe("counsel-feedback redline loop", () => {
   });
 });
 
-// ── 4. go-live gate ────────────────────────────────────────────────────────
+// ── 4. counsel gate (pfd-5) — env kill-switch AND durable sign-off ──────────
 
-describe("rewrite-and-stage — go-live gate", () => {
-  it("withholds the suggestion (but keeps the flag) for a counsel-gated vertical", async () => {
-    const c: CorpusBundle = {
-      ...corpus(),
-      verticalSlug: "mortgage",
-      metadata: { ...corpus().metadata, verticalSlug: "mortgage" },
-    };
+function mortgageCorpus(): CorpusBundle {
+  return {
+    ...corpus(),
+    verticalSlug: "mortgage",
+    metadata: { ...corpus().metadata, verticalSlug: "mortgage" },
+  };
+}
+
+describe("rewrite-and-stage — counsel gate (pfd-5)", () => {
+  it("withholds the suggestion (but keeps the flag) for an unsigned vertical", async () => {
+    const c = mortgageCorpus();
     const scan = scanCorpus({ subject: "", body: "adults only", corpus: c });
     const staged = await stageRewrites({
-      verticalSlug: "mortgage", // not in COMPLIANCE_CORPUS_COUNSEL_REVIEWED
+      verticalSlug: "mortgage", // not in env list, no sign-off row
       flags: scan.flags,
       corpus: c,
       workspaceId: "ws-1",
       llm: fakeLlm("would-be rewrite"),
+      counselGate: signedGate(), // empty store → no row → gated
     });
     assert.equal(staged[0].source, "gated");
     assert.equal(staged[0].gated, true);
@@ -309,13 +350,25 @@ describe("rewrite-and-stage — go-live gate", () => {
     assert.equal(staged[0].flag.ruleId, RULE_ID);
   });
 
-  it("produces suggestions for a gated vertical once the env flag clears it", async () => {
+  it("env-permitted BUT unsigned → still GATED (sign-off row required)", async () => {
     process.env.COMPLIANCE_CORPUS_COUNSEL_REVIEWED = "mortgage";
-    const c: CorpusBundle = {
-      ...corpus(),
+    const c = mortgageCorpus();
+    const scan = scanCorpus({ subject: "", body: "adults only", corpus: c });
+    const staged = await stageRewrites({
       verticalSlug: "mortgage",
-      metadata: { ...corpus().metadata, verticalSlug: "mortgage" },
-    };
+      flags: scan.flags,
+      corpus: c,
+      workspaceId: "ws-1",
+      llm: fakeLlm("would-be rewrite"),
+      counselGate: signedGate(), // env on but NO durable sign-off row
+    });
+    assert.equal(staged[0].source, "gated", "env alone must not open the gate");
+    assert.equal(staged[0].gated, true);
+  });
+
+  it("signed AND env-permitted → rewrites flow", async () => {
+    process.env.COMPLIANCE_CORPUS_COUNSEL_REVIEWED = "mortgage";
+    const c = mortgageCorpus();
     const scan = scanCorpus({ subject: "", body: "adults only", corpus: c });
     const staged = await stageRewrites({
       verticalSlug: "mortgage",
@@ -323,9 +376,44 @@ describe("rewrite-and-stage — go-live gate", () => {
       corpus: c,
       workspaceId: "ws-1",
       llm: fakeLlm("cleared rewrite"),
+      counselGate: signedGate("mortgage"),
     });
     assert.equal(staged[0].source, "llm");
     assert.equal(staged[0].gated, false);
     assert.equal(staged[0].suggestedReplacement, "cleared rewrite");
+  });
+
+  it("signed but env-OFF → GATED (env kill-switch wins)", async () => {
+    // env is "real-estate" (from beforeEach) — mortgage is env-killed even
+    // with a valid sign-off row.
+    const c = mortgageCorpus();
+    const scan = scanCorpus({ subject: "", body: "adults only", corpus: c });
+    const staged = await stageRewrites({
+      verticalSlug: "mortgage",
+      flags: scan.flags,
+      corpus: c,
+      workspaceId: "ws-1",
+      llm: fakeLlm("would-be rewrite"),
+      counselGate: signedGate("mortgage"), // signed, but env doesn't list it
+    });
+    assert.equal(staged[0].source, "gated");
+    assert.equal(staged[0].gated, true);
+  });
+
+  it("a throwing gate is fail-closed (gated)", async () => {
+    const c = corpus();
+    const scan = scanCorpus({ subject: "", body: "adults only", corpus: c });
+    const staged = await stageRewrites({
+      verticalSlug: "real-estate",
+      flags: scan.flags,
+      corpus: c,
+      workspaceId: "ws-1",
+      llm: fakeLlm("would-be rewrite"),
+      counselGate: async () => {
+        throw new Error("gate blew up");
+      },
+    });
+    assert.equal(staged[0].source, "gated");
+    assert.equal(staged[0].gated, true);
   });
 });

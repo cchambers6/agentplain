@@ -5,7 +5,14 @@ import {
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
 import { servicePartnerForWorkspace } from "@/lib/onboarding/service-partner";
-import { loadCorpusFor } from "@/lib/agents/sentinel";
+import {
+  loadCorpusFor,
+  evaluateCounselGate,
+  isKnownCorpusVertical,
+  PrismaCounselSignoffStore,
+  COUNSEL_GATED_BANNER_TEXT,
+  shouldShowCounselGatedBanner,
+} from "@/lib/agents/sentinel";
 import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
 
 interface PageProps {
@@ -64,6 +71,30 @@ export default async function CompliancePage({ params }: PageProps) {
       )
     : [];
 
+  // pfd-5: is rewrite-and-stage live for this vertical? The signoff table is
+  // operator-only RLS, but PrismaCounselSignoffStore reads under system context
+  // internally, so this resolves correctly from the customer surface. The gate
+  // is fail-closed — any error → rewriteLive=false → the honest banner shows.
+  let rewriteLive = false;
+  if (verticalSlug && corpus) {
+    try {
+      const gate = await evaluateCounselGate({
+        verticalSlug,
+        store: new PrismaCounselSignoffStore(),
+        isKnownVertical: isKnownCorpusVertical,
+      });
+      rewriteLive = gate.live;
+    } catch {
+      rewriteLive = false;
+    }
+  }
+  // Show the counsel-gated banner only when there IS a corpus (so rewrite is
+  // even applicable) but it isn't cleared to draft replacement legal text yet.
+  const showCounselGatedBanner = shouldShowCounselGatedBanner({
+    hasCorpus: Boolean(corpus),
+    rewriteLive,
+  });
+
   return (
     <div>
       <ApEyebrow className="mb-3">compliance</ApEyebrow>
@@ -107,6 +138,17 @@ export default async function CompliancePage({ params }: PageProps) {
                 ) : null}
               </>
             )}
+          </p>
+        </div>
+      ) : null}
+
+      {showCounselGatedBanner ? (
+        <div className="mt-4 max-w-2xl border-l-2 border-clay bg-paper-deep p-4">
+          <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+            Auto-rewrite · in counsel review
+          </p>
+          <p className="mt-2 text-[14px] leading-relaxed text-ink-soft">
+            {COUNSEL_GATED_BANNER_TEXT}
           </p>
         </div>
       ) : null}

@@ -1876,6 +1876,64 @@ model CounselRedline {
   @@index([workspaceId, verticalSlug, ruleId, createdAt])
 }
 
+/// pfd-5 — Compliance counsel sign-off (the durable per-vertical record that
+/// makes "unreviewed legal text can never ship" a STRUCTURAL guarantee, not a
+/// policy one).
+///
+/// One row per compliance-corpus vertical (`real-estate`, `mortgage`,
+/// `insurance`, `ria`, `law`, `cpa`, `title-escrow`…). It is PLATFORM-LEVEL,
+/// not per-workspace: counsel reviews the shared corpus for an INDUSTRY once,
+/// and that sign-off applies to every workspace in that vertical. There is no
+/// `workspaceId`.
+///
+/// The gate (`lib/agents/sentinel/counsel-signoff.ts`) reads this on every
+/// rewrite fire and treats the vertical as SIGNED only when
+/// `signedAt IS NOT NULL AND signedAt <= now() AND revokedAt IS NULL`.
+/// Missing row, NULL signedAt, future signedAt, or a non-null revokedAt → the
+/// vertical is UNSIGNED and rewrites are gated. Fail-closed by construction:
+/// the absence of an affirmative, current sign-off is treated as "not signed".
+///
+/// The `COMPLIANCE_CORPUS_COUNSEL_REVIEWED` env flag sits ABOVE this row as a
+/// global kill-switch: env-off for a vertical → gated regardless of any row.
+///
+/// RLS: operator-only, exactly like CounselRedline / LeadCapture. Only the
+/// operator sign-off console writes here; the gate reads under the
+/// system-operator context.
+model ComplianceCounselSignoff {
+  /// id created WITHOUT a DB default — Prisma generates `@default(uuid())`
+  /// client-side, matching the repo-wide `id DROP DEFAULT` baseline so the
+  /// migration adds ZERO new drift-baseline entries (see
+  /// prisma/schema-drift-baseline.README.md).
+  id            String    @id @default(uuid()) @db.Uuid
+  /// Compliance-corpus vertical slug (`real-estate`, `mortgage`…). One row per
+  /// vertical — enforced by the unique constraint.
+  verticalSlug  String    @unique @db.VarChar(64)
+  /// When counsel's sign-off takes effect. NULL = never signed (gated). A
+  /// future timestamp is also treated as unsigned (`signedAt <= now()`), so a
+  /// post-dated sign-off does not prematurely open the gate.
+  signedAt      DateTime?
+  /// When the sign-off was revoked. Non-null = gated again regardless of
+  /// signedAt. Set by the operator "revoke" action; never deletes the row, so
+  /// the sign-off/revoke history stays auditable.
+  revokedAt     DateTime?
+  /// Pointer to the signed counsel artifact (Vercel Blob URL/path or a
+  /// counsel-handoff packet ref). Stored as a reference string exactly like
+  /// CreatorBrief.delivery — the blob upload happens behind the
+  /// `lib/storage/counsel-artifact.ts` seam, this column holds the resulting
+  /// ref. NULL until an artifact is attached.
+  artifactRef   String?
+  /// Email of the counsel / operator who recorded the sign-off. Audit trail
+  /// on the row itself; the full action is also written to AuditLog.
+  signedByEmail String?   @db.VarChar(320)
+  /// Operator user who clicked sign-off (FK-free string for cold-start safety;
+  /// the AuditLog row carries the real actorUserId).
+  signedByUserId String?  @db.Uuid
+  /// Optional operator note (e.g. "Counsel: Smith & Assoc., packet v3").
+  note          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
 /// Wave-2 skill marketplace. One row per workspace × skill that the
 /// customer has touched. NO ROW = "default-installed when the catalog
 /// says runtime=live; not installed otherwise" (see

@@ -43,6 +43,12 @@ import {
 } from '../with-error-reporting';
 import { getLogger } from '@/lib/observability';
 import { runSupportHandlerForRequest } from '@/lib/skills/support-handler';
+import { runTriageForRequest } from '@/lib/skills/customer-support-triage';
+import {
+  TRIAGE_SKILL_SLUG,
+  TRIAGE_DISCIPLINE_ID,
+} from '@/lib/skills/customer-support-triage';
+import { gateSkillFire } from '@/lib/skills/fire-gate';
 import { withSystemContext } from '@/lib/db/rls';
 import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
 import { isWorkspacePaused } from '@/lib/billing/workspace-paused-gate';
@@ -147,6 +153,69 @@ export const supportHandlerOnCreateFn = inngest.createFunction(
               skipped: true,
               reason: 'skill-uninstalled' as const,
             };
+          }
+
+          // pfd-3 — the missing fire gate (audit SIGNUP_TO_GO_2026_06_10).
+          // Before this wave the support-handler skipped gateSkillFire, so a
+          // workspace's vacation pause / off-hours schedule window did NOT
+          // stop a support draft (or now an auto-answer) from firing. Wire it
+          // here so the customer-controlled pause/schedule actually governs
+          // this caller too. A gate denial means: no auto-answer, no
+          // auto-resolve, no draft — the customer's request stays NEW for the
+          // operator (the submit-time email already gave a human ack).
+          const fireGate = await withSystemContext((tx) =>
+            gateSkillFire({
+              tx,
+              workspaceId: data.workspaceId,
+              skillSlug: TRIAGE_SKILL_SLUG,
+              disciplineId: TRIAGE_DISCIPLINE_ID,
+            }),
+          ).catch(() => ({ allowed: true as const }));
+          if (!fireGate.allowed) {
+            logger.info('support-handler skipped — fire gate', {
+              support_request_id: data.supportRequestId,
+              workspace_id: data.workspaceId,
+              reason: fireGate.reason,
+            });
+            return { skipped: true, reason: 'fire-gate' as const };
+          }
+
+          // pfd-3 — L1 TRIAGE runs BEFORE the draft path. It escalates
+          // sensitive messages (legal / distress / vuln / deletion / human
+          // ask / big dispute) to a human via pageHuman with a 24h deadline,
+          // auto-answers high-confidence KB questions, or auto-resolves
+          // bounded account actions. ONLY when it returns 'drafted' (the
+          // self-routing floor) do we fall through to the existing
+          // SUPPORT_HANDLER_REPLY_DRAFT path. The standing gates we just
+          // evaluated thread into bounded auto-resolve.
+          const triage = await runTriageForRequest({
+            supportRequestId: data.supportRequestId,
+            gates: { fireGatePassed: true, billingActive: true },
+          });
+          if (triage.ok && triage.value.decision !== 'drafted') {
+            logger.info('support-handler — triage handled', {
+              support_request_id: data.supportRequestId,
+              workspace_id: data.workspaceId,
+              decision: triage.value.decision,
+              degraded: triage.value.degraded,
+              escalation_trigger: triage.value.escalationTrigger,
+              paged: triage.value.page?.delivered ?? null,
+            });
+            return {
+              ok: true as const,
+              triaged: triage.value.decision,
+              degraded: triage.value.degraded,
+            };
+          }
+          if (!triage.ok) {
+            // Triage failed to even load the request (deleted, etc.) — log,
+            // then fall through to the draft path so the message still gets
+            // an outcome rather than vanishing.
+            logger.info('support-handler — triage non-ok, falling through to draft', {
+              support_request_id: data.supportRequestId,
+              workspace_id: data.workspaceId,
+              error_code: triage.error.code,
+            });
           }
 
           const res = await runSupportHandlerForRequest({

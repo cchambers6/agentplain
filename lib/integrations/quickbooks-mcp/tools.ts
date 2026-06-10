@@ -12,7 +12,14 @@
 
 import { z } from 'zod';
 import type { ToolRegistration } from '@/lib/integrations/mcp-core';
-import { QUICKBOOKS_NAMESPACE, type QuickbooksMcpServer } from './types';
+import { QUICKBOOKS_NAMESPACE, type QboEstimateStatus, type QuickbooksMcpServer } from './types';
+
+const QBO_ESTIMATE_STATUSES: [QboEstimateStatus, ...QboEstimateStatus[]] = [
+  'Pending',
+  'Accepted',
+  'Rejected',
+  'Closed',
+];
 
 const listInvoicesSchema = z.object({
   customerId: z.string().optional(),
@@ -49,6 +56,14 @@ const profitAndLossSchema = z.object({
 const listExpensesSchema = z.object({
   count: z.number().int().positive().max(100).optional(),
 });
+
+const listEstimatesSchema = z.object({
+  status: z.enum(QBO_ESTIMATE_STATUSES).optional(),
+  customerId: z.string().optional(),
+  count: z.number().int().positive().max(100).optional(),
+});
+
+const estimateIdSchema = z.object({ estimateId: z.string().min(1) });
 
 export const QUICKBOOKS_TOOLS: ReadonlyArray<ToolRegistration<QuickbooksMcpServer>> = [
   {
@@ -101,5 +116,18 @@ export const QUICKBOOKS_TOOLS: ReadonlyArray<ToolRegistration<QuickbooksMcpServe
     description: 'List recorded expenses (Purchase entities). count is 1..100 (default 25).',
     schema: listExpensesSchema,
     invoke: (s, a) => s.listExpenses(listExpensesSchema.parse(a)),
+  },
+  {
+    name: `${QUICKBOOKS_NAMESPACE}.list_estimates`,
+    description:
+      'List Estimate objects (quotes/proposals). Pass status="Pending" to return only open estimates awaiting customer acceptance. Optionally filter by customerId. count is 1..100 (default 25). Read-only — no money moves.',
+    schema: listEstimatesSchema,
+    invoke: (s, a) => s.listEstimates(listEstimatesSchema.parse(a)),
+  },
+  {
+    name: `${QUICKBOOKS_NAMESPACE}.get_estimate`,
+    description: 'Get a single Estimate by its QuickBooks entity id. Read-only — no money moves.',
+    schema: estimateIdSchema,
+    invoke: (s, a) => s.getEstimate(estimateIdSchema.parse(a)),
   },
 ];

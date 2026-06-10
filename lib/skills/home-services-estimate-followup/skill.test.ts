@@ -39,6 +39,7 @@ function estimate(overrides: Partial<EstimateRecord> = {}): EstimateRecord {
       email: 'sam@shop.example',
       phone: null,
     },
+    amountUsd: 4500,
     ...overrides,
   };
 }

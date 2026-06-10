@@ -136,6 +136,70 @@ export interface ListExpensesOutput {
   expenses: ExpenseSummary[];
 }
 
+// ── Estimate DTOs ─────────────────────────────────────────────────────────
+//
+// QuickBooks Online Estimate objects represent quotes/proposals sent to a
+// customer before work is performed. The QBO API exposes Estimate as a
+// first-class transaction type on the same OAuth connection as invoices.
+//
+// TxnStatus values from QBO:
+//   Accepted  — customer signed/accepted
+//   Rejected  — customer declined
+//   Closed    — operator manually closed (converted to invoice or voided)
+//   Pending   — sent but awaiting customer action  ← the "open" state
+//   (blank)   — draft not yet sent
+//
+// The follow-up skill cares only about the Pending + unsent states — those
+// are money on the table that needs a nudge.
+
+export type QboEstimateStatus = 'Pending' | 'Accepted' | 'Rejected' | 'Closed';
+
+export interface EstimateSummary {
+  /** QuickBooks Estimate entity id. */
+  id: string;
+  /** Human-visible estimate number (DocNumber). */
+  docNumber: string | null;
+  /** Customer ref id. */
+  customerId: string | null;
+  /** Customer display name. */
+  customerName: string | null;
+  /** Customer primary email — sourced from the CustomerRef.name field or
+   *  the related Customer object. May be null if the customer has no
+   *  email on file. */
+  customerEmail: string | null;
+  /** Total estimate amount in the workspace currency (USD for US companies). */
+  totalAmount: number | null;
+  /** Transaction date (ISO date string YYYY-MM-DD). */
+  txnDate: string | null;
+  /** Expiry date (ISO date string YYYY-MM-DD). Null when not set. */
+  expiryDate: string | null;
+  /** QBO TxnStatus value. */
+  txnStatus: QboEstimateStatus | null;
+  /** Customer-facing memo / description on the estimate. */
+  customerMemo: string | null;
+}
+
+export interface ListEstimatesInput {
+  /** Filter by QBO TxnStatus. Omit to return all statuses. */
+  status?: QboEstimateStatus;
+  /** Optional CustomerRef filter. */
+  customerId?: string;
+  /** 1..100, default 25. */
+  count?: number;
+}
+
+export interface ListEstimatesOutput {
+  estimates: EstimateSummary[];
+}
+
+export interface GetEstimateInput {
+  estimateId: string;
+}
+
+export interface GetEstimateOutput {
+  estimate: EstimateSummary;
+}
+
 // ── Interface every implementation honors ──────────────────────────────────
 
 export interface QuickbooksMcpServer extends McpServerBase {
@@ -146,6 +210,11 @@ export interface QuickbooksMcpServer extends McpServerBase {
   recordPayment(input: RecordPaymentInput): Promise<QuickbooksMcpResult<RecordPaymentOutput>>;
   getProfitAndLoss(input: GetProfitAndLossInput): Promise<QuickbooksMcpResult<GetProfitAndLossOutput>>;
   listExpenses(input: ListExpensesInput): Promise<QuickbooksMcpResult<ListExpensesOutput>>;
+  /** List Estimate objects. Pass `status: 'Pending'` to get only open
+   *  estimates that need a follow-up nudge. */
+  listEstimates(input: ListEstimatesInput): Promise<QuickbooksMcpResult<ListEstimatesOutput>>;
+  /** Fetch a single Estimate by its QBO entity id. */
+  getEstimate(input: GetEstimateInput): Promise<QuickbooksMcpResult<GetEstimateOutput>>;
 }
 
 export const QUICKBOOKS_NAMESPACE = 'quickbooks';

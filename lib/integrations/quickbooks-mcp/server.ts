@@ -29,7 +29,10 @@ import {
   type CreateInvoiceInput,
   type CreateInvoiceOutput,
   type CustomerSummary,
+  type EstimateSummary,
   type ExpenseSummary,
+  type GetEstimateInput,
+  type GetEstimateOutput,
   type GetInvoiceInput,
   type GetInvoiceOutput,
   type GetProfitAndLossInput,
@@ -37,10 +40,13 @@ import {
   type InvoiceSummary,
   type ListCustomersInput,
   type ListCustomersOutput,
+  type ListEstimatesInput,
+  type ListEstimatesOutput,
   type ListExpensesInput,
   type ListExpensesOutput,
   type ListInvoicesInput,
   type ListInvoicesOutput,
+  type QboEstimateStatus,
   type QuickbooksMcpServer,
   type RecordPaymentInput,
   type RecordPaymentOutput,
@@ -179,6 +185,31 @@ export class ProdQuickbooksMcpServer implements QuickbooksMcpServer {
     });
   }
 
+  async listEstimates(input: ListEstimatesInput): Promise<McpResult<ListEstimatesOutput>> {
+    const count = clampCount(input.count);
+    if (!count.ok) return count;
+    const clauses: string[] = [];
+    if (input.status) clauses.push(`TxnStatus = '${escapeSql(input.status)}'`);
+    if (input.customerId) clauses.push(`CustomerRef = '${escapeSql(input.customerId)}'`);
+    const where = clauses.length > 0 ? ` where ${clauses.join(' and ')}` : '';
+    const query = `select * from Estimate${where} maxresults ${count.value}`;
+    return this.withApi(async (ctx) => {
+      const res = await ctx.query<{ Estimate?: RawEstimate[] }>(query);
+      if (!res.ok) return res;
+      return mcpOk({ estimates: (res.value.QueryResponse?.Estimate ?? []).map(toEstimateSummary) });
+    });
+  }
+
+  async getEstimate(input: GetEstimateInput): Promise<McpResult<GetEstimateOutput>> {
+    if (!input.estimateId) return mcpError('INVALID_ARGUMENT', 'getEstimate requires estimateId');
+    return this.withApi(async (ctx) => {
+      const res = await ctx.api<{ Estimate?: RawEstimate }>('GET', `/estimate/${encodeURIComponent(input.estimateId)}`);
+      if (!res.ok) return res;
+      if (!res.value.Estimate) return mcpError('NOT_FOUND', `No estimate ${input.estimateId}`);
+      return mcpOk({ estimate: toEstimateSummary(res.value.Estimate) });
+    });
+  }
+
   // ── internals ─────────────────────────────────────────────────────────
 
   private async withApi<T>(
@@ -289,6 +320,17 @@ interface RawPurchase {
   TotalAmt?: number;
   TxnDate?: string;
 }
+interface RawEstimate {
+  Id?: string;
+  DocNumber?: string;
+  CustomerRef?: RawRef;
+  BillEmail?: { Address?: string };
+  TotalAmt?: number;
+  TxnDate?: string;
+  ExpiryDate?: string;
+  TxnStatus?: string;
+  CustomerMemo?: { value?: string };
+}
 interface RawReportRow {
   Header?: { ColData?: Array<{ value?: string }> };
   Summary?: { ColData?: Array<{ value?: string }> };
@@ -335,6 +377,28 @@ function toExpenseSummary(p: RawPurchase): ExpenseSummary {
     accountName: p.AccountRef?.name ?? null,
     totalAmount: numOrNull(p.TotalAmt),
     txnDate: p.TxnDate ?? null,
+  };
+}
+
+const VALID_ESTIMATE_STATUSES = new Set<string>(['Pending', 'Accepted', 'Rejected', 'Closed']);
+
+function toEstimateSummary(e: RawEstimate): EstimateSummary {
+  const rawStatus = e.TxnStatus;
+  const txnStatus: QboEstimateStatus | null =
+    rawStatus && VALID_ESTIMATE_STATUSES.has(rawStatus)
+      ? (rawStatus as QboEstimateStatus)
+      : null;
+  return {
+    id: e.Id ?? '',
+    docNumber: e.DocNumber ?? null,
+    customerId: e.CustomerRef?.value ?? null,
+    customerName: e.CustomerRef?.name ?? null,
+    customerEmail: e.BillEmail?.Address ?? null,
+    totalAmount: numOrNull(e.TotalAmt),
+    txnDate: e.TxnDate ?? null,
+    expiryDate: e.ExpiryDate ?? null,
+    txnStatus,
+    customerMemo: e.CustomerMemo?.value ?? null,
   };
 }
 

@@ -15,7 +15,10 @@ import {
   type CreateInvoiceInput,
   type CreateInvoiceOutput,
   type CustomerSummary,
+  type EstimateSummary,
   type ExpenseSummary,
+  type GetEstimateInput,
+  type GetEstimateOutput,
   type GetInvoiceInput,
   type GetInvoiceOutput,
   type GetProfitAndLossInput,
@@ -23,6 +26,8 @@ import {
   type InvoiceSummary,
   type ListCustomersInput,
   type ListCustomersOutput,
+  type ListEstimatesInput,
+  type ListEstimatesOutput,
   type ListExpensesInput,
   type ListExpensesOutput,
   type ListInvoicesInput,
@@ -62,6 +67,50 @@ const FIXTURE_CUSTOMERS: CustomerSummary[] = [
 
 const FIXTURE_EXPENSES: ExpenseSummary[] = [
   { id: '301', paymentType: 'CreditCard', accountName: 'Job Materials', totalAmount: 820.5, txnDate: '2026-05-03' },
+];
+
+// Fixture estimates represent realistic home-services scenarios:
+//   EST-401 — a $6,200 roofing quote sent 4 days ago (Pending, needs soft-nudge)
+//   EST-402 — a $3,800 HVAC estimate sent 8 days ago (Pending, needs check-in)
+//   EST-403 — a $950 plumbing estimate that was accepted (should not appear in
+//             Pending filter — validates the status filter works)
+export const FIXTURE_ESTIMATES: EstimateSummary[] = [
+  {
+    id: 'EST-401',
+    docNumber: 'EST-2026-0401',
+    customerId: '1',
+    customerName: 'Jamie Carter',
+    customerEmail: 'jamie@homeowner.example',
+    totalAmount: 6200.0,
+    txnDate: '2026-05-20',
+    expiryDate: '2026-06-20',
+    txnStatus: 'Pending',
+    customerMemo: 'Full roof replacement — dimensional shingles',
+  },
+  {
+    id: 'EST-402',
+    docNumber: 'EST-2026-0402',
+    customerId: '2',
+    customerName: 'Morgan Ellis',
+    customerEmail: 'morgan@homeowner.example',
+    totalAmount: 3800.0,
+    txnDate: '2026-05-16',
+    expiryDate: null,
+    txnStatus: 'Pending',
+    customerMemo: 'HVAC system replacement — 3-ton Carrier',
+  },
+  {
+    id: 'EST-403',
+    docNumber: 'EST-2026-0403',
+    customerId: '3',
+    customerName: 'Riley Park',
+    customerEmail: 'riley@homeowner.example',
+    totalAmount: 950.0,
+    txnDate: '2026-05-10',
+    expiryDate: null,
+    txnStatus: 'Accepted',
+    customerMemo: 'Water heater replacement',
+  },
 ];
 
 export class TestQuickbooksMcpServer implements QuickbooksMcpServer {
@@ -139,5 +188,23 @@ export class TestQuickbooksMcpServer implements QuickbooksMcpServer {
 
   async listExpenses(_input: ListExpensesInput): Promise<McpResult<ListExpensesOutput>> {
     return mcpOk({ expenses: FIXTURE_EXPENSES });
+  }
+
+  async listEstimates(input: ListEstimatesInput): Promise<McpResult<ListEstimatesOutput>> {
+    let estimates = FIXTURE_ESTIMATES;
+    if (input.status) {
+      estimates = estimates.filter((e) => e.txnStatus === input.status);
+    }
+    if (input.customerId) {
+      estimates = estimates.filter((e) => e.customerId === input.customerId);
+    }
+    const count = input.count ?? 25;
+    return mcpOk({ estimates: estimates.slice(0, count) });
+  }
+
+  async getEstimate(input: GetEstimateInput): Promise<McpResult<GetEstimateOutput>> {
+    const estimate = FIXTURE_ESTIMATES.find((e) => e.id === input.estimateId);
+    if (!estimate) return mcpError('NOT_FOUND', `No estimate ${input.estimateId}`);
+    return mcpOk({ estimate });
   }
 }

@@ -73,7 +73,7 @@ export async function sendPlainoMessageAction(
   const workspace = await withSystemContext((tx) =>
     tx.workspace.findUnique({
       where: { id: workspaceId },
-      select: { id: true, name: true },
+      select: { id: true, name: true, vertical: true },
     }),
   );
   if (!workspace) {
@@ -112,6 +112,7 @@ export async function sendPlainoMessageAction(
     fromUserId: member.userId,
     fromEmail: member.email,
     fromName,
+    vertical: workspace.vertical,
     customerMessage: body,
     history,
     capabilities,

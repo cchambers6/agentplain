@@ -231,6 +231,11 @@ export interface PlainoTurnInput {
   fromUserId: string;
   fromEmail: string;
   fromName: string | null;
+  /** The workspace's Prisma Vertical enum value. Used to build the
+   *  activation / what-next card carried on the reply metadata — the
+   *  card branches on which killer workflow to lead with. Optional: when
+   *  absent the card falls back to the general killer workflow. */
+  vertical?: import('@prisma/client').Vertical | null;
   /** Verbatim customer message — the turn we're routing. */
   customerMessage: string;
   /** Recent thread context (last ~6 turns). The dispatcher uses this

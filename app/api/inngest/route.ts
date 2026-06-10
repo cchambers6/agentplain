@@ -101,6 +101,14 @@ import { invoiceChaseGeneralSweepFn } from "@/lib/inngest/functions/invoice-chas
 // (critical, 24h) + writes a fleet-wide health OpsFlag the operator UI reads.
 // Also manually triggerable via agentplain/ops.credential-test.requested.
 import { credentialTestSweepFn } from "@/lib/inngest/functions/credential-test-sweep";
+// pfd-6 fleet-health heartbeat — daily 06:00 ET health snapshot across every
+// other pillar (LLM spend, integration breakage, support backlog, unsupported-
+// vertical signups, aged PAST_DUE, page volume, heartbeat freshness). ANY breach
+// pages a named human (FLEET_TRUSTED_HUMAN_EMAIL) with a concrete action; Monday
+// all-green sends a weekly "the pipe works" confirmation. Self-monitoring: the
+// operator panel renders "last successful health check: <ts>". Manually
+// triggerable via agentplain/ops.fleet-health.requested.
+import { fleetHealthCheckFn } from "@/lib/inngest/functions/fleet-health-check";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -142,5 +150,6 @@ export const { GET, POST, PUT } = serve({
     competitiveSignalFeedSweepFn,
     invoiceChaseGeneralSweepFn,
     credentialTestSweepFn,
+    fleetHealthCheckFn,
   ],
 });

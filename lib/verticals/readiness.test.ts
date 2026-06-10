@@ -24,6 +24,7 @@ describe('resolveVerticalReadiness — registry truth', () => {
     assert.equal(r.killerWorkflowSkillSlug, 'lead-triage-realestate');
   });
 
+<<<<<<< HEAD
   it('cpa is SUPPORTED (pfd-8 — month-end-close-cpa is runtime:live + has the monthly sweep)', () => {
     const r = resolveVerticalReadiness('cpa');
     assert.equal(r.supported, true);
@@ -35,16 +36,34 @@ describe('resolveVerticalReadiness — registry truth', () => {
     // Honest: home-services-estimate-followup has no sweep on this branch.
     // It flips live when PR #207 (the sweep) merges; until then the gate
     // correctly waitlists it.
+=======
+  it('cpa is UNSUPPORTED — month-end-close-cpa is schema-only (no runtime field)', () => {
+    const r = resolveVerticalReadiness('cpa');
+    assert.equal(r.supported, false);
+    // The skill is in the catalog but not live → skill-not-live.
+    assert.equal(r.reason, 'skill-not-live');
+    assert.equal(r.killerWorkflowSkillSlug, 'month-end-close-cpa');
+  });
+
+  it('home-services is UNSUPPORTED — runtime defaults schema-only (the audit 🚨)', () => {
+>>>>>>> f597d4c (feat(pfd-4): unsupported-vertical signup gating + leak-path auto-refund)
     const r = resolveVerticalReadiness('home-services');
     assert.equal(r.supported, false);
     assert.equal(r.reason, 'skill-not-live');
   });
 
+<<<<<<< HEAD
   it('law is SUPPORTED (pfd-8 — law-intake-conflict-screen is runtime:live + has the daily sweep)', () => {
     const r = resolveVerticalReadiness('law');
     assert.equal(r.supported, true);
     assert.equal(r.reason, 'supported');
     assert.equal(r.killerWorkflowSkillSlug, 'law-intake-conflict-screen');
+=======
+  it('law is UNSUPPORTED — law-intake-conflict-screen is schema-only', () => {
+    const r = resolveVerticalReadiness('law');
+    assert.equal(r.supported, false);
+    assert.equal(r.reason, 'skill-not-live');
+>>>>>>> f597d4c (feat(pfd-4): unsupported-vertical signup gating + leak-path auto-refund)
   });
 
   it('insurance / mortgage / property-management / title-escrow / ria are UNSUPPORTED', () => {
@@ -81,10 +100,14 @@ describe('resolveVerticalReadiness — registry truth', () => {
 describe('isVerticalSupportedSafe — fail closed', () => {
   it('returns true only for genuinely supported verticals', () => {
     assert.equal(isVerticalSupportedSafe('real-estate'), true);
+<<<<<<< HEAD
     // cpa + law are now supported (pfd-8 wired their callers); the
     // credential-gated + no-flagship verticals stay unsupported.
     assert.equal(isVerticalSupportedSafe('cpa'), true);
     assert.equal(isVerticalSupportedSafe('insurance'), false);
+=======
+    assert.equal(isVerticalSupportedSafe('cpa'), false);
+>>>>>>> f597d4c (feat(pfd-4): unsupported-vertical signup gating + leak-path auto-refund)
     assert.equal(isVerticalSupportedSafe('recruiting'), false);
   });
 
@@ -117,11 +140,16 @@ describe('resolveVerticalReadinessForEnum', () => {
   it('REAL_ESTATE enum resolves supported', () => {
     assert.equal(resolveVerticalReadinessForEnum('REAL_ESTATE').supported, true);
   });
+<<<<<<< HEAD
   it('CPA enum resolves supported (pfd-8)', () => {
     assert.equal(resolveVerticalReadinessForEnum('CPA').supported, true);
   });
   it('INSURANCE enum resolves unsupported (credential-gated)', () => {
     assert.equal(resolveVerticalReadinessForEnum('INSURANCE').supported, false);
+=======
+  it('CPA enum resolves unsupported', () => {
+    assert.equal(resolveVerticalReadinessForEnum('CPA').supported, false);
+>>>>>>> f597d4c (feat(pfd-4): unsupported-vertical signup gating + leak-path auto-refund)
   });
 });
 
@@ -130,6 +158,7 @@ describe('verticalReadinessSelfCheck — manifest cannot silently lie', () => {
     assert.deepEqual(verticalReadinessSelfCheck(), []);
   });
 
+<<<<<<< HEAD
   it('the four wired killer skills have production callers today (pfd-8)', () => {
     assert.deepEqual(
       [...SKILLS_WITH_PRODUCTION_CALLER].sort(),
@@ -140,5 +169,9 @@ describe('verticalReadinessSelfCheck — manifest cannot silently lie', () => {
         'month-end-close-cpa',
       ],
     );
+=======
+  it('only lead-triage-realestate has a production caller today', () => {
+    assert.deepEqual([...SKILLS_WITH_PRODUCTION_CALLER], ['lead-triage-realestate']);
+>>>>>>> f597d4c (feat(pfd-4): unsupported-vertical signup gating + leak-path auto-refund)
   });
 });

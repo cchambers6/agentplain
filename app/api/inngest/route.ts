@@ -119,7 +119,6 @@ import { credentialTestSweepFn } from "@/lib/inngest/functions/credential-test-s
 // operator panel renders "last successful health check: <ts>". Manually
 // triggerable via agentplain/ops.fleet-health.requested.
 import { fleetHealthCheckFn } from "@/lib/inngest/functions/fleet-health-check";
-<<<<<<< HEAD
 // pfd-8 — registry-truth production callers. month-end-close-cpa (PR #205)
 // and law-intake-conflict-screen (PR #206) shipped module-complete but had
 // NO production caller — a paying CPA / law workspace never saw the killer
@@ -141,6 +140,11 @@ import { unsupportedVerticalRefundSweepFn } from "@/lib/inngest/functions/unsupp
 // was missed.
 import { integrationHealthSweepFn } from "@/lib/inngest/functions/integration-health-sweep";
 import { retryQueueResumeSweepFn } from "@/lib/inngest/functions/retry-queue-resume-sweep";
+// pfd-4 — leak-path auto-refund. Daily sweep finds paying workspaces in an
+// UNSUPPORTED vertical (registry truth) with zero value delivered and either
+// auto-refunds (when UNSUPPORTED_VERTICAL_AUTO_REFUND=on) or — by default —
+// pages a human in detect-only mode. Nobody pays for a vertical we can't serve.
+import { unsupportedVerticalRefundSweepFn } from "@/lib/inngest/functions/unsupported-vertical-refund-sweep";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -190,5 +194,6 @@ export const { GET, POST, PUT } = serve({
     unsupportedVerticalRefundSweepFn,
     integrationHealthSweepFn,
     retryQueueResumeSweepFn,
+    unsupportedVerticalRefundSweepFn,
   ],
 });

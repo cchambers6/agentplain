@@ -20,11 +20,18 @@
  * cache or the model. Keeping it in a wrapper (rather than swapping the
  * inner provider) is what lets it compose cleanly with the budget governor.
  *
- * In every case the chosen inner provider is wrapped in FIVE transparent
+ * In every case the chosen inner provider is wrapped in transparent
  * layers. The compose order is (innermost first):
  *
- *     Logging( Budget( Routing( Sentinel( Caching( inner ) ) ) ) )
+ *     Logging( Budget( Routing( Sentinel( Caching( KeyRotation( inner ) ) ) ) ) )
  *
+ *   0. `KeyRotationLlmProvider` (innermost, live Anthropic only) — when the
+ *      primary `ANTHROPIC_API_KEY` returns 401/403/429/quota, transparently
+ *      retries on `ANTHROPIC_API_KEY_SECONDARY` and serves on it (sticky) so
+ *      the customer never sees the blip. Both keys dead → degrades to PAUSED
+ *      (the calm "briefly offline" copy) AND pages a human (24h deadline).
+ *      It wraps the actual model call (caching sits outside, so a cache hit
+ *      never touches a key). Disable with `LLM_KEY_ROTATION=off`.
  *   1. `CachingLlmProvider` — auto-applies a prompt-cache breakpoint on the
  *      largest stable prefix (the system prompt) of every call that didn't
  *      already opt in, so caching is the default posture rather than a thing
@@ -73,6 +80,7 @@ import { persistUsageRecorder } from '../billing/usage/recorder';
 import { AnthropicProvider } from './anthropic-provider';
 import { BudgetEnforcingLlmProvider } from './budget-enforcing-provider';
 import { CachingLlmProvider } from './cache-wrapper';
+import { KeyRotationLlmProvider } from './key-rotation-provider';
 import { LoggingLlmProvider } from './logging-provider';
 import { SentinelLlmProvider } from './paused';
 import { RoutingLlmProvider } from './routing-provider';
@@ -94,11 +102,30 @@ export function getLlmProvider(): LlmProvider {
 
 function buildProvider(): LlmProvider {
   const inner = buildInnerProvider();
-  // Innermost: auto-cache the system prompt of any call that didn't opt in.
+  // Innermost: self-healing Anthropic key rotation. Wraps the actual model
+  // call so a primary-key 401/403/429/quota failure transparently retries on
+  // `ANTHROPIC_API_KEY_SECONDARY` and serves on it (sticky) — the customer
+  // never sees the blip. Both keys dead → degrade to PAUSED (the calm
+  // "briefly offline" copy, NOT a raw error) AND page a human with a 24h
+  // deadline. Only wraps the live Anthropic provider (the test/heuristic
+  // provider has no keys to rotate). See `lib/llm/key-rotation-provider.ts`
+  // for the position justification.
+  //
+  // Kill switch: `LLM_KEY_ROTATION=off` makes it a pure pass-through to the
+  // primary — consistent with the other §9 switches.
+  const rotated =
+    inner.name === 'anthropic'
+      ? new KeyRotationLlmProvider(inner, {
+          enabled: keyRotationEnabled(),
+          buildSecondary: buildSecondaryAnthropic,
+        })
+      : inner;
+  // Auto-cache the system prompt of any call that didn't opt in.
   // `LLM_PROMPT_CACHE=off` turns the wrapper into a pure pass-through (e.g. to
-  // A/B the cost impact, or to debug a suspected cache invalidator).
+  // A/B the cost impact, or to debug a suspected cache invalidator). Caching
+  // sits OUTSIDE rotation so a cache hit short-circuits before we touch a key.
   const cacheEnabled = process.env.LLM_PROMPT_CACHE !== 'off';
-  const caching = new CachingLlmProvider(inner, { enabled: cacheEnabled });
+  const caching = new CachingLlmProvider(rotated, { enabled: cacheEnabled });
   // Sentinel: when `ANTHROPIC_API_KEY` is the `sk-ant-PAUSED-…` sentinel
   // (spend paused), short-circuit to PAUSED BEFORE the cache layer and the
   // model — the doomed 401 round-trip is never burned and the cache never
@@ -170,6 +197,30 @@ function sentinelEnabled(): boolean {
   return v !== 'on' && v !== '1' && v !== 'true';
 }
 
+/** Key rotation defaults ON. `LLM_KEY_ROTATION=off` is the kill switch that
+ *  turns the wrapper into a pure pass-through to the primary key — for a dev
+ *  who wants the raw single-key behavior. Mirrors the other §9 switches. */
+function keyRotationEnabled(): boolean {
+  return process.env.LLM_KEY_ROTATION !== 'off';
+}
+
+/** Build the secondary Anthropic provider from `ANTHROPIC_API_KEY_SECONDARY`.
+ *  Returns null when no secondary is configured (a primary failure then
+ *  degrades-to-PAUSED + pages). Read at build time inside the rotation
+ *  wrapper's memoized factory. */
+function buildSecondaryAnthropic(): LlmProvider | null {
+  const secondary = process.env.ANTHROPIC_API_KEY_SECONDARY;
+  if (!secondary || secondary.length === 0) return null;
+  // A paused-sentinel secondary is not a usable failover target — treat it
+  // as "no secondary" so we degrade+page rather than silently failing over
+  // to a key that's also guaranteed to 401.
+  if (secondary.startsWith('sk-ant-PAUSED-')) return null;
+  return new AnthropicProvider({
+    apiKey: secondary,
+    defaultModel: process.env.ANTHROPIC_MODEL,
+  });
+}
+
 function buildInnerProvider(): LlmProvider {
   const mode = process.env.LLM_PROVIDER;
   if (mode === 'test') {
@@ -225,3 +276,5 @@ export {
   isPausedApiKey,
   PAUSED_API_KEY_PREFIX,
 } from './paused';
+export { KeyRotationLlmProvider, isKeyFailure } from './key-rotation-provider';
+export type { KeyRotationOptions } from './key-rotation-provider';

@@ -116,6 +116,10 @@ export const NON_SWEEP_LIVE_SKILLS: Readonly<Record<string, string>> = {
   'inbox-triage-general': 'lib/inngest/functions/process-webhook-event.ts (generic chain)',
   // SupportRequest-create handler.
   'support-handler': 'lib/inngest/functions/support-handler-on-create.ts',
+  // pfd-3 L1 triage — intercepts every SupportRequest create (help form +
+  // in-app chat) before the draft path; same event-create caller as
+  // support-handler.
+  'customer-support-triage': 'lib/inngest/functions/support-handler-on-create.ts (triage interception)',
   // Plaino /talk INSTRUCT path → instruction-handler-on-create.
   'research-on-demand-general':
     'lib/inngest/functions/instruction-handler-on-create.ts (research-tagged turns)',

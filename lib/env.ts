@@ -175,6 +175,30 @@ export const env = {
       .filter(Boolean);
   },
 
+  // ── Self-healing credentials: the designated trusted human ──────────────
+  // (lib/ops/page-human.ts). The single inbox every "page a human" call
+  // routes to when the fleet detects a problem it cannot self-heal. This
+  // is the "if Conner died tomorrow" address — set it to a monitored inbox
+  // (or a small distribution list) that ISN'T Conner's personal account so
+  // the alert survives him. When unset, pageHuman falls back to the first
+  // OPERATOR_EMAIL_ALLOWLIST entry (Conner today) AND says in the email body
+  // that no designated fallback human is configured — a loud nudge, never a
+  // silent drop. Accepts a comma-separated list; all recipients are paged.
+  fleetTrustedHumanEmails: (): string[] => {
+    const v = optional("FLEET_TRUSTED_HUMAN_EMAIL") ?? "";
+    return v
+      .split(",")
+      .map((e) => e.trim())
+      .filter(Boolean);
+  },
+  // ── Anthropic key rotation (lib/llm/key-rotation-provider.ts) ───────────
+  // The secondary Anthropic API key the LLM stack fails over to when the
+  // primary returns 401/403/429. Sticky: once the stack is serving on the
+  // secondary it stays there until the process restarts or the primary
+  // verifies healthy again. When unset and the primary fails, the stack
+  // degrades exactly like the paused-sentinel path AND pages a human.
+  anthropicApiKeySecondary: () => optional("ANTHROPIC_API_KEY_SECONDARY"),
+
   // Google integration (PR-B Gmail OAuth + Pub/Sub).
   // Setup steps live in docs/operator-integrations-setup.md. Per
   // feedback_no_prod_secrets_in_dev: use a dev-tier Google Cloud Project

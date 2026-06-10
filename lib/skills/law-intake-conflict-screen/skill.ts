@@ -9,6 +9,12 @@
  *   2. A formal internal-notice draft for the responsible attorney —
  *      with `{{operator: ...}}` merge fields for the legal conclusion
  *      so the attorney signs off before anything sends.
+ *   3. On CLEAR: a deterministic engagement-letter draft surfaced as a
+ *      PROCESS_DOC_DRAFT WorkApprovalQueueItem for attorney review.
+ *   4. On FLAG / NEEDS-COUNSEL-REVIEW: a conflict-review card surfaced as
+ *      a COMPLIANCE_FLAG WorkApprovalQueueItem with cited matches.
+ *   5. Value-impact row via `sink` (hours saved = paralegal conflict
+ *      screen time + engagement-letter drafting time).
  *
  * Per `lib/skills/prompts/law.ts` (formal tone, MRPC 1.1/1.6/1.18):
  *   - never assert a legal conclusion
@@ -17,14 +23,23 @@
  *
  * Per `project_no_outbound_architecture.md`: this skill DRAFTS only.
  * The customer's system sends. The `persister` writes a Gmail or Outlook
- * draft when confidence ≥ threshold.
+ * draft when confidence ≥ threshold. The `sink` writes WorkApprovalQueueItem
+ * rows so the attorney sees the verdict card in /approvals without
+ * leaving agentplain.
+ *
+ * Fire-gate: when `gateAllow === false` in the extended input the skill
+ * returns NOT_APPLICABLE immediately, consistent with the pattern in
+ * sibling skills (chief-of-staff, process-doc-drafter, etc.).
  */
 
 import { randomUUID } from 'node:crypto';
 import { skillError, skillOk, type SkillResult } from '../types';
+import { renderEngagementLetter } from './engagement-letter';
 import {
   DEFAULT_PERSIST_THRESHOLD,
   type ConflictHit,
+  type ConflictScreenExtendedInput,
+  type EngagementLetterDraft,
   type IntakeConflictScreenInput,
   type IntakeConflictScreenOutput,
   type IntakeNoticeDraft,
@@ -33,9 +48,28 @@ import {
   type ScreenStatus,
 } from './types';
 
+/**
+ * Run the conflict screen against the workspace ledger.
+ *
+ * Accepts either `IntakeConflictScreenInput` (base, backward-compatible)
+ * or `ConflictScreenExtendedInput` (adds `sink`, `firmContext`,
+ * `gateAllow`). Type union is intentional — the extended input is a
+ * strict superset so existing callers compile unchanged.
+ */
 export async function runSkill(
-  input: IntakeConflictScreenInput,
+  input: IntakeConflictScreenInput | ConflictScreenExtendedInput,
 ): Promise<SkillResult<IntakeConflictScreenOutput>> {
+  // Fire-gate: honor the vacation-pause / schedule-window decision the
+  // caller resolved before invoking. Consistent with the gateSkillFire
+  // pattern in sibling callers (process-webhook-event, scheduler-sweep).
+  const extended = input as ConflictScreenExtendedInput;
+  if (extended.gateAllow === false) {
+    return skillError(
+      'NOT_APPLICABLE',
+      `law-intake-conflict-screen skipped: fire gate denied`,
+    );
+  }
+
   const persistThreshold = input.persistThreshold ?? DEFAULT_PERSIST_THRESHOLD;
   const ledgerRes = await input.fetcher.fetchLedger({
     workspaceId: input.workspaceId,
@@ -55,6 +89,8 @@ export async function runSkill(
     conflicts,
     status,
   });
+
+  // Persist the attorney-notice draft (Gmail / Outlook) when above threshold.
   if (input.persister && notice.confidence >= persistThreshold) {
     const persistRes = await input.persister.persistDraft({
       workspaceId: input.workspaceId,
@@ -70,13 +106,38 @@ export async function runSkill(
     }
   }
 
-  return skillOk({
+  const screenOutput: IntakeConflictScreenOutput = {
     matterId: input.intake.matterId,
     prospectName: input.intake.prospectName,
     status,
     conflicts,
     attorneyNotice: notice,
-  });
+  };
+
+  // On CLEAR: render the engagement-letter draft deterministically.
+  // On FLAG / NEEDS-COUNSEL: no letter — the conflict must be resolved first.
+  let engagementLetter: EngagementLetterDraft | null = null;
+  if (status === 'clear') {
+    engagementLetter = renderEngagementLetter({
+      intake: input.intake,
+      matterId: input.intake.matterId,
+      firmContext: extended.firmContext,
+      now: input.now,
+    });
+  }
+
+  // Write the verdict card (COMPLIANCE_FLAG or PROCESS_DOC_DRAFT) to the
+  // approval queue via the sink. Sink failure is non-fatal — the screen
+  // output is still returned to the caller; the operator can re-queue.
+  if (extended.sink) {
+    await extended.sink.record({
+      workspaceId: input.workspaceId,
+      screen: screenOutput,
+      engagementLetter,
+    });
+  }
+
+  return skillOk(screenOutput);
 }
 
 // ── Conflict detection ──────────────────────────────────────────────────

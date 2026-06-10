@@ -106,6 +106,11 @@ import { homeServicesEstimateFollowupSweepFn } from "@/lib/inngest/functions/hom
 // WorkspaceBriefing row so the web + mobile briefings views render it. The
 // renewal-proof surface. Deterministic render, no LLM in the hot path.
 import { weeklyProofDigestSweepFn } from "@/lib/inngest/functions/weekly-proof-digest-sweep";
+// pfd-1 self-healing credentials — quarterly read-only health check of the
+// fleet-global keys (Stripe / Resend / Anthropic). A dead key pages a human
+// (critical, 24h) + writes a fleet-wide health OpsFlag the operator UI reads.
+// Also manually triggerable via agentplain/ops.credential-test.requested.
+import { credentialTestSweepFn } from "@/lib/inngest/functions/credential-test-sweep";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -148,5 +153,6 @@ export const { GET, POST, PUT } = serve({
     invoiceChaseGeneralSweepFn,
     homeServicesEstimateFollowupSweepFn,
     weeklyProofDigestSweepFn,
+    credentialTestSweepFn,
   ],
 });

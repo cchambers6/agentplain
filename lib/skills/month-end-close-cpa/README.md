@@ -26,12 +26,22 @@ CPA (`lib/verticals/cpa/content.ts` — CSM + Staff accountant JTBD rows). Tone 
 
 | Provider              | Status            | Today                                                      |
 | --------------------- | ----------------- | ---------------------------------------------------------- |
-| QuickBooks            | ❌ stubbed-json   | `JsonCloseFetcher` accepts engagement + checklist + receipts |
+| QuickBooks            | ✅ built          | `QuickBooksCloseFetcher` — engagement from the customer record; templated checklist; no received-doc concept (everything pending/late) |
 | Gmail                 | ✅ built          | `GmailCloseFetcher` auto-detects emailed doc attachments via the Gmail MCP port + categorizes them; drafts via `DraftPersister` |
+| TaxDome               | ✅ built          | `TaxdomeCloseFetcher` — engagement from the client record; templated checklist; **real received-doc portal** maps client uploads → received/uncategorized |
+| Karbon                | ✅ built          | `KarbonCloseFetcher` — engagement from the active workflow; **checklist IS the firm's Karbon jobs** (real wording, real due dates); a `done` job → synthetic receipt |
 | Outlook (M365)        | 🔄 in-flight     | Provider-neutral `DraftPersister` — swap when ready        |
-| TaxDome / Karbon      | ❌ stubbed-json   | Doc-portal events surface as `ReceivedDoc { source: 'taxdome' \| 'karbon' }` |
 
-When the QuickBooks MCP lands, a `QuickBooksCloseFetcher` impl drops in alongside `JsonCloseFetcher` — **no skill code change** (per `feedback_runner_portability.md`).
+All five `CloseFetcher` impls (`Json`, `Gmail`, `QuickBooks`, `Taxdome`, `Karbon`) share the same port — **no skill code change** per `feedback_runner_portability.md`.
+
+### Honest contract-coverage delta (TaxDome + Karbon, cv-cpa wave)
+
+The TaxDome/Karbon read contracts are read-only and narrower than the checklist wants. What each derives HONESTLY (see the per-file HONESTY BAR blocks):
+
+- **TaxDome** — strong on RECEIVED DOCS (`listReceivedDocuments` returns real client uploads with status); has **no structured checklist** (we template it from scope, same as QuickBooks) and **no contact-role / cc / sign-off** fields (defaults: `owner`, `[]`, `partnerSignoff: false`). Uploads that don't keyword-match a checklist item surface as **uncategorized receipts** rather than a false "received".
+- **Karbon** — strong on the CHECKLIST: jobs ARE the checklist (real titles + due dates). Has **no doc portal**, so a `done` job becomes a synthetic receipt labelled "(marked complete in Karbon)" — honest provenance, never implies an attached file. No active workflow for the client → `NOT_APPLICABLE` (nothing in flight to close).
+
+The **Gmail-attachment doc detector** (`GmailCloseFetcher`) is the upgrade that closes TaxDome's checklist gap and Karbon's doc gap by reading the docs clients actually email — gated on Gmail consent.
 
 ### GmailCloseFetcher (wave-5, theme #12 / ratif #7)
 

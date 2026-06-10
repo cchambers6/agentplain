@@ -44,8 +44,8 @@
 import { buildQuickbooksMcpServer } from '@/lib/integrations/quickbooks-mcp';
 import type { QuickbooksMcpServer } from '@/lib/integrations/quickbooks-mcp';
 import { skillError, skillOk, type SkillResult } from '../types';
+import { checklistForScope, deriveInternalDeadline } from './pm-fetcher-shared';
 import type {
-  ChecklistCategory,
   ChecklistItem,
   ClientEngagement,
   CloseFetcher,
@@ -58,8 +58,6 @@ import type {
  *  /approvals page reads as a calm "connect QuickBooks" prompt. */
 export const QUICKBOOKS_NOT_CONNECTED_MESSAGE =
   'QuickBooks is not yet connected for this workspace. Connect it from /integrations and Plaino will derive month-end engagement detail on the next fire.';
-
-const MS_PER_DAY = 86_400_000;
 
 export interface QuickBooksCloseFetcherOptions {
   /** Override the MCP server — tests pass a TestQuickbooksMcpServer.
@@ -215,88 +213,4 @@ function translateMcpError(
     `QuickBooks: ${message}`,
     code,
   );
-}
-
-/** Internal-deadline derivation: the firm-side close target. We use the
- *  15th of the month AFTER the period close — the standard CPA cadence
- *  for monthly closes. The firm can override per engagement when the
- *  per-workspace config UI lands. */
-function deriveInternalDeadline(periodMonth: string): Date {
-  const [yr, mo] = periodMonth.split('-').map((s) => Number.parseInt(s, 10));
-  if (!Number.isFinite(yr) || !Number.isFinite(mo)) return new Date();
-  // periodMonth = `2026-04` → deadline = 2026-05-15 (UTC midnight).
-  return new Date(Date.UTC(yr, mo, 15));
-}
-
-/** Per-scope templated checklist. Mirrors the standard CPA engagement-
- *  letter pattern: bookkeeping-only is two items; full-stack is the long
- *  set. dueAt is set 5 days BEFORE the internal deadline so chase emails
- *  give the client a runway to respond. */
-function checklistForScope(
-  scope: EngagementScope,
-  periodMonth: string,
-  internalDeadline: Date,
-): ChecklistItem[] {
-  const due = new Date(internalDeadline.getTime() - 5 * MS_PER_DAY);
-  const items: Array<{
-    label: string;
-    category: ChecklistCategory;
-    required: boolean;
-  }> = [];
-  // Every scope needs the bank statement — it's the first thing the
-  // staff reconciles.
-  items.push({
-    label: `Bank statement(s) for ${periodMonth}`,
-    category: 'bank-statement',
-    required: true,
-  });
-  items.push({
-    label: `Business credit-card statement(s) for ${periodMonth}`,
-    category: 'credit-card-statement',
-    required: true,
-  });
-  if (
-    scope === 'bookkeeping-plus-payroll' ||
-    scope === 'full-stack-monthly'
-  ) {
-    items.push({
-      label: `Payroll register for ${periodMonth}`,
-      category: 'payroll-register',
-      required: true,
-    });
-  }
-  if (scope === 'full-stack-monthly') {
-    items.push({
-      label: `Loan / line-of-credit statements for ${periodMonth}`,
-      category: 'loan-statement',
-      required: false,
-    });
-    items.push({
-      label: `Sales-tax filing confirmation for ${periodMonth}`,
-      category: 'sales-tax-filing',
-      required: true,
-    });
-    items.push({
-      label: `AR / AP aging snapshot at month-end`,
-      category: 'ar-ap-detail',
-      required: true,
-    });
-    items.push({
-      label: `Fixed-asset additions / disposals during ${periodMonth}`,
-      category: 'fixed-asset-changes',
-      required: false,
-    });
-    items.push({
-      label: `Owner distributions / contributions during ${periodMonth}`,
-      category: 'owner-distributions',
-      required: false,
-    });
-  }
-  return items.map((it, idx) => ({
-    id: `${periodMonth}-${idx + 1}-${it.category}`,
-    label: it.label,
-    category: it.category,
-    dueAt: due,
-    required: it.required,
-  }));
 }

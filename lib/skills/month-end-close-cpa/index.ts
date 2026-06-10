@@ -15,6 +15,21 @@ export {
   QUICKBOOKS_NOT_CONNECTED_MESSAGE,
 } from './quickbooks-fetcher';
 export {
+  TaxdomeCloseFetcher,
+  TAXDOME_NOT_CONNECTED_MESSAGE,
+  type TaxdomeCloseFetcherOptions,
+} from './taxdome-close-fetcher';
+export {
+  KarbonCloseFetcher,
+  KARBON_NOT_CONNECTED_MESSAGE,
+  type KarbonCloseFetcherOptions,
+} from './karbon-close-fetcher';
+export {
+  checklistForScope,
+  deriveInternalDeadline,
+  matchReceivedToChecklist,
+} from './pm-fetcher-shared';
+export {
   GmailCloseFetcher,
   buildGmailCloseFetcher,
   categorizeAttachment,

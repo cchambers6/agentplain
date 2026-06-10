@@ -40,6 +40,7 @@ import {
   renderEnrichmentLine,
   renderMissingConnectorLine,
 } from './enrichment';
+import { polishBody, polishEnabled } from './polish';
 import {
   DEFAULT_LATE_AFTER_DAYS,
   DEFAULT_REMINDER_IN_DAYS,
@@ -202,6 +203,22 @@ export async function runSkill(
     enrichmentLine,
   });
 
+  // ── Optional, flag-gated LLM polish ──────────────────────────────────
+  // The deterministic bodies above are the product. When polish is wired
+  // AND enabled, smooth the wording — but ANY failure (including the
+  // paused-key sentinel while ANTHROPIC_API_KEY is parked) silently keeps
+  // the deterministic body. Polish runs BEFORE persistence so the saved
+  // draft carries the final text.
+  if (polishEnabled(input.polish)) {
+    for (const draft of chaseEmails) {
+      draft.body = await polishBody({
+        opts: input.polish,
+        deterministicBody: draft.body,
+        subject: draft.subject,
+      });
+    }
+  }
+
   // ── Persist chase drafts ─────────────────────────────────────────────
   for (const draft of chaseEmails) {
     if (input.persister && draft.confidence >= persistThreshold) {
@@ -223,6 +240,13 @@ export async function runSkill(
 
   // ── Build client status update ───────────────────────────────────────
   const statusUpdate = buildStatusUpdate({ engagement, items, now, enrichmentLine });
+  if (polishEnabled(input.polish)) {
+    statusUpdate.body = await polishBody({
+      opts: input.polish,
+      deterministicBody: statusUpdate.body,
+      subject: statusUpdate.subject,
+    });
+  }
   if (input.persister && statusUpdate.confidence >= persistThreshold) {
     await persistStatusUpdate(input.persister, {
       workspaceId: input.workspaceId,

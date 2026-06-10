@@ -1,5 +1,7 @@
 import { ApEyebrow, ApRootedEmptyState, Plaino } from "@/components/ui/ap";
 import type { PersistedChatMessage } from "@/lib/plaino";
+import { parsePlainoCard } from "@/lib/plaino";
+import { PlainoCardView } from "@/components/plaino/PlainoCardView";
 
 // DB-free presentation for the Plaino talk thread. `page.tsx` owns the
 // chat store, decryption, and approval-state lookups; it hands this
@@ -110,6 +112,13 @@ export function ChatBubble({
           instructionState={instructionState}
           workspaceId={workspaceId}
         />
+      ) : null}
+      {isPlaino ? (
+        // Additive visual card carried on the reply's metadata (the V27+
+        // "what next"/activation payload). The prose body above is always
+        // the source of truth; this follows it and degrades to nothing when
+        // the metadata has no valid card. Screen-reader complete on its own.
+        <PlainoCardView card={parsePlainoCard(message.metadata?.card)} />
       ) : null}
     </li>
   );

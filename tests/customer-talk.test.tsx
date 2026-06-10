@@ -152,3 +152,61 @@ test("formatTimestamp produces a short, human date", () => {
   const out = formatTimestamp(new Date("2026-06-05T13:05:00Z"));
   assert.match(out, /Jun/);
 });
+
+test("a Plaino turn renders its additive metadata.card beneath the prose", () => {
+  const html = render(
+    <ChatBubble
+      message={msg({
+        body: "Here's what I'd tackle first.",
+        metadata: {
+          card: {
+            type: "next-steps",
+            steps: [
+              {
+                label: "Every lead gets a first touch in 5 minutes — see it run",
+                href: `/app/workspace/${WS}/approvals`,
+                weight: "primary",
+                why: "Plaino drafts the first touch — you approve",
+              },
+            ],
+          },
+        },
+      })}
+      showDraftedLink={false}
+      instructionState={null}
+      workspaceId={WS}
+    />,
+  );
+  // Prose body is always present (additive rule).
+  assert.match(html, /tackle first/);
+  // The card's step renders as a real deep-link with a text label.
+  assert.match(html, /Suggested next steps/);
+  assert.match(html, /Every lead gets a first touch in 5 minutes/);
+  assert.match(html, new RegExp(`href="/app/workspace/${WS}/approvals"`));
+});
+
+test("a Plaino turn with no card degrades to text-only (renders nothing extra)", () => {
+  const html = render(
+    <ChatBubble
+      message={msg({ body: "Just a plain answer.", metadata: { kind: "ANSWER" } })}
+      showDraftedLink={false}
+      instructionState={null}
+      workspaceId={WS}
+    />,
+  );
+  assert.match(html, /Just a plain answer/);
+  assert.doesNotMatch(html, /Suggested next steps/);
+});
+
+test("a malformed metadata.card never throws — degrades silently", () => {
+  const html = render(
+    <ChatBubble
+      message={msg({ body: "Body.", metadata: { card: { type: "bogus" } } })}
+      showDraftedLink={false}
+      instructionState={null}
+      workspaceId={WS}
+    />,
+  );
+  assert.match(html, /Body\./);
+  assert.doesNotMatch(html, /Suggested next steps/);
+});

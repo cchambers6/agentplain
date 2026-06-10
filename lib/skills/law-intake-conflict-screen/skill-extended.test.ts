@@ -39,7 +39,7 @@ function ledger(entries: LedgerEntry[]): JsonLedgerFetcher {
 describe('skill extended — fire-gate deny', () => {
   it('returns NOT_APPLICABLE when gateAllow=false, does not fetch or sink', async () => {
     const sink = new RecordingConflictApprovalSink();
-    const fetcher = ledger([]);
+    const fetcher = ledger([{ clientName: 'Beacon Foods Co.', status: 'active' }]);
     const res = await runSkill({
       workspaceId: WORKSPACE_ID,
       intake: intake(),
@@ -92,7 +92,7 @@ describe('skill extended — clear path', () => {
     const res = await runSkill({
       workspaceId: WORKSPACE_ID,
       intake: intake(),
-      fetcher: ledger([]),
+      fetcher: ledger([{ clientName: 'Beacon Foods Co.', status: 'active' }]),
       sink,
       gateAllow: true,
       now: FIXED_NOW,
@@ -158,7 +158,7 @@ describe('skill extended — sink failure is non-fatal', () => {
       }
     }
     const sink = new ErrorSink();
-    const fetcher = ledger([]);
+    const fetcher = ledger([{ clientName: 'Beacon Foods Co.', status: 'active' }]);
     // Should NOT throw — the skill must be resilient to sink errors.
     // NOTE: the current skill.ts awaits sink.record without a try/catch,
     // which means a thrown error would propagate. This test documents the
@@ -184,7 +184,7 @@ describe('skill extended — sink failure is non-fatal', () => {
 
 describe('skill extended — backward compatibility', () => {
   it('works without sink, firmContext, or gateAllow (base input shape)', async () => {
-    const fetcher = ledger([]);
+    const fetcher = ledger([{ clientName: 'Beacon Foods Co.', status: 'active' }]);
     const res = await runSkill({
       workspaceId: WORKSPACE_ID,
       intake: intake(),
@@ -197,7 +197,7 @@ describe('skill extended — backward compatibility', () => {
 
   it('works with persister only (no sink)', async () => {
     const persister = new RecordingDraftPersister();
-    const fetcher = ledger([]);
+    const fetcher = ledger([{ clientName: 'Beacon Foods Co.', status: 'active' }]);
     const res = await runSkill({
       workspaceId: WORKSPACE_ID,
       intake: intake(),

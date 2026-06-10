@@ -83,11 +83,12 @@ export async function runSkill(
   }
   const ledger = ledgerRes.value;
   const conflicts = findConflicts(input.intake, ledger);
-  const status = computeStatus(conflicts);
+  const status = computeStatus(conflicts, ledger.length);
   const notice = renderAttorneyNotice({
     intake: input.intake,
     conflicts,
     status,
+    ledgerSize: ledger.length,
   });
 
   // Persist the attorney-notice draft (Gmail / Outlook) when above threshold.
@@ -203,7 +204,15 @@ function namesOverlap(a: string, b: string): boolean {
   return shared >= 2;
 }
 
-function computeStatus(conflicts: ConflictHit[]): ScreenStatus {
+function computeStatus(
+  conflicts: ConflictHit[],
+  ledgerSize: number,
+): ScreenStatus {
+  // An empty ledger means NOTHING was screened — a "clear" verdict from
+  // zero evidence would read to the attorney as a real clearance (a
+  // license-risk misrepresentation). Route to counsel review instead;
+  // the notice copy says explicitly that the screen was unscreened.
+  if (ledgerSize === 0) return 'needs-counsel-review';
   if (conflicts.length === 0) return 'clear';
   const hasDirect = conflicts.some((c) => c.severity === 'direct');
   const hasActiveAdverse = conflicts.some(
@@ -219,9 +228,13 @@ function renderAttorneyNotice(args: {
   intake: ProspectiveIntake;
   conflicts: ConflictHit[];
   status: ScreenStatus;
+  ledgerSize: number;
 }): IntakeNoticeDraft {
-  const { intake, conflicts, status } = args;
+  const { intake, conflicts, status, ledgerSize } = args;
   const subject = (() => {
+    if (ledgerSize === 0) {
+      return `Conflict screen — UNSCREENED (no matter ledger) — ${intake.prospectName} (matter ${intake.matterId})`;
+    }
     switch (status) {
       case 'clear':
         return `Conflict screen — clear — ${intake.prospectName} (matter ${intake.matterId})`;
@@ -247,9 +260,18 @@ function renderAttorneyNotice(args: {
   }
   lines.push(`  Matter: ${intake.matterDescription}`);
   lines.push('');
-  if (conflicts.length === 0) {
+  if (ledgerSize === 0) {
     lines.push(
-      'No prospect / opposing-party overlaps with the firm ledger were found ' +
+      'NO SCREEN WAS PERFORMED: the workspace matter ledger is empty, so ' +
+        'there was nothing to check this intake against. This is NOT a ' +
+        'clearance. Import your matter/client files (or connect your ' +
+        'practice-management system) and re-run, or ' +
+        '{{operator: perform the conflict check manually}}.',
+    );
+  } else if (conflicts.length === 0) {
+    lines.push(
+      `Screened against ${ledgerSize} ledger ${ledgerSize === 1 ? 'entry' : 'entries'}. ` +
+        'No prospect / opposing-party overlaps with the firm ledger were found ' +
         'on the deterministic pass. {{operator: confirm no hand-off conflicts ' +
         'and clear the screen}}.',
     );

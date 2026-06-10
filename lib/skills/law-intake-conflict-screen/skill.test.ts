@@ -172,3 +172,29 @@ describe('law-intake-conflict-screen — workspace mismatch', () => {
     assert.equal(res.error.reference, 'INVALID_INPUT');
   });
 });
+
+describe('law-intake-conflict-screen — empty ledger is never a clearance', () => {
+  it('routes an empty ledger to needs-counsel-review with UNSCREENED framing', async () => {
+    const fetcher = ledger([]);
+    const res = await runSkill({ workspaceId: WORKSPACE_ID, intake: intake(), fetcher });
+    assert.equal(res.ok, true);
+    if (!res.ok) return;
+    assert.equal(res.value.status, 'needs-counsel-review');
+    assert.equal(res.value.conflicts.length, 0);
+    assert.match(res.value.attorneyNotice.subject, /UNSCREENED \(no matter ledger\)/);
+    assert.match(res.value.attorneyNotice.body, /NO SCREEN WAS PERFORMED/);
+    assert.match(res.value.attorneyNotice.body, /NOT a clearance/);
+  });
+
+  it('states the screened ledger size on a true clear verdict', async () => {
+    const fetcher = ledger([
+      { clientName: 'Beacon Foods Co.', status: 'active' },
+      { clientName: 'Yonder Capital LLC', status: 'closed' },
+    ]);
+    const res = await runSkill({ workspaceId: WORKSPACE_ID, intake: intake(), fetcher });
+    assert.equal(res.ok, true);
+    if (!res.ok) return;
+    assert.equal(res.value.status, 'clear');
+    assert.match(res.value.attorneyNotice.body, /Screened against 2 ledger entries/);
+  });
+});

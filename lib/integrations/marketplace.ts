@@ -54,6 +54,28 @@ export type MarketplaceProviderKey =
 export type MarketplaceConnectMode = 'oauth' | 'api-key';
 
 /**
+ * How load-bearing a connector is to the workflows that use it — read by the
+ * integration self-heal layer (pfd-2) to decide whether a broken integration
+ * blocks the primary action or merely holds a side-effect.
+ *
+ *   'critical'     — the integration is the system of RECORD for the action.
+ *                    Gmail/Outlook (the inbox we draft into), QuickBooks (the
+ *                    invoices we chase), the CRMs we triage leads from. If it's
+ *                    down the primary action genuinely cannot complete, so the
+ *                    failed action queues durably + resumes on reconnect.
+ *   'non-critical' — the integration only NOTIFIES or MIRRORS a result the
+ *                    primary action already produced (Slack pings, Notion
+ *                    mirrors). If it's down the primary action STILL HAPPENS;
+ *                    only the notification is held in the retry queue and
+ *                    flushed on reconnect (degraded mode).
+ *
+ * Defaults to 'critical' when unset — the safe default is "treat a broken
+ * integration as load-bearing" so we never silently drop work by assuming a
+ * connector was decorative.
+ */
+export type IntegrationCriticality = 'critical' | 'non-critical';
+
+/**
  * Per-vertical relevance. A connector tile is only shown to a workspace
  * whose vertical is in this list. The sentinel `'all'` means horizontal —
  * relevant across every vertical (Gmail, Slack, QuickBooks, etc.).
@@ -111,6 +133,11 @@ export interface MarketplaceEntry {
    *  `'api-key'` variant for connectors whose providers issue a long-
    *  lived API key (Follow Up Boss). */
   connectMode?: MarketplaceConnectMode;
+  /** How load-bearing this connector is (pfd-2 integration self-heal).
+   *  Omitted = `'critical'` (the safe default — never silently drop work by
+   *  assuming a connector was decorative). Slack/Notion are tagged
+   *  `'non-critical'` because they notify/mirror rather than own the record. */
+  criticality?: IntegrationCriticality;
 }
 
 export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
@@ -322,6 +349,10 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     providerKey: 'SLACK',
     disciplines: ['customer-success', 'operations'],
     verticalRelevance: 'all',
+    // Slack is a NOTIFY channel, not a system of record — if it's down the
+    // primary action (the draft, the triage) still lands; the Slack ping is
+    // held in the retry queue and flushed on reconnect (degraded mode).
+    criticality: 'non-critical',
   },
   {
     id: 'paypal',
@@ -564,6 +595,9 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     providerKey: 'NOTION',
     disciplines: ['operations', 'research', 'marketing'],
     verticalRelevance: 'all',
+    // Notion MIRRORS pages into the substrate; it is not the system of record
+    // for any primary draft/triage action. Held-and-flushed when down.
+    criticality: 'non-critical',
   },
 ];
 
@@ -644,5 +678,40 @@ export function entriesForDiscipline(
 ): readonly MarketplaceEntry[] {
   return MARKETPLACE_ENTRIES.filter((e) =>
     (e.disciplines as readonly string[]).includes(disciplineId),
+  );
+}
+
+/**
+ * Criticality of a marketplace entry. Omitted on the entry = `'critical'`
+ * (the safe default). The integration self-heal layer reads this to decide
+ * whether a broken integration blocks the primary action (critical → queue
+ * + resume) or just holds the side-effect (non-critical → hold + flush).
+ */
+export function entryCriticality(entry: MarketplaceEntry): IntegrationCriticality {
+  return entry.criticality ?? 'critical';
+}
+
+/**
+ * Resolve the marketplace entry that persists as a given `IntegrationProvider`
+ * row. The integration self-heal cron walks `IntegrationCredential` rows
+ * (which carry the provider enum) and needs the customer-facing display name,
+ * the reconnect surface, and the criticality — all of which live on the
+ * marketplace entry.
+ *
+ * Several entries can share one provider key (Gmail + Google Drive both map to
+ * GOOGLE; Outlook/Teams/OneDrive/Excel to M365). We return the FIRST entry for
+ * the provider — its name is the customer-recognizable one for the account
+ * ("Gmail", "Outlook") and its reconnect path is the right landing page.
+ * Returns null for a provider that no `available` entry advertises (e.g. the
+ * vertical-adapter providers BUILDIUM/QUALIA/EZLYNX/ENCOMPASS that have no
+ * marketplace tile yet) so the caller can fall back to the raw provider key.
+ */
+export function entryForProviderKey(
+  providerKey: NonNullable<MarketplaceProviderKey>,
+): MarketplaceEntry | null {
+  return (
+    MARKETPLACE_ENTRIES.find(
+      (e) => e.status === 'available' && e.providerKey === providerKey,
+    ) ?? null
   );
 }

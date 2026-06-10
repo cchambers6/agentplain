@@ -684,6 +684,54 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
     runtime: 'live',
   },
   {
+    slug: 'invoice-chase-general',
+    name: 'Finance — invoice chase autopilot',
+    vertical: 'all',
+    description:
+      'Plaino reads your overdue QuickBooks invoices once a day, buckets each by ' +
+      'days-overdue, and drafts a tier-escalating chase message for each one — a ' +
+      'gentle first-touch on a fresh miss, a firmer note as it ages. Every draft ' +
+      'lands in /approvals tagged finance, carrying the invoice balance in the ' +
+      'payload for value-ledger ROI. When QuickBooks is not connected the sweep ' +
+      'skips the workspace quietly rather than fabricating an AR figure. On the ' +
+      'bounded-execute allowlist (FOLLOW_UP_NUDGE), so when Conner enables it the ' +
+      'owner wakes up to chased invoices. Per project_no_outbound_architecture.md, ' +
+      'nothing leaves the workspace — the customer\'s own system sends.',
+    kind: 'draft',
+    mcpDependencies: [
+      {
+        provider: 'quickbooks',
+        status: 'built',
+        note:
+          'Overdue invoices + balances ride the existing QuickBooks MCP ' +
+          '(lib/skills/invoice-chase-general/quickbooks-ar-fetcher.ts). When ' +
+          'QuickBooks is not connected the fetcher returns NOT_CONFIGURED and the ' +
+          'sweep skips the workspace — never fabricates AR. Daily caller: ' +
+          'lib/inngest/functions/invoice-chase-general-sweep.ts (6 AM UTC).',
+      },
+      {
+        provider: 'work-approval-queue',
+        status: 'built',
+        note:
+          'PrismaInvoiceChaseApprovalSink persists each chase as a ' +
+          'WorkApprovalQueueItem (kind=FOLLOW_UP_NUDGE, discipline=finance) with ' +
+          'balanceUsd in the payload for ROI tracking.',
+      },
+    ],
+    groundedIn: [
+      'project_no_outbound_architecture.md',
+      'feedback_no_silent_vendor_lock.md',
+      'feedback_runner_portability.md',
+      'feedback_cold_start_safe_agents.md',
+      'feedback_no_guesses_no_estimates.md (no fabricated AR when QB is dark)',
+      'docs/audits/SIGNUP_TO_GO_AUDIT_2026_06_10.md §Engine (the silent-gating 🚨 — ' +
+        'this skill shipped (PR #203) but was ABSENT from SKILL_CATALOG, so ' +
+        'isSkillInstalledForWorkspace returned false and the daily sweep skipped ' +
+        'every workspace. This entry closes that gap.)',
+    ],
+    runtime: 'live',
+  },
+  {
     slug: 'invoice-chasing-realestate',
     name: 'Commission invoice chasing — real estate',
     vertical: 'real-estate',
@@ -807,6 +855,11 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
       'lib/verticals/cpa/content.ts',
       'lib/skills/prompts/cpa.ts (formal tone, never state a tax position)',
     ],
+    // pfd-8: flipped live. Production caller =
+    // lib/inngest/functions/month-end-close-cpa-sweep.ts (monthly, month-end
+    // window). Enumerates QuickBooks customers per CPA workspace and drafts a
+    // close-prep chase per engagement.
+    runtime: 'live',
   },
   {
     slug: 'law-intake-conflict-screen',
@@ -842,6 +895,11 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
       'lib/skills/prompts/law.ts (formal tone, never state a legal conclusion)',
       'ABA MRPC 1.7 / 1.18 (conflict screening framework)',
     ],
+    // pfd-8: flipped live. Production caller =
+    // lib/inngest/functions/law-intake-conflict-screen-sweep.ts (daily). Sweeps
+    // un-screened new-matter intakes per law workspace and screens each against
+    // the firm ledger.
+    runtime: 'live',
   },
   {
     slug: 'ria-client-update-draft',

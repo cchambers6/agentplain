@@ -119,6 +119,11 @@ import { credentialTestSweepFn } from "@/lib/inngest/functions/credential-test-s
 // operator panel renders "last successful health check: <ts>". Manually
 // triggerable via agentplain/ops.fleet-health.requested.
 import { fleetHealthCheckFn } from "@/lib/inngest/functions/fleet-health-check";
+// pfd-4 — leak-path auto-refund. Daily sweep finds paying workspaces in an
+// UNSUPPORTED vertical (registry truth) with zero value delivered and either
+// auto-refunds (when UNSUPPORTED_VERTICAL_AUTO_REFUND=on) or — by default —
+// pages a human in detect-only mode. Nobody pays for a vertical we can't serve.
+import { unsupportedVerticalRefundSweepFn } from "@/lib/inngest/functions/unsupported-vertical-refund-sweep";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -163,5 +168,6 @@ export const { GET, POST, PUT } = serve({
     weeklyProofDigestSweepFn,
     credentialTestSweepFn,
     fleetHealthCheckFn,
+    unsupportedVerticalRefundSweepFn,
   ],
 });

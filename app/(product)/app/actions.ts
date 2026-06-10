@@ -12,6 +12,11 @@ import {
 } from "@/lib/auth";
 import { verticalEnumFromSlug } from "@/lib/auth/vertical-enum";
 import { getVerticalContent } from "@/lib/verticals";
+import {
+  isVerticalSupportedSafe,
+  resolveVerticalReadiness,
+} from "@/lib/verticals/readiness";
+import { submitLeadCapture } from "@/lib/leads";
 import { createTrialCheckoutForSignup } from "@/lib/billing/checkout";
 import { provisionTrialSubscriptionSafe } from "@/lib/billing/provisioning";
 import { env } from "@/lib/env";
@@ -39,6 +44,15 @@ export interface ActionResult {
    *  redirecting, so the customer can sign in from the email even if
    *  they cancel out of Checkout. */
   checkoutUrl?: string;
+  /** pfd-4 vertical-gating: when the customer picks a vertical whose
+   *  killer workflow does not fire yet, the form switches to the honest
+   *  waitlist screen instead of proceeding to signup + Stripe. No charge,
+   *  no workspace. The slug + name let the form render Plaino-brand copy
+   *  naming the vertical. */
+  waitlist?: {
+    verticalSlug: string;
+    verticalName: string;
+  };
 }
 
 export async function signUpAction(
@@ -52,12 +66,46 @@ export async function signUpAction(
   // Validate via main's content registry — the slug must exist there for the
   // marketing/[vertical] page, the JTBD tables, the ROI anchor, etc. Slug →
   // Prisma enum mapping happens at this single boundary (lib/auth/vertical-enum).
-  if (!getVerticalContent(verticalSlug)) {
+  const verticalContent = getVerticalContent(verticalSlug);
+  if (!verticalContent) {
     return { ok: false, error: "Pick a vertical to continue" };
   }
   const verticalEnum = verticalEnumFromSlug(verticalSlug);
   if (!verticalEnum) {
     return { ok: false, error: "Pick a vertical to continue" };
+  }
+
+  // pfd-4 UNSUPPORTED-VERTICAL GATE. Nobody pays for a vertical we cannot
+  // serve. If the killer workflow for this vertical does not fire today
+  // (registry truth: catalog `runtime: 'live'` + a live production caller),
+  // we DO NOT proceed to signup + Stripe Checkout. Instead we return the
+  // honest waitlist branch — the form swaps to "we don't have a killer
+  // workflow ready for <vertical> yet" + a notify-me capture. This runs
+  // BEFORE `signUpBrokerOwner`, so no workspace is created and no Stripe
+  // customer is provisioned.
+  //
+  // `isVerticalSupportedSafe` is fail-closed: if the registry can't be read
+  // it returns false (→ waitlist), NEVER true (→ take the money). The
+  // `general` on-ramp + `real-estate` are the supported slugs today; the
+  // other eight verticals route here until their killer-workflow caller
+  // lands. `general` is not in the readiness map but is always serveable
+  // (the horizontal fleet fires for it), so we let it through explicitly.
+  const isOnRampGeneral = verticalSlug === "general";
+  if (
+    !isOnRampGeneral &&
+    !isVerticalSupportedSafe(verticalSlug, (err) =>
+      getLogger()
+        .child({ boundary: "signup", vertical: verticalSlug })
+        .error("vertical-readiness resolver threw — failing closed to waitlist", err),
+    )
+  ) {
+    return {
+      ok: true,
+      waitlist: {
+        verticalSlug,
+        verticalName: verticalContent.name,
+      },
+    };
   }
 
   // Tier selection comes from the picker (Regular / Partner). Max is
@@ -204,6 +252,64 @@ export async function requestSignInAction(
   return {
     ok: true,
     notice: `If that email is registered, a sign-in link is on its way. It's valid for 15 minutes.`,
+  };
+}
+
+/**
+ * pfd-4 — capture an email to the vertical waitlist when a customer picks a
+ * vertical we don't serve yet. Reuses the existing LeadCapture table (the
+ * Plaino-chatbot lead store) via `submitLeadCapture`, persisted under
+ * withSystemContext exactly like the marketing widget's leads. NO charge,
+ * NO workspace — the durable artifact is the waitlist row + the operator
+ * sees it on /operator/leads.
+ *
+ * Defensively re-checks readiness: if a hand-crafted POST sends a SUPPORTED
+ * vertical here, we still just capture interest (harmless) — but a
+ * non-existent slug is rejected so the queue stays clean.
+ */
+export async function joinVerticalWaitlistAction(
+  _prev: ActionResult | undefined,
+  form: FormData,
+): Promise<ActionResult> {
+  const email = formString(form, "email");
+  const verticalSlug = formString(form, "vertical").toLowerCase();
+  const businessName = formString(form, "brokerageName") || null;
+  const ownerName = formString(form, "ownerName") || null;
+
+  const content = getVerticalContent(verticalSlug);
+  if (!content) {
+    return { ok: false, error: "Pick a vertical to continue" };
+  }
+  if (!email) {
+    return { ok: false, error: "Add an email so we can let you know." };
+  }
+
+  // The readiness reason is captured into the lead intent so the operator
+  // can see WHY this vertical is on the waitlist (not-live vs no-caller vs
+  // no-flagship) without re-deriving it.
+  const readiness = resolveVerticalReadiness(verticalSlug);
+
+  const result = await submitLeadCapture({
+    email,
+    name: ownerName ?? undefined,
+    business: businessName ?? undefined,
+    vertical: verticalSlug,
+    intent: `vertical-waitlist: ${content.name} (${readiness.reason})`,
+    sourcePage: "/app/sign-up",
+  });
+
+  if (!result.ok) {
+    return {
+      ok: false,
+      error:
+        result.formError ??
+        "We couldn't add you to the list. Try again, or email hello@agentplain.com.",
+    };
+  }
+
+  return {
+    ok: true,
+    notice: `You're on the list. We'll email ${email} the moment Plaino is ready for ${content.name.toLowerCase()}.`,
   };
 }
 

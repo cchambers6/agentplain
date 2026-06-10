@@ -29,6 +29,9 @@ import type {
   CreateSubscriptionInput,
   CreateSubscriptionResult,
   ProviderSubscriptionStatus,
+  RefundCustomerChargesInput,
+  RefundCustomerChargesResult,
+  RefundedCharge,
   ReportMeterEventInput,
   ReportMeterEventResult,
   RetrieveSubscriptionResult,
@@ -53,6 +56,8 @@ type StripeClientSurface = Pick<
   | "prices"
   | "webhooks"
   | "billing"
+  | "charges"
+  | "refunds"
 >;
 
 export interface StripeProviderOptions {
@@ -326,6 +331,72 @@ export class StripeBillingProvider implements BillingProvider {
       pdfUrl: finalized.invoice_pdf ?? null,
       status: finalized.status ?? "draft",
     };
+  }
+
+  // -------------------------------------------------------------------
+  // Refunds — leak-path auto-refund (pfd-4)
+  //
+  // Stripe refunds attach to a charge (or payment_intent). We list the
+  // customer's most recent SUCCEEDED, not-yet-refunded charges and refund
+  // each in full, newest-first, until the next whole charge would exceed
+  // the cap. We never partial-refund to hit the cap exactly — a partial
+  // refund of a subscription charge muddies the customer's statement; a
+  // clean whole-charge refund + a paged human for the remainder is the
+  // honest behavior.
+  //
+  // Idempotency: the SAME idempotencyKey is passed to each refund create.
+  // Stripe scopes idempotency per-request, so we suffix the charge id to
+  // keep per-charge idempotency while the caller's lifetime key prevents
+  // a second sweep from refunding a fresh charge for the same workspace
+  // (the caller's own once-per-lifetime ledger row is the durable guard).
+  //
+  // Per feedback_no_silent_vendor_lock: the Stripe SDK call stays here.
+  // -------------------------------------------------------------------
+
+  async refundCustomerCharges(
+    input: RefundCustomerChargesInput,
+  ): Promise<RefundCustomerChargesResult> {
+    const charges = await this.client.charges.list({
+      customer: input.providerCustomerId,
+      limit: 100,
+    });
+    // Newest-first (Stripe returns most-recent first). Only refund charges
+    // that actually captured money and have not already been refunded.
+    const eligible = charges.data.filter(
+      (c) => c.paid && c.status === "succeeded" && !c.refunded && c.amount > 0,
+    );
+
+    const refunds: RefundedCharge[] = [];
+    let total = 0;
+    let hitCap = false;
+    for (const charge of eligible) {
+      const remaining = charge.amount - (charge.amount_refunded ?? 0);
+      if (remaining <= 0) continue;
+      if (total + remaining > input.maxRefundUsdCents) {
+        // Refunding this whole charge would blow the cap — stop and let
+        // the caller page a human for the overage.
+        hitCap = true;
+        break;
+      }
+      const refund = await this.client.refunds.create(
+        {
+          charge: charge.id,
+          reason: "requested_by_customer",
+          metadata: {
+            agentplain_refund_reason: input.reason,
+          },
+        },
+        { idempotencyKey: `${input.idempotencyKey}:${charge.id}` },
+      );
+      refunds.push({
+        chargeId: charge.id,
+        refundId: refund.id,
+        amountUsdCents: remaining,
+      });
+      total += remaining;
+    }
+
+    return { refunds, totalRefundedUsdCents: total, hitCap };
   }
 
   // -------------------------------------------------------------------

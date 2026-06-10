@@ -31,6 +31,9 @@ import type {
   CreateSubscriptionInput,
   CreateSubscriptionResult,
   ProviderSubscriptionStatus,
+  RefundCustomerChargesInput,
+  RefundCustomerChargesResult,
+  RefundedCharge,
   ReportMeterEventInput,
   ReportMeterEventResult,
   RetrieveSubscriptionResult,
@@ -207,6 +210,63 @@ export class TestBillingProvider implements BillingProvider {
       pdfUrl: `https://invoice.example/${id}.pdf`,
       status: "open",
     };
+  }
+
+  // -------------------------------------------------------------------
+  // Refunds — leak-path auto-refund (pfd-4). An in-memory charge ledger
+  // lets tests exercise cap + idempotency without a Stripe round-trip.
+  // Seed via `seedCharge`; inspect via `refundCalls`.
+  // -------------------------------------------------------------------
+
+  /** Per-customer charge ledger. `seedCharge` appends; refunds mark
+   *  `refunded=true` so a second sweep is a clean no-op. */
+  readonly charges = new Map<
+    string,
+    { chargeId: string; amountUsdCents: number; refunded: boolean }[]
+  >();
+  /** Every refund request the provider received — for idempotency
+   *  assertions (a re-run with the same idempotencyKey must not double). */
+  readonly refundCalls: RefundCustomerChargesInput[] = [];
+  private nextRefundId = 1;
+
+  /** Test helper — seed a paid, refundable charge for a customer (newest
+   *  appended last; the provider refunds newest-first). */
+  seedCharge(
+    providerCustomerId: string,
+    amountUsdCents: number,
+    chargeId?: string,
+  ): string {
+    const id = chargeId ?? `ch_test_${this.charges.size + 1}_${amountUsdCents}`;
+    const list = this.charges.get(providerCustomerId) ?? [];
+    list.push({ chargeId: id, amountUsdCents, refunded: false });
+    this.charges.set(providerCustomerId, list);
+    return id;
+  }
+
+  async refundCustomerCharges(
+    input: RefundCustomerChargesInput,
+  ): Promise<RefundCustomerChargesResult> {
+    this.refundCalls.push(input);
+    const list = this.charges.get(input.providerCustomerId) ?? [];
+    // Newest-first, mirroring Stripe's list order.
+    const eligible = [...list].reverse().filter((c) => !c.refunded);
+    const refunds: RefundedCharge[] = [];
+    let total = 0;
+    let hitCap = false;
+    for (const charge of eligible) {
+      if (total + charge.amountUsdCents > input.maxRefundUsdCents) {
+        hitCap = true;
+        break;
+      }
+      charge.refunded = true;
+      refunds.push({
+        chargeId: charge.chargeId,
+        refundId: `re_test_${this.nextRefundId++}`,
+        amountUsdCents: charge.amountUsdCents,
+      });
+      total += charge.amountUsdCents;
+    }
+    return { refunds, totalRefundedUsdCents: total, hitCap };
   }
 
   // -------------------------------------------------------------------

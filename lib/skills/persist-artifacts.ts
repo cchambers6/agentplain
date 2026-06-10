@@ -301,6 +301,9 @@ async function applyBoundedExecuteDecision(
       store: args.boundedExecute.store,
       gates: args.boundedExecute.gates,
       env: args.boundedExecute.env,
+      // cv-x1 — the workspace's OWN autonomy policy governs the decision
+      // (workspace-scoped OpsFlag row → fleet-wide row → default OFF).
+      workspaceId: args.workspaceId,
     });
     const flip = boundedExecuteStatusFlip(decision);
     if (!flip) {

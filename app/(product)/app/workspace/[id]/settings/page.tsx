@@ -65,6 +65,12 @@ export default async function SettingsPage({ params }: PageProps) {
         "Tell your service team which agent decisions need explicit ratification.",
     },
     {
+      href: `/app/workspace/${workspaceId}/settings/autonomy`,
+      label: "autonomy",
+      description:
+        "Choose which low-stakes, reversible actions flow through without your click — and the dollar ceiling each must stay under. Includes the log of everything done autonomously.",
+    },
+    {
       href: `/app/workspace/${workspaceId}/settings/skills`,
       label: "skill config",
       description:

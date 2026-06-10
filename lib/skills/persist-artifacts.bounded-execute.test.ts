@@ -170,6 +170,69 @@ describe('persist-artifacts + bounded-execute', () => {
     assert.equal((audit.payload as Record<string, unknown>).kind, 'ADMIN_BILLING_NOTICE');
   });
 
+  it('cv-x1: workspace-scoped opt-in fires for ws-1 (no fleet rows at all)', async () => {
+    const { tx, approvals, audits } = fakeTx();
+    await persistSkillRunArtifacts({
+      workspaceId: 'ws-1',
+      record: recordWithAdminPayload(),
+      client: tx as never,
+      boundedExecute: {
+        store: new InMemoryOpsFlagStore({
+          [autoExecEnabledFlagName('ADMIN_BILLING_NOTICE', 'ws-1')]: 'true',
+          [autoExecCeilingFlagName('ADMIN_BILLING_NOTICE', 'ws-1')]: '4',
+        }),
+        gates: GATES_PASS,
+        env: env({ [BOUNDED_AUTO_EXECUTE_MASTER_ENV]: 'on' }),
+      },
+    });
+    assert.equal(approvals[0].data.status, 'AUTO_APPROVED');
+    assert.equal(audits.length, 1);
+    assert.equal(
+      (audits[0].data.payload as Record<string, unknown>).ceilingUsd,
+      4,
+      'audit records the workspace ceiling the action cleared',
+    );
+  });
+
+  it("cv-x1: another workspace's opt-in does NOT govern this one → PENDING", async () => {
+    const { tx, approvals, audits } = fakeTx();
+    await persistSkillRunArtifacts({
+      workspaceId: 'ws-1',
+      record: recordWithAdminPayload(),
+      client: tx as never,
+      boundedExecute: {
+        store: new InMemoryOpsFlagStore({
+          // Only SOME OTHER workspace opted in — ws-1 must stay PENDING.
+          [autoExecEnabledFlagName('ADMIN_BILLING_NOTICE', 'ws-other')]: 'true',
+        }),
+        gates: GATES_PASS,
+        env: env({ [BOUNDED_AUTO_EXECUTE_MASTER_ENV]: 'on' }),
+      },
+    });
+    assert.equal(approvals[0].data.status, 'PENDING');
+    assert.equal(audits.length, 0);
+  });
+
+  it('cv-x1: workspace opt-out beats fleet-wide enable → PENDING', async () => {
+    const { tx, approvals, audits } = fakeTx();
+    await persistSkillRunArtifacts({
+      workspaceId: 'ws-1',
+      record: recordWithAdminPayload(),
+      client: tx as never,
+      boundedExecute: {
+        store: new InMemoryOpsFlagStore({
+          [autoExecEnabledFlagName('ADMIN_BILLING_NOTICE')]: 'true',
+          [autoExecCeilingFlagName('ADMIN_BILLING_NOTICE')]: '100',
+          [autoExecEnabledFlagName('ADMIN_BILLING_NOTICE', 'ws-1')]: 'false',
+        }),
+        gates: GATES_PASS,
+        env: env({ [BOUNDED_AUTO_EXECUTE_MASTER_ENV]: 'on' }),
+      },
+    });
+    assert.equal(approvals[0].data.status, 'PENDING');
+    assert.equal(audits.length, 0);
+  });
+
   it('billing paused gate → PENDING, no audit (composition, not bypass)', async () => {
     const { tx, approvals, audits } = fakeTx();
     await persistSkillRunArtifacts({

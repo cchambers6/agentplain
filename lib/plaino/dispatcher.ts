@@ -62,6 +62,11 @@ import {
   type SupportContextSnippet,
 } from './types';
 import {
+  shouldAttachCard,
+  messageHasCardIntent,
+  buildReplyCard,
+} from './reply-card';
+import {
   DEFAULT_DISPATCH_MEMORY_BUDGET,
   DISPATCH_MEMORY_CHAR_CAP,
   extractMemoryFromConversation,
@@ -301,6 +306,31 @@ export async function runPlainoTurn(
   }
 
   // 5. Persist the Plaino reply with classification metadata.
+  //    Deterministically attach the activation/what-next card when the
+  //    frequency rule fires. The card is ADDITIVE — the prose reply is
+  //    always the source of truth; the card is enhancement only.
+  //    - first reply in conversation (history empty)
+  //    - or the customer asked "what can you do?" / "what's next?"
+  //    Marketing mode never reaches this dispatcher so no workspace-card
+  //    leak is possible (per project_no_outbound_architecture).
+  const isFirstReply = input.history.length === 0;
+  const hasIntent = messageHasCardIntent(trimmedMessage);
+  const attachCard = shouldAttachCard({
+    isFirstReply,
+    hasCardIntent: hasIntent,
+    isDegradedPlaceholder: false,
+  });
+  const replyCard = attachCard
+    ? buildReplyCard({
+        workspaceId: input.workspaceId,
+        snapshot: input.capabilities,
+        vertical: input.vertical ?? null,
+        // Onboarding state is not available in the dispatcher's input.
+        // Default to all-false (new workspace) so the card always shows
+        // setup-gap steps — conservative, never over-claims completion.
+      })
+    : null;
+
   const plainoMessage = await input.store.appendMessage({
     threadId: customerMessage.threadId,
     workspaceId: input.workspaceId,
@@ -320,6 +350,7 @@ export async function runPlainoTurn(
         sourceUrl: c.sourceUrl,
         similarity: Number(c.similarity.toFixed(3)),
       })),
+      ...(replyCard !== null ? { card: replyCard } : {}),
     },
     now: input.now,
   });
@@ -973,6 +1004,19 @@ async function persistPlaceholderReply(
     '',
     '— Plaino',
   ].join('\n');
+
+  // The degraded placeholder is when the card is MOST valuable — the
+  // customer still gets a useful next action even though Plaino can't
+  // answer. The isFirstReply/intent check is skipped here: the card
+  // ALWAYS attaches to a placeholder reply so the "what should I do?"
+  // question has a real answer even when the LLM is offline.
+  const placeholderCard = buildReplyCard({
+    workspaceId: args.input.workspaceId,
+    snapshot: args.input.capabilities,
+    vertical: args.input.vertical ?? null,
+    firstSession: true, // conservative — show killer workflow
+  });
+
   return args.input.store.appendMessage({
     threadId: args.customerMessage.threadId,
     workspaceId: args.input.workspaceId,
@@ -981,6 +1025,7 @@ async function persistPlaceholderReply(
     metadata: {
       kind: 'PLACEHOLDER',
       reason: args.reason,
+      card: placeholderCard,
     },
     now: args.input.now,
   });

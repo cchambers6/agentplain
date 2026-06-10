@@ -29,7 +29,6 @@ const WS_ID = '11111111-1111-1111-1111-111111111111';
 function candidate(over: Partial<LeakingWorkspace> = {}): LeakingWorkspace {
   return {
     workspaceId: WS_ID,
-<<<<<<< HEAD
     // Insurance is genuinely unsupported (credential-gated) post-pfd-8 —
     // CPA + law were flipped to SUPPORTED, so they are no longer leak-path
     // refund candidates. The sweep mechanics under test are vertical-agnostic;
@@ -37,11 +36,6 @@ function candidate(over: Partial<LeakingWorkspace> = {}): LeakingWorkspace {
     workspaceName: 'Acme Insurance',
     workspaceSlug: 'acme-insurance',
     vertical: 'INSURANCE' as Vertical,
-=======
-    workspaceName: 'Acme CPA',
-    workspaceSlug: 'acme-cpa',
-    vertical: 'CPA' as Vertical,
->>>>>>> f597d4c (feat(pfd-4): unsupported-vertical signup gating + leak-path auto-refund)
     brokerOwnerEmail: 'owner@acme.example',
     brokerOwnerName: 'Pat Owner',
     stripeCustomerId: 'cus_test_acme',

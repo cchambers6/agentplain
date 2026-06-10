@@ -140,6 +140,14 @@ import { unsupportedVerticalRefundSweepFn } from "@/lib/inngest/functions/unsupp
 // was missed.
 import { integrationHealthSweepFn } from "@/lib/inngest/functions/integration-health-sweep";
 import { retryQueueResumeSweepFn } from "@/lib/inngest/functions/retry-queue-resume-sweep";
+// pfd-8 — registry-truth production callers. month-end-close-cpa (PR #205)
+// and law-intake-conflict-screen (PR #206) shipped module-complete but had
+// NO production caller — a paying CPA / law workspace never saw the killer
+// workflow. These are the missing callers. CPA fires monthly (close last
+// month); law fires daily (screen new matters). Both write WorkApprovalQueueItem
+// rows only — no outbound.
+import { monthEndCloseCpaSweepFn } from "@/lib/inngest/functions/month-end-close-cpa-sweep";
+import { lawConflictScreenSweepFn } from "@/lib/inngest/functions/law-intake-conflict-screen-sweep";
 // pfd-4 — leak-path auto-refund. Daily sweep finds paying workspaces in an
 // UNSUPPORTED vertical (registry truth) with zero value delivered and either
 // auto-refunds (when UNSUPPORTED_VERTICAL_AUTO_REFUND=on) or — by default —
@@ -194,6 +202,8 @@ export const { GET, POST, PUT } = serve({
     unsupportedVerticalRefundSweepFn,
     integrationHealthSweepFn,
     retryQueueResumeSweepFn,
+    monthEndCloseCpaSweepFn,
+    lawConflictScreenSweepFn,
     unsupportedVerticalRefundSweepFn,
   ],
 });

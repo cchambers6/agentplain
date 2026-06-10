@@ -90,6 +90,12 @@ import { mediaMonthlyMediaPlanFn } from "@/lib/inngest/functions/media-monthly-m
 // vertical heads consume. Provider behind lib/competitive-signals (fixture
 // default; flag-gated live Bright Data MCP). Draft-and-propose, no outbound.
 import { competitiveSignalFeedSweepFn } from "@/lib/inngest/functions/competitive-signal-feed-sweep";
+// cv-general — QuickBooks AR invoice-chase autopilot. Daily 6 AM UTC sweep
+// reads overdue invoices, drafts tier-escalating chase messages keyed on
+// days-overdue, and stages each as a FOLLOW_UP_NUDGE approval item. When the
+// BOUNDED_AUTO_EXECUTE_MASTER is on, these auto-approve so the owner wakes up
+// to chased invoices. Payload carries balanceUsd for value-ledger ROI.
+import { invoiceChaseGeneralSweepFn } from "@/lib/inngest/functions/invoice-chase-general-sweep";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -129,5 +135,6 @@ export const { GET, POST, PUT } = serve({
     mediaPlatformPerformanceDigestFn,
     mediaMonthlyMediaPlanFn,
     competitiveSignalFeedSweepFn,
+    invoiceChaseGeneralSweepFn,
   ],
 });

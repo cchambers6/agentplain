@@ -60,6 +60,8 @@ export const SKILL_DISCIPLINE: Record<string, DisciplineId> = {
   'recruiting-candidate-status-update': 'customer-success',
   'property-management-rent-collection-chase': 'finance',
   'title-escrow-closing-doc-chase': 'operations',
+  // General cross-vertical finance skill (invoice-chase-general)
+  'invoice-chase-general': 'finance',
 };
 
 /**

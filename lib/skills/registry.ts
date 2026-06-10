@@ -412,6 +412,68 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
     runtime: 'live',
   },
   {
+    slug: 'customer-support-triage',
+    name: 'Support triage — L1 answer, resolve, or escalate',
+    vertical: 'all',
+    description:
+      'Pillar-3 of the self-healing fleet: Plaino as L1 support. Intercepts ' +
+      'every inbound support message (the /help SupportRequest path AND the ' +
+      'in-app help chat, which both funnel through submitSupportRequest) ' +
+      'BEFORE the draft path and routes it to exactly one outcome so a ' +
+      'customer question never hits a black hole: (1) ESCALATE-FIRST to a ' +
+      'human via pageHuman with a 24h deadline for legal/compliance, billing ' +
+      'disputes over a tunable threshold, vulnerability reports, mental-health ' +
+      'distress, data-deletion requests, or ANY explicit ask for a human — and ' +
+      'mark the thread escalated so Plaino stops auto-replying; (2) ' +
+      'AUTO-ANSWER from the curated KB (marketing FAQ + product docs) when ' +
+      'confidence clears the threshold, signed by Plaino, never claiming to be ' +
+      'human; (3) AUTO-RESOLVE bounded zero-dollar account actions (reconnect ' +
+      'prompt, pause/resume, resend magic link) through the EXISTING ' +
+      'bounded-execute autonomy rails; (4) DRAFT-FOR-REVIEW as the ' +
+      'self-routing floor (the existing SUPPORT_HANDLER_REPLY_DRAFT path). ' +
+      'When the LLM is paused/dead it degrades to escalate-everything + pages ' +
+      'once per outage window. Anything touching money stays draft-for-review.',
+    kind: 'triage',
+    mcpDependencies: [
+      {
+        provider: 'anthropic-llm',
+        status: 'built',
+        note:
+          'KB-judged retrieval + grounded answer ride the provider-neutral ' +
+          'LlmProvider (the rotation/paused/budget stack). A PAUSED / dead-key ' +
+          'response degrades the skill to escalate-everything.',
+      },
+      {
+        provider: 'ops-page-human',
+        status: 'built',
+        note:
+          'Escalations route through lib/ops/page-human (pfd-1) — the one ' +
+          'fleet-wide escalation choke point. critical + 24h deadline for ' +
+          'trigger-based escalations, warn for the degraded-LLM path.',
+      },
+      {
+        provider: 'bounded-execute',
+        status: 'built',
+        note:
+          'Auto-resolve reuses lib/skills/bounded-execute (#204 per-workspace ' +
+          'autonomy + reversibility allowlist). Autonomy off → draft-for-review. ' +
+          'No new autonomy mechanism invented.',
+      },
+    ],
+    groundedIn: [
+      'project_no_outbound_architecture.md (drafts/advises; never sends)',
+      'project_plaino_chatbot_two_surfaces.md (REUSES SUPPORT_HANDLER_REPLY_DRAFT)',
+      'project_plaino_named_agent.md (signed by Plaino, calm heritage voice)',
+      'project_fire_gate_must_wire_all_skill_callers.md (gateSkillFire wired ' +
+        'into support-handler-on-create)',
+      'feedback_cold_start_safe_agents.md (KB + policy read fresh per fire)',
+      'feedback_runner_portability.md (KB / LLM / pager / store / marker ports)',
+      'SIGNUP_TO_GO_AUDIT_2026_06_10.md (closes the silent-support-death gap)',
+    ],
+    defaultEnabled: true,
+    runtime: 'live',
+  },
+  {
     slug: 'analytics-weekly-pulse-general',
     name: 'Analytics — weekly pulse',
     vertical: 'all',

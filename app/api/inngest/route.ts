@@ -99,6 +99,13 @@ import { invoiceChaseGeneralSweepFn } from "@/lib/inngest/functions/invoice-chas
 // cv/home-services-estimates — daily estimate follow-up cron for
 // HOME_SERVICES workspaces with a connected QuickBooks account.
 import { homeServicesEstimateFollowupSweepFn } from "@/lib/inngest/functions/home-services-estimate-followup-sweep";
+// Wave cv-x2 — weekly proof-of-value digest. Every Monday morning each
+// active workspace gets a "what Plaino did for you last week" digest
+// (hours saved, dollars influenced incl. real AR where a payload carried
+// it, actions staged vs auto-executed, per-skill breakdown) persisted as a
+// WorkspaceBriefing row so the web + mobile briefings views render it. The
+// renewal-proof surface. Deterministic render, no LLM in the hot path.
+import { weeklyProofDigestSweepFn } from "@/lib/inngest/functions/weekly-proof-digest-sweep";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -140,5 +147,6 @@ export const { GET, POST, PUT } = serve({
     competitiveSignalFeedSweepFn,
     invoiceChaseGeneralSweepFn,
     homeServicesEstimateFollowupSweepFn,
+    weeklyProofDigestSweepFn,
   ],
 });

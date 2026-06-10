@@ -9,6 +9,12 @@
  *   2. A formal internal-notice draft for the responsible attorney —
  *      with `{{operator: ...}}` merge fields for the legal conclusion
  *      so the attorney signs off before anything sends.
+ *   3. On CLEAR: a deterministic engagement-letter draft surfaced as a
+ *      PROCESS_DOC_DRAFT WorkApprovalQueueItem for attorney review.
+ *   4. On FLAG / NEEDS-COUNSEL-REVIEW: a conflict-review card surfaced as
+ *      a COMPLIANCE_FLAG WorkApprovalQueueItem with cited matches.
+ *   5. Value-impact row via `sink` (hours saved = paralegal conflict
+ *      screen time + engagement-letter drafting time).
  *
  * Per `lib/skills/prompts/law.ts` (formal tone, MRPC 1.1/1.6/1.18):
  *   - never assert a legal conclusion
@@ -17,14 +23,23 @@
  *
  * Per `project_no_outbound_architecture.md`: this skill DRAFTS only.
  * The customer's system sends. The `persister` writes a Gmail or Outlook
- * draft when confidence ≥ threshold.
+ * draft when confidence ≥ threshold. The `sink` writes WorkApprovalQueueItem
+ * rows so the attorney sees the verdict card in /approvals without
+ * leaving agentplain.
+ *
+ * Fire-gate: when `gateAllow === false` in the extended input the skill
+ * returns NOT_APPLICABLE immediately, consistent with the pattern in
+ * sibling skills (chief-of-staff, process-doc-drafter, etc.).
  */
 
 import { randomUUID } from 'node:crypto';
 import { skillError, skillOk, type SkillResult } from '../types';
+import { renderEngagementLetter } from './engagement-letter';
 import {
   DEFAULT_PERSIST_THRESHOLD,
   type ConflictHit,
+  type ConflictScreenExtendedInput,
+  type EngagementLetterDraft,
   type IntakeConflictScreenInput,
   type IntakeConflictScreenOutput,
   type IntakeNoticeDraft,
@@ -33,9 +48,28 @@ import {
   type ScreenStatus,
 } from './types';
 
+/**
+ * Run the conflict screen against the workspace ledger.
+ *
+ * Accepts either `IntakeConflictScreenInput` (base, backward-compatible)
+ * or `ConflictScreenExtendedInput` (adds `sink`, `firmContext`,
+ * `gateAllow`). Type union is intentional — the extended input is a
+ * strict superset so existing callers compile unchanged.
+ */
 export async function runSkill(
-  input: IntakeConflictScreenInput,
+  input: IntakeConflictScreenInput | ConflictScreenExtendedInput,
 ): Promise<SkillResult<IntakeConflictScreenOutput>> {
+  // Fire-gate: honor the vacation-pause / schedule-window decision the
+  // caller resolved before invoking. Consistent with the gateSkillFire
+  // pattern in sibling callers (process-webhook-event, scheduler-sweep).
+  const extended = input as ConflictScreenExtendedInput;
+  if (extended.gateAllow === false) {
+    return skillError(
+      'NOT_APPLICABLE',
+      `law-intake-conflict-screen skipped: fire gate denied`,
+    );
+  }
+
   const persistThreshold = input.persistThreshold ?? DEFAULT_PERSIST_THRESHOLD;
   const ledgerRes = await input.fetcher.fetchLedger({
     workspaceId: input.workspaceId,
@@ -49,12 +83,15 @@ export async function runSkill(
   }
   const ledger = ledgerRes.value;
   const conflicts = findConflicts(input.intake, ledger);
-  const status = computeStatus(conflicts);
+  const status = computeStatus(conflicts, ledger.length);
   const notice = renderAttorneyNotice({
     intake: input.intake,
     conflicts,
     status,
+    ledgerSize: ledger.length,
   });
+
+  // Persist the attorney-notice draft (Gmail / Outlook) when above threshold.
   if (input.persister && notice.confidence >= persistThreshold) {
     const persistRes = await input.persister.persistDraft({
       workspaceId: input.workspaceId,
@@ -70,13 +107,38 @@ export async function runSkill(
     }
   }
 
-  return skillOk({
+  const screenOutput: IntakeConflictScreenOutput = {
     matterId: input.intake.matterId,
     prospectName: input.intake.prospectName,
     status,
     conflicts,
     attorneyNotice: notice,
-  });
+  };
+
+  // On CLEAR: render the engagement-letter draft deterministically.
+  // On FLAG / NEEDS-COUNSEL: no letter — the conflict must be resolved first.
+  let engagementLetter: EngagementLetterDraft | null = null;
+  if (status === 'clear') {
+    engagementLetter = renderEngagementLetter({
+      intake: input.intake,
+      matterId: input.intake.matterId,
+      firmContext: extended.firmContext,
+      now: input.now,
+    });
+  }
+
+  // Write the verdict card (COMPLIANCE_FLAG or PROCESS_DOC_DRAFT) to the
+  // approval queue via the sink. Sink failure is non-fatal — the screen
+  // output is still returned to the caller; the operator can re-queue.
+  if (extended.sink) {
+    await extended.sink.record({
+      workspaceId: input.workspaceId,
+      screen: screenOutput,
+      engagementLetter,
+    });
+  }
+
+  return skillOk(screenOutput);
 }
 
 // ── Conflict detection ──────────────────────────────────────────────────
@@ -142,7 +204,15 @@ function namesOverlap(a: string, b: string): boolean {
   return shared >= 2;
 }
 
-function computeStatus(conflicts: ConflictHit[]): ScreenStatus {
+function computeStatus(
+  conflicts: ConflictHit[],
+  ledgerSize: number,
+): ScreenStatus {
+  // An empty ledger means NOTHING was screened — a "clear" verdict from
+  // zero evidence would read to the attorney as a real clearance (a
+  // license-risk misrepresentation). Route to counsel review instead;
+  // the notice copy says explicitly that the screen was unscreened.
+  if (ledgerSize === 0) return 'needs-counsel-review';
   if (conflicts.length === 0) return 'clear';
   const hasDirect = conflicts.some((c) => c.severity === 'direct');
   const hasActiveAdverse = conflicts.some(
@@ -158,9 +228,13 @@ function renderAttorneyNotice(args: {
   intake: ProspectiveIntake;
   conflicts: ConflictHit[];
   status: ScreenStatus;
+  ledgerSize: number;
 }): IntakeNoticeDraft {
-  const { intake, conflicts, status } = args;
+  const { intake, conflicts, status, ledgerSize } = args;
   const subject = (() => {
+    if (ledgerSize === 0) {
+      return `Conflict screen — UNSCREENED (no matter ledger) — ${intake.prospectName} (matter ${intake.matterId})`;
+    }
     switch (status) {
       case 'clear':
         return `Conflict screen — clear — ${intake.prospectName} (matter ${intake.matterId})`;
@@ -186,9 +260,18 @@ function renderAttorneyNotice(args: {
   }
   lines.push(`  Matter: ${intake.matterDescription}`);
   lines.push('');
-  if (conflicts.length === 0) {
+  if (ledgerSize === 0) {
     lines.push(
-      'No prospect / opposing-party overlaps with the firm ledger were found ' +
+      'NO SCREEN WAS PERFORMED: the workspace matter ledger is empty, so ' +
+        'there was nothing to check this intake against. This is NOT a ' +
+        'clearance. Import your matter/client files (or connect your ' +
+        'practice-management system) and re-run, or ' +
+        '{{operator: perform the conflict check manually}}.',
+    );
+  } else if (conflicts.length === 0) {
+    lines.push(
+      `Screened against ${ledgerSize} ledger ${ledgerSize === 1 ? 'entry' : 'entries'}. ` +
+        'No prospect / opposing-party overlaps with the firm ledger were found ' +
         'on the deterministic pass. {{operator: confirm no hand-off conflicts ' +
         'and clear the screen}}.',
     );

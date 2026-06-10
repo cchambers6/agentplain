@@ -115,3 +115,73 @@ export interface IntakeConflictScreenInput {
 }
 
 export const DEFAULT_PERSIST_THRESHOLD = 0.5;
+
+// ── Engagement letter ────────────────────────────────────────────────────
+
+/**
+ * Deterministic engagement-letter draft produced on a CLEAR screen result.
+ * No LLM in the generation path — the template is parameterized by the
+ * intake fields. All merge fields that require attorney judgment carry a
+ * `{{operator: ...}}` placeholder so nothing auto-sends without review.
+ */
+export interface EngagementLetterDraft {
+  draftId: string;
+  matterId: string;
+  prospectName: string;
+  /** Plain-text body ready for attorney review + edit. */
+  body: string;
+}
+
+// ── Approval sink ────────────────────────────────────────────────────────
+
+/**
+ * Port the skill writes to after the screen verdict. Two outcome paths:
+ *
+ *   - CLEAR  → one PROCESS_DOC_DRAFT row carrying the engagement-letter
+ *               draft so the attorney can review, edit, and sign.
+ *   - FLAGGED / NEEDS-COUNSEL-REVIEW → one COMPLIANCE_FLAG row carrying
+ *               the conflict matches so the attorney can review and decide.
+ *
+ * Per `feedback_runner_portability.md` two-implementation rule:
+ *   - `RecordingConflictApprovalSink` (test, captures calls in-memory).
+ *   - `PrismaConflictApprovalSink` (production, writes WorkApprovalQueueItem).
+ */
+export interface ConflictApprovalSink {
+  readonly name: string;
+  record(args: {
+    workspaceId: string;
+    screen: IntakeConflictScreenOutput;
+    engagementLetter: EngagementLetterDraft | null;
+  }): Promise<import('../types').SkillResult<{ sinkId: string }>>;
+}
+
+// ── Firm context ─────────────────────────────────────────────────────────
+
+/**
+ * Optional firm-level metadata included in the engagement-letter template.
+ * When omitted, `{{operator: ...}}` placeholders stand in for the values
+ * so the attorney fills them before sending.
+ */
+export interface FirmContext {
+  firmName: string;
+  firmAddress?: string;
+  stateOfPractice?: string;
+}
+
+// ── Extended input ───────────────────────────────────────────────────────
+
+/**
+ * Extends the base skill input with:
+ *   - `sink`        — optional approval-queue sink; when provided the skill
+ *                      writes the verdict card + engagement-letter draft.
+ *   - `firmContext` — optional firm info for the engagement-letter template.
+ *   - `gateAllow`   — caller-resolved fire-gate outcome (vacation / window).
+ *                      When `false` the skill returns NOT_APPLICABLE without
+ *                      touching the ledger or sink.
+ */
+export interface ConflictScreenExtendedInput extends IntakeConflictScreenInput {
+  sink?: ConflictApprovalSink | null;
+  firmContext?: FirmContext | null;
+  /** When false the skill is off-gate and must not fire. */
+  gateAllow?: boolean;
+}

@@ -13,6 +13,12 @@
  * deterministically from state, not from model free-text. No LLM, no I/O.
  * Every count it surfaces is real + conservative (feedback_no_guesses_no_estimates).
  */
+import type { Vertical } from '@prisma/client';
+import type { MarketplaceProviderKey } from '../integrations/marketplace';
+import {
+  buildKillerWorkflowStep,
+  connectedProvidersFromSnapshot,
+} from './killer-workflow';
 import type { PlainoCapabilitySnapshot } from './types';
 import type { NextStep, NextStepsCard, QueueGlance } from './visual-card';
 
@@ -37,12 +43,34 @@ export interface NextStepsComplianceState {
   openFlags: number;
 }
 
+/**
+ * Activation context — the killer-workflow lead. When present, the card
+ * LEADS with the workspace's vertical killer workflow ("the one thing I'll
+ * do for you this month") instead of a generic onboarding checklist. Set
+ * `lead: true` during the first session (onboarding not yet complete) so a
+ * brand-new customer sees the killer workflow within the first 10 minutes.
+ */
+export interface NextStepsActivationState {
+  /** Lead the card with the killer-workflow step. Typically `true` while
+   *  the workspace is still in its first session. */
+  lead: boolean;
+  /** The workspace vertical — picks which killer workflow leads. `null`
+   *  (not yet picked) falls back to the general workflow. */
+  vertical: Vertical | null;
+  /** Providers the workspace currently has an ACTIVE credential for. The
+   *  killer step branches on whether the unlocking provider is in here. */
+  connectedProviders: ReadonlySet<MarketplaceProviderKey>;
+}
+
 export interface BuildNextStepsArgs {
   workspaceId: string;
   snapshot: PlainoCapabilitySnapshot;
   onboarding: NextStepsOnboardingState;
   approvals: NextStepsApprovalState;
   compliance: NextStepsComplianceState;
+  /** Optional killer-workflow lead. Omit to keep the legacy behaviour
+   *  (setup-gaps-first checklist). */
+  activation?: NextStepsActivationState;
 }
 
 const MAX_STEPS = 4;
@@ -58,6 +86,22 @@ export function buildNextSteps(args: BuildNextStepsArgs): NextStep[] {
   const { workspaceId, snapshot, onboarding, approvals, compliance } = args;
   const base = `/app/workspace/${workspaceId}`;
   const steps: NextStep[] = [];
+
+  // 0 — the killer-workflow lead. During the first session, the card opens
+  //     with the vertical's killer workflow ("here's the one thing I'll do
+  //     for you this month") — connected → "see it run", not-connected →
+  //     the named gap + the one connect CTA that unlocks it. This is the
+  //     activation outcome: a brand-new customer sees their killer workflow
+  //     within the first 10 minutes, not a generic checklist.
+  if (args.activation?.lead) {
+    steps.push(
+      buildKillerWorkflowStep({
+        workspaceId,
+        vertical: args.activation.vertical,
+        connectedProviders: args.activation.connectedProviders,
+      }),
+    );
+  }
 
   // 1 — setup gaps (highest priority: the workspace isn't producing value yet).
   if (!onboarding.verticalPicked) {
@@ -159,4 +203,46 @@ export function buildNextStepsCard(args: BuildNextStepsArgs): NextStepsCard {
     card.queue = queue;
   }
   return card;
+}
+
+/**
+ * Production assembler — build the next-steps card directly from durable
+ * workspace state, deriving the killer-workflow lead automatically. This is
+ * the seam a chat / onboarding surface calls: pass the capability snapshot
+ * the dispatcher already computed plus the workspace vertical + first-session
+ * flag, and the card LEADS with the killer workflow when the workspace is
+ * still in its first session.
+ *
+ * `firstSession` should be true while onboarding is not yet complete (the
+ * window in which the killer-workflow promise drives activation). Once the
+ * customer has reviewed their first draft and finished onboarding, the card
+ * drops the lead and reverts to the standard what-next checklist.
+ *
+ * Pure + deterministic — no I/O, no LLM. The connected-provider set is
+ * derived from the snapshot, so there is no second DB read.
+ */
+export function buildActivationCard(args: {
+  workspaceId: string;
+  vertical: Vertical | null;
+  snapshot: PlainoCapabilitySnapshot;
+  onboarding: NextStepsOnboardingState;
+  approvals: NextStepsApprovalState;
+  compliance: NextStepsComplianceState;
+  /** Lead with the killer workflow. Typically the negation of
+   *  "onboarding complete". */
+  firstSession: boolean;
+}): NextStepsCard {
+  const activation: NextStepsActivationState = {
+    lead: args.firstSession,
+    vertical: args.vertical,
+    connectedProviders: connectedProvidersFromSnapshot(args.snapshot),
+  };
+  return buildNextStepsCard({
+    workspaceId: args.workspaceId,
+    snapshot: args.snapshot,
+    onboarding: args.onboarding,
+    approvals: args.approvals,
+    compliance: args.compliance,
+    activation,
+  });
 }

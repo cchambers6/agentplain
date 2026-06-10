@@ -26,6 +26,9 @@ import {
   type PickableSkill,
 } from "@/lib/onboarding/picked-skills";
 import { servicePartnerForWorkspace } from "@/lib/onboarding/service-partner";
+import { buildActivationCardFromConnectedProviders } from "@/lib/plaino/activation-card-server";
+import type { MarketplaceProviderKey } from "@/lib/integrations/marketplace";
+import { PlainoCardView } from "@/components/plaino/PlainoCardView";
 import {
   CALENDAR_WINDOWS,
   DRAFTING_TONES,
@@ -90,6 +93,32 @@ export default async function OnboardingPage({ params }: PageProps) {
 
   const partner = servicePartnerForWorkspace(workspaceId);
   const ownerFirstName = firstNameFromEmail(member.email);
+
+  // Activation card — the killer-workflow lead a brand-new customer SEES in
+  // their first session. Deterministic, zero LLM: it reads the workspace
+  // vertical + the connected-integration set (both already loaded above) and
+  // renders the one workflow that matters for this vertical, with the single
+  // connect CTA that unlocks it. Mounted on the onboarding surface because
+  // that is the real first-10-minutes experience and it renders without any
+  // model credential (the /talk dispatcher short-circuits in degraded mode;
+  // this never does). Additive + accessible: the onboarding prose above is
+  // always the source of truth — the card follows it, never replaces it.
+  const connectedProviderKeys = new Set<MarketplaceProviderKey>(
+    connectedIntegrations.map((c) => c.provider as MarketplaceProviderKey),
+  );
+  const activationCard = buildActivationCardFromConnectedProviders({
+    workspaceId,
+    vertical: workspace.vertical,
+    // Always a first session here — the completedAt branch returns early.
+    firstSession: true,
+    connectedProviders: connectedProviderKeys,
+    onboarding: {
+      verticalPicked: workspace.vertical !== null,
+      firstToolConnected: connectedIntegrations.length > 0,
+      scheduleWindowSet: existingPreference !== null,
+      firstDraftReviewed: false,
+    },
+  });
 
   // Wave-9 — pickable skills (filtered to runtime:'live' + connector
   // gates). The pick_skills step renders these as checkboxes; the
@@ -175,6 +204,16 @@ export default async function OnboardingPage({ params }: PageProps) {
           to read from, set your drafting tone. I take it from there.
           The 9am block lands the first briefing tomorrow.
         </p>
+
+        {/* Activation lead — the one workflow that matters for this kind of
+            business, with the single connection that brings it to life. The
+            prose above stands on its own; this card points the way. */}
+        <div className="mt-8 max-w-prose">
+          <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+            here&rsquo;s the first thing I&rsquo;ll do for your shop
+          </p>
+          <PlainoCardView card={activationCard} />
+        </div>
 
         <StepCards
           current={currentStep}

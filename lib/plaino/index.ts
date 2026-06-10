@@ -64,6 +64,12 @@ export {
   type BuildKillerWorkflowStepArgs,
 } from './killer-workflow';
 export {
+  buildActivationCardFromState,
+  buildActivationCardFromConnectedProviders,
+  loadActivationCard,
+  type BuildActivationCardFromStateArgs,
+} from './activation-card-server';
+export {
   PrismaChatStore,
   PLAINO_INSTRUCTION_AGENT_SLUG,
   PLAINO_INSTRUCTION_REF_TABLE,

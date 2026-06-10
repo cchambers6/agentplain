@@ -47,3 +47,17 @@ next-env.d.ts
 # See docs/runtime-alerting-2026-05-18.md.
 .sentryclirc
 .env.sentry-build-plugin
+
+# Fleet automation tokens — short-lived GitHub tokens minted by the fleet
+# push/PR mechanism. NEVER commit. Live only on local disk; in-memory preferred.
+.fleet-token*.txt
+.fleet-token*.err
+*.fleet-token.txt
+*.fleet-token.err
+.night-*.mjs
+.night-*.md
+.mk-junction*.mjs
+.pr-body*.md
+pr-sweep.mjs
+*.private-key*
+.playwright-mcp/

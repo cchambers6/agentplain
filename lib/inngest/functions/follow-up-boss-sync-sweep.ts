@@ -20,6 +20,7 @@ import { withSystemContext } from '@/lib/db/rls';
 import { asDisciplineId } from '@/lib/disciplines';
 import { runSkill as runLeadTriageSkill } from '@/lib/skills/lead-triage-realestate';
 import { PrismaLeadTriageApprovalSink } from '@/lib/skills/lead-triage-realestate/prisma-approval-sink';
+import { buildLeadDraftPersister } from '@/lib/skills/lead-triage-realestate/drafts-persister';
 import { FubLeadFetcher } from '@/lib/integrations/follow-up-boss-mcp';
 import { ProdFollowUpBossMcpServer } from '@/lib/integrations/follow-up-boss-mcp';
 import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
@@ -150,10 +151,17 @@ async function runFubSyncForWorkspaceLive(
 ): Promise<{ ok: boolean; leadsTriaged: number; notesWritten: number; reason?: string }> {
   const mcp = new ProdFollowUpBossMcpServer({ workspaceId });
   const fetcher = new FubLeadFetcher({ workspaceId, mcp });
+  // Wire the real drafts persister so hot/warm leads get a first-touch
+  // draft staged to /approvals (and, when LIVE_INBOX_FETCH is on + a live
+  // adapter is supplied, pushed into the broker's Gmail/M365 Drafts).
+  // `buildLeadDraftPersister()` with no live adapter resolves to the
+  // FixtureLeadDraftPersister — always non-null, so the approval row
+  // carries a persisted draft body the broker can open and send.
+  const persister = buildLeadDraftPersister();
   const skill = await runLeadTriageSkill({
     workspaceId,
     fetcher,
-    persister: null,
+    persister,
   });
   if (!skill.ok) {
     return {

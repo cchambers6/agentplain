@@ -168,6 +168,49 @@ export interface CreateInvoiceResult {
 }
 
 // =====================================================================
+// Refunds — leak-path auto-refund (pfd-4)
+// =====================================================================
+
+export interface RefundCustomerChargesInput {
+  /** The workspace's Stripe customer id. We refund this customer's most
+   *  recent paid, non-refunded charges up to `maxRefundUsdCents`. */
+  providerCustomerId: string;
+  /** Hard cap on the total refunded across all charges, in USD cents.
+   *  The provider stops once the running total would exceed this — it
+   *  NEVER refunds a partial charge to hit the cap exactly; it stops at
+   *  the last whole charge that fits. */
+  maxRefundUsdCents: number;
+  /** Idempotency key — the provider passes this to Stripe so a retried
+   *  refund of the same workspace is a no-op on Stripe's side. Compose it
+   *  from the workspace id (once-per-lifetime), NOT a timestamp. */
+  idempotencyKey: string;
+  /** Free-form reason recorded on each refund's metadata for the audit
+   *  trail (e.g. "unsupported-vertical-auto-refund"). */
+  reason: string;
+}
+
+export interface RefundedCharge {
+  /** Stripe charge id (`ch_*`) that was refunded. */
+  chargeId: string;
+  /** Stripe refund id (`re_*`). */
+  refundId: string;
+  /** Amount refunded for this charge, in USD cents. */
+  amountUsdCents: number;
+}
+
+export interface RefundCustomerChargesResult {
+  /** Per-charge refund records (empty when the customer had no eligible
+   *  charges — that is a SUCCESS, not an error: nothing to refund). */
+  refunds: RefundedCharge[];
+  /** Sum of `amountUsdCents` across `refunds`. */
+  totalRefundedUsdCents: number;
+  /** True when at least one eligible charge was skipped because refunding
+   *  it would exceed `maxRefundUsdCents`. The caller pages a human when
+   *  this is set (the customer paid more than the cap — needs eyes). */
+  hitCap: boolean;
+}
+
+// =====================================================================
 // Metered billing — token-usage emission
 // =====================================================================
 
@@ -252,6 +295,15 @@ export interface BillingProvider {
 
   // --- Manual invoicing (Phase 1 high-touch) ---
   createManualInvoice(input: CreateInvoiceInput): Promise<CreateInvoiceResult>;
+
+  // --- Refunds (pfd-4 leak-path auto-refund) ---
+  /** Refund a customer's most recent paid charges up to a USD-cents cap.
+   *  Idempotent via `idempotencyKey` (Stripe-enforced). The Stripe SDK
+   *  call lives inside the provider per feedback_no_silent_vendor_lock —
+   *  the refund cron NEVER imports `stripe`. */
+  refundCustomerCharges(
+    input: RefundCustomerChargesInput,
+  ): Promise<RefundCustomerChargesResult>;
 
   // --- Metered billing — token-usage meter events ---
   /** Report one meter event. Implementations forward to Stripe Billing

@@ -10,7 +10,11 @@ import {
   tierDisplayName,
   type TierName,
 } from "@/lib/pricing/tiers";
-import { signUpAction, type ActionResult } from "../actions";
+import {
+  signUpAction,
+  joinVerticalWaitlistAction,
+  type ActionResult,
+} from "../actions";
 
 const initial: ActionResult = { ok: false };
 
@@ -89,6 +93,18 @@ export function SignUpForm({
           .
         </p>
       </div>
+    );
+  }
+
+  // pfd-4 honest waitlist screen. The customer picked a vertical whose
+  // killer workflow does not fire yet — no charge, no workspace. We name
+  // the gap plainly and offer to let them know the moment it's ready.
+  if (state.ok && state.waitlist) {
+    return (
+      <VerticalWaitlist
+        verticalSlug={state.waitlist.verticalSlug}
+        verticalName={state.waitlist.verticalName}
+      />
     );
   }
 
@@ -321,6 +337,108 @@ function Submit({ tier }: { tier: Exclude<Selection, "max"> }) {
       {pending
         ? "rooting your workspace…"
         : `begin with us — ${tierDisplayName(tier)} workspace`}
+    </ApHeritageButton>
+  );
+}
+
+// pfd-4 — the honest "we're not ready for your shop yet" screen. Plaino's
+// calm heritage register: name the gap, no excuses, offer to follow up.
+// "local businesses" not "SMB". No charge happens behind this screen —
+// the server already short-circuited before any workspace or Stripe call.
+function VerticalWaitlist({
+  verticalSlug,
+  verticalName,
+}: {
+  verticalSlug: string;
+  verticalName: string;
+}) {
+  const waitlistInitial: ActionResult = { ok: false };
+  const [state, formAction] = useFormState<ActionResult, FormData>(
+    joinVerticalWaitlistAction,
+    waitlistInitial,
+  );
+
+  if (state.ok && state.notice) {
+    return (
+      <div className="space-y-3 border border-rule bg-paper-deep p-5">
+        <p className="font-display text-xl leading-tight text-ink">
+          We&apos;ll be in touch.
+        </p>
+        <p className="text-[15px] leading-relaxed text-ink-soft">
+          {state.notice}
+        </p>
+      </div>
+    );
+  }
+
+  const lower = verticalName.toLowerCase();
+  return (
+    <div className="space-y-6 border border-ink bg-paper-deep p-5">
+      <div className="space-y-3">
+        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+          not yet — and we&apos;ll say so plainly
+        </p>
+        <p className="font-display text-2xl leading-tight text-ink">
+          Plaino isn&apos;t ready for {lower} yet.
+        </p>
+        <p className="text-[15px] leading-relaxed text-ink-soft">
+          We hold ourselves to one rule: we don&apos;t take a local
+          business&apos;s money for work we can&apos;t do well yet. The one
+          flagship workflow that would earn its keep for {lower} isn&apos;t
+          live on our side today — so we&apos;re not going to charge you for
+          it.
+        </p>
+        <p className="text-[15px] leading-relaxed text-ink-soft">
+          Leave your email and your service partner will reach out the moment
+          it&apos;s ready — no card, no commitment, no drip.
+        </p>
+      </div>
+
+      <form action={formAction} className="space-y-4">
+        <input type="hidden" name="vertical" value={verticalSlug} />
+        <ApHeritageField
+          label="brokerage / firm name (optional)"
+          name="brokerageName"
+          placeholder="Acme Co."
+          autoComplete="organization"
+        />
+        <ApHeritageField
+          label="your email"
+          name="email"
+          type="email"
+          required
+          autoComplete="email"
+        />
+        <ApHeritageField
+          label="your name (optional)"
+          name="ownerName"
+          autoComplete="name"
+        />
+        {state.error ? (
+          <p className="text-sm text-flag" role="alert">
+            {state.error}
+          </p>
+        ) : null}
+        <WaitlistSubmit />
+      </form>
+
+      <p className="border-t border-rule pt-4 text-[13px] leading-relaxed text-mute">
+        Run a real-estate brokerage instead? That one&apos;s live today —
+        reload and pick it. Or tell us what you need at{" "}
+        <a href="/custom" className="text-ink underline">
+          /custom
+        </a>
+        .
+      </p>
+    </div>
+  );
+}
+
+function WaitlistSubmit() {
+  const { pending } = useFormStatus();
+  return (
+    <ApHeritageButton variant="primary" type="submit" disabled={pending}>
+      {pending ? "adding you…" : "let me know when it's ready"}
     </ApHeritageButton>
   );
 }

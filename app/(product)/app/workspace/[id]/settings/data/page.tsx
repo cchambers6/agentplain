@@ -215,8 +215,10 @@ function ClosureSection({
           <p className="mt-2 text-[13px] leading-relaxed text-mute">
             After the purge runs, every workspace-scoped row we hold —
             documents, drafts, handoffs, integrations, preferences,
-            webhooks, audit log — is removed. The action is irreversible
-            after the grace window ends.
+            webhooks, chat, schedules, briefings, memory — is removed. The
+            action is irreversible after the grace window ends. Your billing
+            rows and a minimal audit trail (who closed the workspace and
+            when) are kept for tax and compliance.
           </p>
 
           <form action={cancelClosureAction} className="mt-6">
@@ -257,12 +259,14 @@ function ClosureSection({
           <li>
             After the {graceDays}-day window, the cascade deletes
             documents, drafts, handoffs, integrations, preferences,
-            webhooks, and your audit log. This is irreversible.
+            webhooks, chat, schedules, briefings, and memory. This is
+            irreversible.
           </li>
           <li>
-            Your billing rows (subscription + invoices) stay so your tax
-            history is queryable. Cancel billing separately in the billing
-            settings if you haven&rsquo;t already.
+            Your billing rows (subscription + invoices) and a minimal audit
+            trail — who closed the workspace and when — stay so your tax and
+            compliance history is queryable. Cancel billing separately in the
+            billing settings if you haven&rsquo;t already.
           </li>
         </ul>
 

@@ -226,6 +226,25 @@ export interface TearDownWorkspaceDataResult {
   preferenceSignalsDeleted: number;
   workspacePreferencesDeleted: number;
   inquiriesDeleted: number;
+  // pfd-4 — teardown gaps the 2026-06-10 signup-to-go audit named. These
+  // tables are workspace-scoped tenant data that the prior teardown left
+  // behind (they cascade from Workspace, but teardown preserves the
+  // Workspace row, so the cascade never fired — orphaned PII).
+  skillConfigsDeleted: number;
+  skillScheduleWindowsDeleted: number;
+  pauseConfigsDeleted: number;
+  skillRunsDeleted: number;
+  plainoConversationsDeleted: number;
+  chatThreadsDeleted: number;
+  chatMessagesDeleted: number;
+  memoryEntriesDeleted: number;
+  briefingsDeleted: number;
+  skillInstallationsDeleted: number;
+  thresholdsDeleted: number;
+  complianceFlagsDeleted: number;
+  counselRedlinesDeleted: number;
+  lifecycleEventsDeleted: number;
+  preferenceFeedbackDeleted: number;
 }
 
 /**
@@ -304,6 +323,59 @@ export async function tearDownWorkspaceData(
     const inquiriesDeleted = (
       await tx.inquiry.deleteMany({ where: { convertedWorkspaceId: workspaceId } })
     ).count;
+
+    // pfd-4 — teardown gaps the audit named. Every one of these is
+    // workspace-scoped tenant data with a Workspace cascade FK. Because
+    // teardown PRESERVES the Workspace row (for audit/billing history),
+    // the cascade never fires, so these have to be purged explicitly.
+    // ChatMessage cascades from ChatThread, but we delete it first for an
+    // accurate count + to be robust if a thread row is missing.
+    const skillRunsDeleted = (
+      await tx.skillRun.deleteMany({ where: { workspaceId } })
+    ).count;
+    const skillConfigsDeleted = (
+      await tx.skillConfig.deleteMany({ where: { workspaceId } })
+    ).count;
+    const skillScheduleWindowsDeleted = (
+      await tx.skillScheduleWindow.deleteMany({ where: { workspaceId } })
+    ).count;
+    const pauseConfigsDeleted = (
+      await tx.workspacePauseConfig.deleteMany({ where: { workspaceId } })
+    ).count;
+    const chatMessagesDeleted = (
+      await tx.chatMessage.deleteMany({ where: { workspaceId } })
+    ).count;
+    const chatThreadsDeleted = (
+      await tx.chatThread.deleteMany({ where: { workspaceId } })
+    ).count;
+    const plainoConversationsDeleted = (
+      await tx.plainoConversation.deleteMany({ where: { workspaceId } })
+    ).count;
+    const memoryEntriesDeleted = (
+      await tx.workspaceMemoryEntry.deleteMany({ where: { workspaceId } })
+    ).count;
+    const briefingsDeleted = (
+      await tx.workspaceBriefing.deleteMany({ where: { workspaceId } })
+    ).count;
+    const skillInstallationsDeleted = (
+      await tx.workspaceSkillInstallation.deleteMany({ where: { workspaceId } })
+    ).count;
+    const thresholdsDeleted = (
+      await tx.workThresholdConfig.deleteMany({ where: { workspaceId } })
+    ).count;
+    const complianceFlagsDeleted = (
+      await tx.complianceFlag.deleteMany({ where: { workspaceId } })
+    ).count;
+    const counselRedlinesDeleted = (
+      await tx.counselRedline.deleteMany({ where: { workspaceId } })
+    ).count;
+    const lifecycleEventsDeleted = (
+      await tx.workspaceLifecycleEvent.deleteMany({ where: { workspaceId } })
+    ).count;
+    const preferenceFeedbackDeleted = (
+      await tx.preferenceFeedback.deleteMany({ where: { workspaceId } })
+    ).count;
+
     return {
       workApprovalsDeleted,
       handoffsDeleted,
@@ -313,6 +385,21 @@ export async function tearDownWorkspaceData(
       preferenceSignalsDeleted,
       workspacePreferencesDeleted,
       inquiriesDeleted,
+      skillConfigsDeleted,
+      skillScheduleWindowsDeleted,
+      pauseConfigsDeleted,
+      skillRunsDeleted,
+      plainoConversationsDeleted,
+      chatThreadsDeleted,
+      chatMessagesDeleted,
+      memoryEntriesDeleted,
+      briefingsDeleted,
+      skillInstallationsDeleted,
+      thresholdsDeleted,
+      complianceFlagsDeleted,
+      counselRedlinesDeleted,
+      lifecycleEventsDeleted,
+      preferenceFeedbackDeleted,
     };
   };
 

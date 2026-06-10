@@ -260,6 +260,14 @@ export interface MonthEndCloseInput {
   /** TaxDome client id paired with the QuickBooks clientId for the
    *  enrichment lookup. Same fallback as `karbonClientId` when omitted. */
   taxdomeClientId?: string | null;
+  /** Optional LLM-polish of the deterministic chase + status bodies.
+   *  OFF by default and flag-gated (env `MONTH_END_CLOSE_LLM_POLISH=on`
+   *  must ALSO be set, or `polish.force` passed for tests). The
+   *  deterministic template is ALWAYS computed first and is the
+   *  fallback: any LLM failure — including the paused-key sentinel
+   *  (`PAUSED`) while ANTHROPIC_API_KEY is parked — silently keeps the
+   *  deterministic body. Polish never blocks or drops a close. */
+  polish?: import('./polish').PolishOptions | null;
 }
 
 // ── Status helpers ──────────────────────────────────────────────────────

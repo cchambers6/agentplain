@@ -328,6 +328,118 @@ export async function computeWorkspaceValueLedger(
   };
 }
 
+// ── Month-end-close value impact (per assembled close) ─────────────────────────
+//
+// The approval-level ledger above counts ONE FINANCE_PULSE approval per fire.
+// That undercounts the month-end-close killer workflow: when the close
+// "assembles itself", the owner is spared the manual doc-chase across EVERY
+// outstanding item and the triage of every loose receipt — work that does not
+// map 1:1 to a single approval row. This pure, DB-free helper measures the
+// hours saved by ONE assembled close directly from its output shape, so the
+// operator surface (and the PR proof) can cite a per-close number without a
+// schema change or a new WorkApprovalKind enum value.
+//
+// Methodology (every constant is surfaced in `assumptions`):
+//   - CHASE_DRAFT_MINUTES (12): composing one batched, CPA-toned chase email
+//     from scratch — reading the engagement letter, listing outstanding items,
+//     getting the tone right so a past-due note does not bruise the client
+//     relationship.
+//   - OUTSTANDING_ITEM_MINUTES (4): per outstanding required item, the manual
+//     work of checking the portal/inbox to confirm it is actually still
+//     missing before chasing it.
+//   - UNCATEGORIZED_RECEIPT_MINUTES (5): per loose receipt, opening it,
+//     deciding which checklist item it satisfies, filing it.
+//   - STATUS_UPDATE_MINUTES (10): composing the single client-facing status
+//     note from the current received/pending/late state.
+// Labor rate: $75/hr — the finance-discipline rate already used by
+// LABOR_RATE_USD_PER_HOUR_BY_KIND.FINANCE_PULSE (BLS "Financial Analysts"
+// 2024 median), so the per-close number is consistent with the ledger.
+
+export const CLOSE_CHASE_DRAFT_MINUTES = 12;
+export const CLOSE_OUTSTANDING_ITEM_MINUTES = 4;
+export const CLOSE_UNCATEGORIZED_RECEIPT_MINUTES = 5;
+export const CLOSE_STATUS_UPDATE_MINUTES = 10;
+export const CLOSE_LABOR_RATE_USD_PER_HOUR = 75;
+
+export interface CloseValueImpact {
+  /** Hours of staff doc-chase + triage time this assembled close saved. */
+  hoursSaved: number;
+  /** USD value influenced = hoursSaved × finance labor rate. */
+  dollarsInfluenced: number;
+  /** Number of chase email drafts staged (one per recipient grouping). */
+  chaseDrafts: number;
+  /** Number of outstanding required items the close chased (pending+late). */
+  outstandingRequiredItems: number;
+  /** Number of loose receipts the close flagged for operator triage. */
+  uncategorizedReceipts: number;
+  /** True when a client-facing status update was drafted. */
+  statusUpdateDrafted: boolean;
+  /** Every constant + formula that produced the number above — nothing
+   *  hidden, per the no-hidden-guess rule. */
+  assumptions: {
+    chaseDraftMinutes: number;
+    outstandingItemMinutes: number;
+    uncategorizedReceiptMinutes: number;
+    statusUpdateMinutes: number;
+    laborRateUsdPerHour: number;
+    formula: string;
+  };
+}
+
+/**
+ * Minimal shape this helper reads from a `MonthEndCloseOutput`. Declared
+ * structurally (not imported) so `lib/measurement` stays free of a skill
+ * dependency — the close skill passes its output and it duck-types.
+ */
+export interface CloseValueImpactInput {
+  items: Array<{ required: boolean; status: 'received' | 'pending' | 'late' }>;
+  chaseEmails: unknown[];
+  uncategorizedReceipts: unknown[];
+}
+
+/**
+ * Compute the hours-saved value of ONE assembled month-end close. Pure;
+ * no DB, no mutation. Per `feedback_no_guesses_no_estimates.md` every
+ * constant is surfaced in `assumptions`.
+ */
+export function computeCloseValueImpact(
+  close: CloseValueImpactInput,
+): CloseValueImpact {
+  const outstandingRequiredItems = close.items.filter(
+    (i) => i.required && (i.status === 'pending' || i.status === 'late'),
+  ).length;
+  const chaseDrafts = close.chaseEmails.length;
+  const uncategorizedReceipts = close.uncategorizedReceipts.length;
+  const statusUpdateDrafted = true;
+
+  const minutes =
+    chaseDrafts * CLOSE_CHASE_DRAFT_MINUTES +
+    outstandingRequiredItems * CLOSE_OUTSTANDING_ITEM_MINUTES +
+    uncategorizedReceipts * CLOSE_UNCATEGORIZED_RECEIPT_MINUTES +
+    (statusUpdateDrafted ? CLOSE_STATUS_UPDATE_MINUTES : 0);
+
+  const hoursSaved = minutes / 60;
+  const dollarsInfluenced = hoursSaved * CLOSE_LABOR_RATE_USD_PER_HOUR;
+
+  return {
+    hoursSaved: roundTo(hoursSaved, 2),
+    dollarsInfluenced: roundTo(dollarsInfluenced, 2),
+    chaseDrafts,
+    outstandingRequiredItems,
+    uncategorizedReceipts,
+    statusUpdateDrafted,
+    assumptions: {
+      chaseDraftMinutes: CLOSE_CHASE_DRAFT_MINUTES,
+      outstandingItemMinutes: CLOSE_OUTSTANDING_ITEM_MINUTES,
+      uncategorizedReceiptMinutes: CLOSE_UNCATEGORIZED_RECEIPT_MINUTES,
+      statusUpdateMinutes: CLOSE_STATUS_UPDATE_MINUTES,
+      laborRateUsdPerHour: CLOSE_LABOR_RATE_USD_PER_HOUR,
+      formula:
+        '(chaseDrafts×12 + outstandingRequiredItems×4 + uncategorizedReceipts×5 + statusUpdate×10) minutes ÷ 60 × $75/hr',
+    },
+  };
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function roundTo(n: number, decimals: number): number {

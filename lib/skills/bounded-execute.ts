@@ -15,9 +15,13 @@
  *   1. the action class is on the reversibility ALLOWLIST (hardcoded —
  *      high-risk / compliance-touching kinds are NEVER eligible);
  *   2. the fleet-wide master switch is ON (env, fail-closed);
- *   3. that specific class has been deliberately enabled (OpsFlag row);
+ *   3. that specific class has been deliberately enabled (OpsFlag row —
+ *      per-workspace scoped row first, then the fleet-wide row; cv-x1
+ *      makes the OWNER's own setting govern their workspace, see
+ *      AUTO_EXEC_WORKSPACE_SCOPE_PREFIX);
  *   4. the estimated dollar/risk of the action is at or below the
- *      configured per-class ceiling (a low default when on);
+ *      effective per-class ceiling — min(workspace, fleet), lower-only,
+ *      with a low conservative default when unset;
  *   5. every standing fire gate already passed for this fire —
  *      `gateSkillFire` (vacation/schedule), billing pause, and the
  *      Wave-7 activation gate. This module COMPOSES with those gates; it
@@ -69,6 +73,42 @@ export const AUTO_EXEC_ENABLED_FLAG_PREFIX = 'AUTO_EXEC_';
 
 /** Per-class dollar-ceiling flag prefix in the OpsFlag table. */
 export const AUTO_EXEC_CEILING_FLAG_PREFIX = 'AUTO_EXEC_CEILING_';
+
+/**
+ * Workspace-scope suffix for per-workspace policy rows. The OpsFlag table
+ * is a flat key-value store, so workspace scoping is encoded in the flag
+ * NAME: `AUTO_EXEC_<KIND>:ws_<workspaceId>`. The unscoped name remains
+ * the fleet-wide row — every flag that exists today keeps working
+ * unchanged (backward compatible by construction).
+ *
+ * ── Per-workspace resolution order (cv-x1) ──
+ * One customer's comfort level must not be every customer's policy, so
+ * each decision resolves policy in this order, reading fresh every time:
+ *
+ *   ENABLE:  workspace-scoped row → fleet-wide row → default OFF
+ *     - scoped value 'true'        → enabled for this workspace
+ *     - scoped value '' (cleared)  → no workspace preference; fall through
+ *                                    to the fleet-wide row
+ *     - scoped value anything else → explicit workspace OPT-OUT — beats a
+ *                                    fleet-wide enable (fail closed)
+ *     - no scoped row              → fleet-wide row decides (legacy)
+ *
+ *   CEILING: effective = min(workspace ceiling, fleet ceiling)
+ *     - the workspace ceiling can only LOWER the fleet ceiling, never
+ *       raise it. A workspace row above the fleet ceiling clamps DOWN to
+ *       the fleet value. Absent/cleared workspace row → fleet ceiling
+ *       (which itself falls back to the conservative default).
+ *
+ * The reversibility ALLOWLIST stays hardcoded above BOTH scopes: no
+ * workspace (and no fleet flag) can opt a non-allowlisted kind in. Any
+ * store read error at either scope fails CLOSED (→ PENDING).
+ */
+export const AUTO_EXEC_WORKSPACE_SCOPE_PREFIX = ':ws_';
+
+/** Compose the workspace-scope suffix for a flag name. */
+export function autoExecWorkspaceScope(workspaceId: string): string {
+  return `${AUTO_EXEC_WORKSPACE_SCOPE_PREFIX}${workspaceId}`;
+}
 
 /**
  * Conservative default ceiling (USD) applied to an enabled class that has
@@ -180,16 +220,28 @@ export function isAutoExecEligibleKind(kind: WorkApprovalKind): boolean {
   return getAllowlistedClass(kind) !== null;
 }
 
-/** OpsFlag name holding a class's enable state.
- *  ADMIN_BILLING_NOTICE → AUTO_EXEC_ADMIN_BILLING_NOTICE */
-export function autoExecEnabledFlagName(kind: WorkApprovalKind): string {
-  return `${AUTO_EXEC_ENABLED_FLAG_PREFIX}${kind}`;
+/** OpsFlag name holding a class's enable state. Unscoped = fleet-wide
+ *  (legacy rows keep working unchanged); pass a workspaceId for the
+ *  workspace-scoped row.
+ *  ADMIN_BILLING_NOTICE         → AUTO_EXEC_ADMIN_BILLING_NOTICE
+ *  ADMIN_BILLING_NOTICE + ws-1  → AUTO_EXEC_ADMIN_BILLING_NOTICE:ws_ws-1 */
+export function autoExecEnabledFlagName(
+  kind: WorkApprovalKind,
+  workspaceId?: string,
+): string {
+  const base = `${AUTO_EXEC_ENABLED_FLAG_PREFIX}${kind}`;
+  return workspaceId ? `${base}${autoExecWorkspaceScope(workspaceId)}` : base;
 }
 
 /** OpsFlag name holding a class's dollar ceiling (whole USD as a string).
+ *  Unscoped = fleet-wide; pass a workspaceId for the workspace-scoped row.
  *  ADMIN_BILLING_NOTICE → AUTO_EXEC_CEILING_ADMIN_BILLING_NOTICE */
-export function autoExecCeilingFlagName(kind: WorkApprovalKind): string {
-  return `${AUTO_EXEC_CEILING_FLAG_PREFIX}${kind}`;
+export function autoExecCeilingFlagName(
+  kind: WorkApprovalKind,
+  workspaceId?: string,
+): string {
+  const base = `${AUTO_EXEC_CEILING_FLAG_PREFIX}${kind}`;
+  return workspaceId ? `${base}${autoExecWorkspaceScope(workspaceId)}` : base;
 }
 
 /**
@@ -248,6 +300,119 @@ export interface ComposedGateOutcomes {
   activationPassed?: boolean;
 }
 
+/** Where an effective enable/ceiling resolution came from — surfaced on
+ *  the decision detail + the owner settings page so both render the SAME
+ *  truth the decision path computed. */
+export type AutoExecPolicyScope = 'workspace' | 'fleet' | 'default';
+
+export interface ResolvedAutoExecEnabled {
+  enabled: boolean;
+  /** 'workspace' when a scoped row decided; 'fleet' when the fleet row
+   *  did; 'default' when neither row exists (→ OFF). */
+  scope: AutoExecPolicyScope;
+}
+
+export interface ResolvedAutoExecCeiling {
+  /** The effective ceiling: min(workspace, fleet). Lower-only — a
+   *  workspace row can never raise the fleet ceiling. */
+  ceilingUsd: number;
+  /** 'workspace' when the workspace row set (or lowered to) the
+   *  effective value; 'fleet' when the fleet row did; 'default' when no
+   *  row exists anywhere and the conservative default applies. */
+  scope: AutoExecPolicyScope;
+}
+
+/**
+ * Resolve the per-class enable state: workspace-scoped row → fleet-wide
+ * row → default OFF. Fresh durable reads every call (cold-start safety —
+ * this is CORRECTNESS, never cache it). Throws nothing; a store failure
+ * surfaces as the `OpsResult` error and the caller fails CLOSED.
+ *
+ * A scoped row with value '' (cleared via the settings surface) means
+ * "no workspace preference" and falls through to the fleet row. Any
+ * other non-'true' scoped value is an explicit workspace OPT-OUT and
+ * beats a fleet-wide enable.
+ */
+export async function resolveAutoExecEnabled(
+  store: OpsFlagStore,
+  kind: WorkApprovalKind,
+  workspaceId?: string,
+): Promise<
+  | { ok: true; value: ResolvedAutoExecEnabled }
+  | { ok: false; error: string }
+> {
+  if (workspaceId) {
+    const scoped = await store.get(autoExecEnabledFlagName(kind, workspaceId));
+    if (!scoped.ok) {
+      return { ok: false, error: `workspace-scoped enable flag unreadable for '${kind}'` };
+    }
+    if (scoped.value !== null && scoped.value.value !== '') {
+      // The workspace said something explicit — it decides, both ways.
+      return {
+        ok: true,
+        value: { enabled: scoped.value.value === 'true', scope: 'workspace' },
+      };
+    }
+  }
+  const fleet = await store.get(autoExecEnabledFlagName(kind));
+  if (!fleet.ok) {
+    return { ok: false, error: `fleet-wide enable flag unreadable for '${kind}'` };
+  }
+  if (fleet.value === null) {
+    return { ok: true, value: { enabled: false, scope: 'default' } };
+  }
+  return {
+    ok: true,
+    value: { enabled: fleet.value.value === 'true', scope: 'fleet' },
+  };
+}
+
+/**
+ * Resolve the effective per-class ceiling: min(workspace, fleet), where
+ * the fleet ceiling itself falls back to the conservative default when
+ * unset/garbage. LOWER-ONLY: a workspace ceiling above the fleet ceiling
+ * clamps DOWN to the fleet value — no workspace can widen its own blast
+ * radius past what the fleet allows. A scoped row with value '' means
+ * "no workspace preference" → fleet ceiling.
+ */
+export async function resolveAutoExecCeiling(
+  store: OpsFlagStore,
+  kind: WorkApprovalKind,
+  workspaceId?: string,
+): Promise<
+  | { ok: true; value: ResolvedAutoExecCeiling }
+  | { ok: false; error: string }
+> {
+  const fleet = await store.get(autoExecCeilingFlagName(kind));
+  if (!fleet.ok) {
+    return { ok: false, error: `fleet-wide ceiling flag unreadable for '${kind}'` };
+  }
+  const fleetCeiling = resolveCeilingUsd(fleet.value?.value ?? null);
+  const fleetScope: AutoExecPolicyScope =
+    fleet.value === null ? 'default' : 'fleet';
+
+  if (!workspaceId) {
+    return { ok: true, value: { ceilingUsd: fleetCeiling, scope: fleetScope } };
+  }
+  const scoped = await store.get(autoExecCeilingFlagName(kind, workspaceId));
+  if (!scoped.ok) {
+    return { ok: false, error: `workspace-scoped ceiling flag unreadable for '${kind}'` };
+  }
+  if (scoped.value === null || scoped.value.value.trim() === '') {
+    return { ok: true, value: { ceilingUsd: fleetCeiling, scope: fleetScope } };
+  }
+  const workspaceCeiling = resolveCeilingUsd(scoped.value.value);
+  // Lower-only clamp. When the workspace value is the lower (or equal)
+  // one it decided; when it tried to exceed the fleet, the fleet did.
+  if (workspaceCeiling <= fleetCeiling) {
+    return {
+      ok: true,
+      value: { ceilingUsd: workspaceCeiling, scope: 'workspace' },
+    };
+  }
+  return { ok: true, value: { ceilingUsd: fleetCeiling, scope: fleetScope } };
+}
+
 export interface DecideBoundedExecuteArgs {
   kind: WorkApprovalKind;
   /** DB-backed flag store. Tests pass `InMemoryOpsFlagStore`. */
@@ -256,6 +421,11 @@ export interface DecideBoundedExecuteArgs {
   gates: ComposedGateOutcomes;
   /** Env snapshot for the master switch. Defaults to `process.env`. */
   env?: NodeJS.ProcessEnv;
+  /** Workspace whose autonomy policy governs this decision. When set,
+   *  policy resolves workspace-scoped row → fleet-wide row → default OFF
+   *  (see AUTO_EXEC_WORKSPACE_SCOPE_PREFIX). When omitted, behavior is
+   *  exactly the legacy fleet-wide resolution — backward compatible. */
+  workspaceId?: string;
   /** Optional per-item dollar estimate override. When omitted, the
    *  allowlist's conservative class `estUsd` is used. A caller that can
    *  compute a tighter per-item number (e.g. a booking with a known
@@ -317,34 +487,51 @@ export async function decideBoundedExecute(
     );
   }
 
-  // 4. Per-class enable flag (fresh durable read; fail-closed on error).
-  const enabledRead = await args.store.get(autoExecEnabledFlagName(args.kind));
+  // 4. Per-class enable flag (fresh durable reads; fail-closed on error).
+  //    Workspace-scoped row → fleet-wide row → default OFF. The OWNER's
+  //    own threshold governs their workspace; an explicit workspace
+  //    opt-out beats a fleet-wide enable.
+  const enabledRead = await resolveAutoExecEnabled(
+    args.store,
+    args.kind,
+    args.workspaceId,
+  );
   if (!enabledRead.ok) {
     return deny(
       'store-error',
-      `Auto-execute flag store unreachable for '${args.kind}' — failing CLOSED (approval queue).`,
+      `Auto-execute flag store unreachable (${enabledRead.error}) — failing CLOSED (approval queue).`,
       klass.estUsd,
     );
   }
-  if (enabledRead.value === null || enabledRead.value.value !== 'true') {
+  if (!enabledRead.value.enabled) {
+    const who =
+      enabledRead.value.scope === 'workspace'
+        ? 'this workspace opted out of auto-execute for the class'
+        : `set ${autoExecEnabledFlagName(args.kind, args.workspaceId)}='true' to opt in`;
     return deny(
       'class-not-enabled',
-      `Action class '${args.kind}' is not enabled for auto-execute (set ${autoExecEnabledFlagName(args.kind)}='true' to opt in).`,
+      `Action class '${args.kind}' is not enabled for auto-execute (${who}).`,
       klass.estUsd,
     );
   }
 
-  // 5. Dollar/risk ceiling. Resolve the configured ceiling (or the
-  //    conservative default) and require the estimate at or below it.
-  const ceilingRead = await args.store.get(autoExecCeilingFlagName(args.kind));
+  // 5. Dollar/risk ceiling: effective = min(workspace, fleet), fleet
+  //    falling back to the conservative default. Lower-only — a
+  //    workspace can tighten its ceiling but never widen past the fleet.
+  const ceilingRead = await resolveAutoExecCeiling(
+    args.store,
+    args.kind,
+    args.workspaceId,
+  );
   if (!ceilingRead.ok) {
     return deny(
       'store-error',
-      `Auto-execute ceiling store unreachable for '${args.kind}' — failing CLOSED.`,
+      `Auto-execute ceiling store unreachable (${ceilingRead.error}) — failing CLOSED.`,
       klass.estUsd,
     );
   }
-  const ceilingUsd = resolveCeilingUsd(ceilingRead.value?.value ?? null);
+  const ceilingUsd = ceilingRead.value.ceilingUsd;
+  const ceilingScope = ceilingRead.value.scope;
 
   // The evaluated estimate is the MAX of the class floor and any caller
   // override — a caller can tighten upward but never under-report below
@@ -360,7 +547,7 @@ export async function decideBoundedExecute(
     return {
       autoExecute: false,
       reason: 'over-ceiling',
-      detail: `Estimated $${estUsd.toFixed(2)} exceeds the $${ceilingUsd.toFixed(2)} auto-execute ceiling for '${args.kind}' — routed to approval.`,
+      detail: `Estimated $${estUsd.toFixed(2)} exceeds the $${ceilingUsd.toFixed(2)} (${ceilingScope}) auto-execute ceiling for '${args.kind}' — routed to approval.`,
       estUsd,
       ceilingUsd,
     };
@@ -370,7 +557,7 @@ export async function decideBoundedExecute(
   return {
     autoExecute: true,
     reason: 'auto-executed',
-    detail: `Auto-executed '${args.kind}': estimated $${estUsd.toFixed(2)} at or below the $${ceilingUsd.toFixed(2)} ceiling; class enabled; all standing gates passed.`,
+    detail: `Auto-executed '${args.kind}': estimated $${estUsd.toFixed(2)} at or below the $${ceilingUsd.toFixed(2)} ceiling (${ceilingScope}); class enabled (${enabledRead.value.scope}); all standing gates passed.`,
     estUsd,
     ceilingUsd,
   };

@@ -29,9 +29,13 @@ const WS_ID = '11111111-1111-1111-1111-111111111111';
 function candidate(over: Partial<LeakingWorkspace> = {}): LeakingWorkspace {
   return {
     workspaceId: WS_ID,
-    workspaceName: 'Acme CPA',
-    workspaceSlug: 'acme-cpa',
-    vertical: 'CPA' as Vertical,
+    // Insurance is genuinely unsupported (credential-gated) post-pfd-8 —
+    // CPA + law were flipped to SUPPORTED, so they are no longer leak-path
+    // refund candidates. The sweep mechanics under test are vertical-agnostic;
+    // candidates are injected past the readiness filter here.
+    workspaceName: 'Acme Insurance',
+    workspaceSlug: 'acme-insurance',
+    vertical: 'INSURANCE' as Vertical,
     brokerOwnerEmail: 'owner@acme.example',
     brokerOwnerName: 'Pat Owner',
     stripeCustomerId: 'cus_test_acme',

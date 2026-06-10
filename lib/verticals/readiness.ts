@@ -101,7 +101,20 @@ const KILLER_WORKFLOW_SKILL_BY_VERTICAL_SLUG: Readonly<
  * non-live catalog skill, so the two can never silently disagree.
  */
 export const SKILLS_WITH_PRODUCTION_CALLER: ReadonlySet<string> = new Set([
+  // real-estate killer workflow — vertical-router + FUB/HubSpot/Salesforce sweeps.
   'lead-triage-realestate',
+  // pfd-8 registry-truth wave — three killer workflows that shipped
+  // module-complete but had no production caller (the audit's silent-gating
+  // 🚨). Each now has a registered Inngest sweep:
+  //   - invoice-chase-general → lib/inngest/functions/invoice-chase-general-sweep.ts
+  //     (daily; was also ABSENT from SKILL_CATALOG — both gaps closed here).
+  //   - month-end-close-cpa  → lib/inngest/functions/month-end-close-cpa-sweep.ts
+  //     (monthly, month-end window).
+  //   - law-intake-conflict-screen →
+  //     lib/inngest/functions/law-intake-conflict-screen-sweep.ts (daily).
+  'invoice-chase-general',
+  'month-end-close-cpa',
+  'law-intake-conflict-screen',
 ]);
 
 export type VerticalReadinessReason =

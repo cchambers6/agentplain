@@ -22,23 +22,33 @@ function form(fields: Record<string, string>): FormData {
 }
 
 describe('signUpAction — unsupported-vertical gate', () => {
-  it('routes an unsupported vertical (cpa) to the honest waitlist, no workspace', async () => {
+  it('routes an unsupported (credential-gated) vertical to the honest waitlist, no workspace', async () => {
     const result = await signUpAction(undefined, form({
       email: 'owner@acme.example',
-      brokerageName: 'Acme CPA',
-      vertical: 'cpa',
+      brokerageName: 'Acme Insurance',
+      vertical: 'insurance',
       tier: 'regular',
     }));
     assert.equal(result.ok, true);
     assert.ok(result.waitlist, 'returns the waitlist branch');
-    assert.equal(result.waitlist?.verticalSlug, 'cpa');
+    assert.equal(result.waitlist?.verticalSlug, 'insurance');
     assert.ok(result.waitlist?.verticalName, 'carries a display name for the copy');
     // The waitlist branch carries NO checkoutUrl — no charge path was taken.
     assert.equal(result.checkoutUrl, undefined);
   });
 
-  it('routes law / insurance / ria to the waitlist too', async () => {
-    for (const slug of ['law', 'insurance', 'ria']) {
+  it('routes the credential-gated + no-flagship verticals to the waitlist', async () => {
+    // pfd-8 flipped cpa + law to SUPPORTED (their callers shipped). The
+    // five credential-gated verticals + recruiting (no flagship) stay
+    // honestly waitlisted.
+    for (const slug of [
+      'mortgage',
+      'insurance',
+      'property-management',
+      'title-escrow',
+      'ria',
+      'recruiting',
+    ]) {
       const result = await signUpAction(undefined, form({
         email: 'owner@acme.example',
         brokerageName: 'Acme',
@@ -47,6 +57,28 @@ describe('signUpAction — unsupported-vertical gate', () => {
       }));
       assert.ok(result.waitlist, `${slug} must route to waitlist`);
       assert.equal(result.waitlist?.verticalSlug, slug);
+    }
+  });
+
+  it('does NOT waitlist cpa or law (pfd-8 wired their killer-workflow callers)', async () => {
+    for (const slug of ['cpa', 'law']) {
+      let result;
+      try {
+        result = await signUpAction(undefined, form({
+          email: 'owner@acme.example',
+          brokerageName: 'Acme',
+          vertical: slug,
+          tier: 'regular',
+        }));
+      } catch {
+        // Downstream auth/DB failure proves the gate let it THROUGH.
+        continue;
+      }
+      assert.equal(
+        result.waitlist,
+        undefined,
+        `${slug} is supported now and must not waitlist`,
+      );
     }
   });
 

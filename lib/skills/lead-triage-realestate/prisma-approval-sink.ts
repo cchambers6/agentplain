@@ -14,6 +14,14 @@
  * Per `feedback_cold_start_safe_agents.md`: stateless. Each `record()`
  * call opens its own RLS-scoped transaction.
  *
+ * Idempotency: `record()` skips the insert when a PENDING row for the
+ * same (workspaceId, kind=LEAD_TRIAGE, refId=leadId) already exists.
+ * This prevents duplicate cards on re-sweep — the hourly FUB/HubSpot/
+ * Salesforce sweeps process the same leads each run until a watermark
+ * advances, so without this guard every sweep would double-stage. The
+ * guard uses a pre-flight SELECT inside the same RLS context; no new
+ * schema migration required.
+ *
  * RLS: writes go through `withRls({ userId: null, workspaceId,
  * isOperator: true })` — same operator-identity wrapper that the rest
  * of the email-loop sinks use. The vertical router runs from the cron
@@ -42,7 +50,7 @@ export interface LeadTriageSinkArgs {
 
 export interface LeadTriageApprovalSink {
   readonly name: string;
-  record(args: LeadTriageSinkArgs): Promise<SkillResult<{ sinkId: string }>>;
+  record(args: LeadTriageSinkArgs): Promise<SkillResult<{ sinkId: string; skippedDuplicate?: boolean }>>;
 }
 
 export interface PrismaLeadTriageApprovalSinkOptions {
@@ -59,7 +67,7 @@ export class PrismaLeadTriageApprovalSink implements LeadTriageApprovalSink {
 
   async record(
     args: LeadTriageSinkArgs,
-  ): Promise<SkillResult<{ sinkId: string }>> {
+  ): Promise<SkillResult<{ sinkId: string; skippedDuplicate?: boolean }>> {
     let row: Prisma.WorkApprovalQueueItemUncheckedCreateInput;
     try {
       row = buildLeadTriageApprovalRow(args.workspaceId, args.triaged);
@@ -76,6 +84,18 @@ export class PrismaLeadTriageApprovalSink implements LeadTriageApprovalSink {
     }
     try {
       if (this.options.tx) {
+        // In a caller-provided transaction we cannot open another nested
+        // transaction for the dedup check — do the check in the same tx.
+        const existing = await this.options.tx.workApprovalQueueItem.findFirst({
+          where: {
+            workspaceId: args.workspaceId,
+            kind: 'LEAD_TRIAGE',
+            refId: args.triaged.leadId,
+            status: 'PENDING',
+          },
+          select: { id: true },
+        });
+        if (existing) return skillOk({ sinkId: existing.id, skippedDuplicate: true });
         const created = await this.options.tx.workApprovalQueueItem.create({
           data: row,
           select: { id: true },
@@ -90,6 +110,20 @@ export class PrismaLeadTriageApprovalSink implements LeadTriageApprovalSink {
       const id = await withRls(
         ctx,
         async (tx) => {
+          // Idempotency guard: skip insert when a PENDING row for this lead
+          // already exists. The hourly sweep can re-present the same lead
+          // multiple times before the watermark advances — without this guard
+          // each sweep would double-stage the same first-touch draft.
+          const existing = await tx.workApprovalQueueItem.findFirst({
+            where: {
+              workspaceId: args.workspaceId,
+              kind: 'LEAD_TRIAGE',
+              refId: args.triaged.leadId,
+              status: 'PENDING',
+            },
+            select: { id: true },
+          });
+          if (existing) return `skip:${existing.id}`;
           const created = await tx.workApprovalQueueItem.create({
             data: row,
             select: { id: true },
@@ -98,6 +132,9 @@ export class PrismaLeadTriageApprovalSink implements LeadTriageApprovalSink {
         },
         this.options.client ? { client: this.options.client } : undefined,
       );
+      if (id.startsWith('skip:')) {
+        return skillOk({ sinkId: id.slice('skip:'.length), skippedDuplicate: true });
+      }
       return skillOk({ sinkId: id });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

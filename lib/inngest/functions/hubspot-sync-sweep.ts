@@ -20,6 +20,7 @@ import { withSystemContext } from '@/lib/db/rls';
 import { asDisciplineId } from '@/lib/disciplines';
 import { runSkill as runLeadTriageSkill } from '@/lib/skills/lead-triage-realestate';
 import { PrismaLeadTriageApprovalSink } from '@/lib/skills/lead-triage-realestate/prisma-approval-sink';
+import { buildLeadDraftPersister } from '@/lib/skills/lead-triage-realestate/drafts-persister';
 import { HubspotLeadFetcher, ProdHubspotMcpServer } from '@/lib/integrations/hubspot-mcp';
 import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
 import { isWorkspacePaused } from '@/lib/billing/workspace-paused-gate';
@@ -141,10 +142,13 @@ async function runHubspotSyncForWorkspaceLive(
 ): Promise<{ ok: boolean; leadsTriaged: number; notesWritten: number; reason?: string }> {
   const mcp = new ProdHubspotMcpServer({ workspaceId });
   const fetcher = new HubspotLeadFetcher({ workspaceId, mcp });
+  // Wire the real drafts persister so hot/warm leads get a first-touch
+  // draft staged to /approvals. See FUB sweep for full rationale.
+  const persister = buildLeadDraftPersister();
   const skill = await runLeadTriageSkill({
     workspaceId,
     fetcher,
-    persister: null,
+    persister,
   });
   if (!skill.ok) {
     return {

@@ -40,6 +40,15 @@ fi
 # --- Layer 1: lint ---
 npm run lint || exit 1
 
+# --- Layer 1.5: brand gate (fast, dependency-free) ---
+# Vendor names / placeholder assets / token drift / banned words on customer
+# surfaces. Baseline ratchet — only NEW violations fail. Wired 2026-06-11 once
+# the design-remediation waves drove the baseline to zero (PRs #227-#234).
+npm run brand-gate || {
+  echo "❌ Push blocked: brand-gate found new brand-standard violations (see docs/brand/brand-gate.md)."
+  exit 1
+}
+
 # --- Layer 2: build gate ---
 echo ""
 echo "▶ Running build gate (npm run build:no-migrate) — catches TS errors + broken pages before push."

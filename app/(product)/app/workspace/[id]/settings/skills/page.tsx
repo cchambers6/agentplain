@@ -45,7 +45,7 @@ function liveBadge(skillSlug: string, key: string) {
   const isLive = liveKeys.includes(key);
   return (
     <span
-      className={`ml-2 inline-block rounded-sm border px-2 py-[2px] font-mono text-[10px] tracking-eyebrow uppercase ${
+      className={`ml-2 inline-block rounded-none border px-2 py-[2px] font-mono text-[10px] tracking-eyebrow uppercase ${
         isLive
           ? "border-clay text-clay"
           : "border-rule text-mute"

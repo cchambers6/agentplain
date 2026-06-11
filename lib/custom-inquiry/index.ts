@@ -287,7 +287,7 @@ function bodyFor(
     `<pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(input.needs)}</pre>`,
     intensityHtml,
     `<hr/>`,
-    `<p style="color:#666">Inquiry id: <code>${escapeHtml(inquiryId)}</code> · Triage at <code>/operator/inquiries</code>.</p>`,
+    `<p style="color:#726A5E">Inquiry id: <code>${escapeHtml(inquiryId)}</code> · Triage at <code>/operator/inquiries</code>.</p>`,
   ].join("\n");
 
   return { text, html };

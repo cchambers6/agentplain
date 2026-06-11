@@ -5,7 +5,7 @@ import { PlainoScene, type PlainoSceneName } from "@/components/ui/ap";
 // app/(marketing)/page.tsx) so every marketing hero gets the same calm,
 // legible "dog on the plain behind the headline" treatment.
 //
-// Wired to a placeholder scene today (see PlainoScene); a real asset swap is
+// Wired to a prairie motif scene (see PlainoScene); a real asset swap is
 // one line in PlainoScene's SRC map and every consuming hero updates at once.
 //
 // The parent <section> MUST be `relative overflow-hidden` and the content

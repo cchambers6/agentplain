@@ -284,7 +284,7 @@ export function TalkHeader({ workspaceId }: { workspaceId: string }) {
       </div>
       <a
         href={`/app/workspace/${workspaceId}/talk/memory`}
-        className="mt-1 rounded-sm font-mono text-[11px] tracking-eyebrow uppercase text-ink-soft underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+        className="mt-1 rounded-none font-mono text-[11px] tracking-eyebrow uppercase text-ink-soft underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
       >
         memory →
       </a>

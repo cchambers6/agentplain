@@ -11,13 +11,8 @@
   },
   {
     "path": "lib/plaino/marketing-prompt.ts",
-    "pattern": "(Claude|Anthropic)",
+    "pattern": "(Claude|Anthropic|ChatGPT|OpenAI)",
     "reason": "Operator instructions teaching Plaino to handle 'why not use Claude SBM' objections. These strings are LLM system-prompt instructions, not rendered customer copy. Ratified in project_sbm_wrapper_positioning_2026_06_06.md."
-  },
-  {
-    "path": "components/PricingTier.tsx",
-    "pattern": "shadow-\\[",
-    "reason": "shadow-[6px_6px_0_0_#B65D3A] is a ratified brand-aesthetic 'brick shadow' design element on the featured pricing card — custom Tailwind JIT value, not a semantic shadow token. Ratified in pricing tier design."
   },
   {
     "path": "lib/plaino/marketing-prompt.ts",
@@ -28,5 +23,15 @@
     "path": "lib/plaino/support-prompt.ts",
     "pattern": "(SMB|knowledge workers)",
     "reason": "Operator LLM instructions — same rationale as marketing-prompt.ts entry."
+  },
+  {
+    "path": "lib/plaino/system-prompt.ts",
+    "pattern": "(Claude|ChatGPT|OpenAI|Anthropic)",
+    "reason": "Identity-deflection instruction (Conner 2026-06-10 vendor-invisible rule): the prompt must NAME the questions ('are you Claude/ChatGPT?') to instruct Plaino to deflect without confirming any vendor. LLM instruction, never rendered."
+  },
+  {
+    "path": "lib/plaino/support-prompt.ts",
+    "pattern": "(Claude|ChatGPT|OpenAI|Anthropic)",
+    "reason": "Identity-deflection instruction — same rationale as system-prompt.ts."
   }
 ]

@@ -306,8 +306,8 @@ export const homeServices: VerticalContent = {
     ],
     planned: [
       { name: "ServiceTitan", category: "FSM (multi-trade)" },
-      { name: "Jobber", category: "FSM (multi-trade SMB)" },
-      { name: "Housecall Pro", category: "FSM (multi-trade SMB)" },
+      { name: "Jobber", category: "FSM (multi-trade)" },
+      { name: "Housecall Pro", category: "FSM (multi-trade)" },
       { name: "FieldEdge", category: "FSM (HVAC/plumbing)" },
       { name: "AccuLynx", category: "CRM (roofing)" },
       { name: "JobNimbus", category: "CRM (roofing/restoration)" },

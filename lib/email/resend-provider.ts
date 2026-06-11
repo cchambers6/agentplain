@@ -32,6 +32,7 @@ export class ResendEmailProvider implements EmailProvider {
       html: req.html,
       text: req.text,
       ...(req.replyTo ? { replyTo: req.replyTo } : {}),
+      ...(req.headers ? { headers: req.headers } : {}),
       ...(req.tags
         ? {
             tags: Object.entries(req.tags).map(([name, value]) => ({

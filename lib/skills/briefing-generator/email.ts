@@ -61,6 +61,10 @@ export async function notifyBriefingReady(
       workspace_id: input.workspaceId,
       briefing_id: input.briefingId,
     },
+    headers: {
+      'List-Unsubscribe': `<mailto:plaino@agentplain.com?subject=unsubscribe-briefings-${input.workspaceId}>, <${briefingsUrl}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    },
   });
   return { messageId: result.messageId };
 }
@@ -90,8 +94,9 @@ function renderHtml(args: {
   <h2 style="font-weight:500; color:#1A1A1F;">Your morning briefing is ready.</h2>
   <p>${escapeHtml(args.headline)} for ${escapeHtml(args.workspaceName)} — ${escapeHtml(args.today)}.</p>
   <p><a href="${args.briefingsUrl}" style="display:inline-block; padding:12px 20px; background:#1A1A1F; color:#F7F4ED; text-decoration:none; font-weight:500;">Read the briefing</a></p>
-  <p style="font-size:13px; color:#8C8478;">Briefings land daily Mon–Fri at ~09:00 ET. Turn them off from the briefings page if you'd rather not get this email.</p>
-  <p style="font-size:13px; color:#8C8478;">Plaino, your service partner at agentplain</p>
+  <p style="font-size:13px; color:#726A5E;">Briefings land daily Mon–Fri at ~09:00 ET. <a href="${args.briefingsUrl}" style="color:#726A5E;">Turn them off from the briefings page</a> if you'd rather not get this email.</p>
+  <p style="font-size:13px; color:#726A5E;">Plaino, your service partner at agentplain</p>
+  <p style="font-size:12px; color:#726A5E; margin-top:24px;">You're receiving this because you have an agentplain workspace.</p>
 </body></html>`;
 }
 
@@ -107,9 +112,11 @@ ${args.headline} for ${args.workspaceName} — ${args.today}.
 
 Read the briefing: ${args.briefingsUrl}
 
-Briefings land daily Mon–Fri at ~09:00 ET. Turn them off from the briefings page if you'd rather not get this email.
+Briefings land daily Mon–Fri at ~09:00 ET. Turn them off here: ${args.briefingsUrl}
 
-Plaino, your service partner at agentplain`;
+Plaino, your service partner at agentplain
+
+You're receiving this because you have an agentplain workspace.`;
 }
 
 function escapeHtml(s: string): string {

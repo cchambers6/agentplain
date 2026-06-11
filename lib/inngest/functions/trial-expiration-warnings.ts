@@ -239,8 +239,9 @@ function renderHtml(args: {
   <p>You're on <strong>${escapeHtml(candidate.tierLabel)}</strong> — ${candidate.seats} seat${candidate.seats === 1 ? "" : "s"} at ${formatCents(candidate.perSeatCents)}/seat/mo. After ${escapeHtml(dayLabel)}, your card on file will be charged ${formatCents(candidate.totalCents)} on a monthly cycle.</p>
   <p>If you haven't added a card yet, your fleet pauses when the trial ends. Add one in under a minute:</p>
   <p><a href="${billingUrl}" style="display:inline-block; padding:12px 20px; background:#1A1A1F; color:#F7F4ED; text-decoration:none; font-weight:500;">Open billing</a></p>
-  <p style="font-size:13px; color:#8C8478;">Month-to-month. Cancel any time from the same page.</p>
-  <p style="font-size:13px; color:#8C8478;">Plaino, your service partner at agentplain</p>
+  <p style="font-size:13px; color:#726A5E;">Month-to-month. Cancel any time from the same page.</p>
+  <p style="font-size:13px; color:#726A5E;">Plaino, your service partner at agentplain</p>
+  <p style="font-size:12px; color:#726A5E; margin-top:24px;">You're receiving this because you have an agentplain workspace.</p>
 </body></html>`;
 }
 
@@ -258,7 +259,9 @@ Open billing: ${billingUrl}
 
 Month-to-month. Cancel any time.
 
-Plaino, your service partner at agentplain`;
+Plaino, your service partner at agentplain
+
+You're receiving this because you have an agentplain workspace.`;
 }
 
 function formatCents(cents: number): string {

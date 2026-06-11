@@ -60,6 +60,10 @@ export async function notifyWeeklyDigestReady(
       kind: 'weekly_proof_digest',
       workspace_id: input.workspaceId,
     },
+    headers: {
+      'List-Unsubscribe': `<mailto:plaino@agentplain.com?subject=unsubscribe-digest-${input.workspaceId}>, <${briefingsUrl}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    },
   });
   return { messageId: result.messageId };
 }
@@ -88,8 +92,9 @@ function renderHtml(args: {
   <h2 style="font-weight:500; color:#1A1A1F;">What Plaino did for you last week.</h2>
   <p>${escapeHtml(args.headline)} for ${escapeHtml(args.workspaceName)}.</p>
   <p><a href="${args.briefingsUrl}" style="display:inline-block; padding:12px 20px; background:#1A1A1F; color:#F7F4ED; text-decoration:none; font-weight:500;">See the full digest</a></p>
-  <p style="font-size:13px; color:#8C8478;">This proof-of-value digest lands every Monday morning. Turn briefings off from the briefings page if you'd rather not get this email.</p>
-  <p style="font-size:13px; color:#8C8478;">Plaino, your service partner at agentplain</p>
+  <p style="font-size:13px; color:#726A5E;">This proof-of-value digest lands every Monday morning. <a href="${args.briefingsUrl}" style="color:#726A5E;">Turn briefings off from the briefings page</a> if you'd rather not get this email.</p>
+  <p style="font-size:13px; color:#726A5E;">Plaino, your service partner at agentplain</p>
+  <p style="font-size:12px; color:#726A5E; margin-top:24px;">You're receiving this because you have an agentplain workspace.</p>
 </body></html>`;
 }
 
@@ -104,9 +109,11 @@ ${args.headline} for ${args.workspaceName}.
 
 See the full digest: ${args.briefingsUrl}
 
-This proof-of-value digest lands every Monday morning. Turn briefings off from the briefings page if you'd rather not get this email.
+This proof-of-value digest lands every Monday morning. Turn briefings off here: ${args.briefingsUrl}
 
-Plaino, your service partner at agentplain`;
+Plaino, your service partner at agentplain
+
+You're receiving this because you have an agentplain workspace.`;
 }
 
 function escapeHtml(s: string): string {

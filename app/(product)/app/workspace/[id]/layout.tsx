@@ -6,6 +6,7 @@ import { signOutAction } from "../../actions";
 import { WorkspaceNavLink } from "./WorkspaceNavLink";
 import { PasskeyEnrollNudge } from "./PasskeyEnrollNudge";
 import { isWorkspacePaused } from "@/lib/billing/workspace-paused-gate";
+import { getUnhealthyIntegrations } from "@/lib/integrations/health-banner";
 
 interface WorkspaceLayoutProps {
   children: React.ReactNode;
@@ -58,6 +59,15 @@ export default async function WorkspaceLayout({
   const hasPasskey = await listPasskeys(member.userId)
     .then((list) => list.length > 0)
     .catch(() => true); // on error, assume enrolled → never nag
+
+  // pfd-2 integration self-heal — surface any integration the daily health
+  // sweep found UNHEALTHY, so the owner finds out FROM US with a one-click fix
+  // the moment they open the app (not after weeks of silently-missing drafts).
+  const unhealthyIntegrations = await getUnhealthyIntegrations({
+    userId: member.userId,
+    workspaceId: id,
+    isOperator: false,
+  }).catch(() => []);
 
   const base = `/app/workspace/${id}`;
 
@@ -156,6 +166,41 @@ export default async function WorkspaceLayout({
                 </p>
               </>
             )}
+          </div>
+        </div>
+      ) : null}
+      {unhealthyIntegrations.length > 0 ? (
+        <div className="container-wide mt-4">
+          <div
+            role="status"
+            aria-live="polite"
+            className="border border-flag bg-paper p-4 text-[14px] text-ink"
+          >
+            <p className="font-medium">
+              {unhealthyIntegrations.length === 1
+                ? `We can't reach your ${unhealthyIntegrations[0].name} — reconnect to keep Plaino working.`
+                : `We can't reach ${unhealthyIntegrations.length} of your connected tools — reconnect to keep Plaino working.`}
+            </p>
+            <p className="mt-2 text-ink-soft">
+              The work that runs through{" "}
+              {unhealthyIntegrations.length === 1
+                ? unhealthyIntegrations[0].name
+                : "them"}{" "}
+              is on hold. Nothing is lost — anything Plaino was about to do is
+              queued and will run the moment you reconnect.
+            </p>
+            <ul className="mt-3 flex flex-wrap gap-3">
+              {unhealthyIntegrations.map((it) => (
+                <li key={it.provider}>
+                  <Link
+                    href={it.reconnectPath}
+                    className="underline underline-offset-4 hover:text-ink"
+                  >
+                    Reconnect {it.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       ) : null}

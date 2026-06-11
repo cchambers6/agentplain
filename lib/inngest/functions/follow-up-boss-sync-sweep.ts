@@ -25,6 +25,8 @@ import { FubLeadFetcher } from '@/lib/integrations/follow-up-boss-mcp';
 import { ProdFollowUpBossMcpServer } from '@/lib/integrations/follow-up-boss-mcp';
 import { isSkillInstalledForWorkspace } from '@/lib/skills/marketplace';
 import { isWorkspacePaused } from '@/lib/billing/workspace-paused-gate';
+import { enqueueRetryableAction } from '@/lib/integrations/retry-queue';
+import { ACTION_LEAD_TRIAGE_PERSIST_DRAFT } from '@/lib/integrations/retry-handlers';
 import type { Vertical } from '@prisma/client';
 import { inngest } from '../client';
 import { runWithDisableGate } from '../run-with-disable-gate';
@@ -128,6 +130,21 @@ export async function runFubSyncSweep(
         ? await args.runForWorkspace(ws.id)
         : await runFubSyncForWorkspaceLive(ws.id);
       if (!run.ok) {
+        // The FUB integration (or the inbox we'd push the first-touch draft
+        // into) was broken for this workspace — don't silently drop the sync.
+        // Enqueue a retryable action so the resume sweep re-runs it the moment
+        // the integration goes healthy again. Idempotent per UTC day so a
+        // daily-failing workspace doesn't pile up duplicate rows.
+        await enqueueRetryableAction({
+          workspaceId: ws.id,
+          provider: 'FOLLOW_UP_BOSS',
+          actionKind: ACTION_LEAD_TRIAGE_PERSIST_DRAFT,
+          payload: { source: 'follow-up-boss-sync', reason: run.reason ?? 'unknown' },
+          idempotencyKey: `fub-sync-${ws.id}-${(args.now ?? new Date()).toISOString().slice(0, 10)}`,
+          now: args.now,
+        }).catch(() => {
+          /* enqueue is best-effort; the failure is already recorded below */
+        });
         result.failures.push({ workspaceId: ws.id, reason: run.reason ?? 'unknown' });
         continue;
       }

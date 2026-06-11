@@ -393,6 +393,51 @@ enum WebhookSubscriptionStatus {
   UNSUBSCRIBED
 }
 
+// Per-workspace, per-provider integration health (pfd-2 integration self-heal).
+// The daily health cron probes each connected integration THROUGH its adapter
+// and records the outcome here so customer surfaces (the reconnect banner) and
+// the retry-resume sweep can read a durable status without re-probing.
+//   HEALTHY  — last check succeeded (real read OR credential-validity check).
+//   UNHEALTHY — last check failed: the vendor rejected the credential, the
+//               token is expired/revoked, or the read 4xx'd. The customer gets
+//               a reconnect banner + one (de-duped) reconnect email.
+//   UNKNOWN  — never checked yet, or the check itself could not run (e.g.
+//              encryption key absent) — NOT a customer-facing failure.
+enum IntegrationHealthStatus {
+  HEALTHY
+  UNHEALTHY
+  UNKNOWN
+}
+
+// Whether a health check exercised a REAL read through the adapter or only
+// validated the credential/token. The audit flagged "health = credential
+// status only" as misleading, so we LABEL each result honestly. The customer
+// surface can then say "we last read your inbox 3h ago" (REAL_READ) vs "your
+// token looks valid but we have not exercised it" (CREDENTIAL_ONLY).
+enum IntegrationHealthCheckKind {
+  REAL_READ
+  CREDENTIAL_ONLY
+}
+
+// Durable retry queue for in-flight actions that failed because an integration
+// was broken (pfd-2). An action queues here, then the resume sweep re-runs it
+// when the integration goes healthy again (and on a slow backstop timer).
+//   PENDING  — eligible to run once its integration is healthy + nextAttemptAt
+//              has passed.
+//   RESOLVED — re-ran successfully; terminal happy path.
+//   DEAD     — exceeded max attempts or the 7-day age cap; a human was paged
+//              and the customer sees a note on the integration page. Terminal.
+//   HELD     — degraded-mode hold for a NON-critical side-effect (e.g. a Slack
+//              notification) whose primary action already succeeded. Flushed on
+//              reconnect just like PENDING, but tagged so surfaces can say "your
+//              work is done; only the Slack ping is waiting".
+enum RetryableActionStatus {
+  PENDING
+  RESOLVED
+  DEAD
+  HELD
+}
+
 // Inquiry intake type. Drives operator triage on /operator/inquiries and
 // the SLA framing in the customer-facing confirmation. CUSTOM_SKILL_BUILD
 // is the existing /custom path (custom skill, integration, white-label,
@@ -652,6 +697,8 @@ model Workspace {
   integrationCredentials   IntegrationCredential[]
   webhookSubscriptions     WebhookSubscription[]
   webhookEvents            WebhookEvent[]
+  integrationHealthChecks  IntegrationHealthCheck[]
+  retryableActions         RetryableAction[]
   knowledgeDocuments       KnowledgeDocument[]
   embeddings               Embedding[]
   supportRequests          SupportRequest[]
@@ -1160,6 +1207,111 @@ model WebhookEvent {
   @@index([processed, receivedAt])
   @@index([processed, deadlettered, nextAttemptAt])
   @@index([workspaceId])
+}
+
+// Per-workspace, per-provider integration health (pfd-2 integration self-heal).
+//
+// The daily health cron writes one row per (workspace, provider) — upserted on
+// the unique key — recording whether the last check passed, what KIND of check
+// it was (real read vs credential-only — labelled honestly per the audit), and
+// the de-dupe state for the reconnect email so a breakage emails the owner ONCE
+// per breakage, not daily. `unhealthySince` anchors the >72h escalation.
+//
+// Why a dedicated table rather than overloading IntegrationCredential.status:
+// status already means "can we refresh the OAuth token". Health means "did a
+// real read just succeed" — orthogonal (a token can be ACTIVE while the vendor
+// 500s every read), and we need the de-dupe + since-timestamp bookkeeping that
+// doesn't belong on the credential row.
+//
+// `id` carries NO DB default (Prisma generates it client-side) so this model
+// adds ZERO new entries to prisma/schema-drift-baseline.sql.
+model IntegrationHealthCheck {
+  id             String                     @id @default(uuid()) @db.Uuid
+  workspaceId    String                     @db.Uuid
+  provider       IntegrationProvider
+  status         IntegrationHealthStatus    @default(UNKNOWN)
+  /// REAL_READ when the last check exercised a real read through the adapter;
+  /// CREDENTIAL_ONLY when it only validated the token. Surfaced verbatim so
+  /// the customer-facing status is honest about what we actually verified.
+  checkKind      IntegrationHealthCheckKind @default(CREDENTIAL_ONLY)
+  /// Last error detail when status=UNHEALTHY (vendor message / HTTP code).
+  /// NULL while HEALTHY.
+  lastError      String?
+  /// UTC instant of the most recent check (success OR failure).
+  lastCheckedAt  DateTime?
+  /// UTC instant the integration first went UNHEALTHY in the current breakage.
+  /// Set when HEALTHY→UNHEALTHY; cleared (NULL) on recovery. The >72h escalation
+  /// + the customer banner read this.
+  unhealthySince DateTime?
+  /// UTC instant we last emailed the workspace owner about this breakage. Set
+  /// once per breakage (when we first notify); cleared on recovery so a NEW
+  /// breakage notifies again. Drives "one email per breakage, not daily spam".
+  notifiedAt     DateTime?
+  /// True once the >72h human escalation (pageHuman warn) has fired for the
+  /// current breakage, so it pages ONCE per breakage, not every daily run.
+  /// Cleared on recovery.
+  escalatedAt    DateTime?
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+  workspace      Workspace                  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, provider])
+  @@index([status, unhealthySince])
+  @@index([workspaceId])
+}
+
+// Durable retry queue for in-flight actions that failed because an integration
+// was broken (pfd-2 integration self-heal).
+//
+// When a killer-workflow producer (a CRM sync sweep's draft-persist, etc.)
+// fails on a broken integration, instead of silently dropping the work it
+// enqueues a row here. The resume sweep re-runs PENDING/HELD rows when their
+// integration is healthy again. `idempotencyKey` is MANDATORY (unique per
+// workspace) so a resume that races a retry never double-executes — the
+// re-run handler no-ops if the work already landed under that key.
+//
+// `payload` is the JSON the re-run handler needs to reconstruct the action
+// (skill slug, record ids, draft body) — NOT raw secrets; tokens are resolved
+// fresh from IntegrationCredential at resume time (cold-start safe).
+//
+// `id` carries NO DB default → ZERO new drift-baseline entries.
+model RetryableAction {
+  id             String                @id @default(uuid()) @db.Uuid
+  workspaceId    String                @db.Uuid
+  /// The integration whose breakage caused (or holds) this action.
+  provider       IntegrationProvider
+  /// Stable action discriminator the resume handler switches on, e.g.
+  /// 'lead-triage.persist-draft' or 'slack.notify'. Free-form string keyed to
+  /// a registered re-run handler.
+  actionKind     String
+  /// Re-run input as JSON. Reconstructs the action without re-reading the
+  /// original failed context. No secrets — credentials resolve fresh at resume.
+  payload        Json
+  /// MANDATORY idempotency key, unique per workspace. The re-run handler keys
+  /// the side-effect on this so a double-fire (resume racing the original
+  /// retry) never double-executes.
+  idempotencyKey String
+  status         RetryableActionStatus @default(PENDING)
+  /// Number of resume attempts made. Bumped on every attempt (success OR fail).
+  attempts       Int                   @default(0)
+  /// When NULL the row is eligible immediately. Set to a future instant after a
+  /// failed attempt (backoff). The resume sweep skips rows whose nextAttemptAt
+  /// is in the future.
+  nextAttemptAt  DateTime?
+  /// Last error from a resume attempt. NULL until the first failure.
+  lastError      String?
+  /// Set when the row goes DEAD (max attempts / 7-day cap) so the operator
+  /// surface + the customer note can show when we gave up.
+  diedAt         DateTime?
+  /// Set when the row RESOLVED so surfaces can show "your held work just ran".
+  resolvedAt     DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  workspace      Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, idempotencyKey])
+  @@index([status, provider, nextAttemptAt])
+  @@index([workspaceId, status])
 }
 
 // Knowledge substrate document (project_knowledge_substrate.md). The

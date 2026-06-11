@@ -13,6 +13,7 @@ import {
   waitlistPath,
 } from "@/lib/integrations/marketplace";
 import { isIntegrationConfigured } from "@/lib/integrations/config-status";
+import { summarizeRetryQueueForProvider } from "@/lib/integrations/retry-queue";
 import { DisconnectButton } from "./DisconnectButton";
 import { TestConnectionButton } from "./TestConnectionButton";
 import { ApiKeyConnectForm } from "./ApiKeyConnectForm";
@@ -80,6 +81,17 @@ export default async function IntegrationSettingsPage({
           }),
         );
 
+  // pfd-2 — queued/held/dead actions waiting on this integration. Lets the
+  // page reassure ("3 actions are queued and will run when you reconnect") and
+  // be honest when we gave up ("1 action could not be completed").
+  const queue =
+    entry.providerKey === null
+      ? { waiting: 0, held: 0, dead: 0 }
+      : await summarizeRetryQueueForProvider(
+          workspaceId,
+          entry.providerKey,
+        ).catch(() => ({ waiting: 0, held: 0, dead: 0 }));
+
   const isComingSoon = entry.status === "coming-soon";
   const isConnected = credential !== null && credential.status === "ACTIVE";
   // Same honesty seam the marketplace tiles + onboarding gate on: when the
@@ -111,6 +123,24 @@ export default async function IntegrationSettingsPage({
       {flash.tested === "fail" && (
         <div className="mt-6 border border-flag/40 bg-flag/5 px-4 py-3 text-sm text-ink">
           Connection check failed. {flash.error ?? "Try reconnecting."}
+        </div>
+      )}
+
+      {queue.waiting + queue.held > 0 && (
+        <div className="mt-6 border border-rule bg-paper px-4 py-3 text-sm text-ink">
+          {queue.waiting + queue.held === 1
+            ? "1 action is queued and will run automatically when "
+            : `${queue.waiting + queue.held} actions are queued and will run automatically when `}
+          {entry.name} is reachable again. Nothing was lost.
+        </div>
+      )}
+      {queue.dead > 0 && (
+        <div className="mt-3 border border-flag/40 bg-flag/5 px-4 py-3 text-sm text-ink">
+          {queue.dead === 1
+            ? "1 action couldn't be completed"
+            : `${queue.dead} actions couldn't be completed`}{" "}
+          after several retries. Your service partner has been notified and will
+          follow up — you don&apos;t need to do anything.
         </div>
       )}
 

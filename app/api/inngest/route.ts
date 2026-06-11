@@ -132,6 +132,14 @@ import { lawConflictScreenSweepFn } from "@/lib/inngest/functions/law-intake-con
 // auto-refunds (when UNSUPPORTED_VERTICAL_AUTO_REFUND=on) or — by default —
 // pages a human in detect-only mode. Nobody pays for a vertical we can't serve.
 import { unsupportedVerticalRefundSweepFn } from "@/lib/inngest/functions/unsupported-vertical-refund-sweep";
+// pfd-2 integration self-heal — daily per-integration health check that probes
+// each connected integration THROUGH its adapter, banners + emails the owner on
+// breakage (one email per breakage, not daily spam), escalates a >72h breakage
+// to a human, and flushes the durable retry queue on reconnect. The resume
+// backstop re-runs queued/held actions on a slow timer if a recovery transition
+// was missed.
+import { integrationHealthSweepFn } from "@/lib/inngest/functions/integration-health-sweep";
+import { retryQueueResumeSweepFn } from "@/lib/inngest/functions/retry-queue-resume-sweep";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -179,5 +187,7 @@ export const { GET, POST, PUT } = serve({
     monthEndCloseCpaSweepFn,
     lawConflictScreenSweepFn,
     unsupportedVerticalRefundSweepFn,
+    integrationHealthSweepFn,
+    retryQueueResumeSweepFn,
   ],
 });

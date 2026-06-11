@@ -6,11 +6,25 @@ export {
   BUILDIUM_NOT_CONNECTED_MESSAGE,
   type BuildiumRentRollLookupOptions,
 } from './buildium-lookup';
+export { RecordingRentChaseApprovalSink } from './approval-sink';
+export {
+  PrismaRentChaseApprovalSink,
+  buildRentChaseApprovalRow,
+  RENT_COLLECTION_CHASE_AGENT_SLUG,
+  RENT_COLLECTION_CHASE_REF_TABLE,
+} from './prisma-approval-sink';
+export {
+  runRentCollectionChaseForWorkspace,
+  RENT_COLLECTION_CHASE_SKILL_SLUG,
+  RENT_COLLECTION_CHASE_DISCIPLINE_ID,
+} from './run-for-workspace';
 export type {
   BucketThresholds,
   ContactPerson,
   DelinquencyBucket,
   OwnerReviewItem,
+  RentChaseApproval,
+  RentChaseApprovalSink,
   RentCollectionChaseInput,
   RentCollectionChaseOutput,
   RentRollLookup,

@@ -28,6 +28,7 @@ function unit(overrides: Partial<UnitDelinquency> = {}): UnitDelinquency {
     primaryTenant: { name: 'Riley Park', email: 'riley@tenant.example', phone: null },
     coTenants: [],
     daysPastDue: 5,
+    outstandingBalanceUsd: 1850,
     paymentPlanInPlace: false,
     tenantAcknowledged: false,
     lastChaseAt: null,

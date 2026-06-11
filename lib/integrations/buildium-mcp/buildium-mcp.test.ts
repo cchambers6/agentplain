@@ -151,6 +151,9 @@ describe('rent-collection skill — honesty seam (Buildium not connected)', () =
       ): Promise<McpResult<ListDelinquentLeasesOutput>> {
         return mcpError('CREDENTIAL_NOT_FOUND', 'no buildium credential');
       },
+      async healthCheck() {
+        return { ok: false as const, latencyMs: 0, lastChecked: NOW.toISOString(), errorCode: 'CREDENTIAL_NOT_FOUND' };
+      },
     };
     const lookup = new BuildiumRentRollLookup({ workspaceId: WORKSPACE_ID, mcp: stub });
     const res = await lookup.fetchDelinquentUnits({ workspaceId: WORKSPACE_ID });
@@ -178,6 +181,9 @@ describe('rent-collection skill — honesty seam (Buildium not connected)', () =
             },
           ],
         });
+      },
+      async healthCheck() {
+        return { ok: true as const, latencyMs: 0, lastChecked: NOW.toISOString() };
       },
     };
     const lookup = new BuildiumRentRollLookup({ workspaceId: WORKSPACE_ID, mcp: stub });

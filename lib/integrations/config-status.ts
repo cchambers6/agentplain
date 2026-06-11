@@ -31,6 +31,13 @@ import type { MarketplaceEntry, MarketplaceProviderKey } from "./marketplace";
  * authorize-URL builder throw.
  */
 export function isIntegrationConfigured(entry: MarketplaceEntry): boolean {
+  // API-key connectors (Buildium, Follow Up Boss, Sierra, BoldTrail, TaxDome,
+  // Karbon) need NO environment OAuth credentials — the customer pastes their
+  // own key into the connect form, which the connect route validates +
+  // encrypts. They are "configured" (self-connectable) whenever the entry is
+  // available; gating them on env OAuth vars would wrongly hide the paste form
+  // behind the "not open for self-connect yet" state.
+  if (entry.connectMode === 'api-key') return entry.status === 'available';
   return isProviderConfigured(entry.providerKey);
 }
 

@@ -71,6 +71,18 @@ export async function runSkill(
   for (const c of classified) {
     if (c.bucket === 'grace') continue;
     const draft = renderTenantChase({ unit: c.unit, bucket: c.bucket });
+
+    // Stage the chase as a FOLLOW_UP_NUDGE approval item (PENDING). The PM
+    // reviews + approves before their own mailbox sends. Sink failures are
+    // non-fatal per the RentCollectionChaseInput.sink contract — a DB hiccup
+    // must not drop the draft from the output.
+    if (input.sink) {
+      await input.sink.record({
+        workspaceId: input.workspaceId,
+        approval: { draft },
+      });
+    }
+
     if (input.persister && draft.confidence >= persistThreshold) {
       const persistRes = await input.persister.persistDraft({
         workspaceId: input.workspaceId,
@@ -220,6 +232,7 @@ function renderTenantChase(args: {
     leaseId: unit.leaseId,
     bucket,
     daysPastDue: unit.daysPastDue,
+    outstandingBalanceUsd: unit.outstandingBalanceUsd,
     toEmails: [unit.primaryTenant.email],
     ccEmails: unit.coTenants.map((c) => c.email),
     subject,

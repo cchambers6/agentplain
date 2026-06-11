@@ -58,6 +58,24 @@ export interface ListDelinquentLeasesOutput {
 }
 
 /**
+ * Result of a Buildium connection health probe. Never throws — a failed
+ * probe returns `ok:false` with the upstream error code so the fleet-health
+ * cron + the customer "Test connection" surface can render a plain-language
+ * status. `latencyMs` is the round-trip time of the cheap read; `lastChecked`
+ * is an ISO timestamp.
+ */
+export interface BuildiumHealth {
+  ok: boolean;
+  latencyMs: number;
+  lastChecked: string;
+  /** Upstream McpError code when `ok` is false (e.g. UNAUTHORIZED,
+   *  CREDENTIAL_NOT_FOUND, RATE_LIMITED, NETWORK). Absent when ok. */
+  errorCode?: string;
+  /** Human-readable detail when `ok` is false. */
+  message?: string;
+}
+
+/**
  * The ONLY surface the rest of the app uses to read Buildium. Both the live
  * REST server and the fixture server implement this — the two-implementation
  * rule (`feedback_runner_portability.md`).
@@ -68,6 +86,10 @@ export interface BuildiumMcpServer {
   listDelinquentLeases(
     input?: ListDelinquentLeasesInput,
   ): Promise<McpResult<ListDelinquentLeasesOutput>>;
+  /** Cheap connection probe — hits a single tiny read (`/leases?limit=1`)
+   *  and reports reachability + latency. Used by the fleet-health cron
+   *  (Pillar 6) and the customer "Test connection" button. */
+  healthCheck(): Promise<BuildiumHealth>;
 }
 
 export const BUILDIUM_API_BASE = 'https://api.buildium.com/v1';

@@ -24,6 +24,27 @@
 
 import type { DraftPersister, SkillResult } from '../types';
 
+// ── Approval sink port ────────────────────────────────────────────────────
+// Mirrors lib/skills/home-services-estimate-followup/types.ts. The skill
+// calls this after rendering each chase draft; the production impl writes a
+// WorkApprovalQueueItem (kind=FOLLOW_UP_NUDGE, status=PENDING) carrying the
+// unit's outstanding balance so the PM console can show "you have $X,XXX in
+// unpaid rent". Tests pass a RecordingRentChaseApprovalSink. Sink failures
+// are non-fatal — a DB hiccup must not drop the draft output.
+
+export interface RentChaseApproval {
+  /** The rendered tenant-chase draft. */
+  draft: TenantChaseDraft;
+}
+
+export interface RentChaseApprovalSink {
+  readonly name: string;
+  record(args: {
+    workspaceId: string;
+    approval: RentChaseApproval;
+  }): Promise<SkillResult<{ sinkId: string }>>;
+}
+
 // ── Input shapes ─────────────────────────────────────────────────────────
 
 export type DelinquencyBucket =
@@ -51,6 +72,12 @@ export interface UnitDelinquency {
    *  positive number means at least one day past. Negative values are
    *  filtered upstream (current-on-rent). */
   daysPastDue: number;
+  /** Outstanding balance in dollars (the at-risk rent). Carried as
+   *  metadata for the value-ledger / PM console "$X,XXX unpaid rent"
+   *  display — NEVER rendered in the chase body (dollar amounts always
+   *  defer to {{operator: amount due}}). Default 0 when the source
+   *  platform doesn't carry a balance (fixtures pre-dating the field). */
+  outstandingBalanceUsd: number;
   /** Whether the tenant has a payment plan logged in the platform.
    *  Drives a different tone — confirm plan in motion vs. cold chase. */
   paymentPlanInPlace: boolean;
@@ -83,6 +110,10 @@ export interface TenantChaseDraft {
   leaseId: string;
   bucket: DelinquencyBucket;
   daysPastDue: number;
+  /** Outstanding balance copied from UnitDelinquency — carried on the draft
+   *  so the approval sink can embed it in the payload without re-fetching
+   *  the rent roll. Metadata only; never appears in `body`. */
+  outstandingBalanceUsd: number;
   toEmails: string[];
   ccEmails: string[];
   subject: string;
@@ -120,6 +151,13 @@ export interface RentCollectionChaseOutput {
 export interface RentCollectionChaseInput {
   workspaceId: string;
   lookup: RentRollLookup;
+  /** Approval sink — when provided, every rendered chase draft is staged as
+   *  a WorkApprovalQueueItem (kind=FOLLOW_UP_NUDGE, status=PENDING) for PM
+   *  review before the customer's own mailbox sends. Sink failures are
+   *  non-fatal: the skill logs and continues so a DB hiccup doesn't drop the
+   *  draft output. Pass null/omit to disable staging (tests that only assert
+   *  draft content). */
+  sink?: RentChaseApprovalSink | null;
   persister?: DraftPersister | null;
   persistThreshold?: number;
   now?: Date;

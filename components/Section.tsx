@@ -20,10 +20,16 @@ export default function Section({
   className = "",
 }: SectionProps) {
   const bg = tone === "deep" ? "bg-paper-deep" : "bg-paper";
+  // Editorial vertical rhythm: py-16/md:py-24 (was py-20/md:py-28). The earlier
+  // scale stacked ~224px of chrome per section; across a long marketing page
+  // that read as a monotonous text wall. Tightened to a calmer broadsheet
+  // cadence that still breathes, and brought into deliberate relation with the
+  // hero's own py-20/md:py-28 (the hero earns the extra air as the first fold;
+  // every section below it sits a notch tighter). Wave A3, 2026-06-11.
   return (
     <section
       id={id}
-      className={`${bg} border-b border-rule py-20 md:py-28 ${className}`}
+      className={`${bg} border-b border-rule py-16 md:py-24 ${className}`}
     >
       <div className="container-wide">
         {(eyebrow || title || intro) && (

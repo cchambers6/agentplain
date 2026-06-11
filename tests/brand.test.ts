@@ -35,8 +35,8 @@ describe("brand tokens — canonical (spec §4)", () => {
 });
 
 describe("brand tokens — typography (spec §3)", () => {
-  it("display family is Source Serif 4 (V0 dev — not Cormorant)", () => {
-    assert.equal(tokens.typography.displayFamily, "Source Serif 4");
+  it("display family is Fraunces (brand spec per docs/brand-and-claims.md §Typography)", () => {
+    assert.equal(tokens.typography.displayFamily, "Fraunces");
   });
   it("sans family is Inter", () => {
     assert.equal(tokens.typography.sansFamily, "Inter");

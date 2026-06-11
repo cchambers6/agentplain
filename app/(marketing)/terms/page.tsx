@@ -170,12 +170,25 @@ export default function TermsPage() {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+// Legal-page section. The eyebrow used to repeat `title` verbatim (eyebrow and
+// h2 rendered the same string) — a redundant double-heading. The page-category
+// label ("Terms of service") already lives in the hero eyebrow, so each section
+// heading is now a single, clear h2. Pass `eyebrow` only when a section
+// genuinely wants a distinct category label above its title. (Wave A3, 2026-06-11.)
+function Section({
+  title,
+  eyebrow,
+  children,
+}: {
+  title: string;
+  eyebrow?: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="border-b border-rule">
       <div className="container-wide py-16 md:py-20">
-        <p className="eyebrow mb-3">{title}</p>
-        <h2 className="mt-2 max-w-3xl font-display text-2xl leading-snug text-ink md:text-3xl">
+        {eyebrow && <p className="eyebrow mb-3">{eyebrow}</p>}
+        <h2 className="max-w-3xl font-display text-2xl leading-snug text-ink md:text-3xl">
           {title}
         </h2>
         <div className="mt-6 max-w-3xl space-y-5 text-base leading-relaxed text-ink-soft md:text-lg">

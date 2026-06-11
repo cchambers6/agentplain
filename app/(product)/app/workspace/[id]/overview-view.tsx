@@ -61,6 +61,18 @@ export interface OverviewViewProps {
   activePause: OverviewActivePause | null;
 }
 
+/** Map DB enum tokens to customer-facing tier names. */
+const VERTICAL_TIER_DISPLAY: Record<string, string> = {
+  REGULAR: "Regular",
+  PLUS: "Partner",
+  MAX: "Max",
+};
+
+function tierDisplayLabel(raw: string | null): string | null {
+  if (!raw) return null;
+  return VERTICAL_TIER_DISPLAY[raw] ?? raw;
+}
+
 export function OverviewView({
   workspaceId,
   email,
@@ -97,7 +109,7 @@ export function OverviewView({
       {activePause ? (
         <aside
           role="status"
-          className="rounded-md border border-rule bg-paper-deep p-4 text-[14px] text-ink"
+          className="rounded-none border border-rule bg-paper-deep p-4 text-[14px] text-ink"
         >
           <p>
             <span className="font-mono text-[11px] uppercase text-mute">
@@ -147,7 +159,7 @@ export function OverviewView({
           {verticalTier ? (
             <>
               <span className="font-mono tracking-eyebrow uppercase">tier</span>
-              <span className="text-ink">{verticalTier}</span>
+              <span className="text-ink">{tierDisplayLabel(verticalTier)}</span>
             </>
           ) : null}
           {!verticalIsLive && verticalName ? (

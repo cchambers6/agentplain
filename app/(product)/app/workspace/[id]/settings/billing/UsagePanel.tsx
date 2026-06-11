@@ -212,7 +212,7 @@ function MeteringNotice({ enabled }: { enabled: boolean }) {
   return (
     <p className="mt-6 text-[13px] leading-relaxed text-ink-soft">
       <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-        in development
+        coming soon
       </span>
       {" "}Usage is tracked here so the picture is honest — it isn&rsquo;t
       yet metered against your subscription. When metered billing turns on

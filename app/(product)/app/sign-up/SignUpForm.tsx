@@ -159,7 +159,7 @@ function TierPicker({
   return (
     <fieldset>
       <legend className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-        service cadence
+        pick your plan
       </legend>
       <div
         role="radiogroup"

@@ -46,9 +46,9 @@ export default async function CheckoutSuccessPage({ searchParams }: PageProps) {
           install within one business day. The sign-in link we emailed
           is valid for 15 minutes — click it whenever you're ready.
         </p>
-        <div className="mt-8">
+        <div className="mt-8 flex flex-wrap gap-3">
           <ApHeritageButton variant="primary" withArrow href="/app/sign-in">
-            back to sign in
+            sign in to open your workspace
           </ApHeritageButton>
         </div>
         <p className="mt-10 border-t border-rule pt-6 text-sm text-mute">

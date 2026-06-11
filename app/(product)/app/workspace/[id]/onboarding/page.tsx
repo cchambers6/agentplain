@@ -253,6 +253,7 @@ export default async function OnboardingPage({ params }: PageProps) {
                   preChecked={new Set(effectivePickedSlugs)}
                   partner={partner}
                   hasInbox={hasInbox}
+                  workspaceId={workspaceId}
                 />
               ) : currentStep === "set_preferences" ? (
                 <>
@@ -657,7 +658,7 @@ function SetPreferences({
 
       <FieldGroup
         label="inbound categorization notes"
-        helper="What should the router treat as hot vs. information-only vs. skip? Free-form prose — {partner} reads it on every fire."
+        helper={`What should the router treat as hot vs. information-only vs. skip? Free-form prose — ${partner} reads it on every fire.`}
       >
         <textarea
           name="categorizationNotes"
@@ -868,11 +869,13 @@ function PickSkills({
   preChecked,
   partner,
   hasInbox,
+  workspaceId,
 }: {
   pickable: PickableSkill[];
   preChecked: Set<string>;
   partner: string;
   hasInbox: boolean;
+  workspaceId: string;
 }) {
   if (pickable.length === 0) {
     return (
@@ -890,7 +893,19 @@ function PickSkills({
       <p className="text-[15px] leading-relaxed text-ink-soft">
         {hasInbox
           ? `${partner} will fire each of these once you finish onboarding. Uncheck anything you'd rather skip for now — you can re-enable any skill later from the marketplace.`
-          : `${partner} can fire the items below from internal workspace data today. Connect an inbox to unlock inbox triage, the chief of staff, and follow-up chasing on your next visit.`}
+          : (
+            <>
+              {partner} can fire the items below from internal workspace data
+              today.{" "}
+              <Link
+                href={`/app/workspace/${workspaceId}/integrations`}
+                className="text-ink underline-offset-4 hover:underline focus:outline-none focus-visible:underline"
+              >
+                Connect your inbox now
+              </Link>{" "}
+              to unlock inbox triage, the chief of staff, and follow-up chasing.
+            </>
+          )}
       </p>
       <ul className="grid gap-px overflow-hidden border border-rule bg-rule">
         {pickable.map((p) => (

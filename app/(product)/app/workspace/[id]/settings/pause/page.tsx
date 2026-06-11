@@ -119,7 +119,7 @@ export default async function PauseSettingsPage({ params }: PageProps) {
         <h2 className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
           schedule a new pause
         </h2>
-        <div className="mt-4 rounded-md border border-rule bg-paper p-5">
+        <div className="mt-4 rounded-none border border-rule bg-paper p-5">
           <PauseForm
             workspaceId={workspaceId}
             defaultPausedFrom={toLocalString(now)}

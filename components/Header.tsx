@@ -107,7 +107,7 @@ export default function Header() {
             </summary>
             <div
               role="menu"
-              className="absolute right-0 top-full z-30 mt-2 w-56 border border-rule bg-paper py-1 shadow-sm"
+              className="absolute right-0 top-full z-30 mt-2 w-56 border border-rule bg-paper py-1"
             >
               {PRIMARY_NAV.map((item) => (
                 <Link

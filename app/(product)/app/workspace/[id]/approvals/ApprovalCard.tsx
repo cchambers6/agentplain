@@ -32,6 +32,39 @@ interface ApprovalCardProps {
   plainoState?: PlainoState;
 }
 
+/** Map internal agent slugs to readable display labels for the customer surface.
+ *  Slugs follow the pattern `<vertical>-<role>` or just `<role>-<vertical>`.
+ *  Fallback: title-case the slug, strip any leading vertical prefix. */
+const AGENT_DISPLAY_NAMES: Record<string, string> = {
+  "realty-drafter": "Reply Drafter",
+  "realty-showing-scheduler": "Showing Scheduler",
+  "realty-buyer-inquiry-router": "Buyer Inquiry Router",
+  "realty-listing-coordinator": "Listing Coordinator",
+  "office-admin": "Office Admin",
+  "follow-up-chaser-general": "Follow-up Chaser",
+  "chief-of-staff-scheduler": "Chief of Staff",
+  "inbox-triage-general": "Inbox Triage",
+  "compliance-watch-general": "Compliance Sentinel",
+  "support-handler": "Support Handler",
+  "process-doc-drafter-general": "Process Doc Drafter",
+  "content-calendar-drafter-general": "Content Calendar Drafter",
+  "invoice-chase-general": "Invoice Chaser",
+  "home-services-estimate-followup": "Estimate Follow-up",
+  "law-intake-conflict-screen": "Conflict Screen",
+  "analytics-weekly-pulse-general": "Analytics Pulse",
+  "finance-pulse-general": "Finance Pulse",
+};
+
+function agentDisplayLabel(slug: string): string {
+  if (AGENT_DISPLAY_NAMES[slug]) return AGENT_DISPLAY_NAMES[slug]!;
+  // Strip leading vertical prefix (e.g. "realty-" or "general-") and title-case.
+  const stripped = slug.replace(/^(realty|general|law|home-services|insurance|cpa|mortgage|real-estate|ria|property-management|recruiting|title-escrow)-/, "");
+  return stripped
+    .split("-")
+    .map((w) => (w.length === 0 ? w : w[0]!.toUpperCase() + w.slice(1)))
+    .join(" ");
+}
+
 export function ApprovalCard({
   row,
   footer,
@@ -46,7 +79,7 @@ export function ApprovalCard({
         <>
           {rendered.kindLabel}
           <span className="mx-2">·</span>
-          {row.agentSlug}
+          {agentDisplayLabel(row.agentSlug)}
           <span className="mx-2">·</span>
           {formatRelativeTime(row.proposedAtIso)}
         </>
@@ -124,7 +157,7 @@ export function ApprovalCard({
       <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
         <Plaino state={plainoState} size={16} />
         <span className="text-ink-soft">drafted by</span>
-        <span className="text-ink">{row.agentSlug}</span>
+        <span className="text-ink">{agentDisplayLabel(row.agentSlug)}</span>
         <span aria-hidden>·</span>
         <span>{rendered.kindLabel}</span>
         <span aria-hidden>·</span>

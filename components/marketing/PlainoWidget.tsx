@@ -134,7 +134,7 @@ export default function PlainoWidget() {
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={open ? "Close chat with Plaino" : "Chat with Plaino"}
-        className="fixed bottom-5 right-5 z-50 flex h-12 w-12 items-center justify-center rounded-full border border-clay bg-clay text-paper shadow-sm transition hover:bg-clay-deep focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:bottom-6 sm:right-6 sm:h-auto sm:w-auto sm:gap-2 sm:rounded-none sm:px-4 sm:py-3 sm:font-mono sm:text-[12px] sm:uppercase sm:tracking-eyebrow"
+        className="fixed bottom-5 right-5 z-50 flex h-12 w-12 items-center justify-center border border-clay bg-clay text-paper transition hover:bg-clay-deep focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:bottom-6 sm:right-6 sm:h-auto sm:w-auto sm:gap-2 sm:px-4 sm:py-3 sm:font-mono sm:text-[12px] sm:uppercase sm:tracking-eyebrow"
       >
         <Plaino state="head-icon" size={20} />
         <span className="hidden sm:inline">
@@ -147,7 +147,7 @@ export default function PlainoWidget() {
           ref={panelRef}
           role="dialog"
           aria-label="Chat with Plaino"
-          className="fixed bottom-24 right-6 z-50 flex max-h-[70vh] w-[min(380px,calc(100vw-3rem))] flex-col border border-rule bg-paper shadow-lg"
+          className="fixed bottom-24 right-6 z-50 flex max-h-[70vh] w-[min(380px,calc(100vw-3rem))] flex-col border border-rule bg-paper"
         >
           <div className="flex items-center gap-3 border-b border-rule bg-paper-deep px-4 py-3">
             <Plaino state="head-icon" size={28} />

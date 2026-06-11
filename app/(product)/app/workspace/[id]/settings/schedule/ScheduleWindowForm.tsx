@@ -110,7 +110,7 @@ export function ScheduleWindowForm({
           required
           value={skillSlug}
           onChange={(e) => onSkillChange(e.target.value)}
-          className="mt-1 block w-full rounded-md border border-rule bg-paper px-3 py-2 text-[14px] text-ink focus:outline-none focus:ring-2 focus:ring-ink/30"
+          className="mt-1 block w-full rounded-none border border-rule bg-paper px-3 py-2 text-[14px] text-ink focus:outline-none focus:ring-2 focus:ring-ink/30"
         >
           {skillOptions.map((s) => (
             <option key={s.slug} value={s.slug}>
@@ -167,7 +167,7 @@ export function ScheduleWindowForm({
             max={23}
             value={startHourLocal}
             onChange={(e) => setStartHourLocal(Number(e.target.value))}
-            className="mt-1 block w-full rounded-md border border-rule bg-paper px-3 py-2 text-[14px] text-ink focus:outline-none focus:ring-2 focus:ring-ink/30"
+            className="mt-1 block w-full rounded-none border border-rule bg-paper px-3 py-2 text-[14px] text-ink focus:outline-none focus:ring-2 focus:ring-ink/30"
           />
         </label>
         <label className="block">
@@ -181,7 +181,7 @@ export function ScheduleWindowForm({
             max={23}
             value={endHourLocal}
             onChange={(e) => setEndHourLocal(Number(e.target.value))}
-            className="mt-1 block w-full rounded-md border border-rule bg-paper px-3 py-2 text-[14px] text-ink focus:outline-none focus:ring-2 focus:ring-ink/30"
+            className="mt-1 block w-full rounded-none border border-rule bg-paper px-3 py-2 text-[14px] text-ink focus:outline-none focus:ring-2 focus:ring-ink/30"
           />
         </label>
         <label className="block">
@@ -194,7 +194,7 @@ export function ScheduleWindowForm({
             value={workspaceTimezone}
             onChange={(e) => setWorkspaceTimezone(e.target.value)}
             placeholder="America/New_York"
-            className="mt-1 block w-full rounded-md border border-rule bg-paper px-3 py-2 text-[14px] text-ink focus:outline-none focus:ring-2 focus:ring-ink/30"
+            className="mt-1 block w-full rounded-none border border-rule bg-paper px-3 py-2 text-[14px] text-ink focus:outline-none focus:ring-2 focus:ring-ink/30"
           />
         </label>
       </div>
@@ -204,12 +204,12 @@ export function ScheduleWindowForm({
       </p>
 
       {error ? (
-        <p className="text-[13px] text-red-700" role="alert">
+        <p className="text-[13px] text-flag" role="alert">
           {error}
         </p>
       ) : null}
       {saved ? (
-        <p className="text-[13px] text-green-700" role="status">
+        <p className="text-[13px] text-moss" role="status">
           Window saved.
         </p>
       ) : null}
@@ -217,7 +217,7 @@ export function ScheduleWindowForm({
       <button
         type="submit"
         disabled={submitting}
-        className="rounded-md border border-ink px-4 py-2 font-mono text-[12px] uppercase text-ink hover:bg-ink hover:text-paper disabled:opacity-50"
+        className="border border-ink px-4 py-2 font-mono text-[12px] uppercase text-ink hover:bg-ink hover:text-paper disabled:opacity-50"
       >
         {submitting ? "saving…" : "save window"}
       </button>

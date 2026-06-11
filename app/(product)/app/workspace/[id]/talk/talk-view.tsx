@@ -28,7 +28,7 @@ export function TalkEmptyState() {
       eyebrow="your service partner"
       scene="empty-talk"
       reality="Plaino's waiting at the workspace door."
-      change="Ask a question and I'll fetch from your files and the substrate. Hand me work and I'll herd it through the team — the draft lands in your approval queue. I'll wait here in the meantime."
+      change="Ask a question and I'll fetch from your files and everything your workspace has learned. Hand me work and I'll herd it through the team — the draft lands in your approval queue. I'll wait here in the meantime."
     />
   );
 }

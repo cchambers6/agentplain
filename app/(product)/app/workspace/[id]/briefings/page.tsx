@@ -167,11 +167,21 @@ export default async function BriefingsPage({ params }: PageProps) {
           {decrypted.map((b) => (
             <li key={b.id}>
               <ApPaperCard
-                title={b.forDate}
+                title={
+                  b.status.startsWith("WEEKLY")
+                    ? `Week of ${b.forDate} · what Plaino did for you`
+                    : b.forDate
+                }
                 eyebrow={
                   <>
                     {new Date(b.generatedAt).toLocaleDateString()}
-                    {b.status === "EMPTY" ? " · quiet day" : ""}
+                    {b.status === "EMPTY"
+                      ? " · quiet day"
+                      : b.status === "WEEKLY_READY"
+                        ? " · weekly proof-of-value digest"
+                        : b.status === "WEEKLY_EMPTY"
+                          ? " · weekly digest · quiet week"
+                          : ""}
                   </>
                 }
               >

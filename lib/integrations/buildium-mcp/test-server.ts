@@ -13,6 +13,7 @@
 
 import { mcpOk, type McpResult } from '@/lib/integrations/mcp-core';
 import {
+  type BuildiumHealth,
   type BuildiumLeaseSummary,
   type BuildiumMcpServer,
   type ListDelinquentLeasesInput,
@@ -88,5 +89,11 @@ export class TestBuildiumMcpServer implements BuildiumMcpServer {
     let leases = FIXTURE_LEASES;
     if (input.limit && input.limit > 0) leases = leases.slice(0, input.limit);
     return mcpOk({ leases });
+  }
+
+  async healthCheck(): Promise<BuildiumHealth> {
+    // Fixtures are always reachable — the probe reports healthy with a small
+    // deterministic latency so dev/tests exercise the green path.
+    return { ok: true, latencyMs: 1, lastChecked: new Date().toISOString() };
   }
 }

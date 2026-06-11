@@ -140,6 +140,10 @@ import { unsupportedVerticalRefundSweepFn } from "@/lib/inngest/functions/unsupp
 // was missed.
 import { integrationHealthSweepFn } from "@/lib/inngest/functions/integration-health-sweep";
 import { retryQueueResumeSweepFn } from "@/lib/inngest/functions/retry-queue-resume-sweep";
+// buildium/property-mgmt — daily rent-collection chase cron for
+// PROPERTY_MANAGEMENT workspaces with a connected Buildium account.
+// No-ops unless BUILDIUM_ADAPTER_LIVE=on (never chases against fixtures).
+import { propertyManagementRentCollectionChaseSweepFn } from "@/lib/inngest/functions/property-management-rent-collection-chase-sweep";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -189,5 +193,6 @@ export const { GET, POST, PUT } = serve({
     unsupportedVerticalRefundSweepFn,
     integrationHealthSweepFn,
     retryQueueResumeSweepFn,
+    propertyManagementRentCollectionChaseSweepFn,
   ],
 });

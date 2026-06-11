@@ -1097,14 +1097,22 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
       'always defer to {{operator: maintenance ETA}}; dollar amounts always defer ' +
       'to {{operator: amount due}}.',
     kind: 'coordinate',
+    // runtime=live: the daily Inngest cron
+    // `property-management-rent-collection-chase-sweep` fires this skill for
+    // every PROPERTY_MANAGEMENT workspace with an ACTIVE Buildium credential
+    // once BUILDIUM_ADAPTER_LIVE=on. Without this flag the entry defaulted to
+    // schema-only, so isSkillInstalledByDefault returned false and the cron's
+    // install-gate skipped it — the killer workflow silently never fired.
+    runtime: 'live',
     mcpDependencies: [
       {
-        provider: 'appfolio',
-        status: 'stubbed-json',
+        provider: 'buildium',
+        status: 'built',
         note:
-          'AppFolio / Buildium / Propertyware / Yardi Breeze MCPs not yet built. ' +
-          'Skill accepts UnitDelinquency[] JSON today; the MCPs will populate ' +
-          'the same shape.',
+          'Buildium MCP (lib/integrations/buildium-mcp/) backs the RentRollLookup ' +
+          'port via BuildiumRentRollLookup. Live calls gated by ' +
+          'BUILDIUM_ADAPTER_LIVE=on; fixtures by default. AppFolio / Propertyware ' +
+          '/ Yardi Breeze are the next adapters behind the same port.',
       },
       {
         provider: 'gmail',
@@ -1117,6 +1125,7 @@ export const SKILL_CATALOG: SkillCatalogEntry[] = [
     groundedIn: [
       'project_no_outbound_architecture.md',
       'feedback_no_silent_vendor_lock.md',
+      'lib/integrations/buildium-mcp/ (RentRollLookup adapter)',
       'lib/verticals/property-management/content.ts',
       'lib/skills/prompts/property-management.ts (friendly tone, never quote dollar amounts)',
     ],

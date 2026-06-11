@@ -44,6 +44,7 @@ export type MarketplaceProviderKey =
   | 'HUBSPOT'
   | 'SALESFORCE'
   | 'NOTION'
+  | 'BUILDIUM'
   | null;
 
 /** How a connector authenticates. `oauth` = the existing OAuth start /
@@ -403,6 +404,27 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     // CPA + future bookkeeping vertical (`cpa` is the current slug;
     // when a `bookkeeping` slug lands the tile auto-applies).
     verticalRelevance: ['cpa'],
+  },
+  {
+    id: 'buildium',
+    name: 'Buildium',
+    category: 'Accounting',
+    description:
+      'Your service partner reads your rent roll — surfaces every delinquent unit and drafts the tone-matched tenant chase so unpaid rent never slips. You approve before anything sends.',
+    mcpEndpointTemplate: '/api/integrations/buildium-mcp/{workspaceId}',
+    // API-key flow — the customer creates a client-id + client-secret pair
+    // under Settings → API Settings in Buildium. We request no OAuth scopes.
+    scopes: [],
+    oauthConfigKey: 'BUILDIUM_API_KEY',
+    status: 'available',
+    providerKey: 'BUILDIUM',
+    disciplines: ['finance', 'operations'],
+    // Property-management workspaces only. The rent-collection chase skill
+    // (runtime=live) is installed-by-default for this vertical and reads
+    // delinquent leases through the Buildium MCP once a credential lands and
+    // BUILDIUM_ADAPTER_LIVE=on.
+    verticalRelevance: ['property-management'],
+    connectMode: 'api-key',
   },
   {
     id: 'canva',

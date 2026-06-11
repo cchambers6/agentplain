@@ -23,6 +23,7 @@ import { mcpError, mcpOk, type McpResult } from '@/lib/integrations/mcp-core';
 import { resolveBuildiumCredential, type ResolvedBuildium } from './auth';
 import {
   BUILDIUM_API_BASE,
+  type BuildiumHealth,
   type BuildiumLeaseSummary,
   type BuildiumMcpServer,
   type BuildiumTenant,
@@ -79,6 +80,25 @@ export class ProdBuildiumMcpServer implements BuildiumMcpServer {
     });
   }
 
+  async healthCheck(): Promise<BuildiumHealth> {
+    const startedAt = Date.now();
+    const res = await this.withApi(async (api) => {
+      // Cheapest read Buildium offers: a single lease. We only care that the
+      // call authenticates + returns 2xx — the body is discarded.
+      return api<unknown>('GET', '/leases?limit=1');
+    });
+    const latencyMs = Date.now() - startedAt;
+    const lastChecked = new Date().toISOString();
+    if (res.ok) return { ok: true, latencyMs, lastChecked };
+    return {
+      ok: false,
+      latencyMs,
+      lastChecked,
+      errorCode: res.error.code,
+      message: res.error.message,
+    };
+  }
+
   // ── internals ───────────────────────────────────────────────────────────
 
   private async withApi<T>(fn: (api: ApiFn) => Promise<McpResult<T>>): Promise<McpResult<T>> {
@@ -90,7 +110,11 @@ export class ProdBuildiumMcpServer implements BuildiumMcpServer {
 
 type ApiFn = <T>(method: string, path: string, body?: unknown) => Promise<McpResult<T>>;
 
-function makeApiContext(resolved: ResolvedBuildium): ApiFn {
+/** Exported for unit tests: builds the raw Buildium request fn from an
+ *  already-resolved credential (no Prisma round-trip), so the HTTP +
+ *  error-mapping paths (401/429/500/malformed/happy) can be exercised with a
+ *  mocked global.fetch. Not used outside server.ts + tests. */
+export function makeApiContext(resolved: ResolvedBuildium): ApiFn {
   return async <T>(method: string, path: string, body?: unknown) => {
     let res: Response;
     try {

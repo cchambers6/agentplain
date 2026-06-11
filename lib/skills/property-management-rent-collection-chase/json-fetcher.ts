@@ -15,7 +15,12 @@ import type { RentRollLookup, UnitDelinquency } from './types';
 
 export interface JsonRentRollSeed {
   workspaceId: string;
-  delinquentUnits: UnitDelinquency[];
+  /** `outstandingBalanceUsd` is optional on seed records so fixtures
+   *  pre-dating the field compile without changes — the fetcher back-fills
+   *  0 when absent (mirrors the home-services amountUsd back-fill). */
+  delinquentUnits: Array<
+    Omit<UnitDelinquency, 'outstandingBalanceUsd'> & { outstandingBalanceUsd?: number }
+  >;
 }
 
 export class JsonRentRollLookup implements RentRollLookup {
@@ -31,6 +36,10 @@ export class JsonRentRollLookup implements RentRollLookup {
         `JsonRentRollLookup seeded for workspace ${this.seed.workspaceId}, asked for ${args.workspaceId}`,
       );
     }
-    return skillOk(this.seed.delinquentUnits);
+    const units: UnitDelinquency[] = this.seed.delinquentUnits.map((u) => ({
+      ...u,
+      outstandingBalanceUsd: u.outstandingBalanceUsd ?? 0,
+    }));
+    return skillOk(units);
   }
 }

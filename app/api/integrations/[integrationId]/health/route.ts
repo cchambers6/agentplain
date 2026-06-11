@@ -20,6 +20,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
 import { getMarketplaceEntry } from "@/lib/integrations/marketplace";
+import { buildiumHealthCheck } from "@/lib/integrations/buildium-mcp";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -83,6 +84,35 @@ export async function POST(req: NextRequest, ctx: RouteContext): Promise<NextRes
       },
       { status: 409 },
     );
+  }
+
+  // Buildium: go beyond the credential-state check and run a real connection
+  // probe (a cheap /leases?limit=1 read). When BUILDIUM_ADAPTER_LIVE=on this
+  // confirms the pasted client-id/secret actually authenticate; off, it
+  // reports the fixture server as healthy. A failed probe surfaces the
+  // upstream code so the operator can reconnect with the right key.
+  if (entry.providerKey === "BUILDIUM") {
+    const health = await buildiumHealthCheck({ workspaceId });
+    if (!health.ok) {
+      return NextResponse.json(
+        {
+          error: "probe_failed",
+          message:
+            health.message ??
+            "Buildium rejected the connection. Double-check the client ID + secret under Settings → API Settings.",
+          errorCode: health.errorCode,
+          latencyMs: health.latencyMs,
+        },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({
+      ok: true,
+      integrationId,
+      accountEmail: credential.accountEmail,
+      latencyMs: health.latencyMs,
+      lastChecked: health.lastChecked,
+    });
   }
 
   const expiresIn = credential.expiresAt.getTime() - Date.now();

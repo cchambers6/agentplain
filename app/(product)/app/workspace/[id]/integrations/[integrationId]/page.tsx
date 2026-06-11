@@ -17,6 +17,7 @@ import { summarizeRetryQueueForProvider } from "@/lib/integrations/retry-queue";
 import { DisconnectButton } from "./DisconnectButton";
 import { TestConnectionButton } from "./TestConnectionButton";
 import { ApiKeyConnectForm } from "./ApiKeyConnectForm";
+import { BuildiumConnectForm } from "./BuildiumConnectForm";
 
 /** Wave-4 — map of `entry.id` → the POST endpoint that validates +
  *  persists an API-key credential. Each entry here MUST exist as a
@@ -200,6 +201,22 @@ export default async function IntegrationSettingsPage({
           </div>
         )}
 
+      {/* Buildium connects with a client-id + client-secret PAIR, so it uses a
+          dedicated two-field form rather than the single-key ApiKeyConnectForm. */}
+      {!isComingSoon && !isConnected && isConfigured && entry.id === "buildium" && (
+        <div className="mt-8">
+          <ApRootedEmptyState
+            motif="lone-tree"
+            reality={`Not connected yet.`}
+            change={`Paste your Buildium client ID and secret below to connect. Your service partner reads your rent roll and drafts tenant chases — you approve every one.`}
+          />
+          <BuildiumConnectForm
+            workspaceId={workspaceId}
+            successRedirectUrl={`/app/workspace/${workspaceId}/integrations/${entry.id}`}
+          />
+        </div>
+      )}
+
       {!isComingSoon && !isConnected && !isConfigured && (
         <div className="mt-8">
           <ApRootedEmptyState
@@ -254,6 +271,25 @@ export default async function IntegrationSettingsPage({
               integrationName={entry.name}
             />
           </div>
+
+          {entry.id === "buildium" && (
+            <div className="mt-6 border border-rule bg-paper p-5">
+              <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                what happens next
+              </p>
+              <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink-soft">
+                Plaino reads your rent roll every morning and drafts the right
+                tenant chase for every delinquent unit. Watch it on your{" "}
+                <Link
+                  href={`/app/workspace/${workspaceId}/rent-collection`}
+                  className="underline underline-offset-4 hover:text-ink"
+                >
+                  rent collection dashboard
+                </Link>
+                ; every chase waits for your approval before anything sends.
+              </p>
+            </div>
+          )}
 
           <p className="mt-6 max-w-2xl text-[13px] leading-relaxed text-mute">
             Disconnecting removes agentplain&apos;s grant on your {entry.name}{" "}

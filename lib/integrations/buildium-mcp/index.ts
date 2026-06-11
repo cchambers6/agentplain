@@ -35,7 +35,13 @@ export { ProdBuildiumMcpServer } from './server';
 export { TestBuildiumMcpServer } from './test-server';
 export { resolveBuildiumCredential, type ResolvedBuildium } from './auth';
 export {
+  buildiumHealthCheck,
+  BUILDIUM_HEALTH_CHECK,
+  type ProviderHealthCheck,
+} from './health';
+export {
   BUILDIUM_API_BASE,
+  type BuildiumHealth,
   type BuildiumLeaseSummary,
   type BuildiumMcpServer,
   type BuildiumTenant,

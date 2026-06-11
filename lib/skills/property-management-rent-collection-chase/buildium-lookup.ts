@@ -138,6 +138,10 @@ export function toUnitDelinquency(lease: BuildiumLeaseSummary): UnitDelinquency 
     },
     coTenants: rest.map((t) => ({ name: t.name, email: t.email as string, phone: t.phone })),
     daysPastDue: lease.daysPastDue,
+    // At-risk rent — metadata for the value-ledger / PM console only. Never
+    // rendered in the chase body (dollar amounts defer to the operator merge
+    // field per lib/skills/prompts/property-management.ts).
+    outstandingBalanceUsd: lease.outstandingBalance,
     paymentPlanInPlace: lease.paymentPlanInPlace,
     // agentplain tracks chase history in its own approval ledger, not
     // Buildium — start each fire from the durable state the skill owns.

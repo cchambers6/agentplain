@@ -60,7 +60,11 @@ export const tokens: BrandTokens = {
     },
   },
   typography: {
-    displayFamily: "Source Serif 4",
+    // Display face is Fraunces — the ratified brand display per
+    // docs/brand-and-claims.md §Typography (Source Serif 4 was the V0 dev
+    // stand-in; aligned to spec in Wave A3, 2026-06-11). Loaded as a variable
+    // font with the opsz optical-size axis in app/layout.tsx.
+    displayFamily: "Fraunces",
     sansFamily: "Inter",
     monoFamily: "JetBrains Mono",
   },

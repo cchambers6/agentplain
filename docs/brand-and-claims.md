@@ -48,8 +48,9 @@ Editorial, not technological. Tactile, not chromed.
 
 ### Typography
 
-- **Display + headings:** Fraunces (serif). Fallback: Georgia.
-- **Body:** System sans (humanist preferred). Fallback: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif.
+- **Display + headings:** Fraunces (serif). Loaded as a **variable** font with the `opsz` (optical-size) axis so large headings render in Fraunces' high-contrast broadsheet cut while small display text stays readable; `wght` axis covers 400–600 (regular through soft-bold emphasis). Wired in `app/layout.tsx` via `next/font/google` → `--font-display`; consumed through the `font-display` Tailwind class. Token of record: `lib/brand/tokens.ts` `typography.displayFamily = "Fraunces"`. Fallback: Georgia, serif.
+- **Body:** Inter (humanist sans). Fallback: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif.
+- **Eyebrows / captions / labels:** JetBrains Mono, uppercase, letter-spaced (the `font-mono` + `tracking-eyebrow` pattern).
 - Editorial rhythm: generous leading, long measure on body, italic Fraunces for pull-quotes and section subtitles.
 
 ### Diagram language

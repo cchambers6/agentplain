@@ -1,11 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Source_Serif_4, Inter, JetBrains_Mono } from "next/font/google";
+import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import { tokens } from "@/lib/brand/tokens";
 import "./globals.css";
 
-const display = Source_Serif_4({
+// Display face — Fraunces (the ratified brand display per
+// docs/brand-and-claims.md §Typography). Loaded as a VARIABLE font: by omitting
+// a fixed `weight`, next/font ships the full variable file, which lets us name
+// the `opsz` (optical-size) axis so large display headings render in Fraunces'
+// high-contrast broadsheet cut while small display text stays readable. The
+// variable `wght` axis covers the 400 regular range through the soft 600 we use
+// for the occasional emphasized display line — no fixed weight list needed (and
+// next/font forbids combining `axes` with a pinned `weight`). Source Serif 4 was
+// the V0 dev stand-in; Fraunces is the brand spec (Wave A3, 2026-06-11).
+const display = Fraunces({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  axes: ["opsz"],
   variable: "--font-display",
   display: "swap",
 });

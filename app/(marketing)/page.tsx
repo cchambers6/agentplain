@@ -7,7 +7,6 @@ import JsonLd from "@/components/seo/JsonLd";
 import {
   Step,
   UniqueCard,
-  ContrastRow,
   KnowledgeStat,
   ProofCard,
   Card,
@@ -17,7 +16,6 @@ import {
   ladderBands,
   partnerBands,
   uniques,
-  chatbotContrast,
   proof,
 } from "@/lib/marketing/home-content";
 import {
@@ -30,7 +28,6 @@ import { alternatesFor } from "@/lib/seo/metadata";
 import { getAllVerticals, getVerticalContent } from "@/lib/verticals";
 import { tokens } from "@/lib/brand/tokens";
 import { SEED_COUNTS } from "@/lib/knowledge/seed-data";
-import { PlainoScene } from "@/components/ui/ap";
 import type { Metadata } from "next";
 
 // Apex homepage metadata. Title inherits the root-layout default (locked
@@ -78,74 +75,89 @@ export default function HomePage() {
       <JsonLd id="ld-faqpage" data={faqPageJsonLd(FAQ_ITEMS)} />
 
       {/* HERO — wordmark + tagline + locked mission line + all 10 verticals.
-          The heritage Plaino illustration sits behind the headline as an
-          above-the-fold backdrop, anchored right where the dog-on-the-plain
-          detail lives. Paper scrims (left + bottom) keep the copy column
-          fully legible per `feedback_everything_tells_a_story.md`. */}
-      <section className="relative overflow-hidden border-b border-rule bg-paper">
-        {/* Decorative heritage backdrop — md+ ONLY. Below md the hero is an
-            extreme-portrait box (≈393×1700px on an iPhone), so `object-right`
-            crops the landscape illustration to a thin vertical slice and the
-            left scrim's `to-paper/30` tail can't cover the right half — the
-            cropped slice bleeds through as a soft vertical band down the page
-            (reported on iOS Safari, iPhone 16). There's no horizontal room for
-            art beside the copy on a phone anyway, so we drop the whole backdrop
-            (img + both scrims) under md. It's `aria-hidden` decoration — zero
-            content/SEO loss. Desktop is unchanged. */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 hidden md:block"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element -- decorative
-              local brand raster; next/image is avoided product-wide (see Plaino.tsx) */}
-          <img
-            src="/brand/plaino-system/heritage.png"
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover object-right opacity-90"
-          />
-          {/* Left scrim — keeps the text column on paper */}
-          <div className="absolute inset-0 bg-gradient-to-r from-paper via-paper/95 to-paper/30" />
-          {/* Bottom scrim — fades the scene into the section edge */}
-          <div className="absolute inset-0 bg-gradient-to-t from-paper via-paper/30 to-transparent" />
-        </div>
-        <div className="relative container-wide pb-24 pt-20 md:pb-28 md:pt-24">
-          {/* Wordmark-and-tagline lockup. The wordmark is rendered by the
-              header logo above; this hero echoes the brand thesis line.
-              Visual hierarchy: tagline is a small eyebrow above the mission
-              line so the h1 is unambiguously the page headline (the locked
-              mission line — words unchanged, sizing dominates). */}
-          <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
-            {tokens.tagline}
-          </p>
-          <h1 className="mt-6 max-w-[58rem] font-display text-4xl leading-[1.08] text-ink sm:text-5xl md:text-[4.5rem] md:leading-[1.04]">
-            We lift up{" "}
-            <span className="text-clay">local businesses</span> by doing the
-            work that takes their time and money away from the people they
-            serve.
-          </h1>
-          <p className="mt-8 max-w-3xl font-display text-xl leading-snug text-ink-soft md:text-2xl">
-            The best AI tools are powerful. Most owners don&apos;t have time to
-            figure them out. We do it for you.
-          </p>
-          <p className="mt-5 max-w-3xl text-lg leading-relaxed text-ink-soft md:text-xl">
-            {tokens.wordmark} is the service partner that runs it. We bring the
-            pre-built skills and agents you&apos;d otherwise have to build
-            yourself, manage the memory that keeps it useful, connect the tools
-            you already run, and operate the whole thing for a low flat fee —
-            plug-and-play, not a configure-it-yourself project. The fleet reads
-            your email, calendar, CRM, and documents, categorizes what matters,
-            drafts what you&apos;d otherwise type, schedules what needs
-            scheduling, and coordinates across threads. You stay in control: the
-            fleet drafts and proposes; you approve and send. We run the
-            operation; you run the business.
-          </p>
-          {/* Supporting copy from Conner's first-pass mission articulation —
-              preserved per the canonical rule as useful supporting framing. */}
-          <p className="mt-4 max-w-3xl text-[15px] leading-relaxed text-mute">
-            More relationship building. More of the work you enjoy. Less of
-            the work that takes your time and money away from the people you
-            serve.
-          </p>
+          The heritage Plaino illustration is a CONTAINED editorial figure (a
+          hairline-bordered picture with a mono caption), NOT a full-bleed
+          watermark behind the copy. On lg+ it sits as a right-hand figure
+          column beside the copy; below lg it drops full-width under the copy,
+          object-contain so the landscape scene is never cropped to a sliver.
+          The image is the best brand asset we own — it reads as a picture, not
+          a texture (Conner, 2026-06-11). Hero padding is squared to the global
+          Section rhythm (py-20 md:py-28) so the first fold doesn't sit tighter
+          than every block below it. */}
+      <section className="border-b border-rule bg-paper">
+        <div className="container-wide py-20 md:py-28">
+          <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-16">
+            {/* COPY COLUMN */}
+            <div>
+              {/* Wordmark-and-tagline lockup. The wordmark is rendered by the
+                  header logo above; this hero echoes the brand thesis line.
+                  Visual hierarchy: tagline is a small eyebrow above the mission
+                  line so the h1 is unambiguously the page headline (the locked
+                  mission line — words unchanged, sizing dominates). */}
+              <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+                {tokens.tagline}
+              </p>
+              <h1 className="mt-6 max-w-[58rem] font-display text-4xl leading-[1.08] text-ink sm:text-5xl md:text-[4.25rem] md:leading-[1.04]">
+                We lift up{" "}
+                <span className="text-clay">local businesses</span> by doing the
+                work that takes their time and money away from the people they
+                serve.
+              </h1>
+              <p className="mt-8 max-w-3xl font-display text-xl leading-snug text-ink-soft md:text-2xl">
+                The best AI tools are powerful. Most owners don&apos;t have time
+                to figure them out. We do it for you.
+              </p>
+              <p className="mt-5 max-w-3xl text-lg leading-relaxed text-ink-soft md:text-xl">
+                {tokens.wordmark} is the service partner that runs it. We bring
+                the pre-built skills and agents you&apos;d otherwise have to
+                build yourself, manage the memory that keeps it useful, connect
+                the tools you already run, and operate the whole thing for a low
+                flat fee — plug-and-play, not a configure-it-yourself project.
+                You stay in control: the fleet drafts and proposes; you approve
+                and send. We run the operation; you run the business.
+              </p>
+              {/* Supporting copy from Conner's first-pass mission articulation —
+                  preserved per the canonical rule as useful supporting framing. */}
+              <p className="mt-4 max-w-3xl text-[15px] leading-relaxed text-mute">
+                More relationship building. More of the work you enjoy. Less of
+                the work that takes your time and money away from the people you
+                serve.
+              </p>
+
+              <div className="mt-10 flex flex-wrap items-center gap-4">
+                <Link href="/app/sign-up" className="btn-primary">
+                  Start free trial
+                  <span aria-hidden>→</span>
+                </Link>
+                <Link href="#how" className="btn-secondary">
+                  See how it works
+                  <span aria-hidden>→</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* FIGURE COLUMN — contained heritage illustration. Full-width
+                under the copy on mobile; right-hand figure on lg+. object-contain
+                + natural aspect so the landscape scene is shown whole, never
+                cropped. Hairline border + mono caption = editorial figure, not
+                a background texture. */}
+            <figure className="m-0">
+              <div className="border border-rule bg-paper-deep">
+                {/* eslint-disable-next-line @next/next/no-img-element -- local
+                    brand raster; next/image avoided product-wide (see Plaino.tsx) */}
+                <img
+                  src="/brand/plaino-system/heritage.png"
+                  alt="Plaino, the agentplain service dog, standing watch over a working plain at first light."
+                  className="block h-auto w-full object-contain"
+                  width={495}
+                  height={235}
+                />
+              </div>
+              <figcaption className="mt-3 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                Plaino, standing watch on the plain
+              </figcaption>
+            </figure>
+          </div>
 
           {/* All 10 verticals as a chip row.
               `/general` is NOT a chip — the chip row enumerates the ratified
@@ -180,17 +192,6 @@ export default function HomePage() {
                 Same service partnership, lighter scaffolding →
               </Link>
             </p>
-          </div>
-
-          <div className="mt-10 flex flex-wrap items-center gap-4">
-            <Link href="/app/sign-up" className="btn-primary">
-              Start free trial
-              <span aria-hidden>→</span>
-            </Link>
-            <Link href="#how" className="btn-secondary">
-              See how it works
-              <span aria-hidden>→</span>
-            </Link>
           </div>
         </div>
       </section>
@@ -368,16 +369,9 @@ export default function HomePage() {
           idle hour where the crew has stopped working.
         </p>
 
-        {/* Supporting scene — Plaino herding documents through a gate.
-            Placeholder today; one-line swap when the real asset lands. */}
-        <PlainoScene
-          name="home-crew"
-          className="mt-10 hidden h-auto w-full max-w-md md:block"
-        />
-
-        {/* Three honest follow-on panels — what's true TODAY, with the
+        {/* Two honest follow-on panels — what's true TODAY, with the
             file-source line kept honest about fixtures vs. live Drive. */}
-        <div className="mt-12 grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-3">
+        <div className="mt-12 grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
           <div className="bg-paper p-7 md:p-8">
             <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
               Tell us once, and it adjusts
@@ -411,11 +405,31 @@ export default function HomePage() {
               fixture to live.
             </p>
           </div>
-          <div className="bg-paper p-7 md:p-8">
+        </div>
+
+        {/* The approval moment, made literal — Plaino fetching the sealed
+            envelope to your queue. This is the no-outbound promise the whole
+            architecture turns on, so it gets a contained figure (hairline
+            border + mono caption) paired with the copy, full-width on mobile
+            so the phone gets a second visual anchor below the hero. The
+            fetching pose PNG is re-cropped by a parallel wave at this path. */}
+        <div className="mt-12 grid items-center gap-px overflow-hidden border border-rule bg-rule md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+          <figure className="m-0 flex items-center justify-center bg-paper-deep p-8">
+            {/* eslint-disable-next-line @next/next/no-img-element -- local brand
+                raster; next/image avoided product-wide (see Plaino.tsx) */}
+            <img
+              src="/brand/plaino-system/poses/fetching.png"
+              alt="Plaino carrying a sealed envelope stamped with the clay 'a' to the approval queue."
+              className="block h-auto w-full max-w-[220px] object-contain"
+              width={250}
+              height={278}
+            />
+          </figure>
+          <div className="bg-paper p-7 md:p-10">
             <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
               Nothing leaves without your name on it
             </p>
-            <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
+            <p className="mt-4 max-w-prose text-[15px] leading-relaxed text-ink-soft md:text-base">
               Every draft — a buyer reply, an admin acknowledgement, a
               scheduling proposal — lands in your approvals queue as a
               <code className="mx-1 text-[12px]">PENDING</code> row.
@@ -446,50 +460,16 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* Q4 follow-on — the "why pay vs. free" objection, answered head-on.
-          Vendor-generic per the 2026-06-11 customer-surface rule: no AI model
-          or provider is named anywhere a customer can see. The honest contrast
-          is a general-purpose chatbot you run yourself vs. a service partner who
-          runs the fleet for you. Two columns (product-vs-alternative axis — NOT
-          a 3-column pricing grid). Reuses the gap-px / bg-rule hairline pattern
-          so the rule shows through as the divider between columns and rows. */}
-      <Section
-        eyebrow="A free chatbot gives you the tool. We run it for you."
-        title={
-          <>
-            A free AI chatbot, or a service partner who{" "}
-            <span className="text-clay">runs it for you?</span>
-          </>
-        }
-        intro="The general-purpose AI chatbots are real, useful tools — and some are cheap or free. They hand you a horizontal model and a tool catalog and expect you to figure out workflows, write prompts, and stitch integrations on your own. That's a different product than what we sell. agentplain is the opposite: we install the fleet, connect your systems, run weekly reviews, and customize as your ops shift. You stay focused on serving your customers."
-      >
-        <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
-          {/* LEFT column head — the free chatbot you'd run yourself */}
-          <div className="bg-paper p-7 md:p-8">
-            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-              A free AI chatbot you run yourself
-            </p>
-            <p className="mt-2 font-display text-base leading-snug text-ink-soft">
-              You get the tool.
-            </p>
-          </div>
-          {/* RIGHT column head — agentplain, run for you */}
-          <div className="bg-paper p-7 md:p-8">
-            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
-              agentplain, run for you
-            </p>
-            <p className="mt-2 font-display text-base leading-snug text-ink">
-              We run it for you.
-            </p>
-          </div>
-
-          {/* Rows. Each contrast renders LEFT then RIGHT so the hairline
-              grid keeps the two columns aligned across breakpoints. */}
-          {chatbotContrast.map((row) => (
-            <ContrastRow key={row.us} free={row.free} us={row.us} />
-          ))}
-        </div>
-      </Section>
+      {/* NOTE (Wave A3, 2026-06-11): the standalone "free chatbot vs. run it
+          for you" contrast Section was CUT here. It restated the same
+          run-it-yourself-vs-run-for-you argument the four-pillar "run-for-you"
+          section near the top already makes, plus the "You stay in control" /
+          "Integrates, not replaces" uniques — two full sections answering one
+          objection violated `feedback_everything_tells_a_story.md` (every
+          element earns its place). The objection is answered once, where it
+          first arises (the run-for-you section under the value loop). The
+          `chatbotContrast` data + `ContrastRow` primitive remain available for
+          a vertical page that wants the comparative table. */}
 
       {/* Concrete value-loop example (real-estate sample, with a deep link to
           every other vertical's example). */}
@@ -560,7 +540,6 @@ export default function HomePage() {
           Per `feedback_no_guesses_no_estimates.md`: every number here cites
           the artifact (seed-data.ts SEED_COUNTS) — none invented. */}
       <Section
-        tone="deep"
         eyebrow="What the fleet knows on day one"
         title="A working knowledge base, not a blank prompt box."
         intro="The fleet doesn't start cold. Before a customer signs up, the knowledge substrate already ships pre-loaded with vertical-specific jobs-to-be-done, the value-loop skill docs the runner consumes, a per-vertical compliance corpus, and the ratified product doctrine that grounds every draft. Counts below are computed at build time from the actual rows the substrate loads — not aspirational, not invented."
@@ -591,13 +570,6 @@ export default function HomePage() {
           Counts are computed at build time from the rows the substrate
           actually loads. Nothing here is aspirational.
         </p>
-
-        {/* Supporting scene — Plaino beside a well-kept filing cabinet.
-            Placeholder today; one-line swap when the real asset lands. */}
-        <PlainoScene
-          name="home-knowledge"
-          className="mt-10 hidden h-auto w-full max-w-md md:block"
-        />
       </Section>
 
       {/* Q6 — Why should anyone believe us? */}
@@ -705,13 +677,13 @@ export default function HomePage() {
             </span>
           </>
         }
-        intro="That's the vision. AI doesn't replace local business owners; it changes WHICH parts of the job they do. Local businesses have been over-rotated toward administrative work for two decades — CRMs, scheduling, compliance, status reports. The judgment work gets squeezed."
+        intro="That's the vision. Local businesses have been over-rotated toward administrative work for two decades — CRMs, scheduling, compliance, status reports — and the judgment work that built the business gets squeezed. We're betting that changes."
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
           <Card
             number="Q8"
             title="The future of work"
-            body="agentplain inverts the ratio. The fleet handles the systematic work; the human gets back to client relationships, deal architecture, advisory. Solo practitioners compete with mid-size firms on operational depth. Mid-size firms compete with enterprise on agility. Affordable access to the same operational depth that used to require an enterprise budget — that's the leveling effect."
+            body="AI doesn't replace local business owners; it changes which parts of the job they do. The fleet takes the systematic work; the owner gets back the judgment work — client relationships, deal architecture, advisory. Affordable access to the operational depth that used to require an enterprise budget is the leveling effect we're building toward."
           />
           <Card
             number="Q9"
@@ -719,13 +691,6 @@ export default function HomePage() {
             body="Models got good enough in 2025 to do real categorization, drafting, scheduling on real-world data — not benchmarks. Vendor APIs (Gmail, Outlook, every major CRM) stabilized enough to build multi-tenant integrations. Compliance frameworks (TCPA, GLBA) are clear enough to build per-vertical corpuses against. Early enough to define the category, late enough that the tech actually works."
           />
         </div>
-
-        {/* Closing vision scene — Plaino on watch over a growing plain.
-            Placeholder today; one-line swap when the real asset lands. */}
-        <PlainoScene
-          name="home-future"
-          className="mt-12 hidden h-auto w-full md:block"
-        />
       </Section>
 
       {/* FAQ — Q2/Q3/Q4/Q5/Q6 follow-ups in one place */}

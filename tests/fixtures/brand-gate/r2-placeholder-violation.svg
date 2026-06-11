@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <!-- PLACEHOLDER — stand-in asset. Real asset at scenes/hero.png -->
+  <rect width="400" height="300" fill="#F7F4ED"/>
+  <text x="200" y="150" text-anchor="middle" font-size="24">PLACEHOLDER · HERO · COMING SOON</text>
+  <text x="200" y="190" text-anchor="middle" font-size="16" opacity="0.7">awaiting real asset</text>
+</svg>

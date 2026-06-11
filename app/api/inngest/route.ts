@@ -119,6 +119,14 @@ import { credentialTestSweepFn } from "@/lib/inngest/functions/credential-test-s
 // operator panel renders "last successful health check: <ts>". Manually
 // triggerable via agentplain/ops.fleet-health.requested.
 import { fleetHealthCheckFn } from "@/lib/inngest/functions/fleet-health-check";
+// pfd-2 integration self-heal — daily per-integration health check that probes
+// each connected integration THROUGH its adapter, banners + emails the owner on
+// breakage (one email per breakage, not daily spam), escalates a >72h breakage
+// to a human, and flushes the durable retry queue on reconnect. The resume
+// backstop re-runs queued/held actions on a slow timer if a recovery transition
+// was missed.
+import { integrationHealthSweepFn } from "@/lib/inngest/functions/integration-health-sweep";
+import { retryQueueResumeSweepFn } from "@/lib/inngest/functions/retry-queue-resume-sweep";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -163,5 +171,7 @@ export const { GET, POST, PUT } = serve({
     weeklyProofDigestSweepFn,
     credentialTestSweepFn,
     fleetHealthCheckFn,
+    integrationHealthSweepFn,
+    retryQueueResumeSweepFn,
   ],
 });

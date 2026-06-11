@@ -166,6 +166,27 @@ export const env = {
     optional("NOTION_BRIEFINGS_DATA_SOURCE_ID") ??
     optional("NOTION_BRIEFINGS_DB_ID"),
 
+  // pfd-4 — leak-path auto-refund for unsupported-vertical workspaces.
+  //
+  // UNSUPPORTED_VERTICAL_AUTO_REFUND gates whether the daily cron actually
+  // executes Stripe refunds. DEFAULT OFF — Stripe refunds are real money,
+  // and the $500 cap + once-per-lifetime policy is PROPOSED, not ratified.
+  // When OFF, the cron still runs in DETECT + PAGE-ONLY mode: it finds the
+  // leaking workspaces and pages a human (so the surface still meets the
+  // bar by self-routing), but moves no money. Flip to `on` only after
+  // Conner ratifies the policy.
+  unsupportedVerticalAutoRefundEnabled: (): boolean =>
+    (optional("UNSUPPORTED_VERTICAL_AUTO_REFUND") ?? "off").toLowerCase() === "on",
+  // Per-workspace refund cap in USD. Above this, the cron pages a human
+  // instead of auto-refunding. Default $500.
+  unsupportedVerticalRefundCapUsd: (): number => {
+    const raw = optional("UNSUPPORTED_VERTICAL_REFUND_CAP_USD");
+    if (!raw) return 500;
+    const n = Number.parseInt(raw, 10);
+    if (!Number.isFinite(n) || n < 0) return 500;
+    return n;
+  },
+
   // Operator allowlist (comma-separated emails)
   operatorEmailAllowlist: (): string[] => {
     const v = optional("OPERATOR_EMAIL_ALLOWLIST") ?? "";

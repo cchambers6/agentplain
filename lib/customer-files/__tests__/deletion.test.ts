@@ -308,6 +308,22 @@ class FakeTeardownPrismaClient {
   preferenceSignals: FakeRow[] = [];
   workspacePreferences: FakeRow[] = [];
   inquiries: Array<{ id: string; convertedWorkspaceId: string | null }> = [];
+  // pfd-4 — teardown-gap tables.
+  skillRuns: FakeRow[] = [];
+  skillConfigs: FakeRow[] = [];
+  skillScheduleWindows: FakeRow[] = [];
+  pauseConfigs: FakeRow[] = [];
+  chatMessages: FakeRow[] = [];
+  chatThreads: FakeRow[] = [];
+  plainoConversations: FakeRow[] = [];
+  memoryEntries: FakeRow[] = [];
+  briefings: FakeRow[] = [];
+  skillInstallations: FakeRow[] = [];
+  thresholds: FakeRow[] = [];
+  complianceFlags: FakeRow[] = [];
+  counselRedlines: FakeRow[] = [];
+  lifecycleEvents: FakeRow[] = [];
+  preferenceFeedbacks: FakeRow[] = [];
 
   async $transaction<T>(cb: (tx: FakeTeardownPrismaClient) => Promise<T>): Promise<T> {
     return cb(this);
@@ -320,6 +336,21 @@ class FakeTeardownPrismaClient {
   handoffLogEntry = makeDeleteMany(this, 'handoffs');
   preferenceSignal = makeDeleteMany(this, 'preferenceSignals');
   workspacePreference = makeDeleteMany(this, 'workspacePreferences');
+  skillRun = makeDeleteMany(this, 'skillRuns');
+  skillConfig = makeDeleteMany(this, 'skillConfigs');
+  skillScheduleWindow = makeDeleteMany(this, 'skillScheduleWindows');
+  workspacePauseConfig = makeDeleteMany(this, 'pauseConfigs');
+  chatMessage = makeDeleteMany(this, 'chatMessages');
+  chatThread = makeDeleteMany(this, 'chatThreads');
+  plainoConversation = makeDeleteMany(this, 'plainoConversations');
+  workspaceMemoryEntry = makeDeleteMany(this, 'memoryEntries');
+  workspaceBriefing = makeDeleteMany(this, 'briefings');
+  workspaceSkillInstallation = makeDeleteMany(this, 'skillInstallations');
+  workThresholdConfig = makeDeleteMany(this, 'thresholds');
+  complianceFlag = makeDeleteMany(this, 'complianceFlags');
+  counselRedline = makeDeleteMany(this, 'counselRedlines');
+  workspaceLifecycleEvent = makeDeleteMany(this, 'lifecycleEvents');
+  preferenceFeedback = makeDeleteMany(this, 'preferenceFeedbacks');
   inquiry = {
     deleteMany: async (args: { where: { convertedWorkspaceId: string } }) => {
       const before = this.inquiries.length;
@@ -393,6 +424,22 @@ describe('tearDownWorkspaceData', () => {
       prisma.handoffs.push({ id: `ho-${target}`, workspaceId: target });
       prisma.preferenceSignals.push({ id: `ps-${target}`, workspaceId: target });
       prisma.workspacePreferences.push({ id: `wp-${target}`, workspaceId: target });
+      // pfd-4 teardown-gap tables.
+      prisma.skillRuns.push({ id: `sr-${target}`, workspaceId: target });
+      prisma.skillConfigs.push({ id: `sc-${target}`, workspaceId: target });
+      prisma.skillScheduleWindows.push({ id: `sw-${target}`, workspaceId: target });
+      prisma.pauseConfigs.push({ id: `pc-${target}`, workspaceId: target });
+      prisma.chatMessages.push({ id: `cm-${target}`, workspaceId: target });
+      prisma.chatThreads.push({ id: `ct-${target}`, workspaceId: target });
+      prisma.plainoConversations.push({ id: `pl-${target}`, workspaceId: target });
+      prisma.memoryEntries.push({ id: `me-${target}`, workspaceId: target });
+      prisma.briefings.push({ id: `br-${target}`, workspaceId: target });
+      prisma.skillInstallations.push({ id: `si-${target}`, workspaceId: target });
+      prisma.thresholds.push({ id: `th-${target}`, workspaceId: target });
+      prisma.complianceFlags.push({ id: `cf-${target}`, workspaceId: target });
+      prisma.counselRedlines.push({ id: `cr-${target}`, workspaceId: target });
+      prisma.lifecycleEvents.push({ id: `le-${target}`, workspaceId: target });
+      prisma.preferenceFeedbacks.push({ id: `pf-${target}`, workspaceId: target });
     }
     prisma.inquiries.push({ id: 'iq-a', convertedWorkspaceId: WORKSPACE_A });
     prisma.inquiries.push({ id: 'iq-b', convertedWorkspaceId: WORKSPACE_B });
@@ -416,6 +463,22 @@ describe('tearDownWorkspaceData', () => {
     assert.equal(result.preferenceSignalsDeleted, 1);
     assert.equal(result.workspacePreferencesDeleted, 1);
     assert.equal(result.inquiriesDeleted, 1);
+    // pfd-4 — every teardown-gap table purged for A.
+    assert.equal(result.skillRunsDeleted, 1);
+    assert.equal(result.skillConfigsDeleted, 1);
+    assert.equal(result.skillScheduleWindowsDeleted, 1);
+    assert.equal(result.pauseConfigsDeleted, 1);
+    assert.equal(result.chatMessagesDeleted, 1);
+    assert.equal(result.chatThreadsDeleted, 1);
+    assert.equal(result.plainoConversationsDeleted, 1);
+    assert.equal(result.memoryEntriesDeleted, 1);
+    assert.equal(result.briefingsDeleted, 1);
+    assert.equal(result.skillInstallationsDeleted, 1);
+    assert.equal(result.thresholdsDeleted, 1);
+    assert.equal(result.complianceFlagsDeleted, 1);
+    assert.equal(result.counselRedlinesDeleted, 1);
+    assert.equal(result.lifecycleEventsDeleted, 1);
+    assert.equal(result.preferenceFeedbackDeleted, 1);
 
     // B rows still present across the board.
     assert.equal(prisma.webhookEvents.length, 1);
@@ -428,6 +491,14 @@ describe('tearDownWorkspaceData', () => {
     assert.equal(prisma.workspacePreferences.length, 1);
     assert.equal(prisma.preferenceSignals.length, 1);
     assert.equal(prisma.webhookSubscriptions.length, 1);
+    // pfd-4 — B's teardown-gap rows untouched.
+    assert.equal(prisma.skillRuns.length, 1);
+    assert.equal(prisma.skillRuns[0].workspaceId, WORKSPACE_B);
+    assert.equal(prisma.chatMessages.length, 1);
+    assert.equal(prisma.plainoConversations.length, 1);
+    assert.equal(prisma.memoryEntries.length, 1);
+    assert.equal(prisma.counselRedlines.length, 1);
+    assert.equal(prisma.lifecycleEvents.length, 1);
 
     // Inquiry survivors: B's converted row + the orphan (null pointer).
     const inqIds = prisma.inquiries.map((r) => r.id).sort();

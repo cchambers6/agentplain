@@ -21,8 +21,11 @@ afterEach(() => {
   else process.env[ENV_KEY] = original;
 });
 
-describe("compliance corpus go-live gate", () => {
-  it("real-estate is baseline-live without the env flag", () => {
+describe("compliance corpus go-live gate (SCAN path)", () => {
+  it("real-estate is baseline-live to SCAN without the env flag", () => {
+    // pfd-5: isVerticalLiveAllowed still governs the SAFE scan/flag path, which
+    // keeps real-estate baseline-live. The dangerous rewrite-generation path is
+    // gated separately by the strict evaluateCounselGate (env AND sign-off row).
     delete process.env[ENV_KEY];
     assert.equal(isVerticalLiveAllowed("real-estate"), true);
   });

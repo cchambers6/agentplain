@@ -20,6 +20,7 @@ const OPERATOR_NAV: Array<{ href: string; label: string }> = [
   { href: "/operator/leads", label: "Leads" },
   { href: "/operator/support", label: "Support" },
   { href: "/operator/integrations", label: "Integrations" },
+  { href: "/operator/compliance-signoff", label: "Counsel sign-off" },
 ];
 
 // Operator surface chrome. Restricted to operators (Conner). Phase 1 is

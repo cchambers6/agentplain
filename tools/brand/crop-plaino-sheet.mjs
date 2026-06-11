@@ -27,19 +27,47 @@ const write = (rel, image) => {
 };
 const cut = (l, t, w, h) => crop(img, l, t, w, h);
 
-// --- Cell coordinates in the 1402x1122 sheet (column centres 386/652/918/1184) ---
+// --- Cell coordinates in the 1402x1122 sheet ---
+// Derived 2026-06-11 by per-pixel column/row luma scan of the reference sheet.
+// Each rect is [left, top, width, height] in source pixels.
+//
+// Row 1 gutters (luma>235 across y=100-300): x=0-26(edge), 192-242(header|dog1),
+//   502-548(dog1|dog2), 708-732(dog2|dog3), 1012-1058(dog3|dog4), 1356-1400(edge).
+// Illustration x-extents (dark pixels in y=50-330):
+//   standing-watch: x=242..505 | sitting-alert: x=541..716
+//   herding: x=732..1015       | fetching: x=1059..1361
+// Row 1 y: illustration ends at y≈325, caption text starts y≈348.
+//   Gap y=326-347 is clean paper — we use top margin of 8px, crop bottom at y=338.
+// Row 2 illustration x-extents (dark pixels in y=410-760):
+//   scouting: x=57..359  | guarding: x=465..731  | resting: x=765..1057 | head-icon: x=1104..1316
+// Row 2 y: scouting illustration bottom y=676, caption y=700.
+//   guarding illustration bottom y=755, caption y=700.
+//   resting illustration bottom y=755, clean paper gap y=756-785, horizontal rule y=786.
+//   head-icon circle y=475..639, caption starts y=640 (excluded).
+// Row 3 (y≈832-1010): 8-bit pixel-art dog and heritage landscape.
+//   8-bit dog: x=645-800, y=842-1010; caption "9.8-BIT PLAINO" starts y=1043 (excluded).
+//   Heritage: x=896-1378, y=800-1049.
 const POSES = {
-  'standing-watch': [261, 48, 250, 278],
-  'sitting-alert': [527, 48, 250, 278],
-  'herding': [793, 48, 250, 278],
-  'fetching': [1059, 48, 250, 278],
-  'scouting': [190, 458, 245, 253],
-  'guarding': [527, 458, 250, 253],
-  'resting': [793, 458, 250, 253],
-  'head-icon': [1085, 500, 210, 206],
+  // Row 1 column gutters (luma>235 in y=100-300): x=0-26, 192-242, 502-548, 708-732, 1012-1058, 1356-1400
+  // Row 1 illustration extents: sw=242..505 | sa=541..716 | hd=732..1015 | ft=1059..1361
+  // Row 1 illustration y: top y≈48-84, ground line y≈320-325, gap y=326-347, caption y=348-358,
+  //   subtitle line1 y=372-388, subtitle line2 y=393-409. Crop must end ABOVE y=409.
+  'standing-watch': [232, 40, 283, 290],  // dog x=242..505, y=48..325; cap at y=330 before captions
+  'sitting-alert':  [531, 40, 175, 290],  // dog x=541..706; gutter starts x=708; tail tip included at x≈700
+  'herding':        [722, 40, 303, 290],  // dog x=732..1015; left-padded for snout; ends y=325
+  'fetching':       [1049, 40, 318, 290], // dog x=1059..1361; right-padded for tail antenna+bag
+  // Row 2 illustration extents (by full column scan of dark pixels, y=410-800):
+  //   scouting: dog y=519..676, x=57..359 | guarding: dog y=466..677, x=465..731
+  //   resting: dog y=581..674, x=765..1057 | head-icon: circle y=475..639, x=1104..1316
+  // Caption "N.NAME MODE" for all row-2 poses: y=700-710 (red text), subtitle y=724-755.
+  // All row 1 subtitle text clears by y=410 — safe start for row 2 is y=415.
+  'scouting':       [47, 510, 322, 175],  // dog y=519..676; narrow band captures dog, excludes caption
+  'guarding':       [455, 455, 295, 230], // dog y=466..677; excludes caption at y=700
+  'resting':        [755, 570, 312, 115], // dog y=581..674; tightly cropped to illustration only
+  'head-icon':      [1090, 462, 240, 185], // circle x=1104..1316, y=475..643; excludes caption at y=640+ (circle outline ends y=639)
 };
-const EIGHT_BIT = [680, 852, 222, 182];
-const HERITAGE = [905, 815, 495, 235];
+const EIGHT_BIT = [617, 830, 210, 185]; // pixel-art dog x=645-800, y=842-1010; caption y=1043 excluded
+const HERITAGE = [890, 796, 495, 258];  // landscape x=896-1378, y=800-1049; clean
 
 // 1) Eight poses + head-icon → poses/<slug>.png
 for (const [slug, [l, t, w, h]] of Object.entries(POSES)) {

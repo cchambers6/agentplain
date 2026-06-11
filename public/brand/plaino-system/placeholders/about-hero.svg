@@ -1,31 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1100" viewBox="0 0 1800 1100" role="img" aria-label="placeholder heritage scene: about · the working town">
-  <!-- PLACEHOLDER — non-blocking stand-in. Real asset swaps in at public/brand/plaino-system/scenes/about-hero.png -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1100" viewBox="0 0 1800 1100" role="img" aria-label="working town silhouette on the plain">
   <rect width="1800" height="1100" fill="#F7F4ED"/>
-  <!-- low land band (Moss) -->
-  <rect x="0" y="682" width="1800" height="418" fill="#3F5C3F" opacity="0.16"/>
-  <!-- horizon line (Ink hairline) + low rise -->
-  <path d="M0 682 H1800" stroke="#1A1A1F" stroke-width="2" opacity="0.55"/>
-  <path d="M900 682 Q1296 591 1692 682" fill="none" stroke="#1A1A1F" stroke-width="2" opacity="0.35"/>
-  <!-- a single distant clay roof (the one Clay charge in the land) -->
-  <path d="M252 682 l88 0 l-44 -39 z" fill="#B65D3A" opacity="0.85"/>
-  <!-- Plaino silhouette: calm working dog, head up, watching -->
-  <g fill="#1A1A1F">
-    <!-- body -->
-    <rect x="1208" y="571" width="176" height="81" rx="21"/>
-    <!-- legs -->
-    <rect x="1229" y="638" width="21" height="44"/>
-    <rect x="1335" y="638" width="21" height="44"/>
-    <!-- head -->
-    <rect x="1314" y="516" width="60" height="69" rx="14"/>
-    <!-- ear (up, alert) -->
-    <path d="M1324 520 l0 -28 l21 20 z"/>
-    <!-- tail -->
-    <path d="M1208 581 q-32 -10 -28 -44" fill="none" stroke="#1A1A1F" stroke-width="18" stroke-linecap="round"/>
-  </g>
-  <!-- collar tag: the single Clay charge on the dog -->
-  <circle cx="1317" cy="581" r="21" fill="#B65D3A"/>
-  <!-- placeholder labelling (Mute) — makes it unmistakably a stand-in -->
-  <text x="108" y="154" font-family="ui-monospace, Menlo, monospace" font-size="31" fill="#726A5E" letter-spacing="2">PLACEHOLDER · ABOUT · THE WORKING TOWN</text>
-  <text x="108" y="204" font-family="ui-monospace, Menlo, monospace" font-size="22" fill="#726A5E" opacity="0.8">1800×1100 · pose standing-watch · awaiting real asset</text>
+  <rect x="0" y="605" width="1800" height="495" fill="#EDE9DE"/>
+  <line x1="0" y1="605" x2="1800" y2="605" stroke="#1A1A1F" stroke-width="1.5" opacity="0.4"/>
+  <rect x="270" y="473" width="108" height="132" fill="#726A5E" opacity="0.20"/>
+  <path d="M270 473 l54 -66 l54 66 z" fill="#B65D3A" opacity="0.65"/>
+  <rect x="396" y="407" width="162" height="198" fill="#726A5E" opacity="0.20"/>
+  <rect x="396" y="376" width="162" height="31" fill="#B65D3A" opacity="0.60"/>
+  <rect x="576" y="495" width="90" height="110" fill="#726A5E" opacity="0.20"/>
+  <path d="M576 495 l45 -50 l45 50 z" fill="#B65D3A" opacity="0.65"/>
+  <rect x="684" y="363" width="180" height="242" fill="#726A5E" opacity="0.20"/>
+  <path d="M684 363 l90 -99 l90 99 z" fill="#B65D3A" opacity="0.65"/>
+  <rect x="882" y="451" width="126" height="154" fill="#726A5E" opacity="0.20"/>
+  <rect x="882" y="425" width="126" height="26" fill="#B65D3A" opacity="0.60"/>
+  <rect x="1026" y="418" width="144" height="187" fill="#726A5E" opacity="0.20"/>
+  <path d="M1026 418 l72 -77 l72 77 z" fill="#B65D3A" opacity="0.65"/>
+  <rect x="1188" y="506" width="90" height="99" fill="#726A5E" opacity="0.20"/>
+  <path d="M1188 506 l45 -44 l45 44 z" fill="#B65D3A" opacity="0.65"/>
+  <rect x="1296" y="462" width="162" height="143" fill="#726A5E" opacity="0.20"/>
+  <rect x="1296" y="438" width="162" height="24" fill="#B65D3A" opacity="0.60"/>
+  <rect x="1476" y="484" width="108" height="121" fill="#726A5E" opacity="0.20"/>
+  <path d="M1476 484 l54 -55 l54 55 z" fill="#B65D3A" opacity="0.65"/>
+  <rect x="0" y="770" width="1800" height="330" fill="#3F5C3F" opacity="0.10"/>
 </svg>

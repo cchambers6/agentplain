@@ -19,7 +19,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: tokens.wordmark,
     short_name: tokens.wordmark,
     description:
-      "The service layer on top of Claude for local businesses. Intelligence rooted in reality.",
+      "A managed AI fleet for local businesses, run for you. Intelligence rooted in reality.",
     start_url: "/",
     display: "standalone",
     background_color: tokens.colors.paper.hex,

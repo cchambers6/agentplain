@@ -5,10 +5,10 @@
   <text x="80" y="130" font-family="ui-monospace, 'Courier New', monospace" font-size="18" letter-spacing="3" fill="#B65D3A">FOR PROPERTY MANAGEMENT</text>
   <!-- MIDDLE: headline + value-prop one-liner -->
   <text x="80" y="300" font-family="Georgia, 'Times New Roman', Times, serif" font-size="56" fill="#1A1A1F" letter-spacing="-1">The fleet for the small-portfolio</text><text x="80" y="366" font-family="Georgia, 'Times New Roman', Times, serif" font-size="56" fill="#1A1A1F" letter-spacing="-1">property manager.</text>
-  <text x="80" y="450" font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="24" fill="#2E2E33">The tenant-ops and owner-reporting skills, agents, and memory you'd</text><text x="80" y="484" font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="24" fill="#2E2E33">otherwise wire yourself — built on Claude, configured by us.</text>
-  <!-- BOTTOM: clay bar + ROI line + Built on Claude stamp -->
+  <text x="80" y="450" font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="24" fill="#2E2E33">The tenant-ops and owner-reporting skills, agents, and memory you'd</text><text x="80" y="484" font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="24" fill="#2E2E33">otherwise wire yourself</text>
+  <!-- BOTTOM: clay bar + ROI line + brand stamp -->
   <rect x="80" y="512" width="120" height="4" fill="#B65D3A"/>
   <text x="80" y="566" font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" fill="#1A1A1F">15–50× per workflow + the violations you don't pay for</text>
   <rect x="906" y="538" width="214" height="46" fill="none" stroke="#1A1A1F" stroke-width="2"/>
-  <text x="1013" y="567" text-anchor="middle" font-family="ui-monospace, 'Courier New', monospace" font-size="18" letter-spacing="1.5" fill="#1A1A1F">BUILT ON CLAUDE</text>
+  <text x="1013" y="567" text-anchor="middle" font-family="ui-monospace, 'Courier New', monospace" font-size="18" letter-spacing="1.5" fill="#1A1A1F">RUN FOR YOU</text>
 </svg>

@@ -39,7 +39,7 @@ import type { Metadata } from "next";
 // self-referential canonical + hreflang stub.
 export const metadata: Metadata = {
   description:
-    "The service layer on top of Claude for local businesses — pre-built fleet, your tools connected, run for you. Built on Claude, configured by us.",
+    "A managed AI fleet for local businesses — pre-built for your vertical, your tools connected, run for you. We do the work; you run the business.",
   alternates: alternatesFor("/"),
 };
 
@@ -124,11 +124,11 @@ export default function HomePage() {
             serve.
           </h1>
           <p className="mt-8 max-w-3xl font-display text-xl leading-snug text-ink-soft md:text-2xl">
-            Claude for Small Business is powerful. Most owners can&apos;t figure
-            out how to use it. We do it for you.
+            The best AI tools are powerful. Most owners don&apos;t have time to
+            figure them out. We do it for you.
           </p>
           <p className="mt-5 max-w-3xl text-lg leading-relaxed text-ink-soft md:text-xl">
-            {tokens.wordmark} is the service layer on top of Claude. We bring the
+            {tokens.wordmark} is the service partner that runs it. We bring the
             pre-built skills and agents you&apos;d otherwise have to build
             yourself, manage the memory that keeps it useful, connect the tools
             you already run, and operate the whole thing for a low flat fee —
@@ -210,24 +210,24 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* SBM-WRAPPER FRAME — near the top, by design.
-          Ratified 2026-06-06 (project_sbm_wrapper_positioning_2026_06_06) as
-          the durable answer to Anthropic shipping Claude for Small Business.
-          We are NOT a competitor to Claude — we are the service layer that
-          makes it usable. The four pillars are stated plainly: pre-built
-          skills + agents, memory management, low-cost plug-and-play, and a
-          human-staffed service. BANNED framings (compete/replace/instead-of/
-          alternative-to Claude) are kept out; the tone is complementary. */}
+      {/* RUN-IT-YOURSELF VS RUN-FOR-YOU — near the top, by design.
+          Vendor-generic per the 2026-06-11 customer-surface rule: the underlying
+          AI model is never named on a customer surface. The premise is the
+          honest "why pay when capable AI tools are cheap or free?" objection,
+          answered without naming any vendor. We are NOT positioned against any
+          one tool — the contrast is do-it-yourself vs. have-it-run-for-you. The
+          four pillars are stated plainly: pre-built skills + agents, memory
+          management, low-cost plug-and-play, and a human-staffed service. */}
       <Section
-        id="claude"
-        eyebrow="How agentplain works with Claude for Small Business"
+        id="run-for-you"
+        eyebrow="A powerful tool you could run yourself — or a partner who runs it"
         title={
           <>
-            Claude gives small businesses a powerful tool.{" "}
-            <span className="text-clay">We make it actually usable.</span>
+            The best AI tools are powerful.{" "}
+            <span className="text-clay">We make them actually usable.</span>
           </>
         }
-        intro="Claude for Small Business is real and genuinely capable. But it hands you a horizontal model and expects you to figure out which skills to write, which agents to build, what to put in memory, and how to wire your tools. Most owners don't have the time — or the engineer. agentplain is the service layer on top: we bring all of that pre-built, manage it for you, and run it for a low flat fee. Built on Claude, configured by us."
+        intro="Capable general-purpose AI tools are real, and some are cheap or free. But they hand you a horizontal model and expect you to figure out which skills to write, which agents to build, what to put in memory, and how to wire your tools. Most owners don't have the time — or the engineer. agentplain brings all of that pre-built, manages it for you, and runs it for a low flat fee. You don't configure it; we run it."
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-4">
           <div className="bg-paper p-7 md:p-8">
@@ -245,7 +245,7 @@ export default function HomePage() {
               Memory, managed
             </p>
             <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
-              The persistent context Claude needs to stay useful long-term —
+              The persistent context the fleet needs to stay useful long-term —
               what to remember, what to prune, what not to let go stale — we
               curate and maintain it. You never touch a config file.
             </p>
@@ -364,7 +364,7 @@ export default function HomePage() {
 
         <p className="mt-8 max-w-prose text-[13px] leading-relaxed text-mute">
           The chain runs every five minutes against your inbox backlog and
-          reacts in real time to push events as they arrive. There is no
+          reacts to push events as your tools are connected. There is no
           idle hour where the crew has stopped working.
         </p>
 
@@ -447,28 +447,27 @@ export default function HomePage() {
       </Section>
 
       {/* Q4 follow-on — the "why pay vs. free" objection, answered head-on.
-          Names Claude for Small Business + ChatGPT explicitly per the
-          service-partnership lock (`project_service_partnership_positioning`,
-          ratified 2026-05-15 in response to Anthropic's Claude for SMB
-          launch). Two columns (product-vs-alternative axis — NOT a 3-column
-          pricing grid). Reuses the gap-px / bg-rule hairline pattern so the
-          rule shows through as the divider between columns and rows. */}
+          Vendor-generic per the 2026-06-11 customer-surface rule: no AI model
+          or provider is named anywhere a customer can see. The honest contrast
+          is a general-purpose chatbot you run yourself vs. a service partner who
+          runs the fleet for you. Two columns (product-vs-alternative axis — NOT
+          a 3-column pricing grid). Reuses the gap-px / bg-rule hairline pattern
+          so the rule shows through as the divider between columns and rows. */}
       <Section
-        eyebrow="Claude gives you the tool. We run it for you."
+        eyebrow="A free chatbot gives you the tool. We run it for you."
         title={
           <>
-            Claude for Small Business, or a service partner who{" "}
+            A free AI chatbot, or a service partner who{" "}
             <span className="text-clay">runs it for you?</span>
           </>
         }
-        intro="Anthropic's Claude for Small Business and OpenAI's ChatGPT are real, useful tools — and they're cheap or free. They hand you a horizontal model and a tool catalog and expect you to figure out workflows, write prompts, and stitch integrations on your own. That's a different product than what we sell. agentplain is the opposite: we install the fleet, connect your systems, run weekly reviews, and customize as your ops shift. You stay focused on serving your customers."
+        intro="The general-purpose AI chatbots are real, useful tools — and some are cheap or free. They hand you a horizontal model and a tool catalog and expect you to figure out workflows, write prompts, and stitch integrations on your own. That's a different product than what we sell. agentplain is the opposite: we install the fleet, connect your systems, run weekly reviews, and customize as your ops shift. You stay focused on serving your customers."
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
-          {/* LEFT column head — Claude for Small Business (named per the
-              2026-05-15 positioning lock) */}
+          {/* LEFT column head — the free chatbot you'd run yourself */}
           <div className="bg-paper p-7 md:p-8">
             <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-              Claude for Small Business (or any free chatbot)
+              A free AI chatbot you run yourself
             </p>
             <p className="mt-2 font-display text-base leading-snug text-ink-soft">
               You get the tool.
@@ -669,7 +668,7 @@ export default function HomePage() {
               <li>— A service partner who installs and runs reviews</li>
               <li>— Human review on every customer-facing output</li>
               <li>— Liability for licensed activities stays with you</li>
-              <li>— Per-vertical compliance corpus, counsel-reviewed</li>
+              <li>— Per-vertical compliance corpus — real-estate scanner fires live; others gated until counsel review</li>
               <li>— No data resold; no client list used to train models</li>
               <li>— You own the work product</li>
             </ul>

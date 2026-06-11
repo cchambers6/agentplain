@@ -10,16 +10,17 @@ import { tokens } from "@/lib/brand/tokens";
 // PNG preview for mobile spot-check lives at public/og/home.png.
 // 1200×630 is the OpenGraph standard size.
 //
-// 2026-06-06 refresh (SEO/marketing pack following PR #158 SBM-wrapper +
-// PR #159 ROI softening): the heritage illustration is the hero canvas; the
-// text overlay carries the SBM-wrapper positioning subhead, the softened ROI
-// claim, and the built-on-Claude stamp — true + verifiable per
-// `project_sbm_wrapper_positioning_2026_06_06.md`.
+// 2026-06-06 refresh (SEO/marketing pack), amended 2026-06-11 (vendor-invisible
+// customer surfaces): the heritage illustration is the hero canvas; the text
+// overlay carries a vendor-generic positioning subhead, the softened ROI claim,
+// and a brand stamp ("Intelligence rooted in reality"). The underlying AI model
+// is NOT named on a customer surface (per the 2026-06-11 rule); the prior
+// "Built on Claude" stamp + subhead were replaced for that reason.
 
 export const runtime = "edge";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = `${tokens.wordmark} — ${tokens.tagline} Built on Claude.`;
+export const alt = `${tokens.wordmark} — ${tokens.tagline}`;
 
 const ROI_LINE = "15–50× per workflow + the violations you don't pay for";
 
@@ -123,10 +124,10 @@ export default async function OpenGraphImage() {
               maxWidth: 1000,
             }}
           >
-            Claude for Small Business is powerful. We make it usable — the
-            service layer that runs it for you.
+            The best AI tools are powerful. We make them usable — a service
+            partner that runs the fleet for you.
           </div>
-          {/* ROI claim + Built on Claude stamp, over a clay accent bar */}
+          {/* ROI claim + brand stamp, over a clay accent bar */}
           <div style={{ display: "flex", width: 120, height: 4, background: colors.clay.hex, marginTop: 4 }} />
           <div
             style={{
@@ -160,7 +161,7 @@ export default async function OpenGraphImage() {
                 textTransform: "uppercase",
               }}
             >
-              Built on Claude
+              Run for you
             </div>
           </div>
         </div>

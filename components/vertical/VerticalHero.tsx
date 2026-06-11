@@ -56,10 +56,10 @@ export default function VerticalHero({
           {content.hero.valueProp}
         </p>
 
-        {/* SBM-wrapper subhead — per project_sbm_wrapper_positioning_2026_06_06.
-            agentplain is the service layer that makes Claude usable for this
-            vertical, never a competitor. Rendered only when the content file
-            supplies it (all ten ratified verticals do). */}
+        {/* Run-for-you subhead — vendor-generic per the 2026-06-11 customer-
+            surface rule (the underlying AI model is never named on a customer
+            surface). Rendered only when the content file supplies it (all ten
+            ratified verticals do). */}
         {content.hero.sbmSubhead ? (
           <p className="mt-4 max-w-3xl font-display text-base leading-snug text-clay md:text-lg">
             {content.hero.sbmSubhead}

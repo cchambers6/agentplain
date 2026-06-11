@@ -43,7 +43,7 @@ const whoThisIsFor = [
   {
     label: "50+ seats with vertical compliance gates",
     body:
-      "State-specific, carrier-specific, lender-specific rules beyond the ten counsel-reviewed corpuses we ship. The standard corpus is the floor; you need an overlay calibrated to how your shop actually files.",
+      "State-specific, carrier-specific, lender-specific rules beyond the per-vertical corpora we ship (real-estate fires live; the others are drafted and gated until counsel review). The standard corpus is the floor; you need an overlay calibrated to how your shop actually files.",
   },
   {
     label: "Multi-state operations",
@@ -84,7 +84,7 @@ const exampleBuilds = [
   {
     label: "Bespoke compliance corpus",
     body:
-      "Per-state regulations beyond the ten counsel-reviewed corpuses we ship. Specialized lender / carrier / regulator rules. We do the reading and the doc work; you do the licensed activity.",
+      "Per-state regulations beyond the per-vertical corpora we ship (real-estate fires live; the others are drafted and gated until counsel review). Specialized lender / carrier / regulator rules. We do the reading and the doc work; you do the licensed activity.",
   },
   {
     label: "White-label",
@@ -94,7 +94,7 @@ const exampleBuilds = [
   {
     label: "Dedicated success",
     body:
-      "A named operator from agentplain who knows your workflow, watches your fleet's outputs, and surfaces drift or opportunities weekly. Adds a managed-service overlay on top of the standard self-serve product.",
+      "A named operator from agentplain who knows your workflow, watches your fleet's outputs, and surfaces drift or opportunities weekly. Adds a deeper, dedicated-service overlay on top of the standard run-for-you product.",
   },
   {
     label: "Custom reporting / data extraction",

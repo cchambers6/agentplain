@@ -127,7 +127,7 @@ export const ria: VerticalContent = {
     valueProp:
       "agentplain REPLACES the meeting-prep + post-meeting documentation cycle, INTEGRATES with Outlook, OneDrive, Excel, and DocuSign on day one, and AUGMENTS the advisor's review on every client-facing communication with a fiduciary-aware compliance pass.",
     sbmSubhead:
-      "The client-meeting skills, agents, and memory you'd otherwise have to build yourself — built on Claude, configured by us.",
+      "The client-meeting skills, agents, and memory you'd otherwise have to build yourself",
   },
 
   metaTitle: "for independent RIAs and wealth advisors",

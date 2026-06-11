@@ -167,18 +167,26 @@ export interface AllowlistedClass {
   estUsd: number;
   /** Plain-English why-it's-reversible, for the operator surface + audit. */
   reversibility: string;
+  /** True when the action's correctness depends on FRESH billing state
+   *  (e.g. a "noted receipt" or trial reminder keyed on the current
+   *  subscription). When the Stripe webhook sync is stale/frozen (mode #5)
+   *  these must NOT auto-execute on data we know to be possibly-wrong — we
+   *  fail closed to the approval queue until billing sync recovers. */
+  billingDependent?: boolean;
 }
 
 export const AUTO_EXEC_ALLOWLIST: readonly AllowlistedClass[] = [
   {
     kind: 'ADMIN_BILLING_NOTICE',
     estUsd: 0,
+    billingDependent: true,
     reversibility:
       'Stages an internal "noted receipt" acknowledgement draft. No money moves; the draft is deletable before the owner sends.',
   },
   {
     kind: 'ADMIN_TRIAL_ENDING',
     estUsd: 0,
+    billingDependent: true,
     reversibility:
       'Files an internal trial/renewal reminder. No money moves; reversible. (Does NOT cancel a trial or stop a charge.)',
   },
@@ -245,6 +253,32 @@ export function autoExecCeilingFlagName(
 }
 
 /**
+ * Tri-state of the master switch — the Conner-dead remediation (mode #3)
+ * distinguishes a DELIBERATE off from an AMBIGUOUS unset:
+ *   - 'on'    → exactly the literal "on".
+ *   - 'off'   → exactly the literal "off" (a deliberate, quiet choice).
+ *   - 'unset' → undefined, "", or any other value (a typo, a half-done
+ *               config). Treated as OFF for safety, but surfaced LOUDLY
+ *               when an eligible action wanted to auto-execute, because
+ *               "I thought I turned this on" is exactly the silent-fail the
+ *               simulation flagged. We never guess what the operator meant.
+ *
+ * FAIL_LOUD: do not collapse 'unset' back into 'off'. The distinction is
+ * the whole fix — an unset master that an eligible action hit must be
+ * surfaced to an admin, not silently swallowed as "off by default."
+ */
+export type BoundedAutoExecuteMasterState = 'on' | 'off' | 'unset';
+
+export function boundedAutoExecuteMasterState(
+  env: NodeJS.ProcessEnv = process.env,
+): BoundedAutoExecuteMasterState {
+  const raw = env[BOUNDED_AUTO_EXECUTE_MASTER_ENV];
+  if (raw === 'on') return 'on';
+  if (raw === 'off') return 'off';
+  return 'unset';
+}
+
+/**
  * Is the fleet-wide bounded-execute master switch ON?
  *
  * Strict equality with `"on"` — any other value (unset, "", "off",
@@ -254,7 +288,7 @@ export function autoExecCeilingFlagName(
 export function isBoundedAutoExecuteMasterOn(
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {
-  return env[BOUNDED_AUTO_EXECUTE_MASTER_ENV] === 'on';
+  return boundedAutoExecuteMasterState(env) === 'on';
 }
 
 /** Every reason a bounded-execute decision can resolve to. The `*` reasons
@@ -262,11 +296,25 @@ export function isBoundedAutoExecuteMasterOn(
 export type BoundedExecuteReason =
   | 'auto-executed'
   | 'master-off'
+  | 'master-unset'
   | 'kind-not-eligible'
   | 'class-not-enabled'
   | 'store-error'
   | 'gate-not-passed'
   | 'over-ceiling';
+
+/**
+ * True when a decision deserves a LOUD admin surface: an eligible action
+ * wanted to auto-execute but the master switch was UNSET (ambiguous), so
+ * we treated it as off without knowing if that was intended. The persist
+ * site records this on every such attempt (mode #3: "surface to admin on
+ * each workflow attempt that wants to auto-execute").
+ */
+export function shouldSurfaceUnconfiguredMaster(
+  decision: BoundedExecuteDecision,
+): boolean {
+  return decision.reason === 'master-unset';
+}
 
 export interface BoundedExecuteDecision {
   /** True only on the single allow branch. */
@@ -298,6 +346,11 @@ export interface ComposedGateOutcomes {
    *  Omit / true for live callers that are not part of the activation
    *  opt-in (they are governed by the disable-flag, not activation). */
   activationPassed?: boolean;
+  /** Stripe webhook sync is FRESH (mode #5). Defaults to true (backward
+   *  compatible — callers that don't know about billing-sync freshness keep
+   *  working). When explicitly false, billing-dependent kinds fail closed:
+   *  we won't auto-execute on subscription state we know may be stale. */
+  billingSyncFresh?: boolean;
 }
 
 /** Where an effective enable/ceiling resolution came from — surfaced on
@@ -444,11 +497,23 @@ export async function decideBoundedExecute(
 ): Promise<BoundedExecuteDecision> {
   const env = args.env ?? process.env;
 
-  // 1. Master switch. One env lever freezes the whole seam.
-  if (!isBoundedAutoExecuteMasterOn(env)) {
+  // 1. Master switch. One env lever freezes the whole seam. We distinguish
+  //    a DELIBERATE 'off' from an AMBIGUOUS unset (mode #3): an eligible
+  //    action that hit an UNSET master returns 'master-unset' so the persist
+  //    site can surface the ambiguous config to an admin instead of
+  //    silently treating it as off. Both still deny (→ approval queue) —
+  //    unset is treated as off for safety, just NOT silently.
+  const masterState = boundedAutoExecuteMasterState(env);
+  if (masterState !== 'on') {
+    if (masterState === 'unset' && isAutoExecEligibleKind(args.kind)) {
+      return deny(
+        'master-unset',
+        `Bounded auto-execute master switch (${BOUNDED_AUTO_EXECUTE_MASTER_ENV}) is UNSET (neither 'on' nor 'off') while an eligible action ('${args.kind}') wanted to auto-execute. Treating as OFF and surfacing the ambiguous config to an admin — set it explicitly to 'on' or 'off'.`,
+      );
+    }
     return deny(
       'master-off',
-      `Bounded auto-execute master switch (${BOUNDED_AUTO_EXECUTE_MASTER_ENV}) is OFF — every action stays in the approval queue.`,
+      `Bounded auto-execute master switch (${BOUNDED_AUTO_EXECUTE_MASTER_ENV}) is ${masterState === 'off' ? 'OFF' : 'UNSET (treated as off)'} — every action stays in the approval queue.`,
     );
   }
 
@@ -476,6 +541,17 @@ export async function decideBoundedExecute(
     return deny(
       'gate-not-passed',
       'Billing-pause gate: workspace is paused — no auto-execute while billing is not current.',
+      klass.estUsd,
+    );
+  }
+  // Billing-sync freshness gate (mode #5). A billing-dependent kind must NOT
+  // auto-execute on subscription state we know may be stale (Stripe webhook
+  // sync frozen). Defaults true so callers that don't thread it are
+  // unaffected; only an explicit `false` freezes these kinds.
+  if (klass.billingDependent && args.gates.billingSyncFresh === false) {
+    return deny(
+      'gate-not-passed',
+      `Billing-sync freshness gate: Stripe webhook sync is stale/frozen — '${args.kind}' depends on fresh billing state, so it stays in the approval queue until sync recovers.`,
       klass.estUsd,
     );
   }

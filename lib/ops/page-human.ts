@@ -11,17 +11,21 @@
  * seam to watch, test, and (later) point at PagerDuty/Slack instead of email.
  *
  * What it does on every call:
- *   1. Resolves the recipient(s):
+ *   1. Resolves the recipient(s) — ALWAYS at least one (Conner-dead P0 #1):
  *        - `FLEET_TRUSTED_HUMAN_EMAIL` (comma-separated) when set — the
  *          designated trusted human, ideally NOT Conner's personal inbox so
  *          the alert survives him.
  *        - otherwise the first `OPERATOR_EMAIL_ALLOWLIST` entry (Conner
  *          today) AND a line in the email body noting that no designated
  *          fallback human is configured. A loud nudge, never a silent drop.
- *        - if BOTH are empty, the email cannot be addressed — we still
- *          persist the page row (the loud-fail artifact the operator UI
- *          reads) and return `delivered: false` so the caller knows the
- *          page didn't reach a person.
+ *        - if BOTH are empty, the LAST-RESORT admin inbox
+ *          (`ADMIN_FALLBACK_EMAIL`, defaulting to the baked-in
+ *          `HARDCODED_ADMIN_FALLBACK_EMAIL`) — so a page can NEVER resolve
+ *          to "nobody." The email body shouts the EVEN-LOUDER notice that
+ *          escalation is running on the baked-in last resort because no
+ *          operator routing is configured at all. (Before this remediation
+ *          a both-empty config paged into the void: persisted but emailed
+ *          no one. That was silent-fail mode #1.)
  *   2. Sends the alert via the EXISTING `lib/email` seam (Resend underneath
  *      in prod, the in-memory test provider in tests) — never the Resend SDK
  *      directly (feedback_no_silent_vendor_lock).
@@ -43,6 +47,7 @@
 import { env } from "../env";
 import { getEmailProvider, type EmailProvider } from "../email";
 import { withSystemContext as defaultWithSystemContext } from "../db";
+import { resolveAdminFallbackEmail } from "./admin-fallback";
 
 /** Triage levels. `critical` = customer-impacting and/or 24h-deadline; the
  *  others are lower-urgency operator FYIs that still want one observable
@@ -75,9 +80,22 @@ export interface PageHumanResult {
   delivered: boolean;
   /** Recipients the page was addressed to (empty when none resolved). */
   recipients: string[];
-  /** True when we fell back to the operator allowlist because no
-   *  `FLEET_TRUSTED_HUMAN_EMAIL` was configured. Drives the in-body nudge. */
+  /** True when we fell back to the operator allowlist OR the baked-in
+   *  last-resort because no `FLEET_TRUSTED_HUMAN_EMAIL` was configured.
+   *  Drives the in-body nudge. */
   usedFallbackRecipient: boolean;
+  /** True ONLY when NO operator routing was configured at all and the page
+   *  went to the baked-in last-resort admin inbox (`ADMIN_FALLBACK_EMAIL`
+   *  / `HARDCODED_ADMIN_FALLBACK_EMAIL`). The loudest fallback tier —
+   *  surfaces that the fleet is escalating into a personal inbox because
+   *  nobody set up routing. (Conner-dead P0 #1.)
+   *
+   *  Optional on the type only so existing fake pagers in tests stay valid;
+   *  the REAL `pageHuman` always sets it. */
+  usedHardcodedFallback?: boolean;
+  /** Which tier resolved the recipients, for the audit row + operator UI.
+   *  Always set by the real `pageHuman`; optional for test fakes. */
+  recipientTier?: RecipientTier;
   /** True iff the page was persisted as an AuditLog row. The loud-fail
    *  artifact — when the email channel is dead this is the only record. */
   persisted: boolean;
@@ -92,10 +110,29 @@ export interface PageHumanResult {
  *  filter on this to render the "fleet paged a human" feed. */
 export const PAGE_HUMAN_AUDIT_ACTION = "ops.page_human";
 
+/** Which configuration tier resolved the page recipients. */
+export type RecipientTier =
+  | "trusted-human"
+  | "operator-fallback"
+  | "hardcoded-fallback";
+
 /** Stable nudge copy when no designated fallback human is configured. Tested
  *  against verbatim so the loud nudge can't silently regress. */
 export const NO_FALLBACK_HUMAN_NOTICE =
   "No designated fallback human is configured — set FLEET_TRUSTED_HUMAN_EMAIL to a monitored inbox so these alerts survive any single person.";
+
+/** The EVEN-LOUDER notice when a page resolved all the way down to the
+ *  baked-in last-resort admin inbox — i.e. NO operator routing exists at
+ *  all. Tested verbatim. (Conner-dead P0 #1: a page must never go to
+ *  nobody, but if it goes to the baked-in default we shout WHY.) */
+export const HARDCODED_FALLBACK_NOTICE =
+  "NO operator routing is configured (FLEET_TRUSTED_HUMAN_EMAIL and OPERATOR_EMAIL_ALLOWLIST are both empty). This alert was routed to the baked-in last-resort admin inbox so it would not be silently lost. Configure FLEET_TRUSTED_HUMAN_EMAIL to a monitored inbox immediately.";
+
+/** The customer-facing line recorded on the audit row when escalation runs
+ *  on a fallback tier, so the fleet activity surface can render an honest
+ *  "routing to fallback admin" status instead of looking healthy. */
+export const FALLBACK_ACTIVITY_NOTICE =
+  "Escalation triggered — routing to fallback admin (no designated human configured).";
 
 export interface PageHumanDeps {
   email?: EmailProvider;
@@ -119,12 +156,19 @@ export async function pageHuman(
   const recipientResolution = resolveRecipients(deps.env ?? process.env);
   const recipients = recipientResolution.recipients;
   const usedFallbackRecipient = recipientResolution.usedFallback;
+  const usedHardcodedFallback = recipientResolution.usedHardcodedFallback;
+  const recipientTier = recipientResolution.tier;
 
   const subject = renderSubject(input);
-  const text = renderText(input, usedFallbackRecipient);
-  const html = renderHtml(input, usedFallbackRecipient);
+  const text = renderText(input, usedFallbackRecipient, usedHardcodedFallback);
+  const html = renderHtml(input, usedFallbackRecipient, usedHardcodedFallback);
 
   // ── Send (best-effort) ──────────────────────────────────────────────
+  // FAIL_LOUD: `recipients` is NEVER empty now (resolveRecipients bottoms
+  // out at the baked-in last resort) — so the else-branch below should be
+  // dead code. It is kept as a belt-and-suspenders guard: if a future edit
+  // ever lets resolution return [], we record WHY rather than silently
+  // pretending a page went out.
   let delivered = false;
   let emailError: string | undefined;
   if (recipients.length > 0) {
@@ -150,8 +194,10 @@ export async function pageHuman(
       emailError = err instanceof Error ? err.message : String(err);
     }
   } else {
+    // FAIL_LOUD: should be unreachable. If you see this in production, the
+    // last-resort fallback in resolveRecipients has been broken.
     emailError =
-      "no recipient configured (FLEET_TRUSTED_HUMAN_EMAIL and OPERATOR_EMAIL_ALLOWLIST both empty)";
+      "NO recipient resolved — the last-resort admin fallback is broken (resolveRecipients returned []). This page reached NOBODY.";
   }
 
   // ── Persist (best-effort, ALWAYS attempted) ─────────────────────────
@@ -178,6 +224,14 @@ export async function pageHuman(
             source: input.source ?? null,
             recipients,
             usedFallbackRecipient,
+            usedHardcodedFallback,
+            recipientTier,
+            // When escalation runs on a fallback tier, record the honest
+            // customer-facing activity line so the fleet activity surface
+            // shows "routing to fallback admin" rather than looking healthy.
+            ...(usedFallbackRecipient
+              ? { activityNotice: FALLBACK_ACTIVITY_NOTICE }
+              : {}),
             emailDelivered: delivered,
             ...(emailError ? { emailError } : {}),
           },
@@ -195,6 +249,8 @@ export async function pageHuman(
     delivered,
     recipients,
     usedFallbackRecipient,
+    usedHardcodedFallback,
+    recipientTier,
     persisted,
     auditLogId,
     ...(emailError ? { emailError } : {}),
@@ -202,24 +258,54 @@ export async function pageHuman(
   };
 }
 
-/** Resolve recipients from the trusted-human var, falling back to the first
- *  operator allowlist entry. Reads env on every call (cold-start safe). */
+/**
+ * Resolve page recipients. Three tiers, ALWAYS non-empty:
+ *   1. `FLEET_TRUSTED_HUMAN_EMAIL` — the designated trusted human(s).
+ *   2. first `OPERATOR_EMAIL_ALLOWLIST` entry — operator fallback.
+ *   3. the baked-in last resort (`resolveAdminFallbackEmail`) — so a page
+ *      can never reach nobody.
+ * Reads env on every call (cold-start safe).
+ *
+ * FAIL_LOUD: the tier-3 fallback is the fix for silent-fail mode #1. If you
+ * remove it, a both-empty operator config makes every credential-failure
+ * page vanish (persisted to audit, emailed to no one). Keep the last tier.
+ */
 export function resolveRecipients(envSnapshot: NodeJS.ProcessEnv = process.env): {
   recipients: string[];
   usedFallback: boolean;
+  usedHardcodedFallback: boolean;
+  tier: RecipientTier;
 } {
   const trusted = parseList(envSnapshot.FLEET_TRUSTED_HUMAN_EMAIL);
   if (trusted.length > 0) {
-    return { recipients: trusted, usedFallback: false };
+    return {
+      recipients: trusted,
+      usedFallback: false,
+      usedHardcodedFallback: false,
+      tier: "trusted-human",
+    };
   }
   const allowlist = parseList(envSnapshot.OPERATOR_EMAIL_ALLOWLIST);
   // Page only the FIRST operator (the primary), not the whole allowlist —
   // the allowlist gates operator console access, which is a broader set
   // than "the person who gets paged at 2am".
   if (allowlist.length > 0) {
-    return { recipients: [allowlist[0]], usedFallback: true };
+    return {
+      recipients: [allowlist[0]],
+      usedFallback: true,
+      usedHardcodedFallback: false,
+      tier: "operator-fallback",
+    };
   }
-  return { recipients: [], usedFallback: false };
+  // Tier 3: nobody is configured. Route to the baked-in last resort so the
+  // page reaches a real inbox, and flag it LOUD so the body + audit shout
+  // that routing is missing.
+  return {
+    recipients: [resolveAdminFallbackEmail(envSnapshot)],
+    usedFallback: true,
+    usedHardcodedFallback: true,
+    tier: "hardcoded-fallback",
+  };
 }
 
 function parseList(raw: string | undefined): string[] {
@@ -245,7 +331,11 @@ function deadlineLine(deadline?: Date): string | null {
   return `Action needed by: ${deadline.toISOString()} (UTC).`;
 }
 
-function renderText(input: PageHumanInput, usedFallback: boolean): string {
+function renderText(
+  input: PageHumanInput,
+  usedFallback: boolean,
+  usedHardcodedFallback: boolean,
+): string {
   const lines: string[] = [];
   lines.push(`Severity: ${input.severity.toUpperCase()}`);
   lines.push("");
@@ -261,7 +351,13 @@ function renderText(input: PageHumanInput, usedFallback: boolean): string {
     lines.push("");
     lines.push(`Source: ${input.source}`);
   }
-  if (usedFallback) {
+  // The louder hardcoded-fallback notice supersedes the gentler operator-
+  // fallback nudge — both can't apply (hardcoded only fires when the
+  // allowlist is ALSO empty).
+  if (usedHardcodedFallback) {
+    lines.push("");
+    lines.push(HARDCODED_FALLBACK_NOTICE);
+  } else if (usedFallback) {
     lines.push("");
     lines.push(NO_FALLBACK_HUMAN_NOTICE);
   }
@@ -272,8 +368,17 @@ function renderText(input: PageHumanInput, usedFallback: boolean): string {
   return lines.join("\n");
 }
 
-function renderHtml(input: PageHumanInput, usedFallback: boolean): string {
+function renderHtml(
+  input: PageHumanInput,
+  usedFallback: boolean,
+  usedHardcodedFallback: boolean,
+): string {
   const dl = deadlineLine(input.deadline);
+  const fallbackNotice = usedHardcodedFallback
+    ? HARDCODED_FALLBACK_NOTICE
+    : usedFallback
+      ? NO_FALLBACK_HUMAN_NOTICE
+      : null;
   return `<!doctype html>
 <html><body style="font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif; color:#1A1A1F; background:#F7F4ED; padding:24px;">
   <p style="font-size:13px; letter-spacing:0.04em; text-transform:uppercase; color:${input.severity === "critical" ? "#B42318" : "#8C8478"}; margin:0 0 8px;">Severity: ${escapeHtml(input.severity)}</p>
@@ -281,7 +386,7 @@ function renderHtml(input: PageHumanInput, usedFallback: boolean): string {
   <pre style="white-space:pre-wrap; font-family:inherit; font-size:14px; line-height:1.5; color:#1A1A1F; margin:0 0 16px;">${escapeHtml(input.details)}</pre>
   ${dl ? `<p style="font-weight:600; color:#B42318; margin:0 0 16px;">${escapeHtml(dl)}</p>` : ""}
   ${input.source ? `<p style="font-size:13px; color:#8C8478; margin:0 0 8px;">Source: ${escapeHtml(input.source)}</p>` : ""}
-  ${usedFallback ? `<p style="font-size:13px; color:#B42318; background:#FEF3F2; padding:12px; border-radius:6px; margin:16px 0 0;">${escapeHtml(NO_FALLBACK_HUMAN_NOTICE)}</p>` : ""}
+  ${fallbackNotice ? `<p style="font-size:13px; color:#B42318; background:#FEF3F2; padding:12px; border-radius:6px; margin:16px 0 0;">${escapeHtml(fallbackNotice)}</p>` : ""}
   <p style="font-size:12px; color:#8C8478; margin:24px 0 0;">Automated page from the agentplain fleet — fired because a credential or key could not self-heal.</p>
 </body></html>`;
 }

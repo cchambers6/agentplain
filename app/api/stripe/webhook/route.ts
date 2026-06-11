@@ -17,6 +17,8 @@ import { getBillingProvider } from "@/lib/billing";
 import { dispatchEvent } from "@/lib/billing/webhook-dispatch";
 import { withSystemContext } from "@/lib/db";
 import { getLogger, reportError } from "@/lib/observability";
+import { PrismaOpsFlagStore } from "@/lib/ops/prisma-flag-store";
+import { stampWebhookOk, stampWebhookError } from "@/lib/billing/sync-freshness";
 
 export const runtime = "nodejs"; // Stripe SDK requires Node runtime
 export const dynamic = "force-dynamic";
@@ -24,6 +26,11 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const billing = getBillingProvider();
   const logger = getLogger().child({ boundary: "webhook", provider: "stripe" });
+  // Sync-freshness heartbeat store (mode #5). Stamping is best-effort — it
+  // must never make the webhook itself fail. The hourly fleet-freshness-sweep
+  // reads these stamps to detect a stale/broken Stripe sync and freeze
+  // billing-dependent auto-exec before customers run hours on stale state.
+  const flagStore = new PrismaOpsFlagStore();
   const rawPayload = await req.text();
   const signature = req.headers.get("stripe-signature");
 
@@ -81,9 +88,30 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       },
       extra: { stripeEventId: event.eventId },
     });
+    // FAIL_LOUD (mode #5): record a sync-failure heartbeat. A VERIFIED Stripe
+    // event we could not dispatch means our billing state is now drifting from
+    // Stripe's. The hourly freshness sweep reads this; if errors persist past
+    // the grace window with no success since, it freezes billing-dependent
+    // auto-exec + pages an admin. We do NOT stamp signature-verify failures
+    // (those are often forged probes — stamping them would let an attacker
+    // freeze billing by spamming bad signatures).
+    await stampWebhookError(
+      flagStore,
+      new Date(),
+      `${event.eventType} (${event.eventId}): ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    ).catch(() => {
+      /* heartbeat is observability — never fail the webhook on it */
+    });
     // Return 500 so Stripe retries.
     return NextResponse.json({ error: "Dispatch failed" }, { status: 500 });
   }
+
+  // Success heartbeat — proves the Stripe→us sync pipe is alive.
+  await stampWebhookOk(flagStore, new Date()).catch(() => {
+    /* best-effort */
+  });
 
   eventLogger.info("stripe webhook dispatched");
   return NextResponse.json({ received: true });

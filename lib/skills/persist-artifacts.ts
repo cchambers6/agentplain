@@ -40,8 +40,10 @@ import {
 import {
   decideBoundedExecute,
   boundedExecuteStatusFlip,
+  shouldSurfaceUnconfiguredMaster,
   type ComposedGateOutcomes,
 } from './bounded-execute';
+import { isBillingSyncFrozen } from '@/lib/billing/sync-freshness';
 import type { OpsFlagStore } from '@/lib/ops/flag-store';
 import type { WorkApprovalKind } from '@prisma/client';
 import type { SkillRunRecord, SkillStepRecord, SkillRunOutcome } from './types';
@@ -296,15 +298,56 @@ async function applyBoundedExecuteDecision(
   args: ApplyBoundedExecuteArgs,
 ): Promise<ApprovalThresholdDecision> {
   try {
+    // mode #5 — billing-sync freshness. If the Stripe webhook sync is frozen
+    // (stale > 1h), billing-dependent kinds must fail closed. We read the
+    // fleet-wide freeze flag once here and thread it into the decision. The
+    // read is fail-open (false on error) because the freeze is EXTRA safety
+    // on top of the already fail-closed enable/ceiling reads — a transient
+    // flag-store blip must not freeze ALL billing work fleet-wide.
+    const billingSyncFresh = !(await isBillingSyncFrozen(
+      args.boundedExecute.store,
+    ).catch(() => false));
+
     const decision = await decideBoundedExecute({
       kind: args.kind,
       store: args.boundedExecute.store,
-      gates: args.boundedExecute.gates,
+      gates: { ...args.boundedExecute.gates, billingSyncFresh },
       env: args.boundedExecute.env,
       // cv-x1 — the workspace's OWN autonomy policy governs the decision
       // (workspace-scoped OpsFlag row → fleet-wide row → default OFF).
       workspaceId: args.workspaceId,
     });
+
+    // mode #3 — surface an AMBIGUOUS master config. When an eligible action
+    // wanted to auto-execute but BOUNDED_AUTO_EXECUTE_MASTER was UNSET
+    // (neither 'on' nor 'off'), record a LOUD audit row on this attempt so an
+    // admin sees the config was never decided — instead of silently treating
+    // it as off. Best-effort + console.warn; never blocks the (PENDING) flow.
+    if (shouldSurfaceUnconfiguredMaster(decision)) {
+      console.warn(
+        `[FAIL_LOUD] bounded-execute master switch is UNSET while '${args.kind}' wanted to auto-execute — set BOUNDED_AUTO_EXECUTE_MASTER to 'on' or 'off'. Treated as off; routed to approval.`,
+      );
+      try {
+        await args.tx.auditLog.create({
+          data: {
+            actorUserId: null,
+            workspaceId: args.workspaceId,
+            action: 'work_approval.auto_execute_unconfigured',
+            targetTable: 'WorkApprovalQueueItem',
+            targetId: args.refId,
+            payload: {
+              kind: args.kind,
+              agentSlug: args.agentSlug,
+              detail: decision.detail,
+              note: 'BOUNDED_AUTO_EXECUTE_MASTER is unset (ambiguous) — surface to admin; treated as off.',
+            },
+          },
+        });
+      } catch {
+        // Non-fatal — the console.warn already shouted; the action stays PENDING.
+      }
+    }
+
     const flip = boundedExecuteStatusFlip(decision);
     if (!flip) {
       // Did not auto-execute — keep the prior PENDING decision. (We do

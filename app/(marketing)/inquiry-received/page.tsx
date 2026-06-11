@@ -43,11 +43,10 @@ export default async function InquiryReceivedPage({ searchParams }: PageProps) {
   return (
     <section className="border-b border-rule bg-paper">
       <div className="container-wide py-24 md:py-32">
-        {/* Confirmation Plaino — "received, it's in good hands." Placeholder
-            today; one-line swap when the real asset lands. */}
+        {/* Confirmation Plaino — fetching pose: work received and brought home. */}
         <PlainoScene
           name="inquiry-received"
-          alt="Plaino setting your inquiry safely on the porch"
+          alt="Plaino the robot dog carrying your inquiry home, ready to deliver it"
           className="mb-8 h-auto w-32"
         />
         <p className="eyebrow mb-6">Inquiry received</p>

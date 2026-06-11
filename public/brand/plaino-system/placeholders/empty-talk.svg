@@ -1,31 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200" role="img" aria-label="placeholder heritage scene: talk · here when ready">
-  <!-- PLACEHOLDER — non-blocking stand-in. Real asset swaps in at public/brand/plaino-system/scenes/empty-talk.png -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200" role="img" aria-label="clearing in the plain with soft horizon">
   <rect width="1200" height="1200" fill="#F7F4ED"/>
-  <!-- low land band (Moss) -->
-  <rect x="0" y="744" width="1200" height="456" fill="#3F5C3F" opacity="0.16"/>
-  <!-- horizon line (Ink hairline) + low rise -->
-  <path d="M0 744 H1200" stroke="#1A1A1F" stroke-width="2" opacity="0.55"/>
-  <path d="M600 744 Q864 645 1128 744" fill="none" stroke="#1A1A1F" stroke-width="2" opacity="0.35"/>
-  <!-- a single distant clay roof (the one Clay charge in the land) -->
-  <path d="M168 744 l96 0 l-48 -42 z" fill="#B65D3A" opacity="0.85"/>
-  <!-- Plaino silhouette: calm working dog, head up, watching -->
-  <g fill="#1A1A1F">
-    <!-- body -->
-    <rect x="768" y="622" width="192" height="88" rx="23"/>
-    <!-- legs -->
-    <rect x="791" y="695" width="23" height="49"/>
-    <rect x="906" y="695" width="23" height="49"/>
-    <!-- head -->
-    <rect x="883" y="563" width="65" height="75" rx="15"/>
-    <!-- ear (up, alert) -->
-    <path d="M895 567 l0 -31 l23 22 z"/>
-    <!-- tail -->
-    <path d="M768 634 q-35 -11 -31 -49" fill="none" stroke="#1A1A1F" stroke-width="19" stroke-linecap="round"/>
-  </g>
-  <!-- collar tag: the single Clay charge on the dog -->
-  <circle cx="887" cy="634" r="23" fill="#B65D3A"/>
-  <!-- placeholder labelling (Mute) — makes it unmistakably a stand-in -->
-  <text x="72" y="168" font-family="ui-monospace, Menlo, monospace" font-size="34" fill="#726A5E" letter-spacing="2">PLACEHOLDER · TALK · HERE WHEN READY</text>
-  <text x="72" y="222" font-family="ui-monospace, Menlo, monospace" font-size="24" fill="#726A5E" opacity="0.8">1200×1200 · pose sitting-alert · awaiting real asset</text>
+  <rect x="0" y="720" width="1200" height="480" fill="#EDE9DE"/>
+  <line x1="0" y1="720" x2="1200" y2="720" stroke="#1A1A1F" stroke-width="1.5" opacity="0.32"/>
+  <path d="M240 720 Q600 624 960 720" fill="#E0DAC9" opacity="0.40" stroke="#1A1A1F" stroke-width="1.2000000000000002" opacity="0.22"/>
+  <rect x="0" y="720" width="144" height="96" fill="#3F5C3F" opacity="0.16"/>
+  <rect x="1056" y="720" width="144" height="96" fill="#3F5C3F" opacity="0.16"/>
 </svg>

@@ -32,43 +32,56 @@ import { PlainoAvatar } from "@/components/ui/ap/PlainoAvatar";
 
 // ── PlainoAvatar — pose prop + render ──────────────────────────────────
 
-describe("PlainoAvatar — pose-aware sitting robot dog placeholder", () => {
+// PlainoAvatar is now a DEPRECATED SHIM over PlainoStatus (the live-state
+// pose family) — see components/ui/ap/PlainoAvatar.tsx + docs/brand/icon-families.md
+// (Conner two-family ratification 2026-06-10). It renders a plain <img> pose
+// raster (not <svg>), mapping pose → status state → the pose PNG. These tests
+// pin the shim contract: the three legacy poses still render without throwing
+// and resolve to their status pose, and the metaphor never leaks.
+const POSE_TO_PLAINO_STATE: Record<"sit" | "fetch" | "herd", string> = {
+  sit: "sitting-alert",
+  fetch: "fetching",
+  herd: "herding",
+};
+
+describe("PlainoAvatar — deprecated shim over PlainoStatus", () => {
   it("renders with default pose='sit' without throwing", () => {
     const html = renderToStaticMarkup(createElement(PlainoAvatar));
-    assert.match(html, /<svg/);
-    assert.match(html, /data-pose="sit"/);
+    assert.match(html, /<img/);
+    assert.match(html, /data-plaino-state="sitting-alert"/);
   });
 
-  it("accepts pose='fetch' and pose='herd' and pose='sit'", () => {
+  it("maps pose='fetch'/'herd'/'sit' to the status pose raster", () => {
     for (const pose of ["sit", "fetch", "herd"] as const) {
       const html = renderToStaticMarkup(
         createElement(PlainoAvatar, { pose }),
       );
       assert.match(
         html,
-        new RegExp(`data-pose="${pose}"`),
-        `expected data-pose="${pose}" in rendered SVG`,
+        new RegExp(`data-plaino-state="${POSE_TO_PLAINO_STATE[pose]}"`),
+        `expected pose=${pose} to render the ${POSE_TO_PLAINO_STATE[pose]} raster`,
       );
     }
   });
 
-  it("exposes aria-label='Plaino' when decorative=false; hides otherwise", () => {
+  it("announces the state when decorative=false; hides otherwise", () => {
     const decorative = renderToStaticMarkup(
       createElement(PlainoAvatar, { decorative: true }),
     );
     assert.match(decorative, /aria-hidden/);
 
     const labeled = renderToStaticMarkup(
-      createElement(PlainoAvatar, { decorative: false }),
+      createElement(PlainoAvatar, { decorative: false, pose: "fetch" }),
     );
-    assert.match(labeled, /aria-label="Plaino"/);
-    assert.match(labeled, /role="img"/);
+    // PlainoStatus announces the live state via the img alt text.
+    assert.match(labeled, /alt="Plaino is fetching"/);
+    assert.doesNotMatch(labeled, /aria-hidden/);
   });
 
-  it("never embeds the literal metaphor in the rendered SVG", () => {
-    // The avatar is a silhouette, not a labeled mascot. The metaphor
-    // (working sheepdog on the plains) is scaffolding only. The
-    // rendered markup must NOT contain the literal animal vocabulary.
+  it("never embeds the literal metaphor in the rendered markup", () => {
+    // The mark is an illustration, not a labeled mascot. The metaphor
+    // (working sheepdog on the plains) is scaffolding only. The rendered
+    // markup must NOT contain the literal animal vocabulary.
     for (const pose of ["sit", "fetch", "herd"] as const) {
       const html = renderToStaticMarkup(
         createElement(PlainoAvatar, { pose, decorative: false }),

@@ -3,7 +3,7 @@ import {
   ApEyebrow,
   ApHeritageButton,
   ApPaperCard,
-  Plaino,
+  PlainoStatus,
 } from "@/components/ui/ap";
 import { withWorkspace } from "@/lib/auth";
 import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
@@ -193,7 +193,7 @@ export default async function OnboardingPage({ params }: PageProps) {
       <header className="mb-10">
         <ApEyebrow>onboarding · welcome</ApEyebrow>
         <div className="mt-3 flex items-start gap-4">
-          <Plaino state="sitting-alert" size={56} />
+          <PlainoStatus state="sit" size={56} />
           <h1 className="font-display text-3xl leading-tight text-ink md:text-4xl">
             Hi {ownerFirstName}. I&rsquo;m {partner}, your service partner
             at agentplain. Let me get your fleet rooted in your shop.

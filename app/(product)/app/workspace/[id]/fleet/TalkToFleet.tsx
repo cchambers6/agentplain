@@ -5,7 +5,7 @@ import {
   ApEyebrow,
   ApHeritageButton,
   ApPaperCard,
-  Plaino,
+  PlainoStatus,
 } from "@/components/ui/ap";
 import { submitFleetRequestAction } from "./actions";
 
@@ -50,7 +50,7 @@ export function TalkToFleet({
       title="Give Plaino a job."
     >
       <p className="flex items-start gap-3 text-[14px] leading-relaxed text-ink-soft">
-        <Plaino state="head-icon" size={24} className="shrink-0" />
+        <PlainoStatus state="sit" size={24} className="shrink-0" />
         <span>
           {partner} reads new requests on each pass and queues a draft
           for your review — your existing tools still send. No reply

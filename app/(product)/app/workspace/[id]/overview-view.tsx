@@ -6,7 +6,7 @@ import {
   ApHeritageButton,
   ApPaperCard,
   ApRootedEmptyState,
-  Plaino,
+  PlainoStatus,
 } from "@/components/ui/ap";
 
 // Broker-owner workspace overview — the daily report-back from the fleet.
@@ -103,6 +103,14 @@ export function OverviewView({
     verticalIntegrationsWindow,
   });
   const firstName = firstNameFromEmail(email);
+  // Live status pose for the overview header — derived from the data the view
+  // already holds (no new fetch). Paused fleet sleeps; pending drafts mean
+  // Plaino is delivering work (fetch); a quiet queue sits.
+  const overviewState = activePause
+    ? "sleep"
+    : pendingApprovals > 0
+      ? "fetch"
+      : "sit";
 
   return (
     <div className="space-y-10">
@@ -138,7 +146,7 @@ export function OverviewView({
           {headline}
         </h1>
         <p className="mt-3 flex max-w-2xl items-start gap-3 text-[15px] leading-relaxed text-ink-soft">
-          <Plaino state="head-icon" size={32} className="shrink-0" />
+          <PlainoStatus state={overviewState} size={32} className="shrink-0" />
           <span>
             {partner} is your service partner. Your fleet is doing the work
             that doesn&rsquo;t need you so you can focus on what does. Approve,

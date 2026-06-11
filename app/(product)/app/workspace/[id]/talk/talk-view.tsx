@@ -1,4 +1,4 @@
-import { ApEyebrow, ApRootedEmptyState, Plaino } from "@/components/ui/ap";
+import { ApEyebrow, ApRootedEmptyState, PlainoMark } from "@/components/ui/ap";
 import type { PersistedChatMessage } from "@/lib/plaino";
 import { parsePlainoCard } from "@/lib/plaino";
 import { PlainoCardView } from "@/components/plaino/PlainoCardView";
@@ -91,7 +91,7 @@ export function ChatBubble({
   return (
     <li>
       <div className="mb-2 flex items-center gap-2 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-        {isPlaino ? <Plaino state="head-icon" size={16} /> : null}
+        {isPlaino ? <PlainoMark size={16} /> : null}
         <span>{speaker}</span>
         <span aria-hidden>·</span>
         <span>{formatTimestamp(message.createdAt)}</span>
@@ -274,7 +274,7 @@ export function TalkHeader({ workspaceId }: { workspaceId: string }) {
   return (
     <div className="mb-6 flex items-start justify-between gap-4 text-ink">
       <div className="flex items-center gap-3">
-        <Plaino state="head-icon" size={48} alt="Plaino" />
+        <PlainoMark size={48} alt="Plaino" />
         <div>
           <ApEyebrow>talk with Plaino</ApEyebrow>
           <h1 className="font-display text-3xl leading-tight text-ink">

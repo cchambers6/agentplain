@@ -35,6 +35,13 @@ export { ApRootedLoader } from "./ApRootedLoader";
 export type { ApRootedLoaderKind } from "./ApRootedLoader";
 export { Plaino } from "./Plaino";
 export type { PlainoState } from "./Plaino";
+// Two-family Plaino icon system (Conner 2026-06-10; docs/brand/icon-families.md):
+//   PlainoMark   — 8-bit BRAND mark (identity surfaces).
+//   PlainoStatus — live-STATE pose icon (dashboard / queue / health).
+// Product/marketing surfaces import these, never `Plaino` directly.
+export { PlainoMark } from "./PlainoMark";
+export { PlainoStatus } from "./PlainoStatus";
+export type { PlainoStatusState } from "./PlainoStatus";
 export {
   PlainoScene,
   isPlaceholderScene,

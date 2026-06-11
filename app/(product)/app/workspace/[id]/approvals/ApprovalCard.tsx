@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
-import { ApPaperCard, Plaino, type PlainoState } from "@/components/ui/ap";
+import {
+  ApPaperCard,
+  PlainoStatus,
+  type PlainoStatusState,
+} from "@/components/ui/ap";
 import { type DisciplineId } from "@/lib/disciplines";
 import type { RenderedApproval } from "./renderApprovalPayload";
 
@@ -24,12 +28,12 @@ interface ApprovalCardProps {
   row: ApprovalRow;
   /** Action controls (approve / edit / reject). Rendered in the footer. */
   footer?: ReactNode;
-  /** Plaino's posture for this item. The approvals queue holds delivered
-   *  drafts, so the default is "fetching" (Plaino brought work to the
-   *  queue). Callers on other surfaces pass "sitting-alert" (approved /
-   *  ready), "guarding" (Sentinel-blocked), or "resting" (paused /
-   *  over-budget) per docs/brand/plaino-system.md. */
-  plainoState?: PlainoState;
+  /** Plaino's live status for this item. The approvals queue holds delivered
+   *  drafts, so the default is "fetch" (Plaino brought work to the queue).
+   *  Callers on other surfaces pass "sit" (ready), "alert" (Sentinel-blocked),
+   *  or "sleep" (paused) per the two-family icon system
+   *  (docs/brand/icon-families.md). */
+  plainoState?: PlainoStatusState;
 }
 
 /** Map internal agent slugs to readable display labels for the customer surface.
@@ -68,7 +72,7 @@ function agentDisplayLabel(slug: string): string {
 export function ApprovalCard({
   row,
   footer,
-  plainoState = "fetching",
+  plainoState = "fetch",
 }: ApprovalCardProps) {
   const { rendered } = row;
   const adminCardClass = adminBorderClass(rendered.admin?.priority);
@@ -155,7 +159,7 @@ export function ApprovalCard({
           to:"). Per project_agents_work_proactively — the customer sees
           the fleet's work, not a black box. */}
       <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-        <Plaino state={plainoState} size={16} />
+        <PlainoStatus state={plainoState} size={16} />
         <span className="text-ink-soft">drafted by</span>
         <span className="text-ink">{agentDisplayLabel(row.agentSlug)}</span>
         <span aria-hidden>·</span>

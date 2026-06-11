@@ -20,7 +20,7 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ApEyebrow, ApPaperCard, Plaino } from "@/components/ui/ap";
+import { ApEyebrow, ApPaperCard, PlainoStatus } from "@/components/ui/ap";
 import { requireUser } from "@/lib/auth/server";
 import {
   listMediaByTier,
@@ -73,7 +73,7 @@ export default async function OperatorMediaFleetPage() {
           The fleet that distributes the work.
         </h1>
         <p className="mt-3 flex max-w-2xl items-start gap-3 text-[15px] leading-relaxed text-ink-soft">
-          <Plaino state="head-icon" size={32} className="shrink-0" />
+          <PlainoStatus state="herd" size={32} className="shrink-0" />
           <span>
             agentplain&rsquo;s own distribution org — it takes finished creative
             and decides where, how, and when it runs: paid, earned, and measured.

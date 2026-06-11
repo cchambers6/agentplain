@@ -85,6 +85,12 @@ function buildMockMcp(args: {
     async listExpenses(_input: ListExpensesInput): Promise<McpResult<ListExpensesOutput>> {
       return mcpError('NOT_FOUND', 'not used in this test');
     },
+    async listEstimates(): Promise<McpResult<import('./../../integrations/quickbooks-mcp/types').ListEstimatesOutput>> {
+      return mcpError('NOT_FOUND', 'not used in this test');
+    },
+    async getEstimate(): Promise<McpResult<import('./../../integrations/quickbooks-mcp/types').GetEstimateOutput>> {
+      return mcpError('NOT_FOUND', 'not used in this test');
+    },
   };
 }
 

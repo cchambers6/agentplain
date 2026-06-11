@@ -15,7 +15,9 @@ import type { EstimateLookup, EstimateRecord } from './types';
 
 export interface JsonEstimateSeed {
   workspaceId: string;
-  estimates: EstimateRecord[];
+  /** `amountUsd` is optional on seed records so fixtures pre-dating the
+   *  field compile without changes.  The fetcher back-fills 0 when absent. */
+  estimates: Array<Omit<EstimateRecord, 'amountUsd'> & { amountUsd?: number }>;
 }
 
 export class JsonEstimateLookup implements EstimateLookup {
@@ -31,6 +33,12 @@ export class JsonEstimateLookup implements EstimateLookup {
         `JsonEstimateLookup seeded for workspace ${this.seed.workspaceId}, asked for ${args.workspaceId}`,
       );
     }
-    return skillOk(this.seed.estimates);
+    // Back-fill amountUsd = 0 for seeds that pre-date the field, so test
+    // fixtures written before amountUsd existed continue to compile.
+    const records: EstimateRecord[] = this.seed.estimates.map((e) => ({
+      ...e,
+      amountUsd: e.amountUsd ?? 0,
+    }));
+    return skillOk(records);
   }
 }

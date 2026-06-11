@@ -96,6 +96,9 @@ import { competitiveSignalFeedSweepFn } from "@/lib/inngest/functions/competitiv
 // BOUNDED_AUTO_EXECUTE_MASTER is on, these auto-approve so the owner wakes up
 // to chased invoices. Payload carries balanceUsd for value-ledger ROI.
 import { invoiceChaseGeneralSweepFn } from "@/lib/inngest/functions/invoice-chase-general-sweep";
+// cv/home-services-estimates — daily estimate follow-up cron for
+// HOME_SERVICES workspaces with a connected QuickBooks account.
+import { homeServicesEstimateFollowupSweepFn } from "@/lib/inngest/functions/home-services-estimate-followup-sweep";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -136,5 +139,6 @@ export const { GET, POST, PUT } = serve({
     mediaMonthlyMediaPlanFn,
     competitiveSignalFeedSweepFn,
     invoiceChaseGeneralSweepFn,
+    homeServicesEstimateFollowupSweepFn,
   ],
 });

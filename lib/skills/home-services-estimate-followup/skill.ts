@@ -25,6 +25,7 @@ import {
   DEFAULT_SOFT_NUDGE_DAYS,
   stageFor,
   type ColdEstimateHandoff,
+  type EstimateApprovalSink,
   type EstimateFollowupInput,
   type EstimateFollowupOutput,
   type EstimateRecord,
@@ -81,6 +82,21 @@ export async function runSkill(
       stage: c.stage,
       daysSinceSent: c.daysSinceSent,
     });
+
+    // Stage as a FOLLOW_UP_NUDGE approval queue item (kind=FOLLOW_UP_NUDGE,
+    // status=PENDING).  The operator reviews + approves before the shop's
+    // email client sends.  Sink failures are non-fatal — a DB hiccup should
+    // not prevent the draft output from landing; we continue and leave the
+    // draft un-staged rather than erroring the whole skill run.
+    if (input.sink) {
+      await input.sink.record({
+        workspaceId: input.workspaceId,
+        approval: { draft },
+      });
+      // We intentionally ignore the SkillResult here — non-fatal per the
+      // EstimateFollowupInput.sink contract.
+    }
+
     if (input.persister && draft.confidence >= persistThreshold) {
       const persistRes = await input.persister.persistDraft({
         workspaceId: input.workspaceId,
@@ -217,6 +233,7 @@ function renderNudge(args: {
     draftId: randomUUID(),
     providerDraftId: null,
     estimateId: estimate.estimateId,
+    estimateAmountUsd: estimate.amountUsd,
     stage,
     toEmails: [estimate.homeowner.email],
     ccEmails: [],

@@ -25,6 +25,25 @@
 
 import type { DraftPersister, SkillResult } from '../types';
 
+// ── Approval sink port ────────────────────────────────────────────────────
+// Mirrors the pattern in follow-up-chaser-general/types.ts.  The skill calls
+// this after rendering each nudge draft; the production implementation writes
+// a WorkApprovalQueueItem (kind=FOLLOW_UP_NUDGE) with the estimate $ in the
+// payload.  Tests pass a RecordingEstimateApprovalSink.
+
+export interface EstimateNudgeApproval {
+  /** The rendered nudge draft. */
+  draft: HomeownerNudgeDraft;
+}
+
+export interface EstimateApprovalSink {
+  readonly name: string;
+  record(args: {
+    workspaceId: string;
+    approval: EstimateNudgeApproval;
+  }): Promise<SkillResult<{ sinkId: string }>>;
+}
+
 // ── Input shapes ─────────────────────────────────────────────────────────
 
 export type EstimateStage = 'fresh' | 'soft-nudge' | 'check-in' | 'last-call' | 'cold';
@@ -57,6 +76,15 @@ export interface EstimateRecord {
   /** The sales rep / owner who sent the estimate — drafts are signed by
    *  this person. */
   rep: ContactPerson;
+  /** The total dollar amount of the estimate.  This is the revenue at stake —
+   *  recorded in the approval-sink payload as `estimateAmountUsd` so the
+   *  operator console can display "you have $X,XXX in unanswered quotes" and
+   *  the value ledger can attribute revenue influenced when the owner approves
+   *  a nudge that converts to a signed estimate.
+   *
+   *  Default 0 when the source system does not carry a dollar value (fixture /
+   *  JSON seeded tests that pre-date this field). */
+  amountUsd: number;
 }
 
 export interface EstimateLookup {
@@ -71,6 +99,10 @@ export interface HomeownerNudgeDraft {
   draftId: string;
   providerDraftId: string | null;
   estimateId: string;
+  /** Dollar value of the estimate — copied from EstimateRecord.amountUsd.
+   *  Carried on the draft so the approval sink can embed it in the payload
+   *  without re-fetching the source record. */
+  estimateAmountUsd: number;
   stage: EstimateStage;
   toEmails: string[];
   ccEmails: string[];
@@ -110,6 +142,13 @@ export interface EstimateFollowupOutput {
 export interface EstimateFollowupInput {
   workspaceId: string;
   lookup: EstimateLookup;
+  /** Approval sink — when provided, every rendered nudge draft is staged as a
+   *  WorkApprovalQueueItem (kind=FOLLOW_UP_NUDGE, status=PENDING) for operator
+   *  review before the customer sends.  Sink failures are non-fatal: the skill
+   *  logs the error and continues so a DB hiccup does not drop the draft output.
+   *  Pass null to disable staging (useful in tests that only care about draft
+   *  content, not persistence). */
+  sink?: EstimateApprovalSink | null;
   persister?: DraftPersister | null;
   persistThreshold?: number;
   now?: Date;

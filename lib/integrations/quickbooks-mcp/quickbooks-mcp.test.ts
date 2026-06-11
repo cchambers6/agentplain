@@ -20,14 +20,16 @@ function client() {
 }
 
 describe('quickbooks-mcp dispatch', () => {
-  it('tools/list exposes the seven QuickBooks tools', async () => {
+  it('tools/list exposes the nine QuickBooks tools', async () => {
     const tools = await client().listTools();
     const names = tools.map((t) => t.name).sort();
     assert.deepEqual(names, [
       'quickbooks.create_invoice',
+      'quickbooks.get_estimate',
       'quickbooks.get_invoice',
       'quickbooks.get_profit_and_loss',
       'quickbooks.list_customers',
+      'quickbooks.list_estimates',
       'quickbooks.list_expenses',
       'quickbooks.list_invoices',
       'quickbooks.record_payment',
@@ -104,5 +106,49 @@ describe('quickbooks-mcp dispatch', () => {
   it('list_expenses returns fixtures', async () => {
     const res = (await client().call('list_expenses', {})) as { expenses: unknown[] };
     assert.equal(res.expenses.length, 1);
+  });
+
+  it('list_estimates returns all fixture estimates when no filter', async () => {
+    const res = (await client().call('list_estimates', {})) as {
+      estimates: { id: string; txnStatus: string }[];
+    };
+    assert.equal(res.estimates.length, 3);
+  });
+
+  it('list_estimates filters to Pending estimates only', async () => {
+    const res = (await client().call('list_estimates', { status: 'Pending' })) as {
+      estimates: { id: string; txnStatus: string; totalAmount: number }[];
+    };
+    assert.equal(res.estimates.length, 2, 'two Pending estimates in fixtures');
+    for (const e of res.estimates) {
+      assert.equal(e.txnStatus, 'Pending');
+    }
+    // Confirm the dollar amounts — these are the open quotes with revenue at stake.
+    const amounts = res.estimates.map((e) => e.totalAmount).sort((a, b) => a - b);
+    assert.deepEqual(amounts, [3800, 6200]);
+  });
+
+  it('list_estimates filters by customerId', async () => {
+    const res = (await client().call('list_estimates', { customerId: '1' })) as {
+      estimates: { customerId: string }[];
+    };
+    assert.equal(res.estimates.length, 1);
+    assert.equal(res.estimates[0].customerId, '1');
+  });
+
+  it('get_estimate returns a known estimate', async () => {
+    const res = (await client().call('get_estimate', { estimateId: 'EST-401' })) as {
+      estimate: { id: string; totalAmount: number; txnStatus: string };
+    };
+    assert.equal(res.estimate.id, 'EST-401');
+    assert.equal(res.estimate.totalAmount, 6200);
+    assert.equal(res.estimate.txnStatus, 'Pending');
+  });
+
+  it('get_estimate 404s on unknown id', async () => {
+    await assert.rejects(
+      () => client().call('get_estimate', { estimateId: 'EST-NOPE' }),
+      /No estimate EST-NOPE/,
+    );
   });
 });

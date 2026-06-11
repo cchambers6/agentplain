@@ -1,4 +1,4 @@
-import { ApEyebrow, Plaino } from "@/components/ui/ap";
+import { ApEyebrow, PlainoStatus } from "@/components/ui/ap";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
 import { withRls } from "@/lib/db";
@@ -206,7 +206,7 @@ export default async function FleetPage({ params }: PageProps) {
           See your fleet. Talk to your fleet.
         </h1>
         <p className="mt-3 flex max-w-2xl items-start gap-3 text-[15px] leading-relaxed text-ink-soft">
-          <Plaino state="head-icon" size={32} className="shrink-0" />
+          <PlainoStatus state="herd" size={32} className="shrink-0" />
           <span>
             One surface for who&rsquo;s working, what they&rsquo;ve done, what&rsquo;s
             waiting on you, and how to add a job. Approve, edit, or reject —

@@ -6,6 +6,13 @@
    tests, and in email/OG contexts. These assets are small, pre-sized PNGs. */
 import type { CSSProperties } from "react";
 
+// LOW-LEVEL PRIMITIVE — do not use directly in product or marketing surfaces.
+// Use PlainoMark (the 8-bit BRAND mark — identity surfaces) or PlainoStatus
+// (the live-STATE pose icon — dashboard / queue / health). Never mix the two
+// families (Conner 2026-06-10; see docs/brand/icon-families.md). The only
+// direct callers of `Plaino` are PlainoMark / PlainoStatus / PlainoScene
+// internals and the OG image routes (heritage state).
+//
 // Canonical Plaino brand mark — the working-dog system delivered on the
 // reference sheet at `public/brand/plaino-system/reference-sheet.png`
 // (a ChatGPT delivery built from `docs/brand` AGENTPLAIN_BRAND_BRIEF.md).

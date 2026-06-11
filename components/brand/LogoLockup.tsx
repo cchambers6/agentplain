@@ -1,12 +1,14 @@
 import Link from "next/link";
 import Logo from "./Logo";
-import { Plaino } from "@/components/ui/ap";
+import { PlainoMark } from "@/components/ui/ap";
 import { tokens } from "@/lib/brand/tokens";
 
-// Horizontal brand lockup: the Plaino head-icon mark + the agentplain
-// wordmark. Used in product/marketing chrome where the mark and the name
-// appear together. The mark is decorative — the wordmark names the brand,
-// so screen readers read the link label once (not "Plaino, agentplain").
+// Horizontal brand lockup: the 8-bit Plaino BRAND mark (PlainoMark) + the
+// agentplain wordmark. Used in product/marketing chrome where the mark and the
+// name appear together. Per the two-family split (Conner 2026-06-10), the
+// header is an identity surface → the static 8-bit mark, never a live pose.
+// The mark is decorative — the wordmark names the brand, so screen readers
+// read the link label once (not "Plaino, agentplain").
 //
 // Below the wordmark's 88px minimum (spec §2) callers should drop to the
 // bare favicon mark instead of this lockup.
@@ -34,7 +36,7 @@ export default function LogoLockup({
   // regardless of Tailwind's utility ordering.)
   const inner = (
     <>
-      <Plaino state="head-icon" size={size} />
+      <PlainoMark size={size} />
       <Logo
         asLink={false}
         variant={variant}

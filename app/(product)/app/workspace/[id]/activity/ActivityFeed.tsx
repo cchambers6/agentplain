@@ -5,7 +5,7 @@ import {
   ApHairlineList,
   ApHairlineRow,
   ApPaperSheet,
-  Plaino,
+  PlainoStatus,
 } from "@/components/ui/ap";
 
 export interface ActivityRow {
@@ -44,7 +44,11 @@ export function ActivityFeed({ rows, partner }: ActivityFeedProps) {
                 onClick={() => setOpenId(row.id)}
                 className="flex w-full items-start gap-3 rounded-none text-left text-ink-soft transition hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
               >
-                <Plaino state="head-icon" size={24} className="mt-0.5 shrink-0" />
+                <PlainoStatus
+                  state={flagged ? "alert" : "sit"}
+                  size={24}
+                  className="mt-0.5 shrink-0"
+                />
                 <span className="min-w-0 flex-1">
                   <span className="block">
                     <span className="font-mono text-ink">{row.fromAgent}</span>

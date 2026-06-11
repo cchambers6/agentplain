@@ -2,18 +2,18 @@
  * V02 — Build-it-yourself vs run-for-you · CODE-SVG · P0
  *
  * Spec: docs/explainer-visual-system-2026-06-07.md §3 V02.
- * Question answered: "How is this different from Claude for Small Business / from
- * doing it myself?" (Q4).
+ * Question answered: "How is this different from doing it myself with an AI
+ * tool I could buy?" (Q4).
  *
- * Two-column comparison, hairline divider. LEFT = "Claude for Small Business
+ * Two-column comparison, hairline divider. LEFT = "A free AI chatbot
  * (do it yourself)", RIGHT = "agentplain (run for you)". Five rows pulled
  * VERBATIM from lib/marketing/home-content.ts → chatbotContrast (single source
  * of truth — never re-type the rows). The RIGHT cells carry a single moss check
  * (verified-good signal ONLY — never decorative).
  *
- * Guardrail: complementary framing only — never "compete/replace/instead-of/
- * alternative-to Claude" (project_sbm_wrapper_positioning_2026_06_06). Header
- * note: "built on Claude, configured by us."
+ * Guardrail: vendor-generic per the 2026-06-11 customer-surface rule — the
+ * underlying AI model is never named on a customer surface. The contrast is
+ * do-it-yourself vs. have-it-run-for-you, never positioned against one tool.
  *
  * Rendered as semantic HTML (a table-like grid) rather than inline SVG so the
  * verbatim copy stays selectable, localizable, and screen-reader complete.
@@ -28,10 +28,10 @@ const MOSS = "#3F5C3F";
 export function DiyVsRunForYou() {
   return (
     <div className="border border-rule bg-paper">
-      {/* Header note — clay, complementary framing. */}
+      {/* Header note — clay, vendor-generic framing. */}
       <div className="border-b border-rule px-6 py-3 md:px-8">
         <p className="font-mono text-[11px] uppercase tracking-eyebrow text-clay">
-          built on Claude, configured by us.
+          a powerful tool, run for you.
         </p>
       </div>
 
@@ -39,7 +39,7 @@ export function DiyVsRunForYou() {
       <div className="grid grid-cols-2 gap-px bg-rule">
         <div className="bg-paper px-6 py-4 md:px-8">
           <p className="font-mono text-[11px] uppercase tracking-eyebrow text-mute">
-            Claude for Small Business
+            A free AI chatbot
           </p>
           <p className="mt-1 font-display text-base leading-snug text-ink-soft">
             do it yourself

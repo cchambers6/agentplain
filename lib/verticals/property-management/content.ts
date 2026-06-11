@@ -107,7 +107,7 @@ export const propertyManagement: VerticalContent = {
     valueProp:
       "agentplain REPLACES tenant inbound triage and maintenance ticket routing, INTEGRATES with Outlook, Gmail, and QuickBooks Online on day one, and AUGMENTS the owner report cadence so landlords stop calling you for status.",
     sbmSubhead:
-      "The tenant-ops and owner-reporting skills, agents, and memory you'd otherwise wire yourself — built on Claude, configured by us.",
+      "The tenant-ops and owner-reporting skills, agents, and memory you'd otherwise wire yourself",
   },
 
   metaTitle: "for single-family and small-portfolio property managers",

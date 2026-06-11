@@ -8,7 +8,7 @@ import { PlainoScene } from "@/components/ui/ap";
 export const metadata: Metadata = {
   title: "About",
   description:
-    "The service layer on top of Claude for local businesses. We install the fleet, run reviews, and customize as your ops shift — so you serve your people.",
+    "A managed AI fleet for local businesses. We install the fleet, run reviews, and customize as your ops shift — so you serve your people.",
   alternates: alternatesFor("/about"),
 };
 

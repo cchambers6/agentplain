@@ -116,12 +116,14 @@ describe("explainer visuals — render + brand discipline", () => {
     assert.ok(html.includes("#3F5C3F"), "expected moss check in run-for-you column");
   });
 
-  it("DiyVsRunForYou keeps complementary SBM framing (no banned compete words)", () => {
+  it("DiyVsRunForYou is vendor-invisible (no AI model/vendor named)", () => {
     const html = renderToStaticMarkup(createElement(DiyVsRunForYou)).toLowerCase();
-    for (const banned of ["instead of claude", "replace claude", "alternative to claude", "compete with claude"]) {
-      assert.ok(!html.includes(banned), `banned SBM framing: ${banned}`);
+    // 2026-06-11: no model, provider, or product name may appear on a
+    // customer surface. The contrast is do-it-yourself vs. run-for-you.
+    for (const vendor of ["claude", "anthropic", "chatgpt", "openai", "gpt-"]) {
+      assert.ok(!html.includes(vendor), `vendor name leaked: ${vendor}`);
     }
-    assert.ok(html.includes("built on claude, configured by us"), "expected complementary header note");
+    assert.ok(html.includes("a powerful tool, run for you"), "expected run-for-you header note");
   });
 
   it("OnboardingRoadmap lights the current step clay only when currentStep is set", () => {

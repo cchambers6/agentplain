@@ -9,7 +9,7 @@ import { alternatesFor } from "@/lib/seo/metadata";
 export const metadata: Metadata = {
   title: "Verticals",
   description:
-    "One managed AI fleet, ten verticals — real estate to RIA. Per-seat service partnership from $99/seat; bespoke scope on /custom. Built on Claude.",
+    "One managed AI fleet, ten verticals — real estate to RIA. Per-seat service partnership from $99/seat; bespoke scope on /custom. Run for you.",
   alternates: alternatesFor("/verticals"),
 };
 

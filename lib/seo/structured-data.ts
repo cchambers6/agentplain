@@ -14,16 +14,17 @@
  * pure builder boundary — components consume the typed shape, never schema.org
  * vocabulary directly.
  *
- * 2026-06-06 refresh (SEO/marketing pack following PR #158 SBM-wrapper
- * positioning + PR #159 ROI softening):
- *   - Organization description reframed to the SBM-wrapper thesis ("service
- *     layer on top of Claude") per `project_sbm_wrapper_positioning_2026_06_06.md`.
- *   - New `softwareApplicationJsonLd()` — acknowledges the built-on-Claude
- *     relationship via `isBasedOn` (true + verifiable; Anthropic is named as
- *     the upstream provider, never as a competitor we replace).
- *   - New `verticalProductJsonLd()` — per-vertical Product with the softened
- *     ROI band (15–50× cap; the retired 107× claim is never emitted) and a
- *     real per-seat Offer derived from the locked pricing ladder.
+ * 2026-06-06 refresh (SEO/marketing pack following PR #158 + PR #159 ROI
+ * softening), amended 2026-06-11 (vendor-invisible customer surfaces):
+ *   - Organization / SoftwareApplication / Service descriptions are
+ *     vendor-generic — the underlying AI model is NOT named on any customer
+ *     surface (per the 2026-06-11 rule; the sole sanctioned disclosure home is
+ *     the privacy + security subprocessor list). The earlier "service layer on
+ *     top of Claude" framing and the `isBasedOn` Claude/Anthropic node were
+ *     removed here for that reason.
+ *   - `verticalProductJsonLd()` — per-vertical Product with the softened ROI
+ *     band (15–50× cap; the retired 107× claim is never emitted) and a real
+ *     per-seat Offer derived from the locked pricing ladder.
  */
 
 import { tokens } from "@/lib/brand/tokens";
@@ -54,8 +55,8 @@ export const ROI_FRAME =
  * surface. Logo/sameAs are intentionally omitted until we have canonical
  * URLs to point at (no invented LinkedIn/X handles).
  *
- * Description carries the SBM-wrapper frame: agentplain is the service layer
- * on top of Claude, not a competitor to it.
+ * Description is vendor-generic — the underlying AI model is not named on a
+ * customer surface (per the 2026-06-11 rule).
  */
 export function organizationJsonLd(): Record<string, unknown> {
   return {
@@ -67,18 +68,17 @@ export function organizationJsonLd(): Record<string, unknown> {
     url: BASE_URL,
     slogan: tokens.tagline,
     description:
-      "agentplain is the service layer on top of Claude for local businesses. We bring the pre-built skills and agents a shop would otherwise build itself, curate the memory that keeps it useful, connect the tools you already run, and operate the whole thing for a low flat fee — built on Claude, configured by us. Built for ten verticals: real estate, mortgage, insurance, property management, title & escrow, recruiting, home services, CPA / tax, law, and RIA.",
+      "agentplain is a managed AI fleet for local businesses. We bring the pre-built skills and agents a shop would otherwise build itself, curate the memory that keeps it useful, connect the tools you already run, and operate the whole thing for a low flat fee — run for you, not configured by you. Built for ten verticals: real estate, mortgage, insurance, property management, title & escrow, recruiting, home services, CPA / tax, law, and RIA.",
     knowsAbout: getAllVerticals().map((v) => v.name),
   };
 }
 
 /**
- * SoftwareApplication payload — acknowledges the built-on-Claude relationship
- * honestly and verifiably (per `project_sbm_wrapper_positioning_2026_06_06.md`:
- * "built on Claude, configured by us" is the approved frame; competitor /
- * replacement framings are banned). `isBasedOn` names Anthropic's Claude as
- * the upstream model the service is configured on top of — a true statement a
- * crawler can corroborate, not a marketing claim.
+ * SoftwareApplication payload. Description is vendor-generic — the underlying
+ * AI model is not named on a customer surface (per the 2026-06-11 rule; the
+ * `isBasedOn` Claude/Anthropic node that previously lived here was removed for
+ * that reason — the sanctioned disclosure home is the privacy/security
+ * subprocessor list, not crawler-facing structured data).
  *
  * `offers` is an AggregateOffer spanning the self-serve per-seat ladder
  * (Regular $99–$199, Partner $199–$299) sourced from the locked pricing
@@ -96,19 +96,7 @@ export function softwareApplicationJsonLd(): Record<string, unknown> {
     url: BASE_URL,
     provider: { "@id": `${BASE_URL}/#organization` },
     description:
-      "A managed, vertical-aware fleet of AI partners that reads your email, calendar, CRM, and documents, then drafts what you'd otherwise type — installed, run, and customized for you by a human service team. Built on Claude, configured by us; you stay in control because the fleet drafts and you approve.",
-    // True + verifiable upstream relationship — agentplain is configured on
-    // top of Anthropic's Claude. NOT a competitor/replacement framing.
-    isBasedOn: {
-      "@type": "SoftwareApplication",
-      name: "Claude",
-      applicationCategory: "BusinessApplication",
-      provider: {
-        "@type": "Organization",
-        name: "Anthropic",
-        url: "https://www.anthropic.com",
-      },
-    },
+      "A managed, vertical-aware fleet of AI partners that reads your email, calendar, CRM, and documents, then drafts what you'd otherwise type — installed, run, and customized for you by a human service team. Run for you; you stay in control because the fleet drafts and you approve.",
     offers: selfServeAggregateOffer(),
   };
 }
@@ -155,7 +143,7 @@ export function serviceJsonLd(): Record<string, unknown> {
     provider: { "@id": `${BASE_URL}/#organization` },
     areaServed: "United States",
     description:
-      "Managed AI ops: we install, run, and customize a vertical-aware fleet of capable AI partners inside your business. Built on Claude, configured by us. The fleet drafts; you decide. Built for ten verticals plus a /general on-ramp.",
+      "Managed AI ops: we install, run, and customize a vertical-aware fleet of capable AI partners inside your business. Run for you, not configured by you. The fleet drafts; you decide. Built for ten verticals plus a /general on-ramp.",
     audience: {
       "@type": "BusinessAudience",
       audienceType: "Local businesses (1–99 seats)",

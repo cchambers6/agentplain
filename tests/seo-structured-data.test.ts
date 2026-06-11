@@ -18,11 +18,12 @@ import { getAllVerticals, getVerticalContent } from "@/lib/verticals";
 import { FAQ_ITEMS } from "@/components/FAQ";
 import { pricingFaqItems } from "@/components/FAQ";
 
-// SEO/marketing pack regression guards (PR following #158 SBM-wrapper +
-// #159 ROI softening). The load-bearing invariants:
+// SEO/marketing pack regression guards. The load-bearing invariants:
 //   - the retired 107× ROI claim never appears in any structured-data payload
 //   - every per-vertical multiplier stays at/under the 50× cap
-//   - the built-on-Claude relationship is stated honestly + verifiably
+//   - structured data is VENDOR-INVISIBLE: no AI model/provider name appears
+//     (2026-06-11 rule — the sanctioned disclosure home is the privacy/security
+//     subprocessor list, not crawler-facing JSON-LD)
 //   - canonical + hreflang stub are emitted for marketing routes
 
 function deepStrings(obj: unknown, out: string[] = []): string[] {
@@ -36,25 +37,22 @@ function deepStrings(obj: unknown, out: string[] = []): string[] {
 }
 
 describe("seo — Organization + SoftwareApplication", () => {
-  it("Organization carries the SBM-wrapper (built-on-Claude) frame", () => {
+  it("Organization frames agentplain as a managed AI fleet (vendor-generic)", () => {
     const org = organizationJsonLd();
     assert.equal(org["@type"], "Organization");
     const blob = deepStrings(org).join(" ").toLowerCase();
-    assert.ok(blob.includes("claude"), "Organization must name Claude");
     assert.ok(
-      blob.includes("built on claude") || blob.includes("service layer"),
-      "Organization must frame agentplain as the service layer on Claude",
+      blob.includes("managed ai fleet") || blob.includes("run for you"),
+      "Organization must frame agentplain as a managed, run-for-you AI fleet",
     );
   });
 
-  it("SoftwareApplication declares Claude as the upstream via isBasedOn", () => {
+  it("SoftwareApplication declares no AI vendor (no isBasedOn model node)", () => {
     const app = softwareApplicationJsonLd();
     assert.equal(app["@type"], "SoftwareApplication");
-    const based = app.isBasedOn as Record<string, unknown>;
-    assert.ok(based, "must declare isBasedOn");
-    assert.equal(based.name, "Claude");
-    const provider = based.provider as Record<string, unknown>;
-    assert.equal(provider.name, "Anthropic");
+    // 2026-06-11: the isBasedOn Claude/Anthropic node was removed — the
+    // underlying model is not named in crawler-facing structured data.
+    assert.ok(app.isBasedOn === undefined, "must NOT declare an isBasedOn model node");
     // Offers span the self-serve ladder; must be a real price band.
     const offers = app.offers as Record<string, unknown>;
     assert.equal(offers["@type"], "AggregateOffer");
@@ -62,22 +60,19 @@ describe("seo — Organization + SoftwareApplication", () => {
     assert.ok((offers.highPrice as number) >= (offers.lowPrice as number));
   });
 
-  it("never emits a competitor/replacement framing for Claude", () => {
+  it("is vendor-invisible — no AI model/provider name in any payload", () => {
     const blob = [
       organizationJsonLd(),
       softwareApplicationJsonLd(),
       serviceJsonLd(),
+      ...getAllVerticals().map(verticalServiceJsonLd),
+      ...getAllVerticals().map(verticalProductJsonLd),
     ]
       .flatMap((p) => deepStrings(p))
       .join(" ")
       .toLowerCase();
-    for (const banned of [
-      "alternative to claude",
-      "instead of claude",
-      "replace claude",
-      "competitor to claude",
-    ]) {
-      assert.ok(!blob.includes(banned), `banned framing present: "${banned}"`);
+    for (const vendor of ["claude", "anthropic", "chatgpt", "openai", "gpt-"]) {
+      assert.ok(!blob.includes(vendor), `vendor name leaked into JSON-LD: "${vendor}"`);
     }
   });
 });

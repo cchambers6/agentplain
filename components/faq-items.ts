@@ -38,12 +38,12 @@ export const FAQ_ITEMS: FAQItem[] = [
     a: "Five things. (1) Install — the partner sets up the fleet, connects your tools, loads your vertical's JTBD table and compliance corpus, and runs the first week alongside you. (2) Review — a recurring call (monthly for Regular, weekly for Partner) covering what the fleet drafted, what got approved, what needs tuning. (3) Customize — when your ops shift (new compliance rule, new transaction system, new comp model), the partner updates the agents so you don't have to. (4) Escalate — if a draft hits a hard call, the partner brings it to you with the context. (5) Translate — when something looks off, the partner is your single human contact, not a ticket queue.",
   },
   {
-    q: "Is this just ChatGPT with extra steps?",
-    a: "No, and not even close. ChatGPT is a horizontal tool you have to drive yourself. agentplain is a service partnership: vertical-aware fleet (MLS workflows, tax-prep deadlines, IRS filing windows, fair-housing language — whatever your vertical needs) plus a service team that installs and runs it. The fleet works in the background and surfaces drafts for your review; you don't prompt it to do its job. And you don't operate it — we do.",
+    q: "Is this just an AI chatbot with extra steps?",
+    a: "No, and not even close. A general-purpose AI chatbot is a horizontal tool you have to drive yourself. agentplain is a service partnership: vertical-aware fleet (MLS workflows, tax-prep deadlines, IRS filing windows, fair-housing language — whatever your vertical needs) plus a service team that installs and runs it. The fleet works in the background and surfaces drafts for your review; you don't prompt it to do its job. And you don't operate it — we do.",
   },
   {
-    q: "How is this different from Claude for Small Business or other AI-for-SMB tools?",
-    a: "We're not a competitor to Claude — we're the service layer that makes it usable. Claude for Small Business is a genuinely capable tool, but it hands an owner a horizontal model and expects them to figure out which skills to write, which agents to build, what to put in memory, and how to wire their tools. agentplain brings all of that pre-built: the per-vertical skills and agents you'd otherwise build yourself, the memory we curate and maintain so it stays useful, the integrations connected for you, and a service team that installs, runs reviews, and customizes for your shop — all for a low flat fee. Built on Claude, configured by us. You're not buying a tool; you're getting it run for you.",
+    q: "How is this different from the AI tools I could buy myself?",
+    a: "A capable general-purpose AI tool hands an owner a horizontal model and expects them to figure out which skills to write, which agents to build, what to put in memory, and how to wire their tools. agentplain brings all of that pre-built: the per-vertical skills and agents you'd otherwise build yourself, the memory we curate and maintain so it stays useful, the integrations connected for you, and a service team that installs, runs reviews, and customizes for your shop — all for a low flat fee. You're not buying a tool; you're getting it run for you.",
   },
   {
     q: "What if I just want the tool, not the service?",
@@ -88,7 +88,7 @@ export const FAQ_ITEMS: FAQItem[] = [
   {
     q: "What's the ROI math?",
     topic: "pricing",
-    a: "Value delivered per practitioner runs $2,900–$10,600/mo — hours saved × your productive-hour rate, plus deals closed faster. Against the $99 → $299 per-seat subscription cost depending on tier, the typical ROI multiple is 15x to 50x per workflow. On top of that sits the regulatory exposure a draft-then-approve loop removes: a non-compliant message (TCPA, fair-housing, RESPA, SEC Marketing Rule, and the like) is caught as a draft, never sent — the one thing an auto-execution tool can't promise to dodge. Run your own numbers in the calculator on the pricing page.",
+    a: "Modeled value delivered per practitioner runs $2,900–$10,600/mo — modeled on 8–15 hr/wk of systematic work saved × your productive-hour rate, plus deals closed faster. Against the $99 → $299 per-seat subscription cost depending on tier, the modeled ROI multiple is 15x to 50x per workflow. On top of that sits the regulatory exposure a draft-then-approve loop removes: a non-compliant message (TCPA, fair-housing, RESPA, SEC Marketing Rule, and the like) is caught as a draft, never sent — the one thing an auto-execution tool can't promise to dodge. Run your own numbers in the calculator on the pricing page.",
   },
   {
     q: "Why should anyone believe you?",
@@ -96,7 +96,7 @@ export const FAQ_ITEMS: FAQItem[] = [
   },
   {
     q: "Is my data safe?",
-    a: "The fleet reads through read-only OAuth and pulls only what a task needs. To do the work, your content is processed by the AI providers that power the fleet (OpenAI for retrieval embeddings, Anthropic for drafting) and stored in our database under per-workspace isolation. The full data-handling specifics — including the current subprocessor list — live in our privacy policy. Liability for licensed activities — anything that requires a state license — stays with you and your firm. We don't act as a brokerage, lender, insurance carrier, law firm, RIA, or any other licensed party. Your service partner runs the AI ops; you run the licensed business.",
+    a: "The fleet reads through read-only OAuth and pulls only what a task needs. To do the work, your content is processed by the AI providers that power the fleet and stored in our database under per-workspace isolation. The full data-handling specifics — including the current subprocessor list that names those providers — live in our privacy policy. Liability for licensed activities — anything that requires a state license — stays with you and your firm. We don't act as a brokerage, lender, insurance carrier, law firm, RIA, or any other licensed party. Your service partner runs the AI ops; you run the licensed business.",
   },
   {
     q: "Is my data resold or used to train someone else's model?",

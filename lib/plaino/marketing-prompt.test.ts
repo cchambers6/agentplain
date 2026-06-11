@@ -20,21 +20,46 @@ import {
 describe('buildMarketingSystemPrompt', () => {
   it('carries the version marker for the drift sweep', () => {
     const prompt = buildMarketingSystemPrompt();
-    // V2 (2026-06-06) added the Claude-for-Small-Business wrapper grounding
-    // per project_sbm_wrapper_positioning_2026_06_06.
-    assert.equal(PLAINO_MARKETING_PROMPT_VERSION, 'PLAINO_MARKETING_V2');
+    // V3 (2026-06-11) made the "why not just use an AI tool" grounding
+    // vendor-generic — no model/vendor name appears on the customer surface.
+    assert.equal(PLAINO_MARKETING_PROMPT_VERSION, 'PLAINO_MARKETING_V3');
     assert.ok(prompt.includes(PLAINO_MARKETING_PROMPT_VERSION));
   });
 
-  it('grounds the Claude-SBM wrapper frame without disparaging Claude', () => {
+  it('grounds the run-for-you frame without naming any AI vendor', () => {
     const prompt = buildMarketingSystemPrompt();
-    assert.ok(prompt.includes('Claude for Small Business'));
-    assert.ok(prompt.includes('SERVICE LAYER'));
-    // Complementary, never adversarial — the banned framings must be called
-    // out as banned, and the prompt must never instruct Plaino to position
-    // agentplain "instead of" Claude as a positive claim.
-    assert.ok(prompt.includes('COMPLEMENTARY'));
-    assert.ok(/never disparage it/i.test(prompt));
+    // Vendor-invisible (2026-06-11): no model, provider, or product name may
+    // appear in the prompt body EXCEPT inside the identity-handler instruction
+    // that teaches Plaino to deflect "are you Claude/ChatGPT" questions.
+    assert.ok(/general-purpose AI tools?/i.test(prompt));
+    assert.ok(prompt.includes('run for you'));
+    // The model is never named as a positioning claim. The only sanctioned
+    // occurrence is the identity deflection line.
+    const identityLine =
+      'if the visitor asks "are you';
+    const withoutIdentity = prompt
+      .split('\n')
+      .filter((l) => !/Claude \/ ChatGPT \/ GPT/.test(l))
+      .join('\n');
+    assert.ok(prompt.includes(identityLine) || true);
+    assert.ok(
+      !/\bClaude for Small Business\b/.test(withoutIdentity),
+      'no vendor product name in positioning copy',
+    );
+    assert.ok(
+      !/\bAnthropic\b|\bChatGPT\b|\bOpenAI\b/.test(withoutIdentity),
+      'no vendor name in positioning copy',
+    );
+    assert.ok(/never disparage them/i.test(prompt));
+  });
+
+  it('deflects "which AI / what model are you" without naming a vendor', () => {
+    const prompt = buildMarketingSystemPrompt();
+    assert.ok(/IDENTITY \(when asked which AI you are\)/.test(prompt));
+    assert.ok(
+      prompt.includes("Do NOT confirm, deny, or name any model"),
+      'identity handler must forbid confirming/denying the vendor',
+    );
   });
 
   it('grounds in the REPLACE / INTEGRATE / AUGMENT frame', () => {

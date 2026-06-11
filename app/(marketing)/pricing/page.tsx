@@ -52,7 +52,7 @@ const sharedGuarantees = [
   "Month-to-month — cancel any time",
   "Human review on every customer-facing output",
   "Liability for licensed activities stays with you",
-  "Per-vertical compliance corpus, counsel-reviewed",
+  "Per-vertical compliance corpus — real-estate scanner fires live; others gated until counsel review",
   "No data resold; no client list used to train models",
   "You own the work product",
 ];
@@ -90,11 +90,11 @@ const whenToChoose = [
   },
 ];
 
-// Build-it-yourself-on-Claude vs. plug-and-play-with-agentplain. Four
-// dimensions that actually cost the owner. Per
-// project_sbm_wrapper_positioning_2026_06_06: complementary framing only —
-// Claude is the engine; the service is the difference. No "instead of" / "vs."
-// disparagement of the model itself.
+// Build-it-yourself vs. plug-and-play-with-agentplain. Four dimensions that
+// actually cost the owner. Vendor-generic per the 2026-06-11 customer-surface
+// rule: the underlying AI model is never named on a customer surface. The
+// honest contrast is configure-and-maintain-it-yourself vs. have-it-run-for-you
+// — never disparagement of any one tool.
 const SBM_COMPARISON: { dimension: string; diy: string; us: string }[] = [
   {
     dimension: "Cost",
@@ -114,7 +114,7 @@ const SBM_COMPARISON: { dimension: string; diy: string; us: string }[] = [
   {
     dimension: "Compliance depth",
     diy: "You research the regulations and write the guardrails yourself, with no safety net if you miss one.",
-    us: "A per-vertical, counsel-reviewed compliance corpus pre-checks every customer-facing draft. The real-estate fair-housing scanner fires today.",
+    us: "A per-vertical compliance corpus pre-checks customer-facing drafts. The real-estate fair-housing scanner fires live today; the other verticals' corpora are drafted and gated until counsel review.",
   },
 ];
 
@@ -243,15 +243,15 @@ export default function PricingPage() {
 
       <Section
         tone="deep"
-        eyebrow="Built on Claude, configured by us"
-        title="Build it yourself on Claude — or plug in agentplain."
-        intro="Claude for Small Business is the engine. You can wire it up yourself, or have us run it for you. Here's the honest comparison across the four things that actually cost you."
+        eyebrow="Run it yourself — or plug in agentplain"
+        title="Build it yourself — or plug in agentplain."
+        intro="A capable AI tool is the engine. You can wire it up yourself, or have us run it for you. Here's the honest comparison across the four things that actually cost you."
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
           {/* Column heads */}
           <div className="bg-paper p-7 md:p-8">
             <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-              Build it yourself on Claude SBM
+              Build it yourself
             </p>
             <p className="mt-2 font-display text-base leading-snug text-ink-soft">
               You configure and maintain it.
@@ -276,7 +276,7 @@ export default function PricingPage() {
           ))}
         </div>
         <p className="mt-8 max-w-prose text-[13px] leading-relaxed text-mute">
-          Not a knock on Claude — it&apos;s a genuinely capable model. The gap is
+          Not a knock on the tools — they&apos;re genuinely capable. The gap is
           everything between &ldquo;powerful tool&rdquo; and &ldquo;running your
           business.&rdquo; That gap is the service.
         </p>

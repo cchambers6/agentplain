@@ -13,14 +13,15 @@ import {
 // renders with the vertical's own name and value prop instead of the same
 // generic agentplain card every time.
 //
-// 2026-06-06 refresh (SEO/marketing pack following PR #158 SBM-wrapper +
-// PR #159 ROI softening). Each card now carries the full marketing frame:
+// 2026-06-06 refresh (SEO/marketing pack), amended 2026-06-11 (vendor-invisible
+// customer surfaces). Each card carries the full marketing frame:
 //   - vertical name (clay eyebrow) + wordmark
 //   - the vertical headline (display serif)
-//   - a value-prop one-liner (sans) sourced from the SBM-wrapper subhead
+//   - a value-prop one-liner (sans) sourced from the vendor-generic subhead
 //   - the softened ROI claim: "15–50× + the violations you don't pay for"
-//   - a "Built on Claude" stamp (per `project_sbm_wrapper_positioning_2026_06_06.md`
-//     — true + verifiable; never a competitor framing)
+//   - a "Run for you" brand stamp. The underlying AI model is NOT named on a
+//     customer surface (per the 2026-06-11 rule); the prior "Built on Claude"
+//     stamp was replaced for that reason.
 //
 // Brand: heritage rooted tokens only (paper, ink, clay, mute) per
 // `project_plaino_named_agent.md` + `feedback_brand_is_plain_not_plane.md`.
@@ -58,7 +59,7 @@ export function generateImageMetadata({
     {
       id: params.vertical,
       alt: content
-        ? `${tokens.wordmark} ${label} — ${tokens.tagline} Built on Claude.`
+        ? `${tokens.wordmark} ${label} — ${tokens.tagline}`
         : `${tokens.wordmark} — ${tokens.tagline}`,
       contentType,
       size,
@@ -192,7 +193,7 @@ export default async function OpenGraphImage({
           </div>
         </div>
 
-        {/* BOTTOM — ROI claim (left) + Built on Claude stamp (right),
+        {/* BOTTOM — ROI claim (left) + brand stamp (right),
             over a clay accent bar */}
         <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 20 }}>
           <div style={{ width: 120, height: 4, background: colors.clay.hex }} />
@@ -228,7 +229,7 @@ export default async function OpenGraphImage({
                 textTransform: "uppercase",
               }}
             >
-              Built on Claude
+              Run for you
             </div>
           </div>
         </div>

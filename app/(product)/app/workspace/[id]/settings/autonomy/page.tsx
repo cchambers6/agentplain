@@ -33,6 +33,18 @@ function labelForKind(kind: WorkApprovalKind): string {
   return KIND_LABELS[kind] ?? kind;
 }
 
+/** Map internal scope tokens to plain English for the customer surface. */
+function scopeLabel(scope: string | undefined | null): string {
+  if (!scope) return "your setting";
+  if (scope === "platform" || scope === "platform-default" || scope === "platform_default") {
+    return "set by agentplain";
+  }
+  if (scope === "workspace" || scope === "workspace-override" || scope === "workspace_override") {
+    return "your setting";
+  }
+  return "your setting";
+}
+
 /** Shape of the auto-execute audit payload written by
  *  lib/skills/persist-artifacts.ts (applyBoundedExecuteDecision). Parsed
  *  defensively — the payload is Json and older rows may differ. */
@@ -130,7 +142,7 @@ export default async function AutonomyPage({ params }: PageProps) {
               const ceilingFieldId = `autonomy-ceiling-${c.kind.toLowerCase()}`;
               return (
                 <li key={c.kind}>
-                  <ApPaperCard eyebrow={c.kind} title={labelForKind(c.kind)}>
+                  <ApPaperCard eyebrow={labelForKind(c.kind)} title={labelForKind(c.kind)}>
                     <p className="text-[14px] leading-relaxed text-ink-soft">
                       {c.reversibility}
                     </p>
@@ -139,10 +151,9 @@ export default async function AutonomyPage({ params }: PageProps) {
                       {c.effectiveEnabled
                         ? `on · up to $${c.effectiveCeilingUsd.toFixed(2)}`
                         : "off"}{" "}
-                      ({c.effectiveEnabled
+                      ({scopeLabel(c.effectiveEnabled
                         ? c.effectiveCeilingScope
-                        : c.effectiveEnabledScope}{" "}
-                      setting)
+                        : c.effectiveEnabledScope)})
                     </p>
                     <form
                       action={saveAutonomyAction}
@@ -205,7 +216,7 @@ export default async function AutonomyPage({ params }: PageProps) {
 
       <section className="mt-12">
         <ApEyebrow className="mb-3">
-          what plaino did autonomously · last {TRUST_WINDOW_DAYS} days
+          what Plaino did autonomously · last {TRUST_WINDOW_DAYS} days
         </ApEyebrow>
         {autoExecuted.length === 0 ? (
           <p className="max-w-2xl text-[14px] leading-relaxed text-ink-soft">

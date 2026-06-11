@@ -89,11 +89,11 @@ export default async function MarketplacePage({ params, searchParams }: PageProp
         Your fleet — install, uninstall, keep honest.
       </h1>
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
-        Every skill in the catalog. Live skills install by default for
+        Every skill in the catalog. Active skills install by default for
         your vertical (and cross-vertical skills install everywhere).
-        Schema-only skills carry a badge so you don&rsquo;t install
-        something that won&rsquo;t fire yet — when its runtime wiring
-        lands, the badge flips.
+        Skills that are coming online carry a badge so you&rsquo;re not
+        surprised when they don&rsquo;t fire yet — the badge flips the
+        moment they go live.
       </p>
 
       {/* Facets */}
@@ -177,12 +177,12 @@ export default async function MarketplacePage({ params, searchParams }: PageProp
                     <span>{s.entry.slug}</span>
                     <RuntimeBadge runtime={s.runtime} />
                     {s.installed ? (
-                      <span className="rounded-sm border border-clay px-2 py-[2px] font-mono text-[10px] tracking-eyebrow uppercase text-clay">
+                      <span className="rounded-none border border-clay px-2 py-[2px] font-mono text-[10px] tracking-eyebrow uppercase text-clay">
                         installed
                       </span>
                     ) : null}
                     {!s.customerExplicit ? (
-                      <span className="rounded-sm border border-rule px-2 py-[2px] font-mono text-[10px] tracking-eyebrow uppercase text-mute">
+                      <span className="rounded-none border border-rule px-2 py-[2px] font-mono text-[10px] tracking-eyebrow uppercase text-mute">
                         default
                       </span>
                     ) : null}
@@ -224,8 +224,8 @@ export default async function MarketplacePage({ params, searchParams }: PageProp
                   </ApHeritageButton>
                   {!s.installed && s.runtime === "schema-only" ? (
                     <p className="mt-2 text-[12px] text-mute">
-                      Schema-only: installing persists the row, but the
-                      skill won&rsquo;t fire until its runtime caller ships.
+                      This skill is coming online — you can install it now
+                      and it will activate automatically once it goes live.
                     </p>
                   ) : null}
                 </form>
@@ -239,24 +239,19 @@ export default async function MarketplacePage({ params, searchParams }: PageProp
 }
 
 function RuntimeBadge({ runtime }: { runtime: "live" | "schema-only" | "coming-soon" }) {
-  const styles =
-    runtime === "live"
-      ? "border-clay text-clay"
-      : runtime === "coming-soon"
-        ? "border-rule text-mute"
-        : "border-mute text-mute";
+  if (runtime === "live") return null; // live skills need no badge
+  const styles = "border-rule text-mute";
+  const label = "coming online";
+  const tooltip =
+    runtime === "schema-only"
+      ? "This skill is finishing its wiring — install it now and it activates automatically when it goes live."
+      : "Coming soon — not yet available.";
   return (
     <span
-      className={`rounded-sm border px-2 py-[2px] font-mono text-[10px] tracking-eyebrow uppercase ${styles}`}
-      title={
-        runtime === "live"
-          ? "Live — production caller fires this skill on real workspace data."
-          : runtime === "schema-only"
-            ? "Schema-only — module exists with tests but no production caller."
-            : "Coming soon — not yet implemented."
-      }
+      className={`rounded-none border px-2 py-[2px] font-mono text-[10px] tracking-eyebrow uppercase ${styles}`}
+      title={tooltip}
     >
-      {runtime}
+      {label}
     </span>
   );
 }
@@ -288,7 +283,7 @@ function FacetLink({
   return (
     <a
       href={href}
-      className={`rounded-sm border px-2 py-[2px] font-mono text-[10px] tracking-eyebrow uppercase ${
+      className={`rounded-none border px-2 py-[2px] font-mono text-[10px] tracking-eyebrow uppercase ${
         isActive
           ? "border-clay text-clay"
           : "border-rule text-mute hover:border-ink hover:text-ink"

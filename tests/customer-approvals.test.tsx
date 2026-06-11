@@ -49,7 +49,8 @@ test("draft card shows provenance: which agent, which kind, herded by Plaino", (
     />,
   );
   assert.match(html, /drafted by/i);
-  assert.match(html, /buyer-inquiry-router/);
+  // agentDisplayLabel maps "buyer-inquiry-router" → "Buyer Inquiry Router"
+  assert.match(html, /Buyer Inquiry Router/);
   assert.match(html, /herded in by Plaino/i);
   // Source it read is surfaced.
   assert.match(html, /In reply to:/i);

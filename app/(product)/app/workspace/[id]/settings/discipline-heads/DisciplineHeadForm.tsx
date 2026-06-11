@@ -62,7 +62,7 @@ export function DisciplineHeadForm({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           disabled={submitting}
-          className="rounded border border-rule bg-paper px-2 py-1 text-[13px] text-ink"
+          className="rounded-none border border-rule bg-paper px-2 py-1 text-[13px] text-ink"
         >
           <option value={DEFAULT_VALUE}>(default — any member)</option>
           {memberChoices.map((m) => (
@@ -77,13 +77,13 @@ export function DisciplineHeadForm({
           type="button"
           onClick={handleSave}
           disabled={submitting}
-          className="rounded bg-ink px-3 py-1 text-[12px] text-paper disabled:opacity-50"
+          className="rounded-none bg-ink px-3 py-1 text-[12px] text-paper disabled:opacity-50"
         >
           {submitting ? "Saving…" : "Save"}
         </button>
       ) : null}
       {error ? (
-        <p className="text-[12px] text-red-600" role="alert">
+        <p className="text-[12px] text-flag" role="alert">
           {error}
         </p>
       ) : null}

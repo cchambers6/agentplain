@@ -118,17 +118,17 @@ export function ApprovalsList({
             edit
           </ApHeritageButton>
         ) : null}
-        <button
+        <ApHeritageButton
+          variant="secondary"
           type="button"
           onClick={() => setFeedbackId(row.id)}
-          className="inline-flex items-center justify-center gap-2 rounded-sm px-3 py-2 font-sans text-sm font-medium text-ink-soft underline-offset-4 transition hover:text-ink hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
         >
           doesn&rsquo;t sound like us
-        </button>
+        </ApHeritageButton>
         <button
           type="button"
           onClick={() => setRejectingId(row.id)}
-          className="inline-flex items-center justify-center gap-2 rounded-sm px-3 py-2 font-sans text-sm font-medium text-flag underline-offset-4 transition hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-flag focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+          className="inline-flex items-center justify-center gap-2 rounded-none px-3 py-2 font-sans text-sm font-medium text-flag underline-offset-4 transition hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-flag focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
         >
           reject
         </button>
@@ -196,9 +196,9 @@ export function ApprovalsList({
 
       <Section
         title="Needs you specifically"
-        subtitle="High-urgency items elevated above the queue."
+        subtitle="Items your fleet flagged as high-urgency — review these first."
         items={needsYou}
-        empty="Nothing flagged as urgent right now."
+        empty="Nothing urgent right now."
         footerFor={rejectFooter}
       />
 

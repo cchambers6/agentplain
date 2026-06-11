@@ -126,7 +126,7 @@ export default async function ScheduleSettingsPage({ params }: PageProps) {
         <h2 className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
           set or edit a window
         </h2>
-        <div className="mt-4 rounded-md border border-rule bg-paper p-5">
+        <div className="mt-4 rounded-none border border-rule bg-paper p-5">
           <ScheduleWindowForm
             workspaceId={workspaceId}
             skillOptions={skillOptions}

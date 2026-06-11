@@ -77,7 +77,7 @@ export function PauseForm({
             required
             value={pausedFrom}
             onChange={(e) => setPausedFrom(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-rule bg-paper px-3 py-2 text-[14px] text-ink focus:outline-none focus:ring-2 focus:ring-ink/30"
+            className="mt-1 block w-full rounded-none border border-rule bg-paper px-3 py-2 text-[14px] text-ink focus:outline-none focus:ring-2 focus:ring-ink/30"
           />
         </label>
         <label className="block">
@@ -89,7 +89,7 @@ export function PauseForm({
             required
             value={pausedUntil}
             onChange={(e) => setPausedUntil(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-rule bg-paper px-3 py-2 text-[14px] text-ink focus:outline-none focus:ring-2 focus:ring-ink/30"
+            className="mt-1 block w-full rounded-none border border-rule bg-paper px-3 py-2 text-[14px] text-ink focus:outline-none focus:ring-2 focus:ring-ink/30"
           />
         </label>
       </div>
@@ -134,7 +134,7 @@ export function PauseForm({
           rows={2}
           maxLength={2000}
           placeholder="e.g. Out of office through next week"
-          className="mt-1 block w-full rounded-md border border-rule bg-paper px-3 py-2 text-[14px] text-ink focus:outline-none focus:ring-2 focus:ring-ink/30"
+          className="mt-1 block w-full rounded-none border border-rule bg-paper px-3 py-2 text-[14px] text-ink focus:outline-none focus:ring-2 focus:ring-ink/30"
         />
         <span className="mt-1 block text-[11px] text-mute">
           Encrypted at rest. Only the operator sees it in the audit log.
@@ -142,7 +142,7 @@ export function PauseForm({
       </label>
 
       {error ? (
-        <p className="text-[13px] text-red-700" role="alert">
+        <p className="text-[13px] text-flag" role="alert">
           {error}
         </p>
       ) : null}
@@ -150,7 +150,7 @@ export function PauseForm({
       <button
         type="submit"
         disabled={submitting}
-        className="rounded-md border border-ink px-4 py-2 font-mono text-[12px] uppercase text-ink hover:bg-ink hover:text-paper disabled:opacity-50"
+        className="border border-ink px-4 py-2 font-mono text-[12px] uppercase text-ink hover:bg-ink hover:text-paper disabled:opacity-50"
       >
         {submitting ? "saving…" : "schedule pause"}
       </button>

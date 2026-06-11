@@ -10,7 +10,13 @@ import {
 
 const initial: TalkActionResult = { ok: false };
 
-export function TalkComposer({ workspaceId }: { workspaceId: string }) {
+export function TalkComposer({
+  workspaceId,
+  degraded = false,
+}: {
+  workspaceId: string;
+  degraded?: boolean;
+}) {
   const [state, formAction] = useFormState<TalkActionResult, FormData>(
     sendPlainoMessageAction.bind(null, workspaceId),
     initial,
@@ -24,6 +30,22 @@ export function TalkComposer({ workspaceId }: { workspaceId: string }) {
       formRef.current.reset();
     }
   }, [state.ok]);
+
+  if (degraded) {
+    return (
+      <div className="space-y-4">
+        <ApHeritageField
+          multiline
+          label="your message to Plaino"
+          name="body"
+          rows={4}
+          disabled
+          placeholder="Plaino is offline for the moment."
+          helper="Plaino will be back online shortly — no action needed from you."
+        />
+      </div>
+    );
+  }
 
   return (
     <form ref={formRef} action={formAction} className="space-y-4">

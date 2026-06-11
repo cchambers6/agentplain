@@ -173,6 +173,16 @@ function SkillRow({ skill }: { skill: SkillStatus }) {
           {skill.reason}
         </p>
       ) : null}
+      {skill.status === "failed" ? (
+        <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">
+          {"We'll cover this on your welcome call — nothing needed from you right now."}
+        </p>
+      ) : null}
+      {skill.status === "skipped" && !skill.reason ? (
+        <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">
+          {"Not enough context yet — Plaino will pick this up once more workspace data lands."}
+        </p>
+      ) : null}
       {hasPreview && skill.draftPreview ? (
         <DraftPreviewCard
           preview={skill.draftPreview}
@@ -188,6 +198,16 @@ function SkillRow({ skill }: { skill: SkillStatus }) {
             href={skill.queueItemHref}
           >
             open in approvals
+          </ApHeritageButton>
+        </div>
+      ) : skill.status === "skipped" || skill.status === "failed" ? (
+        <div className="mt-3">
+          <ApHeritageButton
+            variant="secondary"
+            withArrow
+            href="approvals"
+          >
+            open approvals queue
           </ApHeritageButton>
         </div>
       ) : null}

@@ -104,7 +104,7 @@ export default async function TalkPage({ params }: PageProps) {
       )}
 
       <div className="mt-10">
-        <TalkComposer workspaceId={workspaceId} />
+        <TalkComposer workspaceId={workspaceId} degraded={degraded.degraded} />
       </div>
     </div>
   );

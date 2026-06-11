@@ -21,6 +21,19 @@ interface PageProps {
 
 const SEVERITY_ORDER = ["BLOCKER", "HIGH", "MEDIUM", "LOW", "INFO"];
 
+function formatRelativeTime(date: Date): string {
+  const diffMs = date.getTime() - Date.now();
+  const absDiffMs = Math.abs(diffMs);
+  const minutes = Math.floor(absDiffMs / 60_000);
+  const isPast = diffMs < 0;
+  if (minutes < 1) return isPast ? "moments ago" : "due now";
+  if (minutes < 60) return isPast ? `${minutes} min ago` : `due in ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return isPast ? `${hours} hr ago` : `due in ${hours} hr`;
+  const days = Math.floor(hours / 24);
+  return isPast ? `${days} d ago` : `due in ${days} d`;
+}
+
 export default async function CompliancePage({ params }: PageProps) {
   const { id: workspaceId } = await params;
   const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
@@ -112,28 +125,25 @@ export default async function CompliancePage({ params }: PageProps) {
       {corpus ? (
         <div className="mt-4 max-w-2xl border-l-2 border-rule bg-paper-deep p-4">
           <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-            Corpus maturity · {corpus.verticalSlug}
+            compliance checks
           </p>
           <p className="mt-2 text-[14px] leading-relaxed text-ink-soft">
             {firingRules.length === 0 ? (
               <>
-                No rules fire on drafts in this vertical today. {draftRules.length}{" "}
-                {draftRules.length === 1 ? "rule is" : "rules are"} loaded as
-                DRAFT — visible to counsel, not enforced — and will not raise
-                flags until counsel red-lines them.
+                {draftRules.length > 0
+                  ? `Rules for your coverage areas are written and waiting on attorney review before they switch on. We'll update you when they go live.`
+                  : `No compliance rules are active for this vertical yet. Your service partner will notify you when they go live.`}
               </>
             ) : (
               <>
-                {firingRules.length}{" "}
-                {firingRules.length === 1 ? "rule fires" : "rules fire"} on
-                drafts today (literal-match against verified trigger lists).
+                {corpus.verticalSlug === "real-estate"
+                  ? "Real-estate fair-housing rules check every draft today."
+                  : `${firingRules.length} compliance ${firingRules.length === 1 ? "rule checks" : "rules check"} every draft today.`}
                 {draftRules.length > 0 ? (
                   <>
                     {" "}
-                    {draftRules.length} additional{" "}
-                    {draftRules.length === 1 ? "rule is" : "rules are"} loaded
-                    as DRAFT — visible to counsel, not enforced — and will not
-                    raise flags until counsel red-lines them.
+                    Rules for your other coverage areas are written and waiting
+                    on attorney review before they switch on.
                   </>
                 ) : null}
               </>
@@ -184,8 +194,8 @@ export default async function CompliancePage({ params }: PageProps) {
                 </p>
               ) : null}
               <p className="mt-3 text-[13px] text-mute">
-                Source: {f.sourceRecordTable}:{f.sourceRecordId} · raised by{" "}
-                <span className="font-mono">{f.raisedByAgent}</span>
+                Raised by your compliance sentinel on a drafted reply
+                {f.slaDueAt ? ` · ${formatRelativeTime(f.slaDueAt)}` : ""}
               </p>
             </li>
           ))}

@@ -119,7 +119,7 @@ export default async function IntegrationSettingsPage({
           <ApRootedEmptyState
             motif="wheat"
             reality={`${entry.name} isn't wired up yet.`}
-            change={`It's on the substrate. Join the waitlist and your service partner reaches out when ${entry.name} is ready to connect.`}
+            change={`We're finishing the wiring for ${entry.name}. Join the waitlist and your service partner reaches out the moment it's ready to connect.`}
             cta={
               <ApHeritageButton
                 variant="secondary"

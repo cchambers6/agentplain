@@ -1,0 +1,32 @@
+[
+  {
+    "path": "app/(marketing)/privacy/page.tsx",
+    "pattern": "Anthropic",
+    "reason": "Subprocessor disclosure — Anthropic named as model-inference vendor per privacy/terms requirement. Ratified 2026-06-06 (PR #164 SBM response / privacy page cleanup)."
+  },
+  {
+    "path": "app/(marketing)/security/page.tsx",
+    "pattern": "Anthropic",
+    "reason": "Subprocessor security disclosure — same rationale as privacy page."
+  },
+  {
+    "path": "lib/plaino/marketing-prompt.ts",
+    "pattern": "(Claude|Anthropic)",
+    "reason": "Operator instructions teaching Plaino to handle 'why not use Claude SBM' objections. These strings are LLM system-prompt instructions, not rendered customer copy. Ratified in project_sbm_wrapper_positioning_2026_06_06.md."
+  },
+  {
+    "path": "components/PricingTier.tsx",
+    "pattern": "shadow-\\[",
+    "reason": "shadow-[6px_6px_0_0_#B65D3A] is a ratified brand-aesthetic 'brick shadow' design element on the featured pricing card — custom Tailwind JIT value, not a semantic shadow token. Ratified in pricing tier design."
+  },
+  {
+    "path": "lib/plaino/marketing-prompt.ts",
+    "pattern": "(SMB|knowledge workers)",
+    "reason": "Operator LLM instructions that teach Plaino to contrast agentplain vs Claude SBM. These are system-prompt strings, not customer-rendered copy. The same rationale as the Claude/Anthropic allowlist entry above."
+  },
+  {
+    "path": "lib/plaino/support-prompt.ts",
+    "pattern": "(SMB|knowledge workers)",
+    "reason": "Operator LLM instructions — same rationale as marketing-prompt.ts entry."
+  }
+]

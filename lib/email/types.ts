@@ -21,6 +21,8 @@ export interface SendEmailRequest {
   replyTo?: string;
   /** Free-form tags Resend stores against the message for filtering. */
   tags?: Record<string, string>;
+  /** Extra RFC-2822 headers (e.g. List-Unsubscribe for recurring mail). */
+  headers?: Record<string, string>;
 }
 
 export interface SendEmailResult {

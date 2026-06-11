@@ -3,13 +3,13 @@
 // Mirrors the web "editorial / heritage" language (paper + ink + clay) so the
 // native app reads as the same brand. Calm, grounded, not chirpy — per
 // project_plaino_named_agent (Plaino's heritage voice) and the locked brand.
-// This is a small, hand-kept token set; the web design system is the source of
-// truth if the two ever disagree.
+// This is a small, hand-kept token set; the web design system (lib/brand/tokens.ts)
+// is the source of truth if the two ever disagree.
 
 export const colors = {
-  paper: "#F7F4EF", // app background — warm off-white
+  paper: "#F7F4ED", // app background — warm off-white
   paperRaised: "#FFFFFF", // cards
-  ink: "#1A1A1A", // primary text
+  ink: "#1A1A1F", // primary text
   inkSoft: "#5C5852", // secondary text
   inkFaint: "#8A847B", // tertiary / captions
   line: "#E7E1D7", // hairline borders

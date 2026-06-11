@@ -494,7 +494,9 @@ function renderNudgeText(args: {
       'you, no action needed — we will tidy up your workspace after a ' +
       'few weeks.',
     '',
-    '— Plaino',
+    'Plaino, your service partner at agentplain',
+    '',
+    "You're receiving this because you have an agentplain workspace.",
   ].join('\n');
 }
 
@@ -507,12 +509,13 @@ function renderNudgeHtml(args: {
     : 'Hi,';
   const ws = escapeHtml(args.candidate.workspaceName);
   return [
-    '<!doctype html><html><body style="font-family: ui-sans-serif,system-ui,sans-serif; color:#1c1917;">',
+    '<!doctype html><html><body style="font-family: ui-sans-serif,system-ui,sans-serif; color:#1A1A1F; background:#F7F4ED; padding:32px;">',
     `<p>${greeting}</p>`,
     `<p>You signed up for Plaino at <strong>${ws}</strong> — but setup did not finish. Plaino is waiting on the last step: adding your payment method in Stripe Checkout.</p>`,
-    `<p><a href="${escapeHtml(args.checkoutUrl)}" style="display:inline-block;padding:10px 16px;background:#1c1917;color:#fff;text-decoration:none;border-radius:4px;">Finish setup</a></p>`,
-    '<p style="color:#737373; font-size:13px;">If you signed up to evaluate and decided Plaino is not right for you, no action needed — we will tidy up your workspace after a few weeks.</p>',
-    '<p>— Plaino</p>',
+    `<p><a href="${escapeHtml(args.checkoutUrl)}" style="display:inline-block;padding:10px 16px;background:#1A1A1F;color:#F7F4ED;text-decoration:none;border-radius:4px;">Finish setup</a></p>`,
+    '<p style="color:#726A5E; font-size:13px;">If you signed up to evaluate and decided Plaino is not right for you, no action needed — we will tidy up your workspace after a few weeks.</p>',
+    '<p style="font-size:13px; color:#726A5E;">Plaino, your service partner at agentplain</p>',
+    '<p style="font-size:12px; color:#726A5E; margin-top:24px;">You\'re receiving this because you have an agentplain workspace.</p>',
     '</body></html>',
   ].join('');
 }

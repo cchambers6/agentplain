@@ -10,7 +10,7 @@
 // wired to real PNG crops in PlainoScene.tsx — these motif SVGs serve the
 // marketing/structural slots only.
 //
-// Output: public/brand/plaino-system/placeholders/<slug>.svg
+// Output: public/brand/plaino-system/motifs/<slug>.svg
 // Run:    node tools/brand/gen-placeholder-scenes.mjs
 
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -395,7 +395,7 @@ function escapeXml(s) {
 }
 
 const here = dirname(fileURLToPath(import.meta.url));
-const outDir = join(here, "..", "..", "public", "brand", "plaino-system", "placeholders");
+const outDir = join(here, "..", "..", "public", "brand", "plaino-system", "motifs");
 mkdirSync(outDir, { recursive: true });
 
 let n = 0;
@@ -405,4 +405,4 @@ for (const slot of SLOTS) {
   n++;
 }
 
-console.log(`wrote ${n} scene motif SVGs to public/brand/plaino-system/placeholders/`);
+console.log(`wrote ${n} scene motif SVGs to public/brand/plaino-system/motifs/`);

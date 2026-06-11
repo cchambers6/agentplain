@@ -27,7 +27,7 @@ interface ApRootedEmptyStateProps {
    * Heritage Plaino scene illustration — the partner-grade upgrade over the
    * line-art `motif`. When set, this renders instead of `motif` so the empty
    * state shows the named service partner, not a generic landscape. Wired to a
-   * placeholder today (see PlainoScene); a real asset swap is one-line.
+   * motif or pose art (see PlainoScene); an asset swap is one-line.
    */
   scene?: PlainoSceneName;
 }

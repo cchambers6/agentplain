@@ -44,7 +44,7 @@ export { PlainoStatus } from "./PlainoStatus";
 export type { PlainoStatusState } from "./PlainoStatus";
 export {
   PlainoScene,
-  isPlaceholderScene,
+  isMotifScene,
   verticalSceneName,
 } from "./PlainoScene";
 export type { PlainoSceneName } from "./PlainoScene";

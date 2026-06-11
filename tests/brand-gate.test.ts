@@ -460,51 +460,37 @@ describe("baseline ratchet", () => {
   });
 });
 
-// ─── Integration: gate catches known live violations ─────────────────────────
+// ─── Integration: the live tree holds the gate at zero ───────────────────────
+// The seed baseline carried 270 violations when the gate first landed; the
+// 2026-06-11 design-remediation waves (PRs #227-#234) drove it to zero and the
+// gate moved from ratchet-only to a hard pre-push layer. These tests pin the
+// clean state: the baseline stays empty and a live run reports no violations.
 
-describe("integration — known live violations spot-checked in baseline", () => {
-  it("baseline contains R2 violations (placeholder SVGs in public/brand)", () => {
+describe("integration — live tree is brand-gate clean", () => {
+  it("baseline is empty (zero ratified-debt violations)", () => {
     const baseline = JSON.parse(readFileSync(BASELINE_PATH, "utf8")) as {
       violations: Array<{ rule: string }>;
     };
-    const r2 = baseline.violations.filter((v) => v.rule === "R2");
-    assert.ok(r2.length > 0, "Expected R2 violations in baseline (placeholder SVGs)");
-  });
-
-  it("baseline contains R3 violations — deprecated #8C8478 in email templates", () => {
-    const baseline = JSON.parse(readFileSync(BASELINE_PATH, "utf8")) as {
-      violations: Array<{ rule: string; match: string }>;
-    };
-    const r3deprecated = baseline.violations.filter(
-      (v) => v.rule === "R3" && v.match.toUpperCase() === "#8C8478",
-    );
-    assert.ok(
-      r3deprecated.length > 0,
-      "Expected #8C8478 R3 violations in baseline (email templates use deprecated mute color)",
+    assert.equal(
+      baseline.violations.length,
+      0,
+      "Baseline must stay empty — fix new violations or allowlist with a ratified reason, never re-baseline debt",
     );
   });
 
-  it("baseline contains R3 rounded-md violations — PauseForm, ScheduleWindowForm", () => {
-    const baseline = JSON.parse(readFileSync(BASELINE_PATH, "utf8")) as {
-      violations: Array<{ rule: string; match: string }>;
+  it("live run finds zero violations across all rules", () => {
+    const result = spawnGate("--json --all");
+    const parsed = JSON.parse(result.stdout || result.stderr) as {
+      totalFound: number;
+      violations: Array<{ rule: string; file: string; line: number; match: string }>;
     };
-    const r3rounded = baseline.violations.filter(
-      (v) => v.rule === "R3" && v.match.startsWith("rounded-"),
-    );
-    assert.ok(
-      r3rounded.length > 0,
-      "Expected rounded-* R3 violations in baseline (PauseForm etc.)",
-    );
-  });
-
-  it("baseline contains R1 violations — vendor names in faq-items / vertical content", () => {
-    const baseline = JSON.parse(readFileSync(BASELINE_PATH, "utf8")) as {
-      violations: Array<{ rule: string }>;
-    };
-    const r1 = baseline.violations.filter((v) => v.rule === "R1");
-    assert.ok(
-      r1.length > 0,
-      "Expected R1 violations in baseline (FAQ, vertical content, OG files)",
+    const summary = parsed.violations
+      .map((v) => `${v.rule} ${v.file}:${v.line} ${v.match}`)
+      .join("\n");
+    assert.equal(
+      parsed.totalFound,
+      0,
+      `Expected zero brand-gate violations in the live tree, found:\n${summary}`,
     );
   });
 });

@@ -130,7 +130,7 @@ export function OverviewView({
             — resuming {new Date(activePause.pausedUntil).toLocaleString()}.{" "}
             <Link
               href={`/app/workspace/${workspaceId}/settings/pause`}
-              className="rounded-sm underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper-deep"
+              className="rounded-none underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper-deep"
             >
               manage&nbsp;→
             </Link>
@@ -298,7 +298,7 @@ function TodaysWork({
         <ApEyebrow>what we did</ApEyebrow>
         <Link
           href={`/app/workspace/${workspaceId}/agents`}
-          className="rounded-sm font-mono text-[11px] tracking-eyebrow uppercase text-mute hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+          className="rounded-none font-mono text-[11px] tracking-eyebrow uppercase text-mute hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
         >
           see fleet&nbsp;→
         </Link>

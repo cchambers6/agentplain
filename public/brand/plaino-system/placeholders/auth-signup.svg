@@ -1,31 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900" role="img" aria-label="placeholder heritage scene: sign-up · welcome aboard">
-  <!-- PLACEHOLDER — non-blocking stand-in. Real asset swaps in at public/brand/plaino-system/scenes/auth-signup.png -->
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900" role="img" aria-label="arrival scene with plain and open gate">
   <rect width="900" height="900" fill="#F7F4ED"/>
-  <!-- low land band (Moss) -->
-  <rect x="0" y="558" width="900" height="342" fill="#3F5C3F" opacity="0.16"/>
-  <!-- horizon line (Ink hairline) + low rise -->
-  <path d="M0 558 H900" stroke="#1A1A1F" stroke-width="2" opacity="0.55"/>
-  <path d="M450 558 Q648 483 846 558" fill="none" stroke="#1A1A1F" stroke-width="2" opacity="0.35"/>
-  <!-- a single distant clay roof (the one Clay charge in the land) -->
-  <path d="M126 558 l72 0 l-36 -32 z" fill="#B65D3A" opacity="0.85"/>
-  <!-- Plaino silhouette: calm working dog, head up, watching -->
-  <g fill="#1A1A1F">
-    <!-- body -->
-    <rect x="576" y="467" width="144" height="66" rx="17"/>
-    <!-- legs -->
-    <rect x="593" y="521" width="17" height="37"/>
-    <rect x="680" y="521" width="17" height="37"/>
-    <!-- head -->
-    <rect x="662" y="422" width="49" height="56" rx="12"/>
-    <!-- ear (up, alert) -->
-    <path d="M671 425 l0 -23 l17 17 z"/>
-    <!-- tail -->
-    <path d="M576 475 q-26 -8 -23 -37" fill="none" stroke="#1A1A1F" stroke-width="14" stroke-linecap="round"/>
-  </g>
-  <!-- collar tag: the single Clay charge on the dog -->
-  <circle cx="665" cy="475" r="17" fill="#B65D3A"/>
-  <!-- placeholder labelling (Mute) — makes it unmistakably a stand-in -->
-  <text x="54" y="126" font-family="ui-monospace, Menlo, monospace" font-size="25" fill="#726A5E" letter-spacing="2">PLACEHOLDER · SIGN-UP · WELCOME ABOARD</text>
-  <text x="54" y="167" font-family="ui-monospace, Menlo, monospace" font-size="18" fill="#726A5E" opacity="0.8">900×900 · pose standing-watch · awaiting real asset</text>
+  <rect x="0" y="540" width="900" height="360" fill="#EDE9DE"/>
+  <line x1="0" y1="540" x2="900" y2="540" stroke="#1A1A1F" stroke-width="1.5" opacity="0.38"/>
+  <rect x="396" y="378" width="11" height="162" fill="#1A1A1F" opacity="0.50"/>
+  <rect x="567" y="378" width="11" height="162" fill="#1A1A1F" opacity="0.50"/>
+  <path d="M396 450 L567 387" stroke="#1A1A1F" stroke-width="1.7999999999999998" opacity="0.38" fill="none"/>
+  <rect x="396" y="360" width="14" height="23" fill="#B65D3A" opacity="0.72"/>
+  <rect x="565" y="360" width="14" height="23" fill="#B65D3A" opacity="0.72"/>
 </svg>

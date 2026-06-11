@@ -84,16 +84,43 @@ test("decorative scene is aria-hidden; labelled scene exposes alt", () => {
 });
 
 test("placeholder slots are flagged so a real-asset swap is detectable", () => {
-  // All slots ship as placeholders in this wave.
-  for (const name of ALL_SCENES) {
+  // Marketing / structural / vertical slots remain prairie motif SVGs — placeholder.
+  const MOTIF_SLOTS: PlainoSceneName[] = [
+    "home-crew", "home-knowledge", "home-future",
+    "pricing", "custom", "about-hero", "verticals", "legal",
+    "vertical-real-estate", "vertical-mortgage", "vertical-insurance",
+    "vertical-property-management", "vertical-title-escrow",
+    "vertical-recruiting", "vertical-home-services",
+    "vertical-cpa", "vertical-law", "vertical-ria", "vertical-general",
+  ];
+  for (const name of MOTIF_SLOTS) {
     assert.equal(
       isPlaceholderScene(name),
       true,
-      `${name} should be a placeholder until a real asset lands`,
+      `${name} should be a prairie motif placeholder until a real scene lands`,
     );
   }
-  const html = render(<PlainoScene name="empty-talk" />);
-  assert.match(html, /data-plaino-placeholder="true"/);
+
+  // Character slots (auth gates, empty-states, about-dogfood, inquiry-received)
+  // are now wired to real brand beagle PNG poses — NOT placeholders.
+  const CHARACTER_SLOTS: PlainoSceneName[] = [
+    "auth-signin", "auth-signup", "auth-checkout",
+    "inquiry-received", "about-dogfood",
+    "empty-talk", "empty-approvals", "empty-activity", "empty-sentinel",
+  ];
+  for (const name of CHARACTER_SLOTS) {
+    assert.equal(
+      isPlaceholderScene(name),
+      false,
+      `${name} is wired to a real pose PNG and should not be flagged as a placeholder`,
+    );
+  }
+
+  // A motif slot carries the placeholder attribute; a character slot does not.
+  const motifHtml = render(<PlainoScene name="pricing" />);
+  assert.match(motifHtml, /data-plaino-placeholder="true"/);
+  const poseHtml = render(<PlainoScene name="empty-talk" />);
+  assert.doesNotMatch(poseHtml, /data-plaino-placeholder/);
 });
 
 test("verticalSceneName maps known slugs and falls back to general", () => {

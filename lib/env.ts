@@ -113,19 +113,43 @@ export const env = {
     optional("RESEND_FROM_EMAIL") ?? "agentplain <plaino@agentplain.com>",
 
   // Stripe — Prices resolved by lookup_key (see lib/pricing/tiers.ts +
-  // scripts/stripe/setup-products.ts). No per-tier Price-id env vars.
+  // scripts/stripe/setup-products.ts). No per-tier Price-id env vars
+  // (feedback_no_quick_fixes — lookup keys live on the Price inside
+  // Stripe and survive Price archival; 15 hardcoded env vars are
+  // brittle vendor lock).
   stripeSecretKey: () => required("STRIPE_SECRET_KEY"),
   stripeWebhookSecret: () => required("STRIPE_WEBHOOK_SECRET"),
-  // Wave-2 CC-at-trial signup pivot. When true (the default in prod) the
-  // signup server action routes the customer to a Stripe Checkout session
-  // for card capture immediately after the workspace transaction commits.
-  // When explicitly disabled (`STRIPE_CHECKOUT_ENABLED=false`), signup
-  // falls back to the legacy `provisionTrialSubscriptionSafe` path —
-  // useful for dev/preview without Stripe creds and for the test-mode
-  // `BILLING_PROVIDER=test` flow. Audit §6 (2026-05-28) — fixes the
-  // "no card required" lie on the signup form + trial-warning email.
+  // ── Master billing switch ──────────────────────────────────────────
+  // THE one gate that turns the whole Stripe path on. Default FALSE so a
+  // fresh deploy (and prod, pre-launch) makes ZERO Stripe calls: signup
+  // completes, the workspace lands in the "trial, no card" state, and
+  // nothing is ever charged. Flip `STRIPE_BILLING_ENABLED=true` (with the
+  // STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET keys populated) to activate
+  // billing the moment the four go-live decisions land. Every billing
+  // side-effect (signup provisioning, dunning sweep, checkout) reads this
+  // first — see app/(product)/app/actions.ts + lib/billing/dunning.ts.
+  stripeBillingEnabled: (): boolean =>
+    (optional("STRIPE_BILLING_ENABLED") ?? "false").toLowerCase() === "true",
+  // Trial length in days. Default 14 (block-F trial-first mandate). Env-
+  // configurable so Conner can move it without a deploy. Clamped to a
+  // sane [0, 365] so a fat-fingered value can't create a decade-long
+  // free trial. Consumed by lib/billing/provisioning.ts +
+  // lib/billing/checkout.ts and surfaced in the billing-page copy.
+  stripeTrialPeriodDays: (): number => {
+    const raw = optional("STRIPE_TRIAL_PERIOD_DAYS");
+    if (!raw) return 14;
+    const n = Number.parseInt(raw, 10);
+    if (!Number.isFinite(n) || n < 0) return 14;
+    return Math.min(n, 365);
+  },
+  // Card-at-signup override. The block-F default is trial-first / NO card
+  // at signup (frictionless trial start; capture the card before day-14
+  // trial end). Setting `STRIPE_CHECKOUT_ENABLED=true` opts into the
+  // wave-2 variant instead: signup routes through a Stripe Checkout
+  // session that collects the card up front. Default FALSE → trial-first.
+  // Only consulted when `stripeBillingEnabled()` is true.
   stripeCheckoutEnabled: (): boolean =>
-    (optional("STRIPE_CHECKOUT_ENABLED") ?? "true").toLowerCase() !== "false",
+    (optional("STRIPE_CHECKOUT_ENABLED") ?? "false").toLowerCase() === "true",
   // Stripe Billing Meter for token-usage emission. Two things must line
   // up before the cron actually POSTs anything:
   //   1. STRIPE_USAGE_METER_ENABLED=true (master switch).

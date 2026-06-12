@@ -9,9 +9,19 @@
  * matches the runtime.
  *
  * Statuses gated as PAUSED:
- *   - PAUSED           — explicit pause (the most-specific signal)
- *   - PAST_DUE         — payment failed; fleet runs through period end
- *                        only — see the banner in /settings/billing
+ *   - PAUSED           — explicit pause (the most-specific signal); also
+ *                        the hard-gate state the dunning sweep flips a
+ *                        PAST_DUE subscription into once its grace window
+ *                        is exhausted (lib/billing/dunning.ts)
+ *   - PAST_DUE *past grace* — payment failed AND the paid-through date
+ *                        (currentPeriodEnd) has passed. While the period
+ *                        the customer already paid for is still running,
+ *                        PAST_DUE is NOT gated — the fleet keeps working
+ *                        through the grace window, matching the
+ *                        /settings/billing banner copy ("fleet keeps
+ *                        running through <date>"). Before this seam the
+ *                        gate paused PAST_DUE immediately, contradicting
+ *                        that promise.
  *
  * Statuses NOT gated (the workspace stays "active for skills"):
  *   - TRIALING         — trial subscriptions run as full active
@@ -49,6 +59,9 @@ export const SKILL_PAUSED_STATUSES: ReadonlyArray<SubscriptionStatus> = [
 export interface IsWorkspacePausedArgs {
   workspaceId: string;
   systemContext?: SystemContextRunner;
+  /** Injected for deterministic tests; live callers omit it (→ now). The
+   *  PAST_DUE grace check compares this against `currentPeriodEnd`. */
+  now?: Date;
 }
 
 export interface WorkspacePauseState {
@@ -76,11 +89,12 @@ export async function isWorkspacePaused(
   args: IsWorkspacePausedArgs,
 ): Promise<WorkspacePauseState> {
   const systemContext = args.systemContext ?? defaultWithSystemContext;
+  const now = args.now ?? new Date();
   const { sub, workspace } = await systemContext(async (tx) => {
     const [s, w] = await Promise.all([
       tx.subscription.findUnique({
         where: { workspaceId: args.workspaceId },
-        select: { status: true },
+        select: { status: true, currentPeriodEnd: true },
       }),
       tx.workspace.findUnique({
         where: { id: args.workspaceId },
@@ -107,6 +121,31 @@ export async function isWorkspacePaused(
       reason: 'no subscription row — treating as active',
     };
   }
+
+  // PAST_DUE grace window. The customer paid for the current period; a
+  // failed renewal does NOT cut service mid-period. We keep the fleet
+  // running until `currentPeriodEnd` (the paid-through date), then pause.
+  // A null/missing period anchor is treated as past-grace (fail-closed —
+  // we cannot prove the customer is still inside a paid window).
+  if (sub.status === 'PAST_DUE') {
+    const periodEnd = sub.currentPeriodEnd ?? null;
+    const withinGrace = periodEnd !== null && now < periodEnd;
+    if (withinGrace) {
+      return {
+        isPaused: false,
+        status: sub.status,
+        reason: `subscription.status=PAST_DUE but within grace through ${periodEnd.toISOString()} — fleet keeps running until the paid period ends`,
+      };
+    }
+    return {
+      isPaused: true,
+      status: sub.status,
+      reason: periodEnd
+        ? `subscription.status=PAST_DUE and grace window ended ${periodEnd.toISOString()} — skill fires paused until billing is current`
+        : `subscription.status=PAST_DUE with no current-period anchor — skill fires paused (fail-closed) until billing is current`,
+    };
+  }
+
   const paused = SKILL_PAUSED_STATUSES.includes(sub.status);
   return {
     isPaused: paused,

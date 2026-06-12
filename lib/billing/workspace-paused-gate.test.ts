@@ -23,6 +23,7 @@ import {
 
 interface FakeSubRow {
   status: SubscriptionStatus | null;
+  currentPeriodEnd?: Date | null;
 }
 
 interface FakeWorkspaceRow {
@@ -57,13 +58,45 @@ describe('isWorkspacePaused', () => {
     assert.match(res.reason, /PAUSED/);
   });
 
-  it('returns isPaused=true when status is PAST_DUE', async () => {
+  it('returns isPaused=true when status is PAST_DUE with no period anchor (fail-closed)', async () => {
     const res = await isWorkspacePaused({
       workspaceId: 'ws-1',
       systemContext: stubContext({ status: 'PAST_DUE' }),
     });
     assert.equal(res.isPaused, true);
     assert.equal(res.status, 'PAST_DUE');
+  });
+
+  it('returns isPaused=false when PAST_DUE but still within the grace window', async () => {
+    const now = new Date('2026-06-12T00:00:00.000Z');
+    const res = await isWorkspacePaused({
+      workspaceId: 'ws-1',
+      now,
+      systemContext: stubContext({
+        status: 'PAST_DUE',
+        // paid-through date is in the future → grace
+        currentPeriodEnd: new Date('2026-06-20T00:00:00.000Z'),
+      }),
+    });
+    assert.equal(res.isPaused, false);
+    assert.equal(res.status, 'PAST_DUE');
+    assert.match(res.reason, /within grace/i);
+  });
+
+  it('returns isPaused=true when PAST_DUE and the grace window has ended', async () => {
+    const now = new Date('2026-06-25T00:00:00.000Z');
+    const res = await isWorkspacePaused({
+      workspaceId: 'ws-1',
+      now,
+      systemContext: stubContext({
+        status: 'PAST_DUE',
+        // paid-through date is in the past → grace exhausted
+        currentPeriodEnd: new Date('2026-06-20T00:00:00.000Z'),
+      }),
+    });
+    assert.equal(res.isPaused, true);
+    assert.equal(res.status, 'PAST_DUE');
+    assert.match(res.reason, /grace window ended/i);
   });
 
   it('returns isPaused=false when status is ACTIVE', async () => {

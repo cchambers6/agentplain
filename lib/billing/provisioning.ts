@@ -5,9 +5,10 @@
 // Per feedback_max_friction_reduction_for_trials rules #1 + #5: signup
 // must never block on Stripe being down. If provisioning fails, the
 // workspace still exists; the cron + the next billing-page render
-// surface the missing-subscription state and we retry. Per the brief's
-// `trial_period_days: 30` directive, no card is collected at signup —
-// the trial-end flow drives card-on-file capture later.
+// surface the missing-subscription state and we retry. Per the block-F
+// trial-first mandate, no card is collected at signup — the trial is
+// `env.stripeTrialPeriodDays()` (14 by default) and the trial-end flow
+// drives card-on-file capture before day-14.
 
 import type {
   Prisma,
@@ -15,10 +16,10 @@ import type {
   WorkspaceVerticalTier,
 } from "@prisma/client";
 import {
-  TRIAL_PERIOD_DAYS,
   tierFromVerticalTier,
   type TierName,
 } from "@/lib/pricing/tiers";
+import { env } from "@/lib/env";
 import { withSystemContext as defaultWithSystemContext } from "@/lib/db";
 import type { DbTransactionClient } from "@/lib/db";
 import { getBillingProvider } from "./index";
@@ -43,6 +44,10 @@ export interface ProvisionTrialSubscriptionInput {
    *  feedback_max_friction_reduction_for_trials rule #6 there is no
    *  minimum-seats requirement. */
   seats?: number;
+  /** Trial length in days. Defaults to `env.stripeTrialPeriodDays()`
+   *  (14 per the block-F trial-first mandate). Passed explicitly by
+   *  tests for determinism. */
+  trialPeriodDays?: number;
   /** Override for tests; the live caller uses `getBillingProvider()`. */
   provider?: BillingProvider;
   /** Override for tests; the live caller uses `withSystemContext`. */
@@ -70,6 +75,7 @@ export async function provisionTrialSubscription(
   const withSystemContext: SystemContextRunner =
     input.systemContext ?? defaultWithSystemContext;
   const seats = input.seats ?? 1;
+  const trialPeriodDays = input.trialPeriodDays ?? env.stripeTrialPeriodDays();
   const tier = tierFromVerticalTier(input.verticalTier);
 
   // 1. Customer.
@@ -79,14 +85,15 @@ export async function provisionTrialSubscription(
     email: input.email,
   });
 
-  // 2. Subscription with 30-day trial. Per the brief, no payment
-  //    method is collected here.
+  // 2. Subscription with the configured trial (14 days by default). Per
+  //    the trial-first mandate, no payment method is collected here — the
+  //    customer adds a card before trial end from /settings/billing.
   const sub = await provider.createSubscription({
     providerCustomerId: customer.providerCustomerId,
     tier,
     seatBand: "SEATS_1",
     seats,
-    trialPeriodDays: TRIAL_PERIOD_DAYS,
+    trialPeriodDays,
     metadata: {
       agentplain_workspace_id: input.workspaceId,
       agentplain_signup_flow: "self_serve",
@@ -127,7 +134,7 @@ export async function provisionTrialSubscription(
         payload: {
           tier,
           seats,
-          trialPeriodDays: TRIAL_PERIOD_DAYS,
+          trialPeriodDays,
           providerCustomerId: customer.providerCustomerId,
         } satisfies Prisma.InputJsonValue,
       },

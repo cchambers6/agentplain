@@ -10,7 +10,8 @@
 // helper creates the Stripe Customer, persists `Workspace.stripeCustomerId`
 // (RLS-scoped via the system context — the signup flow has no user
 // session yet), then opens a subscription-mode Stripe Checkout Session
-// with `subscription_data.trial_period_days=30` and
+// with `subscription_data.trial_period_days` (env.stripeTrialPeriodDays,
+// 14 by default) and
 // `payment_method_collection="always"`. The customer enters their card
 // in Stripe-hosted UI; the underlying subscription is created by
 // Checkout (Stripe fires `customer.subscription.created`) and the
@@ -29,11 +30,8 @@
 
 import type { Prisma } from "@prisma/client";
 import { withSystemContext as defaultWithSystemContext } from "@/lib/db";
-import {
-  TRIAL_PERIOD_DAYS,
-  tierFromVerticalTier,
-  type TierName,
-} from "@/lib/pricing/tiers";
+import { type TierName } from "@/lib/pricing/tiers";
+import { env } from "@/lib/env";
 import { getBillingProvider } from "./index";
 import type { BillingProvider } from "./types";
 import type { SystemContextRunner } from "./provisioning";
@@ -69,7 +67,7 @@ export interface CreateTrialCheckoutForSignupResult {
 /**
  * Creates a Stripe Customer for the freshly-signed-up workspace, persists
  * `Workspace.stripeCustomerId`, and returns a Stripe-hosted Checkout
- * Session URL configured with `trial_period_days=30` +
+ * Session URL configured with `trial_period_days` (14 by default) +
  * `payment_method_collection="always"`. The caller redirects the browser
  * to that URL.
  *
@@ -136,7 +134,7 @@ export async function createTrialCheckoutForSignup(
     seats,
     successUrl,
     cancelUrl,
-    trialPeriodDays: TRIAL_PERIOD_DAYS,
+    trialPeriodDays: env.stripeTrialPeriodDays(),
     paymentMethodCollection: "always",
     clientReferenceId: input.workspaceId,
     metadata: {

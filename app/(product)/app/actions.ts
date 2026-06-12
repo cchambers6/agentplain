@@ -162,17 +162,32 @@ export async function signUpAction(
     };
   }
 
-  // Wave-2 CC-at-trial pivot. When STRIPE_CHECKOUT_ENABLED is true (the
-  // prod default), route to Stripe Checkout for card capture before the
-  // trial subscription is provisioned. Stripe creates the subscription
-  // when Checkout completes and our existing `customer.subscription.
-  // created` webhook upserts the Subscription row by stripeCustomerId
-  // (which is set on the workspace by `createTrialCheckoutForSignup`).
-  //
-  // On Stripe outage / Checkout failure / `STRIPE_CHECKOUT_ENABLED=false`,
-  // fall back to the legacy `provisionTrialSubscriptionSafe` path —
-  // workspace exists, magic link is on the way, customer can add a card
-  // later from /settings/billing. This degrades but never blocks signup.
+  // ── Master billing gate ──────────────────────────────────────────────
+  // Default OFF (STRIPE_BILLING_ENABLED unset/false): signup is COMPLETE
+  // here. We make ZERO Stripe calls — no customer, no subscription, no
+  // charge — and the workspace sits in the "trial, no card" state
+  // indefinitely. That is exactly right pre-launch. The magic link is
+  // already on its way (above), so the customer signs in and works
+  // immediately. Flip STRIPE_BILLING_ENABLED=true (with the Stripe keys
+  // populated) to activate billing the moment the go-live decisions land
+  // — no code change required.
+  if (!env.stripeBillingEnabled()) {
+    return {
+      ok: true,
+      notice: `Check ${email}. The sign-in link is valid for 15 minutes.`,
+    };
+  }
+
+  // Billing is ON. Block-F default = trial-first, NO card at signup:
+  // `provisionTrialSubscriptionSafe` creates a Stripe Customer + a
+  // `trialing` Subscription with no payment method (see the else-branch
+  // below). The card-at-signup variant — Stripe Checkout up front — is
+  // opt-in via STRIPE_CHECKOUT_ENABLED=true. When enabled, Stripe creates
+  // the subscription on Checkout completion and our existing
+  // `customer.subscription.created` webhook upserts the Subscription row
+  // by stripeCustomerId (set on the workspace by
+  // `createTrialCheckoutForSignup`). On Checkout failure we degrade to the
+  // trial-first path so a Stripe hiccup never blocks signup.
   if (env.stripeCheckoutEnabled()) {
     try {
       const checkout = await createTrialCheckoutForSignup({
@@ -214,9 +229,11 @@ export async function signUpAction(
     }
   }
 
-  // STRIPE_CHECKOUT_ENABLED=false path — legacy provisioning so dev /
-  // preview without Stripe creds + the `BILLING_PROVIDER=test` flow
-  // keep working unchanged.
+  // Trial-first default (STRIPE_CHECKOUT_ENABLED unset/false): provision a
+  // Stripe Customer + a `trialing` Subscription with NO card. The customer
+  // adds a card before trial end from /settings/billing; the trial-warning
+  // cron nudges them as day-14 approaches. This is also the dev/preview +
+  // `BILLING_PROVIDER=test` path.
   await provisionTrialSubscriptionSafe(
     {
       workspaceId: signUpResult.workspace.id,
@@ -229,7 +246,7 @@ export async function signUpAction(
 
   return {
     ok: true,
-    notice: `Check ${email}. The sign-in link is valid for 15 minutes.`,
+    notice: `Check ${email}. Your ${env.stripeTrialPeriodDays()}-day trial just started — no card needed yet. The sign-in link is valid for 15 minutes.`,
   };
 }
 

@@ -22,7 +22,7 @@ import assert from "node:assert/strict";
 
 import { TestBillingProvider } from "@/lib/billing";
 import { createTrialCheckoutForSignup } from "@/lib/billing/checkout";
-import { TRIAL_PERIOD_DAYS } from "@/lib/pricing/tiers";
+import { env } from "@/lib/env";
 import type { SystemContextRunner } from "@/lib/billing/provisioning";
 
 interface RecordedWorkspaceUpdate {
@@ -114,7 +114,10 @@ describe("createTrialCheckoutForSignup — wave-2 CC-at-trial happy path", () =>
     assert.equal(session.tier, "regular");
     assert.equal(session.seats, 1);
     assert.equal(session.seatBand, "SEATS_1");
-    assert.equal(session.trialPeriodDays, TRIAL_PERIOD_DAYS);
+    // Trial length is env-configurable (STRIPE_TRIAL_PERIOD_DAYS, default
+    // 14 per the block-F trial-first mandate). Assert against the resolved
+    // value so the test tracks the env, not a frozen constant.
+    assert.equal(session.trialPeriodDays, env.stripeTrialPeriodDays());
     assert.equal(session.paymentMethodCollection, "always");
     assert.equal(session.clientReferenceId, "ws_signup_1");
     assert.equal(

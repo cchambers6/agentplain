@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/ap";
 import { withWorkspace } from "@/lib/auth";
 import { withRls } from "@/lib/db";
+import { env } from "@/lib/env";
 import { getWorkspaceBudgetSnapshot } from "@/lib/billing/budget";
 import { recommendBudgetCapUsd } from "@/lib/billing/recommendations";
 import { formatMicroCentsAsUsd } from "@/lib/billing/usage/pricing";
@@ -115,6 +116,8 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
     : null;
   const hasPaymentMethod = Boolean(subscription?.defaultPaymentMethodId);
   const currentSeats = subscription?.seats ?? 1;
+  const trialDays = env.stripeTrialPeriodDays();
+  const billingEnabled = env.stripeBillingEnabled();
 
   // Advisory recommended monthly budget (MRR × 0.30, lib/billing/recommendations.ts).
   // Customer-facing copy only — nothing is enforced unless the operator sets an
@@ -132,9 +135,9 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
         Your plan and invoices.
       </h1>
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
-        Per-seat, monthly, month-to-month. First 30 days are on us — no
-        card required to start. Add a card any time before your trial
-        ends and your subscription rolls over without a gap.
+        Per-seat, monthly, month-to-month. First {trialDays} days are on
+        us — no card required to start. Add a card any time before your
+        trial ends and your subscription rolls over without a gap.
       </p>
 
       {flash ? (
@@ -144,7 +147,10 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
       ) : null}
 
       {!subscription ? (
-        <MissingSubscriptionState />
+        <MissingSubscriptionState
+          billingEnabled={billingEnabled}
+          trialDays={trialDays}
+        />
       ) : (
         <>
           {subscription.status === "TRIALING" && daysToTrialEnd !== null ? (
@@ -695,7 +701,28 @@ function TrialBanner(props: {
   );
 }
 
-function MissingSubscriptionState() {
+function MissingSubscriptionState({
+  billingEnabled,
+  trialDays,
+}: {
+  billingEnabled: boolean;
+  trialDays: number;
+}) {
+  // When billing isn't enabled yet (pre-launch default), there's no Stripe
+  // subscription BY DESIGN — the workspace is on a free trial with no card.
+  // Say that plainly instead of the "still provisioning" copy, which only
+  // applies when billing IS on and the post-signup provisioning is lagging.
+  if (!billingEnabled) {
+    return (
+      <div className="mt-8">
+        <ApRootedEmptyState
+          motif="lone-tree"
+          reality={`You're on a free trial — no card needed.`}
+          change={`Your first ${trialDays} days are on us. We'll let you know here, and by email, before anything is ever charged. Nothing to do right now.`}
+        />
+      </div>
+    );
+  }
   return (
     <div className="mt-8">
       <ApRootedEmptyState

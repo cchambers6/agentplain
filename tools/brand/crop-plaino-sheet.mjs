@@ -44,8 +44,10 @@ const cut = (l, t, w, h) => crop(img, l, t, w, h);
 //   guarding illustration bottom y=755, caption y=700.
 //   resting illustration bottom y=755, clean paper gap y=756-785, horizontal rule y=786.
 //   head-icon circle y=475..639, caption starts y=640 (excluded).
-// Row 3 (y≈832-1010): 8-bit pixel-art dog and heritage landscape.
-//   8-bit dog: x=645-800, y=842-1010; caption "9.8-BIT PLAINO" starts y=1043 (excluded).
+// Row 3 (y≈810-1015): 8-bit pixel-art dog and heritage landscape.
+//   8-bit dog: x=645-800, y=823-1010; caption "9.8-BIT PLAINO" starts y=1043 (excluded).
+//   Raised-tail orb topmost pixel = y=823 (pixel-scanned 2026-06-12). Crop top=810
+//   gives 13px of paper buffer above the orb so it can never clip at the header edge.
 //   Heritage: x=896-1378, y=800-1049.
 const POSES = {
   // Row 1 column gutters (luma>235 in y=100-300): x=0-26, 192-242, 502-548, 708-732, 1012-1058, 1356-1400
@@ -66,7 +68,7 @@ const POSES = {
   'resting':        [755, 570, 312, 115], // dog y=581..674; tightly cropped to illustration only
   'head-icon':      [1090, 462, 240, 185], // circle x=1104..1316, y=475..643; excludes caption at y=640+ (circle outline ends y=639)
 };
-const EIGHT_BIT = [617, 830, 210, 185]; // pixel-art dog x=645-800, y=842-1010; caption y=1043 excluded
+const EIGHT_BIT = [617, 810, 210, 205]; // pixel-art dog x=645-800, y=823-1010; orb top=y823, 13px buffer above
 const HERITAGE = [890, 796, 495, 258];  // landscape x=896-1378, y=800-1049; clean
 
 // 1) Eight poses + head-icon → poses/<slug>.png

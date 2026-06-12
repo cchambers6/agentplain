@@ -12,8 +12,11 @@ import {
   pageHuman,
   resolveRecipients,
   NO_FALLBACK_HUMAN_NOTICE,
+  HARDCODED_FALLBACK_NOTICE,
+  FALLBACK_ACTIVITY_NOTICE,
   PAGE_HUMAN_AUDIT_ACTION,
 } from "./page-human";
+import { HARDCODED_ADMIN_FALLBACK_EMAIL } from "./admin-fallback";
 import { TestEmailProvider } from "../email";
 
 /** An in-memory `withSystemContext` stub that records the AuditLog rows the
@@ -45,7 +48,11 @@ const throwingContext = async () => {
   throw new Error("DB unreachable");
 };
 
-const ENV_KEYS = ["FLEET_TRUSTED_HUMAN_EMAIL", "OPERATOR_EMAIL_ALLOWLIST"];
+const ENV_KEYS = [
+  "FLEET_TRUSTED_HUMAN_EMAIL",
+  "OPERATOR_EMAIL_ALLOWLIST",
+  "ADMIN_FALLBACK_EMAIL",
+];
 
 describe("resolveRecipients", () => {
   it("uses FLEET_TRUSTED_HUMAN_EMAIL when set (no fallback)", () => {
@@ -63,12 +70,26 @@ describe("resolveRecipients", () => {
     } as unknown as NodeJS.ProcessEnv);
     assert.deepEqual(r.recipients, ["conner@example.com"]);
     assert.equal(r.usedFallback, true);
+    assert.equal(r.usedHardcodedFallback, false);
+    assert.equal(r.tier, "operator-fallback");
   });
 
-  it("resolves nothing when both are empty", () => {
+  it("falls back to the baked-in last resort when BOTH are empty (never empty)", () => {
     const r = resolveRecipients({} as NodeJS.ProcessEnv);
-    assert.deepEqual(r.recipients, []);
-    assert.equal(r.usedFallback, false);
+    // FAIL_LOUD mode #1: a page must never resolve to nobody.
+    assert.deepEqual(r.recipients, [HARDCODED_ADMIN_FALLBACK_EMAIL]);
+    assert.equal(r.usedFallback, true);
+    assert.equal(r.usedHardcodedFallback, true);
+    assert.equal(r.tier, "hardcoded-fallback");
+  });
+
+  it("uses ADMIN_FALLBACK_EMAIL over the baked-in default when set", () => {
+    const r = resolveRecipients({
+      ADMIN_FALLBACK_EMAIL: "lastresort@agentplain.com",
+    } as unknown as NodeJS.ProcessEnv);
+    assert.deepEqual(r.recipients, ["lastresort@agentplain.com"]);
+    assert.equal(r.usedHardcodedFallback, true);
+    assert.equal(r.tier, "hardcoded-fallback");
   });
 });
 
@@ -149,8 +170,9 @@ describe("pageHuman", () => {
     assert.equal(ctx.rows[0].payload.usedFallbackRecipient, true);
   });
 
-  it("persists the page even when NO recipient resolves (loud-fail artifact)", async () => {
-    // Both vars empty — the email cannot be addressed at all.
+  it("routes to the baked-in last resort + shouts when NO operator routing is configured", async () => {
+    // Both vars empty — before remediation this paged NOBODY. Now it must
+    // reach the baked-in last-resort inbox AND shout that routing is missing.
     const email = new TestEmailProvider();
     const ctx = recordingContext();
 
@@ -158,20 +180,45 @@ describe("pageHuman", () => {
       {
         severity: "critical",
         summary: "Resend key dead",
-        details: "Resend invalid_api_key — paging by email is impossible.",
+        details: "Resend invalid_api_key.",
         source: "credential-test-cron",
       },
       { email, systemContext: ctx.run as any },
     );
 
-    assert.equal(result.delivered, false);
-    assert.deepEqual(result.recipients, []);
-    // The page is STILL recorded — the only artifact when email is dead.
+    // FAIL_LOUD mode #1: the page reached a real inbox, not the void.
+    assert.equal(result.delivered, true);
+    assert.deepEqual(result.recipients, [HARDCODED_ADMIN_FALLBACK_EMAIL]);
+    assert.equal(result.usedHardcodedFallback, true);
+    assert.equal(result.recipientTier, "hardcoded-fallback");
+    assert.equal(email.sent.length, 1);
+    assert.equal(email.sent[0].to, HARDCODED_ADMIN_FALLBACK_EMAIL);
+    // The loudest fallback notice (not the gentler operator nudge) is in the body.
+    assert.ok(email.sent[0].text.includes(HARDCODED_FALLBACK_NOTICE));
+    assert.equal(email.sent[0].text.includes(NO_FALLBACK_HUMAN_NOTICE), false);
+    // The page is recorded with the honest fleet-activity status line.
     assert.equal(result.persisted, true);
     assert.equal(ctx.rows.length, 1);
     assert.equal(ctx.rows[0].action, PAGE_HUMAN_AUDIT_ACTION);
-    assert.equal(ctx.rows[0].payload.emailDelivered, false);
-    assert.equal(email.sent.length, 0);
+    assert.equal(ctx.rows[0].payload.emailDelivered, true);
+    assert.equal(ctx.rows[0].payload.usedHardcodedFallback, true);
+    assert.equal(ctx.rows[0].payload.recipientTier, "hardcoded-fallback");
+    assert.equal(ctx.rows[0].payload.activityNotice, FALLBACK_ACTIVITY_NOTICE);
+  });
+
+  it("ADMIN_FALLBACK_EMAIL overrides the baked-in default for the last resort", async () => {
+    process.env.ADMIN_FALLBACK_EMAIL = "lastresort@agentplain.com";
+    const email = new TestEmailProvider();
+    const ctx = recordingContext();
+
+    const result = await pageHuman(
+      { severity: "critical", summary: "key dead", details: "d", source: "s" },
+      { email, systemContext: ctx.run as any },
+    );
+
+    assert.equal(result.delivered, true);
+    assert.deepEqual(result.recipients, ["lastresort@agentplain.com"]);
+    assert.equal(result.usedHardcodedFallback, true);
   });
 
   it("never throws when the email send fails — records the page + the error", async () => {

@@ -20,6 +20,8 @@ import {
   autoExecEnabledFlagName,
   autoExecCeilingFlagName,
   isBoundedAutoExecuteMasterOn,
+  boundedAutoExecuteMasterState,
+  shouldSurfaceUnconfiguredMaster,
   AUTO_EXEC_ALLOWLIST,
   DEFAULT_AUTO_EXEC_CEILING_USD,
   BOUNDED_AUTO_EXECUTE_MASTER_ENV,
@@ -32,7 +34,9 @@ function env(vars: Record<string, string>): NodeJS.ProcessEnv {
   return vars as unknown as NodeJS.ProcessEnv;
 }
 const MASTER_ON = env({ [BOUNDED_AUTO_EXECUTE_MASTER_ENV]: 'on' });
-const MASTER_OFF = env({});
+const MASTER_OFF = env({ [BOUNDED_AUTO_EXECUTE_MASTER_ENV]: 'off' });
+/** Neither 'on' nor 'off' — the ambiguous config the simulation flagged. */
+const MASTER_UNSET = env({});
 
 const ALL_GATES_PASS: ComposedGateOutcomes = {
   fireGatePassed: true,
@@ -52,6 +56,7 @@ function enabledStore(ceiling?: string): InMemoryOpsFlagStore {
 
 describe('master switch', () => {
   it('defaults OFF (unset env)', () => {
+    assert.equal(isBoundedAutoExecuteMasterOn(MASTER_UNSET), false);
     assert.equal(isBoundedAutoExecuteMasterOn(MASTER_OFF), false);
   });
   it('OFF on any value but the literal "on"', () => {
@@ -65,6 +70,18 @@ describe('master switch', () => {
   });
   it('ON only for exactly "on"', () => {
     assert.equal(isBoundedAutoExecuteMasterOn(MASTER_ON), true);
+  });
+
+  // mode #3 — the unset/off ambiguity is the fix.
+  it('tri-state distinguishes on / off / unset', () => {
+    assert.equal(boundedAutoExecuteMasterState(MASTER_ON), 'on');
+    assert.equal(boundedAutoExecuteMasterState(MASTER_OFF), 'off');
+    assert.equal(boundedAutoExecuteMasterState(MASTER_UNSET), 'unset');
+    // Garbage / typos are 'unset', NOT 'off' — we never guess intent.
+    assert.equal(
+      boundedAutoExecuteMasterState(env({ [BOUNDED_AUTO_EXECUTE_MASTER_ENV]: 'yes' })),
+      'unset',
+    );
   });
 });
 
@@ -107,7 +124,7 @@ describe('reversibility allowlist', () => {
 });
 
 describe('decideBoundedExecute — fail-closed branches (no auto-execute)', () => {
-  it('master OFF → PENDING even when fully enabled', async () => {
+  it('master explicit OFF → PENDING (master-off, quiet) even when fully enabled', async () => {
     const d = await decideBoundedExecute({
       kind: KIND,
       store: enabledStore('100'),
@@ -116,6 +133,61 @@ describe('decideBoundedExecute — fail-closed branches (no auto-execute)', () =
     });
     assert.equal(d.autoExecute, false);
     assert.equal(d.reason, 'master-off');
+    // A deliberate off is NOT surfaced as a config problem.
+    assert.equal(shouldSurfaceUnconfiguredMaster(d), false);
+  });
+
+  it('master UNSET + eligible kind → master-unset (LOUD, surfaced to admin)', async () => {
+    const d = await decideBoundedExecute({
+      kind: KIND,
+      store: enabledStore('100'),
+      gates: ALL_GATES_PASS,
+      env: MASTER_UNSET,
+    });
+    assert.equal(d.autoExecute, false);
+    // mode #3: an unset master that an eligible action hit is surfaced, not
+    // silently swallowed as "off by default."
+    assert.equal(d.reason, 'master-unset');
+    assert.equal(shouldSurfaceUnconfiguredMaster(d), true);
+    assert.match(d.detail, /UNSET/);
+  });
+
+  it('master UNSET + NON-eligible kind → plain master-off (no false alarm)', async () => {
+    const d = await decideBoundedExecute({
+      kind: 'COMPLIANCE_FLAG',
+      store: new InMemoryOpsFlagStore({}),
+      gates: ALL_GATES_PASS,
+      env: MASTER_UNSET,
+    });
+    assert.equal(d.autoExecute, false);
+    assert.equal(d.reason, 'master-off');
+    assert.equal(shouldSurfaceUnconfiguredMaster(d), false);
+  });
+
+  it('billing-sync frozen → billing-dependent kind fails closed (mode #5)', async () => {
+    const d = await decideBoundedExecute({
+      kind: KIND, // ADMIN_BILLING_NOTICE is billingDependent
+      store: enabledStore('100'),
+      gates: { ...ALL_GATES_PASS, billingSyncFresh: false },
+      env: MASTER_ON,
+    });
+    assert.equal(d.autoExecute, false);
+    assert.equal(d.reason, 'gate-not-passed');
+    assert.match(d.detail, /sync is stale\/frozen/);
+  });
+
+  it('billing-sync frozen does NOT block a non-billing-dependent kind', async () => {
+    const store = new InMemoryOpsFlagStore({
+      [autoExecEnabledFlagName('CHIEF_OF_STAFF_TODO')]: 'true',
+      [autoExecCeilingFlagName('CHIEF_OF_STAFF_TODO')]: '100',
+    });
+    const d = await decideBoundedExecute({
+      kind: 'CHIEF_OF_STAFF_TODO',
+      store,
+      gates: { ...ALL_GATES_PASS, billingSyncFresh: false },
+      env: MASTER_ON,
+    });
+    assert.equal(d.autoExecute, true);
   });
 
   it('non-allowlisted kind → never eligible, even master ON + enabled', async () => {

@@ -509,6 +509,52 @@ enum SupportRequestStatus {
   ARCHIVED
 }
 
+// ── Customer-facing support TICKET lifecycle ─────────────────────────────
+// (feat/customer-support-channel-and-ticket-lifecycle, 2026-06-12). This is
+// the "Real ticketing (Intercom/Zendesk-grade) is a later phase" promised in
+// the SupportRequestStatus comment above. Where SupportRequest is a single
+// drafted-reply unit funneled through the operator approval queue,
+// SupportTicket is a first-class, customer-visible ticket with a stable
+// number, a threaded conversation (SupportTicketMessage), an explicit SLA,
+// staff assignment, and a full open→closed lifecycle. The two coexist: the
+// Plaino in-app chat still drafts SupportRequest replies for quick answers;
+// a customer who needs a tracked, human-owned ticket opens one of these.
+//
+// The task spec typed status/category/priority/author as bare strings; we
+// use enums instead to match the codebase convention (every other status
+// column is an enum) and get DB + client type-safety for free. The string
+// unions in lib/support/tickets/types.ts mirror these 1:1.
+enum SupportTicketStatus {
+  OPEN                 // submitted, awaiting first staff response
+  IN_PROGRESS          // a staff member is actively working it
+  WAITING_ON_CUSTOMER  // staff replied; ball is in the customer's court
+  RESOLVED             // answered + closed out (resolvedAt stamps when)
+  CLOSED               // filed away without further action (dup / no-repro)
+}
+
+enum SupportTicketPriority {
+  P0 // customer-impacting / urgent — 1h first-response target
+  P1 // high — 4h
+  P2 // normal (default) — 24h
+  P3 // low — 48h
+}
+
+enum SupportTicketCategory {
+  BILLING
+  WORKFLOW
+  INTEGRATION
+  BUG
+  OTHER
+}
+
+// Who authored a thread message. SYSTEM = the fleet itself (auto-classified,
+// SLA acknowledgement, status-change notes) — never claims to be a human.
+enum SupportTicketAuthor {
+  CUSTOMER
+  STAFF
+  SYSTEM
+}
+
 // Which front-door surface a Plaino conversation belongs to
 // (feat/plaino-chatbot-marketing-support, 2026-06-06). Both modes share
 // the /api/chat backbone + the PlainoConversation log; the mode selects
@@ -616,6 +662,7 @@ model User {
   triagedInquiries          Inquiry[]                    @relation("InquiryTriagedBy")
   passkeys                  WebAuthnCredential[]
   supportRequests           SupportRequest[]             @relation("SupportRequestFrom")
+  supportTickets            SupportTicket[]              @relation("SupportTicketOpenedBy")
   /// Wave-6: memberships this user has issued (audit lineage). SetNull so
   /// the inviter going away does not orphan the invited row.
   invitedMemberships        Membership[]                 @relation("MembershipInvitedBy")
@@ -702,6 +749,8 @@ model Workspace {
   knowledgeDocuments       KnowledgeDocument[]
   embeddings               Embedding[]
   supportRequests          SupportRequest[]
+  supportTickets           SupportTicket[]
+  supportTicketMessages    SupportTicketMessage[]
   preference               WorkspacePreference?
   preferenceSignals        PreferenceSignal[]
   preferenceFeedback       PreferenceFeedback[]
@@ -1845,6 +1894,86 @@ model SupportRequest {
 
   @@index([workspaceId, createdAt])
   @@index([status, createdAt])
+}
+
+// A customer-facing support ticket. Created from /workspace/[id]/support/new
+// (or the "talk to a human" path in the Plaino support chat). Carries a
+// stable, human-readable `number` shown to the customer (#1042), a threaded
+// conversation, an explicit first-response SLA, and a full lifecycle worked
+// by staff from /operator/tickets. See lib/support/tickets/.
+//
+// RLS: workspace-isolation OR operator (same shape as PlainoConversation). A
+// member reads/writes only their workspace's tickets; staff (operator
+// context) see all. The internal/customer-visible split on messages is an
+// application-level filter on top of RLS — the customer loader always
+// excludes `internal = true` rows.
+model SupportTicket {
+  id                 String                @id @default(uuid()) @db.Uuid
+  // Stable, monotonically-increasing public ticket number. Shown to the
+  // customer ("#1042") and used in email subjects. A DB sequence (SERIAL)
+  // so it is gap-tolerant but never reused — Prisma represents it as
+  // @default(autoincrement()), so it adds no drift-baseline entry.
+  number             Int                   @unique @default(autoincrement())
+  workspaceId        String                @db.Uuid
+  /// The member who opened the ticket. SetNull on user delete so the ticket
+  /// (and its thread) survives for staff even if the account is removed.
+  userId             String?               @db.Uuid
+  subject            String
+  category           SupportTicketCategory
+  description        String
+  status             SupportTicketStatus   @default(OPEN)
+  priority           SupportTicketPriority @default(P2)
+  /// Auto-attached workspace context captured at creation time (vertical,
+  /// plan, connected integrations, recent queue items, Plaino state). A
+  /// point-in-time snapshot — never re-derived, so staff see what the
+  /// customer's world looked like when they hit the snag.
+  context            Json                  @default("{}")
+  /// Staff email currently handling the ticket. Resolved at creation from
+  /// FLEET_TRUSTED_HUMAN_EMAIL (or the #239 last-resort fallback) and
+  /// re-pointable from the staff inbox.
+  assignedTo         String?
+  /// First-response SLA target = createdAt + the priority's response window.
+  /// Surfaced to the customer ("Expected first response: within 24 hours").
+  firstResponseDueAt DateTime?
+  /// Stamped the first time a STAFF (non-internal) message posts — the SLA
+  /// clock stops here. NULL until a human first responds.
+  firstRespondedAt   DateTime?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  resolvedAt         DateTime?
+  workspace          Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  openedBy           User?                 @relation("SupportTicketOpenedBy", fields: [userId], references: [id], onDelete: SetNull)
+  messages           SupportTicketMessage[]
+
+  @@index([workspaceId, createdAt])
+  @@index([status, priority, createdAt])
+  @@index([assignedTo, status])
+}
+
+// One message in a ticket thread. Author CUSTOMER / STAFF / SYSTEM. An
+// internal note (internal = true) is staff-only and never shown to the
+// customer — the customer-facing loader filters it out (RLS isolates by
+// workspace; this flag isolates by audience within the workspace).
+//
+// workspaceId is denormalized from the parent ticket so the RLS policy is a
+// simple column compare (no parent subquery on every read), matching how
+// the rest of the schema keeps workspaceId on every workspace-scoped row.
+model SupportTicketMessage {
+  id           String              @id @default(uuid()) @db.Uuid
+  ticketId     String              @db.Uuid
+  workspaceId  String              @db.Uuid
+  author       SupportTicketAuthor
+  /// User id of the author when known (the customer member or the staff
+  /// operator). NULL for SYSTEM messages and for authors since deleted.
+  authorUserId String?             @db.Uuid
+  body         String
+  internal     Boolean             @default(false)
+  createdAt    DateTime            @default(now())
+  ticket       SupportTicket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  workspace    Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+  @@index([workspaceId])
 }
 
 // Operator-only flag store. Source of truth for ops-managed kill-switches

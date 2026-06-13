@@ -8,6 +8,7 @@ import {
   decideApproval,
   editApprovalDraft,
   submitDraftFeedback,
+  ApprovalDecisionError,
   type ApprovalDecision,
 } from "@/lib/approvals/decisions";
 import { withRls } from "@/lib/db";
@@ -18,6 +19,49 @@ const formStr = (form: FormData, key: string): string => {
   const v = form.get(key);
   return typeof v === "string" ? v : "";
 };
+
+const formStrList = (form: FormData, key: string): string[] =>
+  form.getAll(key).filter((v): v is string => typeof v === "string" && v.length > 0);
+
+/**
+ * Batch-approve a set of routine, low-stakes items in one tap ("approve all 12
+ * chase emails"). Eligibility is gated client-side (lib/approvals/presentation
+ * `isBatchEligible`) AND each item is still funneled through the SAME shared
+ * `decideApproval` core — so the audit row, RLS check, and already-decided
+ * guard are identical to a one-off approve. Items that were decided out from
+ * under us (a race, a second tab) are skipped, not failed: a batch should
+ * clear what it can and move on.
+ */
+export async function batchApproveAction(form: FormData): Promise<void> {
+  const workspaceId = formStr(form, "workspaceId");
+  const itemIds = formStrList(form, "itemId");
+
+  if (!workspaceId) throw new Error("Missing workspaceId");
+  if (itemIds.length === 0) {
+    redirect(`/app/workspace/${workspaceId}/approvals`);
+  }
+
+  const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
+  const ctx = { userId: member.userId, workspaceId, isOperator: false };
+
+  for (const itemId of itemIds) {
+    try {
+      await decideApproval(ctx, {
+        workspaceId,
+        itemId,
+        decision: "APPROVED",
+        reason: null,
+      });
+    } catch (err) {
+      // Skip items already decided elsewhere; surface anything unexpected.
+      if (err instanceof ApprovalDecisionError) continue;
+      throw err;
+    }
+  }
+
+  revalidatePath(`/app/workspace/${workspaceId}/approvals`);
+  redirect(`/app/workspace/${workspaceId}/approvals`);
+}
 
 export async function decideApprovalAction(form: FormData): Promise<void> {
   const workspaceId = formStr(form, "workspaceId");

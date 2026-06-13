@@ -33,8 +33,37 @@ export interface RenderedApproval {
   persisted?: boolean;
   /** Raw plain-text draft body. Stable contract for the edit sheet to seed from. */
   editableBody?: string;
+  /** Numeric confidence (0–1) when the drafter reported a score. Drives the
+   *  confidence chip + batch-approve eligibility (lib/approvals/presentation). */
+  confidence?: number;
+  /** Tier string for drafters that report a tier rather than a score — the
+   *  support handler writes "high" / "medium" / "placeholder". Normalized to
+   *  the three-tier vocabulary the chip understands. */
+  confidenceTier?: "high" | "medium" | "low";
+  /** Plaino's own short rationale — "why I drafted this" — surfaced as a
+   *  distinct block in the detail view so the decision isn't a black box. */
+  reasoning?: string;
+  /** Structured source references Plaino read to produce this draft, with
+   *  optional deep links ("Buildium lease #123"). Rendered in the detail view. */
+  sources?: ApprovalSource[];
   /** Office-admin extension — see renderAdmin* helpers below. */
   admin?: AdminRenderExtension;
+}
+
+/** One thing Plaino read to produce the draft. `href` is optional — many
+ *  sources are internal references with no addressable link. */
+export interface ApprovalSource {
+  label: string;
+  href?: string;
+}
+
+/** Normalize the support handler's tier string into the chip vocabulary. */
+export function normalizeConfidenceTier(
+  raw: string | undefined,
+): RenderedApproval["confidenceTier"] {
+  if (raw === "high" || raw === "medium" || raw === "low") return raw;
+  if (raw === "placeholder") return "low";
+  return undefined;
 }
 
 /** Office-admin render fields. Distinct from the legacy draft fields so
@@ -214,6 +243,7 @@ function renderAdmin(
     body: body.length > 0 ? body : ["No body details were attached."],
     metaLine: composeAdminMeta({ confidence, expiresAt, amount, priority }),
     editableBody: draftBody && draftBody.trim().length > 0 ? draftBody : undefined,
+    confidence,
     admin: {
       category,
       priority,
@@ -349,6 +379,7 @@ function renderReplyDraft(p: Record<string, unknown>): RenderedApproval {
     tone,
     persisted,
     editableBody: draft || undefined,
+    confidence: confidence ?? undefined,
   };
 }
 
@@ -370,6 +401,8 @@ function renderListingRecommendation(
       confidence: pickNumber(p, ["confidence", "score"]),
       threshold: pickString(p, ["threshold", "tier"]),
     }),
+    confidence: pickNumber(p, ["confidence", "score"]),
+    reasoning: rationale,
   };
 }
 
@@ -396,6 +429,8 @@ function renderPricingRecommendation(
       confidence: pickNumber(p, ["confidence", "score"]),
       threshold: pickString(p, ["threshold", "tier"]),
     }),
+    confidence: pickNumber(p, ["confidence", "score"]),
+    reasoning: rationale,
   };
 }
 
@@ -407,10 +442,8 @@ function renderComplianceFlag(p: Record<string, unknown>): RenderedApproval {
   return {
     kindLabel: KIND_LABEL.COMPLIANCE_FLAG,
     title: rule,
-    body: [
-      summary ?? "Compliance flagged an item that needs your eyes.",
-      ...(source ? [`Source: ${source}`] : []),
-    ],
+    body: [summary ?? "Compliance flagged an item that needs your eyes."],
+    sources: source ? [{ label: source }] : undefined,
   };
 }
 
@@ -438,6 +471,8 @@ function renderChiefOfStaffMeeting(p: Record<string, unknown>): RenderedApproval
     inboundSummary: reasoning,
     proposedSlots: slots.length > 0 ? slots : undefined,
     editableBody: inviteBody || undefined,
+    confidence: confidence ?? undefined,
+    reasoning,
   };
 }
 
@@ -473,6 +508,8 @@ function renderChiefOfStaffReplyDraft(
     tone,
     persisted: false,
     editableBody: body || undefined,
+    confidence: confidence ?? undefined,
+    reasoning,
   };
 }
 
@@ -497,6 +534,8 @@ function renderChiefOfStaffTodo(p: Record<string, unknown>): RenderedApproval {
     body: lines,
     metaLine: composeMeta({ confidence, tone: undefined }),
     inboundSummary: reasoning,
+    confidence: confidence ?? undefined,
+    reasoning,
   };
 }
 
@@ -542,6 +581,8 @@ function renderInboxTriage(p: Record<string, unknown>): RenderedApproval {
     inboundSummary: reasoning,
     tone,
     editableBody: draftBody,
+    confidence: confidence ?? undefined,
+    reasoning,
   };
 }
 
@@ -580,6 +621,8 @@ function renderFollowUpNudge(p: Record<string, unknown>): RenderedApproval {
     inboundSummary: reasoning,
     persisted: false,
     editableBody: body || undefined,
+    confidence: confidence ?? undefined,
+    reasoning,
   };
 }
 
@@ -610,6 +653,8 @@ function renderProcessDocDraft(p: Record<string, unknown>): RenderedApproval {
     metaLine,
     inboundSummary: reasoning,
     editableBody: body || undefined,
+    confidence: confidence ?? undefined,
+    reasoning,
   };
 }
 
@@ -636,31 +681,32 @@ function renderSupportHandlerReplyDraft(
   const suggestedAction = pickString(p, ["suggestedAction"]);
   const reasoning = pickString(p, ["reasoning"]);
   const citations = pickCitations(p);
-  const citationLines =
-    citations.length > 0
-      ? citations.map(
-          (c) =>
-            `· ${c.title}${c.similarity !== null ? ` (similarity ${c.similarity.toFixed(2)})` : ""}`,
-        )
-      : [];
+  // Citations become structured sources (rendered as their own block in the
+  // detail view) rather than appended to the draft body — the customer sees
+  // "what Plaino read" separately from "what Plaino wrote".
+  const sources: ApprovalSource[] = citations.map((c) => ({
+    label:
+      c.similarity !== null
+        ? `${c.title} (similarity ${c.similarity.toFixed(2)})`
+        : c.title,
+  }));
   const metaParts: string[] = [];
   if (confidenceTier) metaParts.push(`confidence: ${confidenceTier}`);
   if (suggestedAction) metaParts.push(`suggested: ${suggestedAction}`);
   const metaLine = metaParts.length > 0 ? metaParts.join(" · ") : undefined;
   const bodyLines = body ? splitParagraphs(body) : ["No draft body was attached."];
-  const fullBody =
-    citationLines.length > 0
-      ? [...bodyLines, "", "Cited snippets:", ...citationLines]
-      : bodyLines;
 
   return {
     kindLabel: KIND_LABEL.SUPPORT_HANDLER_REPLY_DRAFT,
     recipientLine: subject ? `Re: ${subject}` : undefined,
-    body: fullBody,
+    body: bodyLines,
     metaLine,
     inboundSummary: reasoning,
     persisted: false,
     editableBody: body || undefined,
+    confidenceTier: normalizeConfidenceTier(confidenceTier),
+    reasoning,
+    sources: sources.length > 0 ? sources : undefined,
   };
 }
 
@@ -785,6 +831,8 @@ function renderLeadTriage(
     body: lines.length > 0 ? lines : ["No further detail attached."],
     metaLine: metaParts.length > 0 ? metaParts.join(" · ") : undefined,
     editableBody: draftBody ?? undefined,
+    confidence: draftConfidence ?? undefined,
+    reasoning: routingRationale ?? undefined,
   };
 }
 

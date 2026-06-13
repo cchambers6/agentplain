@@ -1730,6 +1730,14 @@ model WorkspacePreference {
   /// cron skips and the briefings page renders a "muted — turn back
   /// on" empty state. Per-workspace switch, not per-discipline.
   briefingsMutedAt    DateTime?
+  /// Weekly customer report email opt-in. TRUE (default) = the Friday
+  /// 8am ET "here's what Plaino did for you this week" email sends to
+  /// the broker-owner. The one-click unsubscribe link in the email
+  /// footer and the toggle on /reports/weekly both flip this to FALSE.
+  /// The weekly-customer-report cron reads this per workspace and skips
+  /// any workspace that opted out. Per-workspace switch (the report is a
+  /// workspace-level ROI summary, not a per-user setting).
+  weeklyReportEnabled Boolean   @default(true)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)

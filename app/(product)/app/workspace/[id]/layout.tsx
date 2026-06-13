@@ -23,6 +23,7 @@ const NAV: Array<{ href: string; label: string }> = [
   { href: "/agents", label: "Agents" },
   { href: "/compliance", label: "Compliance" },
   { href: "/briefings", label: "Briefings" },
+  { href: "/reports/weekly", label: "Weekly report" },
   { href: "/integrations", label: "Integrations" },
   { href: "/settings", label: "Settings" },
   { href: "/support", label: "Support" },

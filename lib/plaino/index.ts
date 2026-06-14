@@ -8,6 +8,11 @@
  */
 
 export { runPlainoTurn } from './dispatcher';
+export {
+  triagePlainoTurnFailure,
+  type TurnFailureTriage,
+  type TurnFailureCategory,
+} from './turn-failure';
 export { buildSystemPrompt, PLAINO_SYSTEM_PROMPT_VERSION } from './system-prompt';
 export {
   checkDegradedMode,

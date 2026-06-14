@@ -18,24 +18,45 @@
  *     DB write, no encryption seam touched, no customer content
  *     persisted in plaintext.
  *
- * This module is intentionally tiny — no Prisma import, no LLM import.
- * Pure env-check + canned copy. Callable from the Server Action and the
- * page renderer.
+ * This module is intentionally tiny — no Prisma import. Its only LLM
+ * dependency is the PURE `isPausedApiKey` prefix-check from the provider
+ * seam (`lib/llm/paused.ts`), which pulls in no SDK — so the sentinel
+ * SHAPE (`sk-ant-PAUSED-…`) stays defined in exactly one place
+ * (feedback_no_silent_vendor_lock) rather than being re-hardcoded here.
+ * Otherwise: pure env-check + canned copy. Callable from the Server
+ * Action and the page renderer.
  *
  * Per reference_product_claims_vs_reality_2026_05_22: the UI never
  * pretends the chat is working when it isn't.
+ *
+ * The PAUSED-sentinel branch is the fix for the 2026-06-13 outage: prod's
+ * `ANTHROPIC_API_KEY` was the `sk-ant-PAUSED-…` sentinel (set on the
+ * 2026-06-02 pause, never restored). It is a NON-EMPTY string, so the
+ * old "is the key set?" check passed, the dispatcher ran, every LLM call
+ * came back PAUSED, and the customer saw the generic "had trouble drafting
+ * a reply" with NO operator alert. Detecting the sentinel HERE means the
+ * customer gets the calm honest "briefly offline" notice, no DB write is
+ * burned, and the page renderer surfaces the operator restore steps. This
+ * matches the stack's real behavior: `SentinelLlmProvider` sits OUTSIDE
+ * `KeyRotationLlmProvider` in the compose order, so a sentinel primary
+ * short-circuits to PAUSED before any failover — declaring degraded here
+ * is faithful, not a guess. (See `lib/llm/paused.ts` + `lib/llm/index.ts`.)
  *
  * Per project_no_outbound_architecture: this notice is in-chat only,
  * not an outbound message. Nothing leaves the workspace.
  */
 
 import { isEncryptionConfigured } from '../security/encryption';
+import { isPausedApiKey } from '../llm/paused';
 
 export type DegradedMode =
   | { degraded: false }
   | {
       degraded: true;
-      reason: 'ENCRYPTION_KEY_MISSING' | 'ANTHROPIC_API_KEY_MISSING';
+      reason:
+        | 'ENCRYPTION_KEY_MISSING'
+        | 'ANTHROPIC_API_KEY_MISSING'
+        | 'ANTHROPIC_API_KEY_PAUSED';
       /** Customer-facing one-liner — what they see in the thread. */
       customerNotice: string;
       /** Operator-facing follow-on — what `settings` should display. */
@@ -81,7 +102,40 @@ export function checkDegradedMode(env: NodeJS.ProcessEnv = process.env): Degrade
         'ANTHROPIC_API_KEY production` and redeploy.',
     };
   }
+  // The deliberate "paused spend" sentinel (`sk-ant-PAUSED-…`) is a
+  // non-empty string, so it slips past the check above — then EVERY model
+  // call short-circuits to PAUSED at the SentinelLlmProvider layer. Catch
+  // it here so the customer gets the calm "briefly offline" notice instead
+  // of a confusing post-send "had trouble drafting a reply", and no DB
+  // write is burned persisting a doomed turn. Respect the dev kill-switch
+  // `LLM_SENTINEL_BYPASS` (a dev pointing a real key through the full
+  // stack) — when bypass is on, the stack does NOT short-circuit, so we
+  // must not declare degraded here either.
+  if (isPausedApiKey(anthropic) && !isSentinelBypassed(env)) {
+    return {
+      degraded: true,
+      reason: 'ANTHROPIC_API_KEY_PAUSED',
+      customerNotice:
+        "Plaino's resting right now — model spend is paused on this " +
+        "deployment, so I can't draft a reply yet. I've flagged it for the " +
+        "team; once it's switched back on, I'll be right here.",
+      operatorNotice:
+        'ANTHROPIC_API_KEY is the paused sentinel (`sk-ant-PAUSED-…`) — spend ' +
+        'was paused and never restored. Every Plaino turn short-circuits to ' +
+        'PAUSED, so customers get no replies. Restore a live key via ' +
+        '`vercel env add ANTHROPIC_API_KEY production` (or rotate back the ' +
+        'real key) and redeploy.',
+    };
+  }
   return { degraded: false };
+}
+
+/** Mirror of `lib/llm/index.ts`'s `sentinelEnabled()` bypass read, inlined
+ *  to keep this module free of the provider graph (and its SDK import).
+ *  `LLM_SENTINEL_BYPASS` set to an on-ish value disables the short-circuit. */
+function isSentinelBypassed(env: NodeJS.ProcessEnv): boolean {
+  const v = env.LLM_SENTINEL_BYPASS;
+  return v === 'on' || v === '1' || v === 'true';
 }
 
 /** Stable metadata kind for a degraded-mode notice. The chat page

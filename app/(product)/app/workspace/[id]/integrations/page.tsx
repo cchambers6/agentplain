@@ -81,13 +81,33 @@ export default async function WorkspaceIntegrationsPage({
       .filter((c) => c.status === "ACTIVE")
       .map((c) => [c.provider, c]),
   );
+  const expiredByProvider = new Map(
+    credentials
+      .filter((c) => c.status === "EXPIRED" || c.status === "REVOKED")
+      .map((c) => [c.provider, c]),
+  );
+  const errorByProvider = new Map(
+    credentials
+      .filter((c) => c.status === "ERROR")
+      .map((c) => [c.provider, c]),
+  );
 
   const tiles = entries.map((entry) => {
-    const status = tileStatusFor(entry, connectedByProvider);
-    const cred =
+    const status = tileStatusFor(
+      entry,
+      connectedByProvider,
+      expiredByProvider,
+      errorByProvider,
+    );
+    const activeCred =
       entry.providerKey !== null
         ? connectedByProvider.get(entry.providerKey)
         : undefined;
+    const expiredCred =
+      entry.providerKey !== null
+        ? expiredByProvider.get(entry.providerKey)
+        : undefined;
+    const cred = activeCred ?? expiredCred;
     return {
       entry,
       status,
@@ -97,11 +117,9 @@ export default async function WorkspaceIntegrationsPage({
   });
 
   const connectedCount = tiles.filter((t) => t.status === "connected").length;
-  // "available" means the tile is in the marketplace and not coming-soon.
-  // We split it by whether the OAuth credentials are actually wired up in
-  // this environment so the header doesn't overstate self-serve capability:
-  // a tile whose env vars are missing dead-ends at `oauth_not_configured`,
-  // so it's accurate to label it "awaiting connection" rather than "available."
+  const needsAttentionCount = tiles.filter(
+    (t) => t.status === "expired" || t.status === "error",
+  ).length;
   const availableNow = tiles.filter(
     (t) => t.status === "available" && t.configured,
   ).length;
@@ -131,8 +149,14 @@ export default async function WorkspaceIntegrationsPage({
 
       <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
         <span>{connectedCount} connected</span>
+        {needsAttentionCount > 0 ? (
+          <>
+            <span aria-hidden>·</span>
+            <span className="text-flag">{needsAttentionCount} needs attention</span>
+          </>
+        ) : null}
         <span aria-hidden>·</span>
-        <span>{availableNow} available now</span>
+        <span>{availableNow} ready to connect</span>
         {awaitingConnection > 0 ? (
           <>
             <span aria-hidden>·</span>
@@ -178,9 +202,13 @@ export default async function WorkspaceIntegrationsPage({
 function tileStatusFor(
   entry: MarketplaceEntry,
   connected: Map<string, unknown>,
+  expired: Map<string, unknown>,
+  errored: Map<string, unknown>,
 ): TileStatus {
   if (entry.status === "coming-soon") return "coming-soon";
   if (entry.providerKey && connected.has(entry.providerKey)) return "connected";
+  if (entry.providerKey && errored.has(entry.providerKey)) return "error";
+  if (entry.providerKey && expired.has(entry.providerKey)) return "expired";
   return "available";
 }
 

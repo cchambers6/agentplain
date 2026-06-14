@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ApEyebrow,
   ApHairlineList,
   ApHairlineRow,
   ApRootedEmptyState,
@@ -110,8 +109,7 @@ export default async function DisciplineDetailPage({ params }: PageProps) {
           ← all disciplines
         </Link>
       </p>
-      <ApEyebrow className="mb-3 mt-3">{discipline.iconKey}</ApEyebrow>
-      <h1 className="font-display text-3xl text-ink">{discipline.name}</h1>
+      <h1 className="font-display text-3xl text-ink mt-3">{discipline.name}</h1>
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
         {discipline.description}
       </p>

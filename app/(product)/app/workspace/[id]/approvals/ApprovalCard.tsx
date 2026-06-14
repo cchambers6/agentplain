@@ -47,6 +47,9 @@ interface ApprovalCardProps {
   /** Drop the outer ApPaperCard chrome + the duplicate eyebrow/title. Used
    *  when the card renders inside the detail sheet. */
   embedded?: boolean;
+  /** When true, the card is the deep-link target (the onboarding first-draft).
+   *  Renders a clay ring so the customer's eye lands on it immediately. */
+  highlighted?: boolean;
 }
 
 /** Map internal agent slugs to readable display labels for the customer surface.
@@ -117,10 +120,15 @@ export function ApprovalCard({
   footer,
   plainoState = "fetch",
   embedded = false,
+  highlighted = false,
 }: ApprovalCardProps) {
   const { rendered } = row;
   const confidence = resolveConfidence(rendered);
-  const adminCardClass = adminBorderClass(rendered.admin?.priority);
+  // The highlight ring wins over the admin-priority border so the deep-link
+  // target reads as "this one" even when it's also a critical admin card.
+  const adminCardClass = highlighted
+    ? "ring-2 ring-clay ring-offset-2 ring-offset-paper border-clay"
+    : adminBorderClass(rendered.admin?.priority);
 
   const eyebrow = (
     <>

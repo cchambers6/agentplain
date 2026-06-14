@@ -38,8 +38,20 @@ import {
 } from "@/lib/preferences";
 import { getVerticalContent } from "@/lib/verticals";
 import type { VerticalContent } from "@/lib/verticals/types";
+import { StuckHelpLink } from "@/components/onboarding/StuckHelpLink";
 import { FirstFireWatch } from "./FirstFireWatch";
 import { advanceOnboardingAction } from "./actions";
+
+// One stuck-help subject per step, so the help form arrives pre-named with
+// exactly where the customer got blocked.
+const STEP_HELP_SUBJECT: Record<StepId, string> = {
+  confirm_details: "Stuck confirming my workspace details",
+  connect_integration: "Stuck connecting a tool",
+  pick_skills: "Stuck picking what Plaino should do",
+  set_preferences: "Stuck setting my drafting preferences",
+  first_fire_watch: "My first draft hasn't shown up yet",
+  done: "Stuck during onboarding",
+};
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -146,27 +158,22 @@ export default async function OnboardingPage({ params }: PageProps) {
       <div className="mx-auto max-w-3xl">
         <ApEyebrow className="mb-3">onboarding · complete</ApEyebrow>
         <h1 className="font-display text-4xl leading-tight text-ink md:text-5xl">
-          Your workspace is rooted.
+          You&rsquo;re set. Your workspace is rooted.
         </h1>
         <p className="mt-4 max-w-prose text-[15px] leading-relaxed text-ink-soft">
-          {partner}&rsquo;s fleet is running on your workspace. The first
-          fire landed in your approvals queue; the morning briefing files
-          on the next 9am block. Revisit any setup choice from{" "}
-          <Link
-            href={`/app/workspace/${workspaceId}/settings`}
-            className="text-ink underline"
-          >
-            Settings
-          </Link>
-          .
+          {partner}&rsquo;s fleet is running on your workspace. Your first
+          drafts land in the approvals queue — read them, edit anything that&rsquo;s
+          off, then approve to send through your own system. Nothing leaves
+          agentplain without your yes.
         </p>
+
         <div className="mt-8 flex flex-wrap gap-3">
           <ApHeritageButton
             variant="primary"
             withArrow
-            href={`/app/workspace/${workspaceId}/welcome`}
+            href={`/app/workspace/${workspaceId}/approvals`}
           >
-            see your first draft
+            review your first draft
           </ApHeritageButton>
           <ApHeritageButton
             variant="secondary"
@@ -176,6 +183,60 @@ export default async function OnboardingPage({ params }: PageProps) {
             open workspace
           </ApHeritageButton>
         </div>
+
+        <div className="mt-10 border border-rule bg-paper-deep p-5">
+          <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+            what to expect this week
+          </p>
+          <ul className="mt-3 space-y-2 text-[14px] leading-relaxed text-ink-soft">
+            <li>
+              <span className="text-ink">Every weekday morning</span> (~9am ET),
+              {" "}{partner} files a briefing on what surfaced overnight.
+            </li>
+            <li>
+              <span className="text-ink">As work comes in</span>, drafts collect
+              in your approvals queue — review them whenever suits you.
+            </li>
+            <li>
+              <span className="text-ink">Every edit teaches the fleet.</span> The
+              more you shape, the closer the next draft lands.
+            </li>
+            <li>
+              <span className="text-ink">Your running tally</span> lives on the{" "}
+              <Link
+                href={`/app/workspace/${workspaceId}`}
+                className="text-ink underline-offset-4 hover:underline"
+              >
+                workspace dashboard
+              </Link>{" "}
+              — what {partner} did, and what&rsquo;s waiting on you.
+            </li>
+          </ul>
+        </div>
+
+        <p className="mt-6 text-[13px] leading-relaxed text-mute">
+          Revisit any setup choice from{" "}
+          <Link
+            href={`/app/workspace/${workspaceId}/settings`}
+            className="text-ink underline-offset-4 hover:underline"
+          >
+            Settings
+          </Link>
+          , or see the whole fleet on the{" "}
+          <Link
+            href={`/app/workspace/${workspaceId}/agents`}
+            className="text-ink underline-offset-4 hover:underline"
+          >
+            agents page
+          </Link>
+          .
+        </p>
+
+        <StuckHelpLink
+          workspaceId={workspaceId}
+          subject="Just finished onboarding — what now?"
+          className="mt-4 text-[13px] leading-relaxed text-mute"
+        />
       </div>
     );
   }
@@ -324,6 +385,12 @@ export default async function OnboardingPage({ params }: PageProps) {
                 back to workspace
               </Link>
             </form>
+
+            <StuckHelpLink
+              workspaceId={workspaceId}
+              subject={STEP_HELP_SUBJECT[currentStep]}
+              className="mt-4 border-t border-rule pt-4 text-[13px] leading-relaxed text-mute"
+            />
           </ApPaperCard>
         </section>
 

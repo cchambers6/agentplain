@@ -8,7 +8,7 @@ import { ApprovalsList, type ApprovalRow } from "./ApprovalsList";
 
 interface PageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ discipline?: string }>;
+  searchParams: Promise<{ discipline?: string; focus?: string }>;
 }
 
 export const dynamic = "force-dynamic";
@@ -17,6 +17,12 @@ export default async function ApprovalsPage({ params, searchParams }: PageProps)
   const { id: workspaceId } = await params;
   const sp = await searchParams;
   const initialDiscipline = asDisciplineId(sp.discipline ?? null);
+  // `?focus=<queueItemId>` is the deep-link the onboarding first-fire watch
+  // (and any "open in approvals" CTA) carries. It marks the item the
+  // customer was sent here to act on — the magic-moment first draft. The
+  // list scrolls to it, highlights it, and shows a one-time coach banner.
+  const initialFocusId =
+    typeof sp.focus === "string" && sp.focus.length > 0 ? sp.focus : null;
 
   const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
   const ctx = { userId: member.userId, workspaceId, isOperator: false };
@@ -53,6 +59,13 @@ export default async function ApprovalsPage({ params, searchParams }: PageProps)
 
       {rows.length === 0 ? (
         <div className="mt-8">
+          {initialFocusId ? (
+            <p className="mb-6 border border-rule bg-paper-deep px-4 py-3 text-[14px] leading-relaxed text-ink">
+              That draft has already cleared your queue — it was approved or
+              sent back, so there&rsquo;s nothing left to decide on it. New
+              work lands here as Plaino surfaces it.
+            </p>
+          ) : null}
           <ApRootedEmptyState
             scene="empty-approvals"
             reality="Nothing waiting on you."
@@ -64,6 +77,7 @@ export default async function ApprovalsPage({ params, searchParams }: PageProps)
           workspaceId={workspaceId}
           rows={rows}
           initialDiscipline={initialDiscipline}
+          initialFocusId={initialFocusId}
         />
       )}
     </div>

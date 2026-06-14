@@ -15,6 +15,7 @@
 import Link from "next/link";
 import { ApEyebrow, ApHeritageButton, PlainoScene } from "@/components/ui/ap";
 import { PLAINO_PARTNER } from "@/lib/onboarding/service-partner";
+import { env } from "@/lib/env";
 
 interface PageProps {
   searchParams: Promise<{ session_id?: string; workspace?: string }>;
@@ -22,6 +23,7 @@ interface PageProps {
 
 export default async function CheckoutSuccessPage({ searchParams }: PageProps) {
   await searchParams; // resolve to avoid the unused-promise lint
+  const trialDays = env.stripeTrialPeriodDays();
   return (
     <div className="container-wide py-16">
       <div className="mx-auto max-w-xl">
@@ -37,7 +39,7 @@ export default async function CheckoutSuccessPage({ searchParams }: PageProps) {
           Your card is secured. Your trial is rooted.
         </h1>
         <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
-          Stripe holds your card; we never see the number. Your 30-day
+          Stripe holds your card; we never see the number. Your {trialDays}-day
           trial starts now — Stripe will charge your card automatically
           when it ends, unless you cancel from billing first.
         </p>

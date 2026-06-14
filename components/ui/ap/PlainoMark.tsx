@@ -30,6 +30,9 @@ import type { CSSProperties } from "react";
 // Accessibility: decorative by default (a paired wordmark/name labels the
 // brand). Pass `alt` to expose a label when the mark stands alone.
 
+// 8bit.png crop must include ≥10px of paper buffer above the raised-tail orb.
+// Orb topmost pixel = sheet y=823; crop starts at y=810 (13px buffer).
+// If this asset is ever re-cropped, run tools/brand/fix-8bit-crop.mjs to verify.
 const MARK_SRC = "/brand/plaino-system/8bit.png";
 
 type PlainoMarkProps = {

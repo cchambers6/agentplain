@@ -111,6 +111,15 @@ export const env = {
   resendApiKey: () => required("RESEND_API_KEY"),
   resendFromEmail: () =>
     optional("RESEND_FROM_EMAIL") ?? "agentplain <plaino@agentplain.com>",
+  // CAN-SPAM physical postal address — REQUIRED by law in the footer of any
+  // commercial/relationship bulk email (the weekly customer report). Set
+  // COMPANY_POSTAL_ADDRESS to agentplain's real registered mailing address
+  // before the weekly report cron is enabled in production. The placeholder
+  // default keeps dev/preview rendering without passing off a fake address as
+  // real — it is visibly a placeholder. CONNER ACTION: set this env var.
+  companyPostalAddress: () =>
+    optional("COMPANY_POSTAL_ADDRESS") ??
+    "agentplain — set COMPANY_POSTAL_ADDRESS to your registered mailing address",
 
   // Stripe — Prices resolved by lookup_key (see lib/pricing/tiers.ts +
   // scripts/stripe/setup-products.ts). No per-tier Price-id env vars

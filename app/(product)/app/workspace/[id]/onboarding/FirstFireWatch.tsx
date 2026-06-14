@@ -130,14 +130,22 @@ export function FirstFireWatch({ workspaceId, initial }: FirstFireWatchProps) {
             No skills picked. You can pick from the marketplace any time.
           </li>
         ) : (
-          status.picked.map((s) => <SkillRow key={s.slug} skill={s} />)
+          status.picked.map((s) => (
+            <SkillRow key={s.slug} skill={s} workspaceId={workspaceId} />
+          ))
         )}
       </ul>
     </div>
   );
 }
 
-function SkillRow({ skill }: { skill: SkillStatus }) {
+function SkillRow({
+  skill,
+  workspaceId,
+}: {
+  skill: SkillStatus;
+  workspaceId: string;
+}) {
   const [expanded, setExpanded] = useState(false);
   const accent =
     skill.status === "drafted"
@@ -202,10 +210,13 @@ function SkillRow({ skill }: { skill: SkillStatus }) {
         </div>
       ) : skill.status === "skipped" || skill.status === "failed" ? (
         <div className="mt-3">
+          {/* Absolute path: a relative "approvals" href resolves against
+              /onboarding → /onboarding/approvals (404). Always link the
+              workspace-rooted queue. */}
           <ApHeritageButton
             variant="secondary"
             withArrow
-            href="approvals"
+            href={`/app/workspace/${workspaceId}/approvals`}
           >
             open approvals queue
           </ApHeritageButton>

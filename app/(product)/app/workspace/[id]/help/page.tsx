@@ -9,10 +9,17 @@ export const runtime = "nodejs";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  // `?subject=` lets the funnel's "I'm stuck" links arrive with the step
+  // already named (e.g. "Stuck connecting a tool"), so the customer doesn't
+  // have to describe where they are — they just say what's wrong.
+  searchParams: Promise<{ subject?: string }>;
 }
 
-export default async function HelpPage({ params }: PageProps) {
+export default async function HelpPage({ params, searchParams }: PageProps) {
   const { id: workspaceId } = await params;
+  const sp = await searchParams;
+  const defaultSubject =
+    typeof sp.subject === "string" ? sp.subject.slice(0, 200) : "";
   const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
   const partner = servicePartnerForWorkspace(workspaceId);
   const recent = await getSupportRecentStatus({
@@ -44,7 +51,7 @@ export default async function HelpPage({ params }: PageProps) {
       ) : null}
 
       <div className="mt-8">
-        <HelpForm workspaceId={workspaceId} />
+        <HelpForm workspaceId={workspaceId} defaultSubject={defaultSubject} />
       </div>
     </div>
   );

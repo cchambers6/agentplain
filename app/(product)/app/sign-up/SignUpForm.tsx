@@ -10,6 +10,7 @@ import {
   tierDisplayName,
   type TierName,
 } from "@/lib/pricing/tiers";
+import { trialCardPolicy } from "@/lib/billing/trial-copy";
 import {
   signUpAction,
   joinVerticalWaitlistAction,
@@ -57,10 +58,18 @@ export function SignUpForm({
   verticals,
   defaultVerticalSlug,
   defaultTier = "regular",
+  trialDays = 14,
+  cardAtSignup = false,
 }: {
   verticals: VerticalOption[];
   defaultVerticalSlug?: string;
   defaultTier?: TierName;
+  /** Configured trial length (env-driven). Surfaced in the tier summary so
+   *  the copy never drifts from the actual Stripe trial. */
+  trialDays?: number;
+  /** True only when billing is live AND Checkout-at-signup is on. Default
+   *  (#241 scaffold) is trial-first / no card — the summary must say so. */
+  cardAtSignup?: boolean;
 }) {
   const [tier, setTier] = useState<Selection>(defaultTier);
   const [verticalSlug, setVerticalSlug] = useState<string>(
@@ -126,7 +135,11 @@ export function SignUpForm({
         <form action={formAction} className="space-y-5">
           <input type="hidden" name="tier" value={tier} />
           <input type="hidden" name="vertical" value={verticalSlug} />
-          <TierSummary tier={tier} />
+          <TierSummary
+            tier={tier}
+            trialDays={trialDays}
+            cardAtSignup={cardAtSignup}
+          />
 
           <VerticalChipRow
             verticals={verticals}
@@ -216,19 +229,28 @@ function TierPicker({
   );
 }
 
-function TierSummary({ tier }: { tier: Exclude<Selection, "max"> }) {
-  // Wave-2 CC-at-trial honesty fix: pre-pivot the copy promised "no
-  // card required" — false the moment we shipped the trial-warning
-  // email saying "your card on file will be charged." Card capture
-  // happens in Stripe-hosted Checkout the moment the signup form is
-  // submitted, so the summary now names the trade plainly.
+function TierSummary({
+  tier,
+  trialDays,
+  cardAtSignup,
+}: {
+  tier: Exclude<Selection, "max">;
+  trialDays: number;
+  cardAtSignup: boolean;
+}) {
+  // Trial-honesty: the summary must match the ACTUAL configured flow. The
+  // #241 scaffold default is trial-first / NO card at signup; the
+  // card-at-signup variant is opt-in (STRIPE_CHECKOUT_ENABLED). Earlier
+  // copy hardcoded "30 days free. Card captured at signup" — wrong on both
+  // counts for the default. Trial length + card timing now flow in from the
+  // server page so the copy can never drift from the env config.
   return (
     <p className="border border-rule bg-paper-deep px-4 py-3 text-[13px] leading-relaxed text-ink-soft">
       <span className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
         {tierDisplayName(tier)}
       </span>{" "}
-      · {TIER_TAGLINE[tier]} 30 days free. Card captured at signup so
-      your fleet keeps running when the trial ends. Cancel any time.
+      · {TIER_TAGLINE[tier]} {trialDays} days free.{" "}
+      {trialCardPolicy(trialDays, cardAtSignup)} Cancel any time.
       {tier === "plus" ? (
         <>
           {" "}

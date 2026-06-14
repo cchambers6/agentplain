@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   ApHeritageButton,
   ApHeritageConfirm,
@@ -28,7 +28,14 @@ interface ApprovalsListProps {
   workspaceId: string;
   rows: ApprovalRow[];
   initialDiscipline: DisciplineId | null;
+  /** Queue-item id the customer was deep-linked to (the onboarding
+   *  first-draft "open in approvals" CTA). When it matches a pending row
+   *  the list shows a first-draft coach banner, scrolls to the item, and
+   *  highlights its card. Null on the normal queue view. */
+  initialFocusId?: string | null;
 }
+
+const FOCUS_ANCHOR_ID = "approval-focus-target";
 
 const ALL = "all" as const;
 type FilterValue = typeof ALL | DisciplineId;
@@ -44,7 +51,29 @@ export function ApprovalsList({
   workspaceId,
   rows,
   initialDiscipline,
+  initialFocusId = null,
 }: ApprovalsListProps) {
+  // The focused row only counts as "found" if it's still pending in this
+  // list. If it already cleared, we drop the focus treatment silently
+  // (the page-level empty/normal view handles the "already decided" case).
+  const focusedRow = initialFocusId
+    ? (rows.find((r) => r.id === initialFocusId) ?? null)
+    : null;
+  const focusId = focusedRow?.id ?? null;
+  const [coachDismissed, setCoachDismissed] = useState(false);
+
+  // Scroll the focused card into view once on mount. Deferred a tick so the
+  // bucketed sections have rendered. Best-effort — no-op if the anchor
+  // isn't in the DOM (e.g. the row was filtered out of the active chip).
+  useEffect(() => {
+    if (!focusId) return;
+    const t = setTimeout(() => {
+      const el = document.getElementById(FOCUS_ANCHOR_ID);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
+    return () => clearTimeout(t);
+  }, [focusId]);
+
   const [activeFilter, setActiveFilter] = useState<FilterValue>(
     initialDiscipline ?? ALL,
   );
@@ -178,6 +207,18 @@ export function ApprovalsList({
 
   return (
     <>
+      {focusedRow && !coachDismissed ? (
+        <FirstDraftCoach
+          title={
+            focusedRow.rendered.title ??
+            focusedRow.rendered.recipientLine ??
+            focusedRow.rendered.kindLabel ??
+            "your first draft"
+          }
+          onDismiss={() => setCoachDismissed(true)}
+        />
+      ) : null}
+
       {/* ── Sticky control header ─────────────────────────────────────── */}
       <div className="sticky top-0 z-20 -mx-1 bg-paper/95 px-1 pb-3 pt-4 backdrop-blur supports-[backdrop-filter]:bg-paper/80">
         <div className="flex items-center justify-between gap-3">
@@ -284,7 +325,7 @@ export function ApprovalsList({
           </p>
           <ul className="mt-4 space-y-3">
             {needsYou.map((row) => (
-              <li key={row.id}>
+              <li key={row.id} id={focusId === row.id ? FOCUS_ANCHOR_ID : undefined}>
                 <ApprovalRowItem {...rowProps(row)} />
               </li>
             ))}
@@ -306,7 +347,7 @@ export function ApprovalsList({
         ) : (
           <ul className={needsYou.length > 0 ? "mt-4 space-y-3" : "space-y-3"}>
             {queue.map((row) => (
-              <li key={row.id}>
+              <li key={row.id} id={focusId === row.id ? FOCUS_ANCHOR_ID : undefined}>
                 <ApprovalRowItem {...rowProps(row)} />
               </li>
             ))}
@@ -539,6 +580,45 @@ function DetailActions({
           reject
         </button>
       </div>
+    </div>
+  );
+}
+
+// First-draft coach — the one-time guidance banner a customer sees when they
+// land on /approvals via the onboarding first-fire deep link. Names the draft,
+// explains the three moves, and reinforces the no-outbound promise in Plaino's
+// calm register. Dismissable; never blocks the queue.
+function FirstDraftCoach({
+  title,
+  onDismiss,
+}: {
+  title: string;
+  onDismiss: () => void;
+}) {
+  return (
+    <div className="mt-6 border border-ink bg-paper-deep p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+          your first draft is ready
+        </p>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="font-mono text-[10px] tracking-eyebrow uppercase text-mute underline-offset-4 hover:text-ink hover:underline focus:outline-none focus-visible:underline"
+        >
+          got it
+        </button>
+      </div>
+      <p className="mt-2 font-display text-xl leading-tight text-ink">
+        Plaino drafted &ldquo;{title}&rdquo; for you.
+      </p>
+      <p className="mt-2 max-w-prose text-[15px] leading-relaxed text-ink-soft">
+        It&rsquo;s highlighted below. Read it, then make one of three moves:{" "}
+        <span className="text-ink">approve</span> to send it through your own
+        system, <span className="text-ink">edit</span> anything that&rsquo;s
+        off first, or <span className="text-ink">send it back</span> if it
+        misses. Nothing ever leaves agentplain without your yes.
+      </p>
     </div>
   );
 }

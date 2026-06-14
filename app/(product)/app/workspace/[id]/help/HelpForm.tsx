@@ -9,7 +9,14 @@ import {
 
 const initial: SupportActionResult = { ok: false };
 
-export function HelpForm({ workspaceId }: { workspaceId: string }) {
+export function HelpForm({
+  workspaceId,
+  defaultSubject = "",
+}: {
+  workspaceId: string;
+  /** Pre-filled subject from a funnel "I'm stuck" deep link (?subject=). */
+  defaultSubject?: string;
+}) {
   const [state, formAction] = useFormState<SupportActionResult, FormData>(
     sendSupportMessageAction.bind(null, workspaceId),
     initial,
@@ -29,6 +36,7 @@ export function HelpForm({ workspaceId }: { workspaceId: string }) {
         label="subject"
         name="subject"
         required
+        defaultValue={defaultSubject}
         error={state.fieldErrors?.subject}
         helper="A few words on what you need a hand with."
       />

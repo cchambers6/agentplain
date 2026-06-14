@@ -2,7 +2,12 @@ import Link from "next/link";
 import type { MarketplaceEntry } from "@/lib/integrations/marketplace";
 import { oauthStartPath, waitlistPath } from "@/lib/integrations/marketplace";
 
-export type TileStatus = "connected" | "available" | "coming-soon";
+export type TileStatus =
+  | "connected"
+  | "available"
+  | "coming-soon"
+  | "expired"
+  | "error";
 
 interface IntegrationTileProps {
   entry: MarketplaceEntry;
@@ -28,7 +33,6 @@ export function IntegrationTile({
   configured = true,
 }: IntegrationTileProps) {
   const isComingSoon = status === "coming-soon";
-  const isConnected = status === "connected";
 
   const tileClasses = [
     "flex h-full flex-col bg-paper p-5 transition",
@@ -78,45 +82,102 @@ function TileAction({
 }) {
   const focusRing =
     "focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper";
+
   if (status === "connected") {
     return (
-      <Link
-        prefetch={false}
-        href={`/app/workspace/${workspaceId}/integrations/${entry.id}`}
-        className={`inline-flex items-center gap-2 font-mono text-[11px] tracking-eyebrow uppercase text-ink underline-offset-4 hover:underline ${focusRing}`}
-      >
-        manage <span aria-hidden>→</span>
-      </Link>
+      <div className="flex flex-col gap-2">
+        <Link
+          prefetch={false}
+          href={`/app/workspace/${workspaceId}/integrations/${entry.id}`}
+          className={`inline-flex min-h-[44px] items-center justify-center gap-2 border border-ink px-4 py-3 font-sans text-[13px] font-medium text-ink transition hover:bg-ink/[0.05] ${focusRing}`}
+        >
+          Manage
+        </Link>
+        <Link
+          prefetch={false}
+          href={`/app/workspace/${workspaceId}/integrations/${entry.id}`}
+          className={`inline-flex items-center gap-1 font-mono text-[11px] tracking-eyebrow uppercase text-mute underline-offset-4 hover:underline ${focusRing}`}
+        >
+          Disconnect
+        </Link>
+      </div>
     );
   }
+
+  if (status === "expired") {
+    return (
+      <div className="flex flex-col gap-3">
+        <Link
+          prefetch={false}
+          href={oauthStartPath(entry, workspaceId)}
+          className={`inline-flex min-h-[44px] items-center justify-center gap-2 border border-flag bg-flag px-4 py-3 font-sans text-[13px] font-medium text-paper transition hover:opacity-90 ${focusRing}`}
+        >
+          Reconnect
+        </Link>
+        <p className="text-[11px] leading-relaxed text-flag">
+          Access expired — reconnect to keep Plaino working.
+        </p>
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div className="flex flex-col gap-3">
+        <Link
+          prefetch={false}
+          href={`/app/workspace/${workspaceId}/integrations/${entry.id}`}
+          className={`inline-flex min-h-[44px] items-center justify-center gap-2 border border-flag bg-flag px-4 py-3 font-sans text-[13px] font-medium text-paper transition hover:opacity-90 ${focusRing}`}
+        >
+          Retry
+        </Link>
+        <p className="text-[11px] leading-relaxed text-flag">
+          Something went wrong — open to troubleshoot.
+        </p>
+      </div>
+    );
+  }
+
   if (status === "available") {
-    // Credentials not wired in this environment yet — the connect CTA would
-    // dead-end at the start route. Report the honest service-partnership
-    // state instead of a button that errors.
     if (!configured) {
       return (
-        <span className="inline-flex items-center font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-          your service partner connects this
-        </span>
+        <div className="flex flex-col gap-3">
+          <Link
+            prefetch={false}
+            href="/custom?type=integration-request"
+            className={`inline-flex min-h-[44px] items-center justify-center gap-2 border border-ink/30 px-4 py-3 font-sans text-[13px] font-medium text-ink transition hover:border-ink hover:bg-ink/[0.03] ${focusRing}`}
+          >
+            Request connection
+          </Link>
+          <p className="text-[11px] leading-relaxed text-mute">
+            Your service partner wires this during onboarding.
+          </p>
+        </div>
       );
     }
     return (
-      <Link
-        prefetch={false}
-        href={oauthStartPath(entry, workspaceId)}
-        className={`inline-flex items-center gap-2 border border-clay bg-clay px-4 py-2 font-sans text-[13px] font-medium text-paper transition hover:border-clay-deep hover:bg-clay-deep ${focusRing}`}
-      >
-        connect <span aria-hidden>→</span>
-      </Link>
+      <div className="flex flex-col gap-3">
+        <Link
+          prefetch={false}
+          href={oauthStartPath(entry, workspaceId)}
+          className={`inline-flex min-h-[44px] items-center justify-center gap-2 border border-clay bg-clay px-4 py-3 font-sans text-[13px] font-medium text-paper transition hover:border-clay-deep hover:bg-clay-deep ${focusRing}`}
+        >
+          Connect
+        </Link>
+        <p className="text-[11px] leading-relaxed text-mute">
+          You&rsquo;ll grant read access — nothing sends without your review.
+        </p>
+      </div>
     );
   }
+
   return (
     <Link
       prefetch={false}
       href={waitlistPath(entry)}
-      className={`inline-flex items-center gap-2 border border-ink/30 px-4 py-2 font-sans text-[13px] font-medium text-ink transition hover:border-ink hover:bg-ink/[0.03] ${focusRing}`}
+      className={`inline-flex min-h-[44px] items-center justify-center gap-2 border border-ink/30 px-4 py-3 font-sans text-[13px] font-medium text-ink transition hover:border-ink hover:bg-ink/[0.03] ${focusRing}`}
     >
-      join the waitlist <span aria-hidden>→</span>
+      Join waitlist
     </Link>
   );
 }
@@ -128,12 +189,20 @@ function StatusBadge({ status }: { status: TileStatus }) {
       classes: "border-moss/40 bg-moss/10 text-moss",
     },
     available: {
-      label: "available",
-      classes: "border-ink/30 bg-paper text-ink",
+      label: "ready to connect",
+      classes: "border-clay/40 bg-clay/5 text-clay",
     },
     "coming-soon": {
       label: "coming soon",
       classes: "border-rule bg-paper text-mute",
+    },
+    expired: {
+      label: "reconnect needed",
+      classes: "border-flag/40 bg-flag/5 text-flag",
+    },
+    error: {
+      label: "needs attention",
+      classes: "border-flag/40 bg-flag/5 text-flag",
     },
   };
   const { label, classes } = map[status];

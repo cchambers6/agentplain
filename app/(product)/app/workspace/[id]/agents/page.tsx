@@ -107,14 +107,14 @@ export default async function AgentsPage({ params }: PageProps) {
     // explicitly with the connector list so the call to action is
     // unambiguous.
     const status = requiresConnector
-      ? `connect to activate — needs ${formatConnectors(agent.liveRequires!.connectors)}`
+      ? `Connect ${formatConnectors(agent.liveRequires!.connectors)} to activate this capability`
       : isRooting
-        ? agent.rootingNote ?? "rooting now — runtime still being built."
+        ? agent.rootingNote ?? "Setting up — Plaino is getting ready."
         : isLiveSkillBound
-          ? "ready — capability tested, first run lands when triggered"
+          ? "Watching — ready when triggered"
           : handoffCount === 0
-            ? "rooting in — first handoff lands soon"
-            : `${handoffCount} handoff${handoffCount === 1 ? "" : "s"} logged`;
+            ? "Setting up — first activity lands soon"
+            : `Working — ${handoffCount} ${handoffCount === 1 ? "item" : "items"} surfaced`;
     const disciplineId = AGENT_DISCIPLINE[agent.slug] ?? null;
     return {
       slug: agent.slug,

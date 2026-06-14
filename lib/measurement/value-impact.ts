@@ -75,6 +75,12 @@ import { getWorkspaceUsageReport } from '@/lib/billing/usage/aggregate';
 //   COMPLIANCE_DIGEST      — 15 min: reviewing 24h of drafts for risk patterns.
 //   FINANCE_PULSE          — 25 min: pulling AR aging, reviewing open invoices,
 //                            writing a finance summary.
+//   ACTIVATION_DRAFT       — 0 min: the first-5-min activation draft runs
+//                            against CLEARLY-LABELLED demo data, so it must
+//                            never inflate the real value ledger. Scored at
+//                            zero deliberately (the welcome surface shows the
+//                            ~15-min payoff from the draft payload, not this
+//                            cumulative ledger).
 //
 // Tune these constants by updating MINUTES_SAVED_BY_KIND and deploying.
 
@@ -102,6 +108,8 @@ export const MINUTES_SAVED_BY_KIND: Record<WorkApprovalKind, number> = {
   CONTENT_CALENDAR: 20,
   COMPLIANCE_DIGEST: 15,
   FINANCE_PULSE: 25,
+  // Demo activation draft — excluded from real metrics (see header note).
+  ACTIVATION_DRAFT: 0,
 };
 
 // ── Per-kind labor-rate table (USD/hour) ─────────────────────────────────────
@@ -143,6 +151,8 @@ export const LABOR_RATE_USD_PER_HOUR_BY_KIND: Record<WorkApprovalKind, number> =
     CONTENT_CALENDAR: 55,
     COMPLIANCE_DIGEST: 75,
     FINANCE_PULSE: 75,
+    // Demo activation draft — excluded from real metrics (see header note).
+    ACTIVATION_DRAFT: 0,
   };
 
 // ── Public types ──────────────────────────────────────────────────────────────

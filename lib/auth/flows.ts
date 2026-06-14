@@ -16,6 +16,7 @@ import type {
   WorkspaceVerticalTier,
 } from "@prisma/client";
 import { provisionTrialSubscriptionSafe } from "../billing/provisioning";
+import { seedDemoData } from "../onboarding/demo-seed";
 import { withSystemContext } from "../db/rls";
 import { env } from "../env";
 import { getVerticalContent } from "../verticals";
@@ -177,6 +178,24 @@ export async function signUpBrokerOwner(input: SignUpInput): Promise<SignUpResul
 
     return { user, workspace };
   });
+
+  // First-5-min activation: seed the clearly-labelled demo dataset for the
+  // workspace's vertical so Plaino has something concrete to act on the moment
+  // the customer lands on /welcome. Best-effort + post-commit (never blocks
+  // signup) and idempotent — the activation run re-seeds lazily if this is
+  // ever skipped. See lib/onboarding/demo-seed + lib/onboarding/activation-run.
+  try {
+    await seedDemoData({
+      workspaceId: created.workspace.id,
+      vertical: created.workspace.vertical,
+    });
+  } catch (err) {
+    console.warn(
+      `demo-data seed failed for workspace ${created.workspace.id} (ignored): ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+  }
 
   // Provision Stripe Customer + trialing Subscription AFTER the DB
   // commits. Network IO doesn't belong inside the workspace tx, and

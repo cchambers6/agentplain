@@ -229,6 +229,14 @@ enum WorkApprovalKind {
   //                   but the body names the "connect QuickBooks for richer
   //                   pulse" gap instead of fabricating numbers.
   FINANCE_PULSE
+  // First-5-min activation draft. Produced once per workspace in the
+  // customer's first session by lib/onboarding/activation-run.ts: Plaino
+  // drafts the single piece of work the workspace's killer workflow promises,
+  // run against a clearly-labelled demo dataset (lib/onboarding/demo-data.ts),
+  // so a brand-new customer SEES Plaino do something within five minutes.
+  // Deterministic (no LLM) so it lands every time; draft-only by contract —
+  // the magic-moment surface (/welcome) lets the owner approve in one click.
+  ACTIVATION_DRAFT
 }
 
 enum WorkApprovalStatus {

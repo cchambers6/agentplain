@@ -5,6 +5,10 @@ import {
   type PlainoStatusState,
 } from "@/components/ui/ap";
 import { type DisciplineId } from "@/lib/disciplines";
+import {
+  resolveConfidence,
+  type ConfidenceView,
+} from "@/lib/approvals/presentation";
 import type { RenderedApproval } from "./renderApprovalPayload";
 
 // DB-free presentation for one queued approval. The action controls
@@ -12,6 +16,12 @@ import type { RenderedApproval } from "./renderApprovalPayload";
 // in via the `footer` slot — that keeps this module free of the server
 // actions (and therefore the db), so every card variant is renderable
 // in a unit test. See tests/customer-approvals.test.tsx.
+//
+// Two render modes:
+//   - default ("card") — full ApPaperCard chrome, used inline anywhere.
+//   - embedded         — no outer border + no duplicate eyebrow/title,
+//                        for rendering INSIDE the detail bottom-sheet whose
+//                        header already carries the title.
 
 export interface ApprovalRow {
   id: string;
@@ -34,6 +44,9 @@ interface ApprovalCardProps {
    *  or "sleep" (paused) per the two-family icon system
    *  (docs/brand/icon-families.md). */
   plainoState?: PlainoStatusState;
+  /** Drop the outer ApPaperCard chrome + the duplicate eyebrow/title. Used
+   *  when the card renders inside the detail sheet. */
+  embedded?: boolean;
 }
 
 /** Map internal agent slugs to readable display labels for the customer surface.
@@ -59,7 +72,7 @@ const AGENT_DISPLAY_NAMES: Record<string, string> = {
   "finance-pulse-general": "Finance Pulse",
 };
 
-function agentDisplayLabel(slug: string): string {
+export function agentDisplayLabel(slug: string): string {
   if (AGENT_DISPLAY_NAMES[slug]) return AGENT_DISPLAY_NAMES[slug]!;
   // Strip leading vertical prefix (e.g. "realty-" or "general-") and title-case.
   const stripped = slug.replace(/^(realty|general|law|home-services|insurance|cpa|mortgage|real-estate|ria|property-management|recruiting|title-escrow)-/, "");
@@ -69,27 +82,67 @@ function agentDisplayLabel(slug: string): string {
     .join(" ");
 }
 
+// ── Confidence chip ───────────────────────────────────────────────────────
+// One glance tells the owner how sure Plaino is: forest = high, clay = worth a
+// read, mute = needs your eyes. Static class maps (no dynamic class names) so
+// Tailwind keeps them through the JIT purge.
+
+const CONFIDENCE_TONE: Record<
+  ConfidenceView["tone"],
+  { chip: string; dot: string }
+> = {
+  moss: { chip: "border-moss/40 text-moss", dot: "bg-moss" },
+  clay: { chip: "border-clay/50 text-clay", dot: "bg-clay" },
+  mute: { chip: "border-rule text-mute", dot: "bg-mute" },
+};
+
+export function ConfidenceChip({ view }: { view: ConfidenceView }) {
+  const tone = CONFIDENCE_TONE[view.tone];
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 border px-2 py-0.5 font-mono text-[10px] tracking-eyebrow uppercase ${tone.chip}`}
+      title={view.percent !== undefined ? `${view.percent}% confidence` : undefined}
+    >
+      <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} />
+      {view.label}
+      {view.percent !== undefined ? (
+        <span className="opacity-70">· {view.percent}%</span>
+      ) : null}
+    </span>
+  );
+}
+
 export function ApprovalCard({
   row,
   footer,
   plainoState = "fetch",
+  embedded = false,
 }: ApprovalCardProps) {
   const { rendered } = row;
+  const confidence = resolveConfidence(rendered);
   const adminCardClass = adminBorderClass(rendered.admin?.priority);
-  return (
-    <ApPaperCard
-      className={adminCardClass}
-      eyebrow={
-        <>
-          {rendered.kindLabel}
-          <span className="mx-2">·</span>
-          {agentDisplayLabel(row.agentSlug)}
-          <span className="mx-2">·</span>
-          {formatRelativeTime(row.proposedAtIso)}
-        </>
-      }
-      title={rendered.title}
-    >
+
+  const eyebrow = (
+    <>
+      {rendered.kindLabel}
+      <span className="mx-2">·</span>
+      {agentDisplayLabel(row.agentSlug)}
+      <span className="mx-2">·</span>
+      {formatRelativeTime(row.proposedAtIso)}
+    </>
+  );
+
+  const body = (
+    <>
+      {/* Low-confidence: Plaino speaks up and asks for your eyes — first
+          person, calm, owner-of-the-business voice. */}
+      {confidence?.nudge ? (
+        <p className="mb-4 flex items-start gap-2 border-l-2 border-clay bg-paper-deep px-3 py-2 text-[13px] leading-relaxed text-ink-soft">
+          <PlainoStatus state="alert" size={16} className="mt-0.5 shrink-0" />
+          <span>{confidence.nudge}</span>
+        </p>
+      ) : null}
+
       {rendered.admin ? <AdminCardContent admin={rendered.admin} /> : null}
 
       {rendered.recipientLine ? (
@@ -98,7 +151,22 @@ export function ApprovalCard({
         </p>
       ) : null}
 
-      {rendered.inboundSummary ? (
+      {/* Plaino's reasoning — the "why I drafted this" that turns the queue
+          from a black box into a partner you can second-guess. Shown once;
+          if the inbound trigger is the same text, we don't repeat it below. */}
+      {rendered.reasoning ? (
+        <div className="mt-3 border-l-2 border-moss/50 pl-3">
+          <p className="font-mono text-[10px] tracking-eyebrow uppercase text-mute">
+            why plaino drafted this
+          </p>
+          <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">
+            {rendered.reasoning}
+          </p>
+        </div>
+      ) : null}
+
+      {rendered.inboundSummary &&
+      rendered.inboundSummary !== rendered.reasoning ? (
         <p className="mt-3 border-l-2 border-rule pl-3 text-[13px] leading-relaxed text-mute">
           In reply to: {rendered.inboundSummary}
         </p>
@@ -106,7 +174,9 @@ export function ApprovalCard({
 
       <div
         className={
-          rendered.recipientLine || rendered.inboundSummary
+          rendered.recipientLine ||
+          rendered.inboundSummary ||
+          rendered.reasoning
             ? "mt-4 border-t border-rule pt-4"
             : ""
         }
@@ -136,6 +206,37 @@ export function ApprovalCard({
         </div>
       ) : null}
 
+      {/* Source data Plaino read — with links where they exist. "Pulled from
+          Buildium lease #123" — the customer can verify before approving. */}
+      {rendered.sources && rendered.sources.length > 0 ? (
+        <div className="mt-4 border-t border-rule pt-4">
+          <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+            what plaino read
+          </p>
+          <ul className="mt-2 space-y-1 text-[13px] leading-relaxed text-ink-soft">
+            {rendered.sources.map((s, i) => (
+              <li key={i} className="flex items-baseline gap-2">
+                <span aria-hidden className="text-mute">
+                  ·
+                </span>
+                {s.href ? (
+                  <a
+                    href={s.href}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="text-ink underline decoration-rule underline-offset-4 hover:decoration-ink"
+                  >
+                    {s.label}
+                  </a>
+                ) : (
+                  <span>{s.label}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       {rendered.persisted === false ? (
         <p className="mt-4 border border-rule bg-paper-deep px-3 py-2 text-[12px] leading-relaxed text-mute">
           Held for your review — confidence below the persist threshold, so we
@@ -155,9 +256,8 @@ export function ApprovalCard({
       ) : null}
 
       {/* Provenance — names the agent that drafted it, the kind of work,
-          and who herded it in. The source it read sits above ("In reply
-          to:"). Per project_agents_work_proactively — the customer sees
-          the fleet's work, not a black box. */}
+          and who herded it in. Per project_agents_work_proactively — the
+          customer sees the fleet's work, not a black box. */}
       <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
         <PlainoStatus state={plainoState} size={16} />
         <span className="text-ink-soft">drafted by</span>
@@ -173,6 +273,38 @@ export function ApprovalCard({
           {footer}
         </footer>
       ) : null}
+    </>
+  );
+
+  // Embedded (detail sheet): no outer border, no duplicate eyebrow/title.
+  // The sheet header carries the title; show the eyebrow + confidence chip
+  // as a compact meta row instead.
+  if (embedded) {
+    return (
+      <div>
+        <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+            {eyebrow}
+          </p>
+          {confidence ? <ConfidenceChip view={confidence} /> : null}
+        </div>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <ApPaperCard
+      className={adminCardClass}
+      eyebrow={eyebrow}
+      title={
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span>{rendered.title}</span>
+          {confidence ? <ConfidenceChip view={confidence} /> : null}
+        </span>
+      }
+    >
+      {body}
     </ApPaperCard>
   );
 }

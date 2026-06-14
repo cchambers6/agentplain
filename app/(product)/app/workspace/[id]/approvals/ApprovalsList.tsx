@@ -5,9 +5,10 @@ import {
   ApHeritageButton,
   ApHeritageConfirm,
   ApPaperSheet,
+  PlainoStatus,
 } from "@/components/ui/ap";
 import { listDisciplines, type DisciplineId } from "@/lib/disciplines";
-import { bucketApprovals } from "@/lib/disciplines/grouping";
+import { isBatchEligible } from "@/lib/approvals/presentation";
 import {
   FEEDBACK_CATEGORIES,
   CATEGORY_DESCRIPTION,
@@ -16,8 +17,10 @@ import {
   decideApprovalAction,
   editApprovalDraftAction,
   submitDraftFeedbackAction,
+  batchApproveAction,
 } from "./actions";
 import { ApprovalCard, type ApprovalRow } from "./ApprovalCard";
+import { ApprovalRowItem } from "./ApprovalRowItem";
 
 export type { ApprovalRow } from "./ApprovalCard";
 
@@ -29,16 +32,10 @@ interface ApprovalsListProps {
 
 const ALL = "all" as const;
 type FilterValue = typeof ALL | DisciplineId;
-type SortValue = "oldest" | "newest";
+type SortValue = "urgency" | "oldest" | "newest";
 
-/**
- * Items that get elevated into the "Needs you specifically" section.
- * Today the explicit-tag signal is `priority === 'critical'` on admin
- * cards (the existing `adminBorderClass` pattern); the same rule wins for
- * compliance-flagged drafts because they ride the same priority field.
- * The bar stays deliberately narrow — items in this bucket should be
- * things the broker MUST read, not just "items needing approval at all."
- */
+/** The narrow set of items the broker MUST read first — Plaino flagged them
+ *  critical (admin) or they ride the same priority field (compliance). */
 function isNeedsYou(row: ApprovalRow): boolean {
   return row.rendered.admin?.priority === "critical";
 }
@@ -48,46 +45,50 @@ export function ApprovalsList({
   rows,
   initialDiscipline,
 }: ApprovalsListProps) {
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [rejectingId, setRejectingId] = useState<string | null>(null);
-  const [feedbackId, setFeedbackId] = useState<string | null>(null);
-  const [isRejectPending, startReject] = useTransition();
   const [activeFilter, setActiveFilter] = useState<FilterValue>(
     initialDiscipline ?? ALL,
   );
-  // Oldest-first by default: a work queue should surface the
-  // longest-waiting decision first so nothing languishes.
-  const [sort, setSort] = useState<SortValue>("oldest");
-  const editing = rows.find((r) => r.id === editingId) ?? null;
+  const [sort, setSort] = useState<SortValue>("urgency");
+
+  // Detail bottom-sheet: which item is open, and whether we're viewing or
+  // editing it inline.
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [detailMode, setDetailMode] = useState<"view" | "edit">("view");
+
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [feedbackId, setFeedbackId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  // Batch mode: "approve all 12 chase emails" without opening each.
+  const [batchMode, setBatchMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const disciplines = listDisciplines();
+  const detail = rows.find((r) => r.id === detailId) ?? null;
   const rejecting = rows.find((r) => r.id === rejectingId) ?? null;
   const givingFeedback = rows.find((r) => r.id === feedbackId) ?? null;
-  const disciplines = listDisciplines();
 
-  // Apply the discipline filter + sort once, up front. The pure-function
-  // bucketing helper then carves the list into three buckets; its unit
-  // tests are in `tests/disciplines-ux-wedge.test.ts`.
   const filtered = useMemo(() => {
     const base =
       activeFilter === ALL
         ? rows
         : rows.filter((r) => r.discipline === activeFilter);
+    const byDate = (a: ApprovalRow, b: ApprovalRow) =>
+      a.proposedAtIso.localeCompare(b.proposedAtIso);
     return [...base].sort((a, b) => {
-      const cmp = a.proposedAtIso.localeCompare(b.proposedAtIso);
-      return sort === "oldest" ? cmp : -cmp;
+      if (sort === "urgency") {
+        const ua = isNeedsYou(a) ? 0 : 1;
+        const ub = isNeedsYou(b) ? 0 : 1;
+        if (ua !== ub) return ua - ub;
+        return -byDate(a, b); // newest first within each tier
+      }
+      return sort === "oldest" ? byDate(a, b) : -byDate(a, b);
     });
   }, [rows, activeFilter, sort]);
 
-  const buckets = useMemo(
-    () =>
-      bucketApprovals(filtered.map((r) => ({ ...r, isNeedsYou: isNeedsYou(r) }))),
-    [filtered],
-  );
-  const needsYou = buckets.needsYou;
-  const byDiscipline = buckets.byDiscipline;
-  const allRecentFallback = buckets.fallback;
+  const needsYou = useMemo(() => filtered.filter(isNeedsYou), [filtered]);
+  const queue = useMemo(() => filtered.filter((r) => !isNeedsYou(r)), [filtered]);
 
-  // Per-chip counts (unfiltered universe so a chip never reads 0 just
-  // because the user picked a different chip first).
   const chipCounts = useMemo(() => {
     const m = new Map<FilterValue, number>();
     m.set(ALL, rows.length);
@@ -97,43 +98,56 @@ export function ApprovalsList({
     return m;
   }, [rows, disciplines]);
 
-  function rejectFooter(row: ApprovalRow) {
-    const canEdit = Boolean(row.rendered.editableBody);
-    return (
-      <>
-        <form action={decideApprovalAction}>
-          <input type="hidden" name="workspaceId" value={workspaceId} />
-          <input type="hidden" name="itemId" value={row.id} />
-          <input type="hidden" name="decision" value="APPROVED" />
-          <ApHeritageButton variant="primary" type="submit">
-            approve
-          </ApHeritageButton>
-        </form>
-        {canEdit ? (
-          <ApHeritageButton
-            variant="secondary"
-            type="button"
-            onClick={() => setEditingId(row.id)}
-          >
-            edit
-          </ApHeritageButton>
-        ) : null}
-        <ApHeritageButton
-          variant="secondary"
-          type="button"
-          onClick={() => setFeedbackId(row.id)}
-        >
-          doesn&rsquo;t sound like us
-        </ApHeritageButton>
-        <button
-          type="button"
-          onClick={() => setRejectingId(row.id)}
-          className="inline-flex items-center justify-center gap-2 rounded-none px-3 py-2 font-sans text-sm font-medium text-flag underline-offset-4 transition hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-flag focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
-        >
-          reject
-        </button>
-      </>
-    );
+  // Visible, batch-eligible ids (needs-you items are never batch-eligible).
+  const eligibleVisibleIds = useMemo(
+    () =>
+      filtered
+        .filter((r) => isBatchEligible(r.kind, r.rendered))
+        .map((r) => r.id),
+    [filtered],
+  );
+  const selectedEligible = useMemo(
+    () => eligibleVisibleIds.filter((id) => selected.has(id)),
+    [eligibleVisibleIds, selected],
+  );
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  function selectAllEligible() {
+    setSelected(new Set(eligibleVisibleIds));
+  }
+  function clearSelection() {
+    setSelected(new Set());
+  }
+  function exitBatch() {
+    setBatchMode(false);
+    clearSelection();
+  }
+
+  function openDetail(id: string) {
+    setDetailId(id);
+    setDetailMode("view");
+  }
+  function closeDetail() {
+    setDetailId(null);
+    setDetailMode("view");
+  }
+
+  function approveNow(row: ApprovalRow) {
+    const fd = new FormData();
+    fd.set("workspaceId", workspaceId);
+    fd.set("itemId", row.id);
+    fd.set("decision", "APPROVED");
+    startTransition(async () => {
+      await decideApprovalAction(fd);
+      if (detailId === row.id) closeDetail();
+    });
   }
 
   function confirmReject() {
@@ -142,20 +156,45 @@ export function ApprovalsList({
     fd.set("workspaceId", workspaceId);
     fd.set("itemId", rejecting.id);
     fd.set("decision", "REJECTED");
-    startReject(async () => {
+    startTransition(async () => {
       await decideApprovalAction(fd);
       setRejectingId(null);
+      if (detailId === rejecting.id) closeDetail();
     });
+  }
+
+  function rowProps(row: ApprovalRow) {
+    return {
+      row,
+      onOpen: () => openDetail(row.id),
+      onApprove: () => approveNow(row),
+      onReject: () => setRejectingId(row.id),
+      batchMode,
+      selectable: isBatchEligible(row.kind, row.rendered),
+      selected: selected.has(row.id),
+      onToggleSelect: () => toggleSelect(row.id),
+    };
   }
 
   return (
     <>
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <div
-          className="flex flex-wrap items-center gap-2"
-          role="group"
-          aria-label="Filter approvals by discipline"
-        >
+      {/* ── Sticky control header ─────────────────────────────────────── */}
+      <div className="sticky top-0 z-20 -mx-1 bg-paper/95 px-1 pb-3 pt-4 backdrop-blur supports-[backdrop-filter]:bg-paper/80">
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+            {rows.length} {rows.length === 1 ? "decision" : "decisions"} waiting
+          </p>
+          <button
+            type="button"
+            onClick={() => (batchMode ? exitBatch() : setBatchMode(true))}
+            aria-pressed={batchMode}
+            className="min-h-[36px] rounded-none border border-rule px-3 py-1 font-mono text-[11px] tracking-eyebrow uppercase text-ink transition hover:border-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-clay"
+          >
+            {batchMode ? "done" : "select"}
+          </button>
+        </div>
+
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <FilterChip
             label="all"
             count={chipCounts.get(ALL) ?? 0}
@@ -173,110 +212,161 @@ export function ApprovalsList({
             />
           ))}
         </div>
-        <div
-          className="flex items-center gap-2"
-          role="group"
-          aria-label="Sort approvals by age"
-        >
+
+        <div className="mt-2 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
             sort
           </span>
-          <SortChip
-            label="oldest first"
-            active={sort === "oldest"}
-            onClick={() => setSort("oldest")}
-          />
-          <SortChip
-            label="newest first"
-            active={sort === "newest"}
-            onClick={() => setSort("newest")}
-          />
+          <SortChip label="most urgent" active={sort === "urgency"} onClick={() => setSort("urgency")} />
+          <SortChip label="oldest" active={sort === "oldest"} onClick={() => setSort("oldest")} />
+          <SortChip label="newest" active={sort === "newest"} onClick={() => setSort("newest")} />
         </div>
+
+        {/* Batch action bar — only in batch mode. */}
+        {batchMode ? (
+          <div className="mt-3 flex flex-wrap items-center gap-3 border border-rule bg-paper-deep px-3 py-3">
+            <span className="font-mono text-[11px] tracking-eyebrow uppercase text-ink">
+              {selectedEligible.length} selected
+            </span>
+            <button
+              type="button"
+              onClick={selectAllEligible}
+              disabled={eligibleVisibleIds.length === 0}
+              className="font-mono text-[11px] tracking-eyebrow uppercase text-clay underline-offset-4 hover:underline disabled:opacity-40"
+            >
+              select all clearable ({eligibleVisibleIds.length})
+            </button>
+            {selectedEligible.length > 0 ? (
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="font-mono text-[11px] tracking-eyebrow uppercase text-mute underline-offset-4 hover:underline"
+              >
+                clear
+              </button>
+            ) : null}
+            <form action={batchApproveAction} className="ml-auto">
+              <input type="hidden" name="workspaceId" value={workspaceId} />
+              {selectedEligible.map((id) => (
+                <input key={id} type="hidden" name="itemId" value={id} />
+              ))}
+              <ApHeritageButton
+                variant="primary"
+                type="submit"
+                disabled={selectedEligible.length === 0}
+              >
+                approve {selectedEligible.length || ""}
+              </ApHeritageButton>
+            </form>
+          </div>
+        ) : null}
       </div>
 
-      <Section
-        title="Needs you specifically"
-        subtitle="Items your fleet flagged as high-urgency — review these first."
-        items={needsYou}
-        empty="Nothing urgent right now."
-        footerFor={rejectFooter}
-      />
-
-      <h2 className="mt-12 font-display text-2xl text-ink">By discipline</h2>
-      <p className="mt-2 text-[13px] leading-relaxed text-mute">
-        Grouped by the discipline that produced each draft.
-      </p>
-      {byDiscipline.size === 0 ? (
-        <p className="mt-6 border-l-2 border-rule pl-4 text-[13px] leading-relaxed text-mute">
-          Nothing to group right now. Items appear here as your fleet produces
-          tagged drafts.
+      {batchMode ? (
+        <p className="mt-2 text-[12px] leading-relaxed text-mute">
+          Batch approve is for routine, low-stakes work Plaino is confident
+          about. Anything with stakes — money, listings, compliance, or
+          anything it&rsquo;s unsure of — has no checkbox and still wants your
+          individual look.
         </p>
-      ) : (
-        <div className="mt-6 space-y-10">
-          {disciplines
-            .filter((d) => (byDiscipline.get(d.id)?.length ?? 0) > 0)
-            .map((d) => {
-              const items = byDiscipline.get(d.id) ?? [];
-              return (
-                <DisciplineSection
-                  key={d.id}
-                  name={d.name}
-                  count={items.length}
-                  items={items}
-                  footerFor={rejectFooter}
-                />
-              );
-            })}
-        </div>
-      )}
+      ) : null}
 
-      <h2 className="mt-12 font-display text-2xl text-ink">All recent</h2>
-      <p className="mt-2 text-[13px] leading-relaxed text-mute">
-        Anything not yet tagged with a discipline lands here so nothing slips
-        through.
-      </p>
-      <Section
-        title=""
-        items={allRecentFallback}
-        empty="Every recent item already grouped above."
-        footerFor={rejectFooter}
-        hideTitle
-      />
+      {/* ── Needs-you pinned section ──────────────────────────────────── */}
+      {needsYou.length > 0 ? (
+        <section className="mt-6" aria-label="Needs you specifically">
+          <div className="flex items-center gap-2">
+            <PlainoStatus state="alert" size={18} />
+            <h2 className="font-display text-xl text-ink">Needs you first</h2>
+          </div>
+          <p className="mt-1 text-[13px] leading-relaxed text-mute">
+            Plaino flagged these as high-urgency — a quick decision keeps things
+            moving.
+          </p>
+          <ul className="mt-4 space-y-3">
+            {needsYou.map((row) => (
+              <li key={row.id}>
+                <ApprovalRowItem {...rowProps(row)} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
+      {/* ── Main queue ────────────────────────────────────────────────── */}
+      <section className="mt-8" aria-label="Queue">
+        {needsYou.length > 0 ? (
+          <h2 className="font-display text-xl text-ink">The rest of the queue</h2>
+        ) : null}
+        {queue.length === 0 ? (
+          <p className="mt-4 border-l-2 border-rule pl-4 text-[13px] leading-relaxed text-mute">
+            {activeFilter === ALL
+              ? "Nothing else waiting — Plaino has herded everything urgent to the top."
+              : "Nothing in this discipline right now. Try another filter, or check back after the next sweep."}
+          </p>
+        ) : (
+          <ul className={needsYou.length > 0 ? "mt-4 space-y-3" : "space-y-3"}>
+            {queue.map((row) => (
+              <li key={row.id}>
+                <ApprovalRowItem {...rowProps(row)} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* ── Detail bottom-sheet ───────────────────────────────────────── */}
       <ApPaperSheet
-        open={editing !== null}
-        onClose={() => setEditingId(null)}
-        eyebrow="edit draft"
+        open={detail !== null}
+        onClose={closeDetail}
+        anchor="bottom-mobile"
+        eyebrow={detailMode === "edit" ? "edit draft" : "review"}
         title={
-          editing?.rendered.title ??
-          editing?.rendered.recipientLine ??
-          editing?.rendered.kindLabel ??
+          detail?.rendered.title ??
+          detail?.rendered.recipientLine ??
+          detail?.rendered.kindLabel ??
           "Draft"
         }
+        footer={
+          detail && detailMode === "view" ? (
+            <DetailActions
+              workspaceId={workspaceId}
+              row={detail}
+              onEdit={() => setDetailMode("edit")}
+              onReject={() => setRejectingId(detail.id)}
+              onFeedback={() => {
+                setFeedbackId(detail.id);
+                closeDetail();
+              }}
+            />
+          ) : null
+        }
       >
-        {editing ? (
+        {detail && detailMode === "view" ? (
+          <ApprovalCard row={detail} embedded />
+        ) : null}
+        {detail && detailMode === "edit" ? (
           <form
             action={async (form: FormData) => {
               await editApprovalDraftAction(form);
-              setEditingId(null);
+              setDetailMode("view");
             }}
           >
             <input type="hidden" name="workspaceId" value={workspaceId} />
-            <input type="hidden" name="itemId" value={editing.id} />
+            <input type="hidden" name="itemId" value={detail.id} />
             <label className="block">
               <span className="mb-2 block font-mono text-[11px] tracking-eyebrow uppercase text-mute">
                 draft body
               </span>
               <textarea
                 name="body"
-                defaultValue={editing.rendered.editableBody ?? ""}
+                defaultValue={detail.rendered.editableBody ?? ""}
                 rows={14}
                 className="block w-full rounded-none border border-rule bg-paper p-3 font-sans text-[15px] leading-relaxed text-ink focus:border-ink focus:outline-none"
               />
             </label>
             <p className="mt-2 text-[13px] leading-relaxed text-mute">
               Saving rewrites the drafted body. Tone, recipient, and threshold
-              stay as your fleet proposed them.
+              stay as Plaino proposed them.
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-rule pt-5">
               <ApHeritageButton variant="primary" type="submit">
@@ -284,8 +374,8 @@ export function ApprovalsList({
               </ApHeritageButton>
               <button
                 type="button"
-                onClick={() => setEditingId(null)}
-                className="inline-flex items-center justify-center rounded-none px-3 py-2 font-sans text-sm text-ink underline-offset-4 hover:underline"
+                onClick={() => setDetailMode("view")}
+                className="inline-flex min-h-[44px] items-center justify-center rounded-none px-3 py-2 font-sans text-sm text-ink underline-offset-4 hover:underline"
               >
                 cancel
               </button>
@@ -294,6 +384,7 @@ export function ApprovalsList({
         ) : null}
       </ApPaperSheet>
 
+      {/* ── "Doesn't sound like us" feedback sheet ────────────────────── */}
       <ApPaperSheet
         open={givingFeedback !== null}
         onClose={() => setFeedbackId(null)}
@@ -319,9 +410,8 @@ export function ApprovalsList({
               <span className="font-mono text-[13px] text-ink">
                 {givingFeedback.agentSlug}
               </span>
-              , fold it into the next draft, and review it in our weekly
-              sweep. The draft stays in your queue — this is feedback, not a
-              decision.
+              , fold it into the next draft, and review it in our weekly sweep.
+              The draft stays in your queue — this is feedback, not a decision.
             </p>
 
             <label className="mt-6 block">
@@ -362,7 +452,7 @@ export function ApprovalsList({
               <button
                 type="button"
                 onClick={() => setFeedbackId(null)}
-                className="inline-flex items-center justify-center rounded-none px-3 py-2 font-sans text-sm text-ink underline-offset-4 hover:underline"
+                className="inline-flex min-h-[44px] items-center justify-center rounded-none px-3 py-2 font-sans text-sm text-ink underline-offset-4 hover:underline"
               >
                 cancel
               </button>
@@ -371,19 +461,20 @@ export function ApprovalsList({
         ) : null}
       </ApPaperSheet>
 
+      {/* ── Reject confirm ────────────────────────────────────────────── */}
       <ApHeritageConfirm
         open={rejecting !== null}
-        onClose={() => (isRejectPending ? undefined : setRejectingId(null))}
+        onClose={() => (isPending ? undefined : setRejectingId(null))}
         eyebrow="reject draft"
         title="Reject this draft?"
-        confirmLabel={isRejectPending ? "rejecting…" : "reject draft"}
+        confirmLabel={isPending ? "rejecting…" : "reject draft"}
         cancelLabel="keep it"
         variant="destructive"
         onConfirm={confirmReject}
       >
         <p>
-          The draft is discarded and leaves your queue. Nothing is sent — your
-          fleet simply stops here.
+          The draft is discarded and leaves your queue. Nothing is sent — Plaino
+          simply stops here.
         </p>
         <p>
           If you want a different version instead, go back and choose edit. You
@@ -394,81 +485,61 @@ export function ApprovalsList({
   );
 }
 
-interface SectionProps {
-  title: string;
-  subtitle?: string;
-  items: ApprovalRow[];
-  empty: string;
-  footerFor: (row: ApprovalRow) => React.ReactNode;
-  hideTitle?: boolean;
+// ── Detail sheet sticky footer actions ───────────────────────────────────
+
+interface DetailActionsProps {
+  workspaceId: string;
+  row: ApprovalRow;
+  onEdit: () => void;
+  onReject: () => void;
+  onFeedback: () => void;
 }
 
-function Section({
-  title,
-  subtitle,
-  items,
-  empty,
-  footerFor,
-  hideTitle,
-}: SectionProps) {
+function DetailActions({
+  workspaceId,
+  row,
+  onEdit,
+  onReject,
+  onFeedback,
+}: DetailActionsProps) {
+  const canEdit = Boolean(row.rendered.editableBody);
   return (
-    <section className={hideTitle ? "mt-6" : "mt-12"}>
-      {hideTitle ? null : (
-        <>
-          <h2 className="font-display text-2xl text-ink">{title}</h2>
-          {subtitle ? (
-            <p className="mt-2 text-[13px] leading-relaxed text-mute">
-              {subtitle}
-            </p>
-          ) : null}
-        </>
-      )}
-      {items.length === 0 ? (
-        <p className="mt-4 border-l-2 border-rule pl-4 text-[13px] leading-relaxed text-mute">
-          {empty}
-        </p>
-      ) : (
-        <ul className="mt-6 space-y-4">
-          {items.map((row) => (
-            <li key={row.id}>
-              <ApprovalCard row={row} footer={footerFor(row)} />
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-interface DisciplineSectionProps {
-  name: string;
-  count: number;
-  items: ApprovalRow[];
-  footerFor: (row: ApprovalRow) => React.ReactNode;
-}
-
-function DisciplineSection({
-  name,
-  count,
-  items,
-  footerFor,
-}: DisciplineSectionProps) {
-  return (
-    <section aria-label={`${name} approvals`}>
-      <header className="flex flex-wrap items-baseline gap-3">
-        <h3 className="font-display text-xl text-ink">{name}</h3>
-        <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-          {count} {count === 1 ? "item" : "items"}
-        </span>
-      </header>
-      <ul className="mt-4 space-y-4">
-        {items.map((row) => (
-          <li key={row.id}>
-            <ApprovalCard row={row} footer={footerFor(row)} />
-          </li>
-        ))}
-      </ul>
-    </section>
+    <div className="space-y-3">
+      {/* Big, prominent approve — the primary daily action. */}
+      <form action={decideApprovalAction}>
+        <input type="hidden" name="workspaceId" value={workspaceId} />
+        <input type="hidden" name="itemId" value={row.id} />
+        <input type="hidden" name="decision" value="APPROVED" />
+        <ApHeritageButton variant="primary" type="submit" className="w-full py-4 text-base">
+          approve
+        </ApHeritageButton>
+      </form>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        {canEdit ? (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex min-h-[44px] items-center font-sans text-sm font-medium text-ink underline-offset-4 hover:underline"
+          >
+            edit
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={onFeedback}
+          className="inline-flex min-h-[44px] items-center font-sans text-sm font-medium text-ink underline-offset-4 hover:underline"
+        >
+          doesn&rsquo;t sound like us
+        </button>
+        <button
+          type="button"
+          onClick={onReject}
+          className="ml-auto inline-flex min-h-[44px] items-center font-sans text-sm font-medium text-flag underline-offset-4 hover:underline"
+        >
+          reject
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -480,13 +551,7 @@ interface FilterChipProps {
   onClick: () => void;
 }
 
-function FilterChip({
-  label,
-  count,
-  active,
-  disabled,
-  onClick,
-}: FilterChipProps) {
+function FilterChip({ label, count, active, disabled, onClick }: FilterChipProps) {
   return (
     <button
       type="button"
@@ -494,7 +559,7 @@ function FilterChip({
       disabled={disabled}
       aria-pressed={active}
       className={[
-        "inline-flex items-center gap-2 border px-3 py-1 font-mono text-[11px] tracking-eyebrow uppercase transition",
+        "inline-flex min-h-[36px] shrink-0 items-center gap-2 whitespace-nowrap border px-3 py-1 font-mono text-[11px] tracking-eyebrow uppercase transition",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
         active
           ? "border-ink bg-ink text-paper"
@@ -522,7 +587,7 @@ function SortChip({ label, active, onClick }: SortChipProps) {
       onClick={onClick}
       aria-pressed={active}
       className={[
-        "inline-flex items-center border px-3 py-1 font-mono text-[11px] tracking-eyebrow uppercase transition",
+        "inline-flex min-h-[36px] shrink-0 items-center whitespace-nowrap border px-3 py-1 font-mono text-[11px] tracking-eyebrow uppercase transition",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
         active
           ? "border-ink bg-ink text-paper"

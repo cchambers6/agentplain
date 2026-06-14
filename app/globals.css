@@ -158,3 +158,27 @@ body {
     animation: none;
   }
 }
+
+/* Bottom-mobile sheet — slides UP from the bottom on phones (native
+   bottom-sheet feel), and reuses the right slide-over from md up. Per §3.4
+   + the mobile-first approval-queue brief. */
+@keyframes ap-sheet-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.ap-sheet-bottom {
+  animation: ap-sheet-up 200ms ease-out;
+}
+
+@media (min-width: 768px) {
+  .ap-sheet-bottom {
+    animation: ap-paper-sheet-in 180ms ease-out;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ap-sheet-bottom {
+    animation: none;
+  }
+}

@@ -10,6 +10,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test \"tests/*.test.ts\" \"lib/**/*.test.ts\"",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "test:ui": "tsx --tsconfig ./tests/tsconfig.test.json --test \"tests/customer-workspace-home.test.tsx\" \"tests/customer-approvals.test.tsx\" \"tests/customer-talk.test.tsx\" \"tests/customer-settings-states.test.tsx\" \"tests/customer-visibility-states.test.tsx\" \"tests/operator-workspace-detail.test.tsx\" \"tests/plaino-widget-lead-capture.test.tsx\" \"tests/plaino-avatar.test.tsx\" \"tests/plaino-scene-wiring.test.tsx\" \"tests/customer-surface-loaders.test.tsx\" \"tests/customer-activity-failure-visibility.test.tsx\"",
     "brand-gate": "node tools/brand/brand-gate.mjs",
     "check:schema-drift": "tsx scripts/check-schema-drift.ts",
@@ -40,6 +42,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/node": "^20.19.40",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",

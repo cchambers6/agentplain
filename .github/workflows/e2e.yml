@@ -1,0 +1,98 @@
+# E2E revenue-path Playwright suite.
+#
+# Runs on every PR and on pushes to main. Tests cover:
+#   signup-to-first-value, trial-to-paid, past-due-grace,
+#   cancel-and-resubscribe, support-ticket-lifecycle, vertical-gate-refund.
+#
+# External services used:
+#   - Auth:    AUTH_PROVIDER=test    (no real email / Resend)
+#   - Billing: BILLING_PROVIDER=test (no real Stripe)
+#   - LLM:     Anthropic NOT called  (drafts are pre-seeded)
+#
+# CI secrets required (set in repo → Settings → Secrets):
+#   SESSION_PASSWORD     ≥32-char random string (SAME as dev/preview value is OK for test isolation)
+#   ENCRYPTION_KEY       64-char hex AES key
+#   DATABASE_URL         Postgres URL pointing at the test DB (the service below)
+#   DATABASE_URL_DIRECT  Same as DATABASE_URL for pgbouncer-less migrations
+
+name: e2e
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: e2e
+          POSTGRES_PASSWORD: e2e
+          POSTGRES_DB: e2e_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U e2e"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      # ── App rails ────────────────────────────────────────────────────────────
+      DATABASE_URL: postgres://e2e:e2e@localhost:5432/e2e_test
+      DATABASE_URL_DIRECT: postgres://e2e:e2e@localhost:5432/e2e_test
+      SESSION_PASSWORD: ${{ secrets.SESSION_PASSWORD }}
+      ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+      APP_PUBLIC_ORIGIN: http://localhost:3000
+
+      # ── Provider overrides (no real Stripe / email in tests) ─────────────────
+      AUTH_PROVIDER: test
+      BILLING_PROVIDER: test
+      STRIPE_WEBHOOK_SECRET: test_whsec
+
+      # ── E2E seed permission ──────────────────────────────────────────────────
+      ALLOW_E2E_SEED: "yes"
+      E2E_SEED_MAX_EXISTING_WORKSPACES: "200"
+
+      # ── CI signal to Playwright ──────────────────────────────────────────────
+      CI: "true"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Prisma migrations on test DB
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgres://e2e:e2e@localhost:5432/e2e_test
+          DATABASE_URL_DIRECT: postgres://e2e:e2e@localhost:5432/e2e_test
+          # prisma generate is part of postinstall; migrate deploy only needs the DB URL.
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run Playwright E2E suite
+        run: npx playwright test
+        env:
+          # Inherit all env vars from the job-level env block above.
+          # webServer (next dev) is started by Playwright config automatically.
+          SKIP_WEB_SERVER: ""   # ensure webServer block fires in CI
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

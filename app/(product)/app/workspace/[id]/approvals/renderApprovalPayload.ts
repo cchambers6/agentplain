@@ -97,6 +97,8 @@ const KIND_LABEL: Record<WorkApprovalKind, string> = {
   COMPLIANCE_DIGEST: "compliance digest",
   // Wave-4 — finance discipline closer (2026-05-29).
   FINANCE_PULSE: "weekly finance pulse",
+  // First-5-min activation — Plaino's first draft for a brand-new workspace.
+  ACTIVATION_DRAFT: "your first draft",
 };
 
 export function renderApprovalPayload(
@@ -153,6 +155,8 @@ export function renderApprovalPayload(
       return renderComplianceDigest(p);
     case "FINANCE_PULSE":
       return renderFinancePulse(p);
+    case "ACTIVATION_DRAFT":
+      return renderActivationDraft(p);
     default: {
       const _exhaustive: never = kind;
       // Runtime safety: if a new enum value reaches production before the
@@ -971,6 +975,45 @@ function composeMeta({
   }
   if (tone) parts.push(`Tone: ${tone}`);
   return parts.length > 0 ? parts.join(" · ") : undefined;
+}
+
+/**
+ * ACTIVATION_DRAFT — the first-5-min magic-moment draft. Plaino drafted the
+ * one piece of work the workspace's killer workflow promises, run against a
+ * clearly-labelled demo dataset. The primary surface is /welcome, but the row
+ * also lives in /approvals so it's approvable from either place. The "demo"
+ * tag in the meta line keeps it honest about what the draft ran against.
+ */
+function renderActivationDraft(p: Record<string, unknown>): RenderedApproval {
+  const subject = pickString(p, ["subject"]);
+  const body = pickString(p, ["body"]) ?? "";
+  const recordTitle = pickString(p, ["recordTitle"]);
+  const partyName = pickString(p, ["partyName"]);
+  const recipient = pickRecipientFromToEmails(p);
+  const savedMinutes = pickNumber(p, ["savedMinutes"]);
+  const recipientLine =
+    recipient && subject
+      ? `To: ${recipient}    Re: ${subject}`
+      : recipient
+        ? `To: ${recipient}`
+        : subject
+          ? `Re: ${subject}`
+          : undefined;
+  const metaParts: string[] = ["demo data"];
+  if (typeof savedMinutes === "number") {
+    metaParts.push(`saves ~${savedMinutes} min`);
+  }
+  return {
+    kindLabel: recordTitle
+      ? `${KIND_LABEL.ACTIVATION_DRAFT} · ${recordTitle}`
+      : KIND_LABEL.ACTIVATION_DRAFT,
+    recipientLine,
+    body: body ? splitParagraphs(body) : ["No draft body was attached."],
+    metaLine: metaParts.join(" · "),
+    inboundSummary: partyName ? `First draft for ${partyName}.` : undefined,
+    persisted: false,
+    editableBody: body || undefined,
+  };
 }
 
 // ── Wave-3 discipline-wrap renderers ─────────────────────────────────

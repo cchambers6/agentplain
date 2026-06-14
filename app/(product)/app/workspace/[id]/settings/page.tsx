@@ -9,6 +9,7 @@ import {
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withSystemContext } from "@/lib/db";
 import { servicePartnerForWorkspace } from "@/lib/onboarding/service-partner";
+import { countDemoRecords } from "@/lib/onboarding/demo-seed";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -51,6 +52,10 @@ export default async function SettingsPage({ params }: PageProps) {
   );
 
   const partner = servicePartnerForWorkspace(workspaceId);
+
+  // First-5-min: only surface the demo-data control when sample data is
+  // actually present (it auto-clears once real records land).
+  const demoCount = await countDemoRecords(workspaceId);
 
   const sections: SectionLink[] = [
     {
@@ -127,6 +132,16 @@ export default async function SettingsPage({ params }: PageProps) {
       description:
         "How your fleet sounds in customer-facing drafts — your tone, the templates it learns from, and the corrections you've made.",
     },
+    ...(demoCount > 0
+      ? [
+          {
+            href: `/app/workspace/${workspaceId}/settings/demo`,
+            label: "demo data",
+            description:
+              "The sample records we seeded so you could watch your first workflow run. Remove them any time — they also clear themselves once your real data lands.",
+          } satisfies SectionLink,
+        ]
+      : []),
     {
       label: "team members",
       description: "Add, remove, and assign roles.",

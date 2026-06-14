@@ -164,16 +164,16 @@ export default async function OnboardingPage({ params }: PageProps) {
           <ApHeritageButton
             variant="primary"
             withArrow
-            href={`/app/workspace/${workspaceId}`}
+            href={`/app/workspace/${workspaceId}/welcome`}
           >
-            open workspace
+            see your first draft
           </ApHeritageButton>
           <ApHeritageButton
             variant="secondary"
             withArrow
-            href={`/app/workspace/${workspaceId}/agents`}
+            href={`/app/workspace/${workspaceId}`}
           >
-            see the fleet
+            open workspace
           </ApHeritageButton>
         </div>
       </div>

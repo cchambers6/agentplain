@@ -26,7 +26,7 @@ const NAV: Array<{ href: string; label: string }> = [
   { href: "/integrations", label: "Integrations" },
   { href: "/settings", label: "Settings" },
   { href: "/support", label: "Support" },
-  { href: "/help", label: "Help" },
+  { href: "/support/new", label: "Get help" },
 ];
 
 export default async function WorkspaceLayout({

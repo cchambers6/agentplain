@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireWorkspaceMember } from "@/lib/auth/server";
 import { withRls } from "@/lib/db/rls";
 import PlainoSupportChat from "@/components/support/PlainoSupportChat";
@@ -27,10 +28,32 @@ export default async function SupportChatPage({ params }: PageProps) {
       }),
   );
 
+  const basePath = `/app/workspace/${workspaceId}`;
+
   return (
-    <PlainoSupportChat
-      workspaceId={workspaceId}
-      workspaceName={workspace?.name ?? "your workspace"}
-    />
+    <div>
+      <PlainoSupportChat
+        workspaceId={workspaceId}
+        workspaceName={workspace?.name ?? "your workspace"}
+      />
+      <div className="mx-auto mt-6 max-w-2xl border-t border-rule pt-5 text-[14px] leading-relaxed text-ink-soft">
+        Need a person on it? You can{" "}
+        <Link
+          href={`${basePath}/support/new`}
+          className="text-ink underline underline-offset-4 hover:text-clay"
+        >
+          open a tracked ticket
+        </Link>{" "}
+        — you&rsquo;ll get a ticket number, a clear response time, and an email
+        the moment a human replies. See{" "}
+        <Link
+          href={`${basePath}/support/tickets`}
+          className="text-ink underline underline-offset-4 hover:text-clay"
+        >
+          your tickets
+        </Link>{" "}
+        any time.
+      </div>
+    </div>
   );
 }

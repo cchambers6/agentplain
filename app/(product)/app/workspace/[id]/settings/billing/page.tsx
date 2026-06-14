@@ -14,7 +14,6 @@ import { getWorkspaceBudgetSnapshot } from "@/lib/billing/budget";
 import { recommendBudgetCapUsd } from "@/lib/billing/recommendations";
 import { formatMicroCentsAsUsd } from "@/lib/billing/usage/pricing";
 import {
-  PARTNER_RESERVED_HOURS_PER_MONTH,
   PER_SEAT_MONTHLY_USD_CENTS,
   SEAT_BANDS,
   TIER_ORDER,
@@ -511,7 +510,7 @@ const TIER_BULLETS: Record<TierName, TierBullets> = {
   plus: {
     bullets: [
       "Everything in Regular",
-      `${PARTNER_RESERVED_HOURS_PER_MONTH} hours/month of a named service partner`,
+      "Priority support + quarterly async check-in with your service team",
       "Priority handling on flags + drafts",
       "Service-partner check-in each week",
     ],
@@ -652,9 +651,8 @@ function TierChangeForm({
             className="mt-[3px]"
           />
           <span>
-            I understand I&rsquo;ll lose the named service partner and
-            the {PARTNER_RESERVED_HOURS_PER_MONTH} reserved hours per
-            month. (Only applies if downgrading from Partner.)
+            I understand I&rsquo;ll lose priority support and the
+            quarterly async check-in. (Only applies if downgrading from Partner.)
           </span>
         </label>
       ) : null}

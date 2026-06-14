@@ -122,13 +122,28 @@ export const PER_SEAT_MONTHLY_USD_CENTS: Record<
   },
 };
 
-// project_stripe_both_surfaces lines 43–44: "First month free across all
-// three tiers" via 30-day trial. The brief explicitly overrides the
-// memory's "Card on file" framing to "NEVER at signup" per
-// feedback_max_friction_reduction_for_trials rule #5 (no
-// credit-card-required-to-see-pricing) — interpreted to extend to
-// trial entry. Conflict flagged in the PR description.
-export const TRIAL_PERIOD_DAYS = 30;
+// Trial policy (ratified 2026-06-14):
+//   Default 7 days — card captured at signup via Stripe Checkout.
+//   CPA + Law verticals get 14 days (weekly-or-slower ops cadence; one
+//   full cycle needed to deliver value before billing starts).
+//   The old 30-day/no-card path (feedback_max_friction_reduction
+//   rule #5) was superseded by the CC-at-signup wave (checkout.ts).
+export const TRIAL_PERIOD_DAYS = 7;
+export const TRIAL_PERIOD_DAYS_EXTENDED = 14;
+
+// Verticals that receive the extended 14-day trial. Compared against the
+// vertical slug (e.g. "cpa", "law") returned by the signup form.
+const EXTENDED_TRIAL_VERTICAL_SLUGS = new Set<string>(["cpa", "law"]);
+
+export function trialPeriodDaysForVertical(verticalSlug: string): number {
+  return EXTENDED_TRIAL_VERTICAL_SLUGS.has(verticalSlug.toLowerCase())
+    ? TRIAL_PERIOD_DAYS_EXTENDED
+    : TRIAL_PERIOD_DAYS;
+}
+
+// 14-day money-back guarantee, independent of trial length. Runs from
+// first charge date; operator action required to process refund.
+export const MONEY_BACK_GUARANTEE_DAYS = 14;
 
 // Trial-end warning thresholds (days remaining). Cron at 06:00 ET emits
 // one in-app banner + one email per threshold per subscription.
@@ -228,20 +243,11 @@ export function tierProductLookupKey(tier: TierName): string {
   return `agentplain_${tier}`;
 }
 
-// Partner-tier reserved hours of a named service partner per month, per
-// the 2026-05-15 amendment to `project_stripe_both_surfaces.md`. Surfaces
-// in marketing copy, the ROI calculator's Partner column, and the
-// billing-page Partner card. Reserved hours are commitment, not metered
-// usage; the operator dashboard tracks consumption out of band.
-export const PARTNER_RESERVED_HOURS_PER_MONTH = 4;
-
-// Headline tagline for each tier, anchored to the
-// `project_stripe_both_surfaces.md` brief (2026-05-15). Kept here so the
-// app, the operator surface, and the marketing teaser all read the same
-// sentence — the customer should not see two different framings for the
-// same tier across surfaces.
+// Headline tagline for each tier. Ratified 2026-06-14: Partner no longer
+// includes reserved Conner hours — it is self-serve + AI + priority email
+// + quarterly async check-in template. Conner time is Max/Custom only.
 export const TIER_TAGLINE: Record<TierName, string> = {
   regular: "Standard managed AI ops + onboarding bundled.",
-  plus: `Everything in Regular, plus ${PARTNER_RESERVED_HOURS_PER_MONTH} hours per month of a named service partner.`,
+  plus: "Everything in Regular, plus priority support and a quarterly async check-in with your service team.",
   max: "Quote-based engagement. High-intensity, multi-state, white-label, or dedicated team.",
 };

@@ -48,6 +48,11 @@ export interface CreateTrialCheckoutForSignupInput {
    *  signup flow passes `env.appPublicOrigin()` so the URL matches the
    *  host the customer is actually on. */
   appOrigin: string;
+  /** Per-vertical trial length override. Callers pass
+   *  `trialPeriodDaysForVertical(verticalSlug)` so CPA/Law get 14 days
+   *  while the default is 7. Falls back to `env.stripeTrialPeriodDays()`
+   *  when omitted. */
+  trialPeriodDays?: number;
   /** Override for tests; live caller uses `getBillingProvider()`. */
   provider?: BillingProvider;
   /** Override for tests; live caller uses `withSystemContext`. */
@@ -134,7 +139,7 @@ export async function createTrialCheckoutForSignup(
     seats,
     successUrl,
     cancelUrl,
-    trialPeriodDays: env.stripeTrialPeriodDays(),
+    trialPeriodDays: input.trialPeriodDays ?? env.stripeTrialPeriodDays(),
     paymentMethodCollection: "always",
     clientReferenceId: input.workspaceId,
     metadata: {

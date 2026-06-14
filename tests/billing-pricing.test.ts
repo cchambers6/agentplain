@@ -6,13 +6,14 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
-  PARTNER_RESERVED_HOURS_PER_MONTH,
+  MONEY_BACK_GUARANTEE_DAYS,
   PER_SEAT_MONTHLY_USD_CENTS,
   SEAT_BANDS,
   SELF_SERVE_TIERS,
   TIER_ORDER,
   TIER_TAGLINE,
   TRIAL_PERIOD_DAYS,
+  TRIAL_PERIOD_DAYS_EXTENDED,
   TRIAL_WARNING_THRESHOLDS_DAYS,
   allLookupKeys,
   isSelfServeTier,
@@ -23,6 +24,7 @@ import {
   tierFromVerticalTier,
   tierProductLookupKey,
   tierProductName,
+  trialPeriodDaysForVertical,
   verticalTierFromTier,
 } from "@/lib/pricing/tiers";
 
@@ -49,8 +51,20 @@ describe("pricing ladder — canonical match", () => {
     assert.equal(PER_SEAT_MONTHLY_USD_CENTS.max.SEATS_50_99, 29900);
   });
 
-  it("uses 30-day trial per the brief", () => {
-    assert.equal(TRIAL_PERIOD_DAYS, 30);
+  it("uses 7-day default trial (ratified 2026-06-14)", () => {
+    assert.equal(TRIAL_PERIOD_DAYS, 7);
+  });
+
+  it("uses 14-day extended trial for CPA + Law", () => {
+    assert.equal(TRIAL_PERIOD_DAYS_EXTENDED, 14);
+    assert.equal(trialPeriodDaysForVertical("cpa"), 14);
+    assert.equal(trialPeriodDaysForVertical("law"), 14);
+    assert.equal(trialPeriodDaysForVertical("real-estate"), 7);
+    assert.equal(trialPeriodDaysForVertical("general"), 7);
+  });
+
+  it("money-back guarantee is 14 days", () => {
+    assert.equal(MONEY_BACK_GUARANTEE_DAYS, 14);
   });
 
   it("warning thresholds are 7/3/1 days", () => {
@@ -154,8 +168,11 @@ describe("tier display naming (2026-05-15 Partner rename)", () => {
       assert.ok(tagline.length > 10, `tagline too short for ${t}`);
     }
   });
-  it("partner reserved hours is positive", () => {
-    assert.ok(PARTNER_RESERVED_HOURS_PER_MONTH > 0);
+  it("Partner tier tagline does not mention reserved hours (ratified 2026-06-14)", () => {
+    assert.ok(
+      !TIER_TAGLINE.plus.match(/\d+\s+hour/i),
+      "Partner tagline must not promise a specific reserved-hours count",
+    );
   });
 });
 

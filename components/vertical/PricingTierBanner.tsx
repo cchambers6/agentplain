@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Section from "@/components/Section";
 import {
-  PARTNER_RESERVED_HOURS_PER_MONTH,
   TIER_TAGLINE,
   tierDisplayName,
   type TierName,
@@ -116,7 +115,7 @@ export default function PricingTierBanner({ tier }: { tier?: VerticalTier }) {
       }
       intro={
         resolvedTier === "plus"
-          ? `Per seat, month-to-month. Includes ${PARTNER_RESERVED_HOURS_PER_MONTH} hours per month of a named service partner — review-gate adjustment, integration depth, monthly business review. First month is free; cancel any time.`
+          ? `Per seat, month-to-month. Priority support + quarterly async check-in with your service team. 7-day free trial, card at signup; cancel any time.`
           : "Per seat, month-to-month. Standard managed AI ops + onboarding bundled in. First month is free; cancel any time."
       }
     >

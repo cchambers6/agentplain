@@ -23,6 +23,7 @@ import { env } from "@/lib/env";
 import {
   isSelfServeTier,
   SELF_SERVE_TIERS,
+  trialPeriodDaysForVertical,
   verticalTierFromTier,
   type TierName,
 } from "@/lib/pricing/tiers";
@@ -196,6 +197,7 @@ export async function signUpAction(
         email,
         tier: selectedTier,
         appOrigin: env.appPublicOrigin(),
+        trialPeriodDays: trialPeriodDaysForVertical(verticalSlug),
       });
       return {
         ok: true,

@@ -11,7 +11,7 @@ import HeroBackdrop from "@/components/marketing/HeroBackdrop";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Three per-seat service-partnership tiers, month-to-month. Regular $199→$99, Partner $299→$199, Max quoted. First month free. Custom engagements on /custom.",
+    "Three per-seat service-partnership tiers, month-to-month. Regular $199→$99, Partner $299→$199, Max quoted. 7-day free trial, card at signup, 14-day money-back guarantee. Custom engagements on /custom.",
   alternates: alternatesFor("/pricing"),
 };
 
@@ -48,7 +48,7 @@ const partnerBands: Band[] = [
 
 const sharedGuarantees = [
   "A service partner who installs the fleet and runs reviews",
-  "First month free, every seat band",
+  "7-day free trial across every seat band (14 days for CPA + Law)",
   "Month-to-month — cancel any time",
   "Human review on every customer-facing output",
   "Liability for licensed activities stays with you",
@@ -104,7 +104,7 @@ const SBM_COMPARISON: { dimension: string; diy: string; us: string }[] = [
   {
     dimension: "Time to value",
     diy: "Weeks to months: learn prompting, decide which agents to build, write the skills, wire each integration, then tune until it's reliable.",
-    us: "Days. We install the per-vertical fleet, connect your tools, and you're approving real drafts in the first week. First month free.",
+    us: "Days. We install the per-vertical fleet, connect your tools, and you're approving real drafts in the first week. 7-day free trial, card at signup.",
   },
   {
     dimension: "Ongoing maintenance",
@@ -143,7 +143,7 @@ export default function PricingPage() {
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft md:text-xl">
             Every tier is a service partnership: we install the fleet, run
             reviews, and customize alongside you. Per seat, month-to-month.
-            First month free across every band.
+            7-day free trial, card at signup. 14-day money-back guarantee.
           </p>
           <div className="mt-10 flex flex-wrap items-center gap-4">
             <Link href="/app/sign-up" className="btn-primary">
@@ -178,7 +178,7 @@ export default function PricingPage() {
             ctaLabel="Start free trial"
             ctaHref="/app/sign-up"
             ctaStyle="primary"
-            footnote="First month free. Month-to-month. Per seat."
+            footnote="7-day free trial. Month-to-month. Per seat."
           />
           <TierColumn
             name="Partner"
@@ -188,7 +188,7 @@ export default function PricingPage() {
             ctaLabel="Talk to a service partner"
             ctaHref="mailto:hello@agentplain.com?subject=agentplain%20Partner%20tier%20interest"
             ctaStyle="secondary"
-            footnote="First month free. Month-to-month. Per seat."
+            footnote="7-day free trial. Month-to-month. Per seat."
             featured
           />
           <TierColumn
@@ -338,8 +338,8 @@ export default function PricingPage() {
         <div className="container-wide py-24 md:py-32">
           <p className="eyebrow mb-6 text-paper/60">Start where it&apos;s free</p>
           <p className="max-w-3xl font-display text-3xl leading-[1.15] md:text-5xl md:leading-[1.08]">
-            First month free. Month-to-month. By the time you&apos;d pay for
-            month two, your service team has either earned its seat or it
+            7-day free trial, card at signup. By day 7 your service team
+            has either shown up or it hasn&apos;t. 14-day money-back if it
             hasn&apos;t.
           </p>
           <div className="mt-10 flex flex-wrap gap-4">

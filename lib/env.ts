@@ -139,26 +139,24 @@ export const env = {
   // first — see app/(product)/app/actions.ts + lib/billing/dunning.ts.
   stripeBillingEnabled: (): boolean =>
     (optional("STRIPE_BILLING_ENABLED") ?? "false").toLowerCase() === "true",
-  // Trial length in days. Default 14 (block-F trial-first mandate). Env-
-  // configurable so Conner can move it without a deploy. Clamped to a
-  // sane [0, 365] so a fat-fingered value can't create a decade-long
-  // free trial. Consumed by lib/billing/provisioning.ts +
-  // lib/billing/checkout.ts and surfaced in the billing-page copy.
+  // Trial length in days. Default 7 (ratified 2026-06-14; card captured at
+  // signup). Per-vertical overrides are computed in lib/pricing/tiers.ts
+  // `trialPeriodDaysForVertical()` — CPA + Law get 14 days. Env-configurable
+  // so Conner can adjust without a deploy. Clamped to [0, 365].
   stripeTrialPeriodDays: (): number => {
     const raw = optional("STRIPE_TRIAL_PERIOD_DAYS");
-    if (!raw) return 14;
+    if (!raw) return 7;
     const n = Number.parseInt(raw, 10);
-    if (!Number.isFinite(n) || n < 0) return 14;
+    if (!Number.isFinite(n) || n < 0) return 7;
     return Math.min(n, 365);
   },
-  // Card-at-signup override. The block-F default is trial-first / NO card
-  // at signup (frictionless trial start; capture the card before day-14
-  // trial end). Setting `STRIPE_CHECKOUT_ENABLED=true` opts into the
-  // wave-2 variant instead: signup routes through a Stripe Checkout
-  // session that collects the card up front. Default FALSE → trial-first.
+  // Card-at-signup default TRUE (ratified 2026-06-14). Signup routes
+  // through Stripe Checkout and collects the card up front; the
+  // subscription auto-renews after the trial period. Set
+  // STRIPE_CHECKOUT_ENABLED=false only for dev/testing without Stripe.
   // Only consulted when `stripeBillingEnabled()` is true.
   stripeCheckoutEnabled: (): boolean =>
-    (optional("STRIPE_CHECKOUT_ENABLED") ?? "false").toLowerCase() === "true",
+    (optional("STRIPE_CHECKOUT_ENABLED") ?? "true").toLowerCase() !== "false",
   // Stripe Billing Meter for token-usage emission. Two things must line
   // up before the cron actually POSTs anything:
   //   1. STRIPE_USAGE_METER_ENABLED=true (master switch).

@@ -59,10 +59,36 @@ function deriveStatus(card: CardInput): CardStatus {
   return "build-pending";
 }
 
-function statusLabel(status: CardStatus): string {
-  if (status === "active") return "active";
-  if (status === "connector-needed") return "connector needed";
-  return "build pending";
+// Customer-readable one-liner matching Plaino state vocabulary.
+// Workers = agents + skills — both count, the customer doesn't care which.
+// Fix 6: "active with 0 agents" was a UX model issue; agentCount=0 +
+// skillCount>0 is a skill-driven discipline, still correctly "active".
+// Removing the raw agent/skill/connected counter grid (Fix 2) and
+// replacing with this sentence resolves the misleading "AGENTS 0" display.
+function customerStatusSentence(card: {
+  status: CardStatus;
+  enabled: boolean;
+  agentCount: number;
+  skillCount: number;
+  connectedCount: number;
+  availableCount: number;
+}): string {
+  if (!card.enabled) return "Paused";
+  const workers = card.agentCount + card.skillCount;
+  const w = workers === 1 ? "1 worker" : `${workers} workers`;
+  if (card.status === "build-pending") return "Setting up";
+  if (card.status === "connector-needed") {
+    return card.availableCount > 0
+      ? `${w} · 0 of ${card.availableCount} connections live`
+      : `${w} · connection needed`;
+  }
+  // active — connectedCount > 0 guaranteed by deriveStatus
+  if (card.availableCount === 0 || card.connectedCount >= card.availableCount) {
+    return workers === 0
+      ? "Working · all connections live"
+      : `Working · ${w}, all connections live`;
+  }
+  return `${w} · ${card.connectedCount} of ${card.availableCount} connections live`;
 }
 
 export default async function DisciplinesPanelPage({ params }: PageProps) {
@@ -119,13 +145,13 @@ export default async function DisciplinesPanelPage({ params }: PageProps) {
     id: DisciplineId;
     name: string;
     description: string;
-    iconKey: string;
     agentCount: number;
     skillCount: number;
     connectedCount: number;
     availableCount: number;
     status: CardStatus;
     enabled: boolean;
+    firstNeededConnector: { id: string; name: string } | null;
   }> = disciplines.map((d) => {
     const entriesForD = entriesForDiscipline(d.id).filter((e) =>
       entryAppliesToVertical(e, verticalSlug),
@@ -148,17 +174,30 @@ export default async function DisciplinesPanelPage({ params }: PageProps) {
       availableCount,
       enabled,
     });
+    // First available-but-unconnected connector for the discipline (Fix 3).
+    const firstNeeded =
+      status === "connector-needed"
+        ? (entriesForD.find(
+            (e) =>
+              e.providerKey !== null &&
+              !connectedProviders.has(e.providerKey) &&
+              isIntegrationConfigured(e) &&
+              e.status === "available",
+          ) ?? null)
+        : null;
     return {
       id: d.id,
       name: d.name,
       description: d.description,
-      iconKey: d.iconKey,
       agentCount,
       skillCount,
       connectedCount,
       availableCount,
       status,
       enabled,
+      firstNeededConnector: firstNeeded
+        ? { id: firstNeeded.id, name: firstNeeded.name }
+        : null,
     };
   });
 
@@ -192,11 +231,11 @@ export default async function DisciplinesPanelPage({ params }: PageProps) {
             role="listitem"
             className="flex flex-col gap-4 bg-paper p-6"
           >
+            {/* Fix 1 — eyebrow removed; card.iconKey was a Lucide slug being
+                rendered as visible text ("bar-chart", "book-open", etc.).
+                The discipline name below is sufficient. */}
             <header>
-              <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-                {card.iconKey}
-              </p>
-              <h2 className="mt-2 font-display text-2xl text-ink">
+              <h2 className="font-display text-2xl text-ink">
                 {card.name}
               </h2>
               <p className="mt-2 text-[14px] leading-relaxed text-ink-soft">
@@ -204,62 +243,67 @@ export default async function DisciplinesPanelPage({ params }: PageProps) {
               </p>
             </header>
 
-            <dl className="grid grid-cols-3 gap-4 border-t border-rule pt-4 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-              <div>
-                <dt className="text-mute">agents</dt>
-                <dd
-                  className="mt-1 font-display text-xl text-ink"
-                  aria-label={`${card.agentCount} agents`}
-                >
-                  {card.agentCount}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-mute">skills</dt>
-                <dd
-                  className="mt-1 font-display text-xl text-ink"
-                  aria-label={`${card.skillCount} skills`}
-                >
-                  {card.skillCount}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-mute">connected</dt>
-                <dd
-                  className="mt-1 font-display text-xl text-ink"
-                  aria-label={`${card.connectedCount} connectors connected`}
-                >
-                  {card.connectedCount}
-                </dd>
-              </div>
-            </dl>
-
+            {/* Fix 2 — single customer-meaningful sentence replaces the
+                AGENTS / SKILLS / CONNECTED three-counter grid.
+                Fix 6 — "active with 0 agents" was UX modeling: skill-only
+                disciplines are correctly active; the old grid surfaced
+                "AGENTS 0" which looked broken. Workers = agents + skills. */}
             <p
               className={[
-                "inline-flex items-center gap-2 self-start font-mono text-[11px] tracking-eyebrow uppercase",
-                card.status === "active" ? "text-ink" : "text-mute",
+                "flex items-center gap-2 text-[13px]",
+                card.status === "active" && card.enabled
+                  ? "text-ink"
+                  : "text-mute",
               ].join(" ")}
               data-status={card.status}
             >
               <span
                 aria-hidden
                 className={[
-                  "inline-block h-1.5 w-1.5",
-                  card.status === "active" ? "bg-clay" : "bg-rule",
+                  "inline-block h-1.5 w-1.5 shrink-0 rounded-full",
+                  card.status === "active" && card.enabled
+                    ? "bg-clay"
+                    : "bg-rule",
                 ].join(" ")}
               />
-              status · {statusLabel(card.status)}
+              {customerStatusSentence(card)}
             </p>
 
-            <footer className="mt-auto flex flex-wrap items-center gap-3 border-t border-rule pt-4">
+            {/* Fix 3 — "CONNECTOR NEEDED" status label replaced with
+                a named, actionable button that routes to the connector page. */}
+            {card.status === "connector-needed" ? (
+              card.firstNeededConnector ? (
+                <ApHeritageButton
+                  variant="primary"
+                  withArrow
+                  href={`/app/workspace/${workspaceId}/integrations/${card.firstNeededConnector.id}`}
+                >
+                  Connect {card.firstNeededConnector.name} to start
+                </ApHeritageButton>
+              ) : (
+                <ApHeritageButton
+                  variant="secondary"
+                  withArrow
+                  href={`/app/workspace/${workspaceId}/integrations`}
+                >
+                  View integrations
+                </ApHeritageButton>
+              )
+            ) : null}
+
+            {/* Fix 4+5 — iOS toggle replaces button+redundant state text.
+                "See activity →" replaces passive "open detail". */}
+            <footer className="mt-auto flex flex-wrap items-center gap-4 border-t border-rule pt-4">
               <Link
                 href={`/app/workspace/${workspaceId}/disciplines/${card.id}`}
                 className="inline-flex min-h-[44px] items-center justify-center border border-ink bg-paper px-3 py-2 font-sans text-sm text-ink underline-offset-4 transition hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
-                aria-label={`Open ${card.name} detail`}
               >
-                open detail
+                See activity →
               </Link>
-              <form action={toggleDisciplineAction}>
+              <form
+                action={toggleDisciplineAction}
+                className="flex items-center gap-2.5"
+              >
                 <input type="hidden" name="workspaceId" value={workspaceId} />
                 <input type="hidden" name="discipline" value={card.id} />
                 <input
@@ -267,22 +311,32 @@ export default async function DisciplinesPanelPage({ params }: PageProps) {
                   name="enabled"
                   value={card.enabled ? "false" : "true"}
                 />
-                {card.enabled ? (
-                  <ApHeritageButton variant="secondary" type="submit">
-                    turn off
-                  </ApHeritageButton>
-                ) : (
-                  <ApHeritageButton variant="primary" type="submit">
-                    turn on
-                  </ApHeritageButton>
-                )}
+                <button
+                  type="submit"
+                  role="switch"
+                  aria-checked={card.enabled}
+                  aria-label={`${card.name} is ${card.enabled ? "on" : "off"} — tap to ${card.enabled ? "turn off" : "turn on"}`}
+                  className={[
+                    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent",
+                    "transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
+                    card.enabled ? "bg-clay" : "bg-rule",
+                  ].join(" ")}
+                >
+                  <span
+                    aria-hidden
+                    className={[
+                      "pointer-events-none inline-block h-5 w-5 rounded-full bg-paper shadow ring-0 transition-transform duration-200",
+                      card.enabled ? "translate-x-5" : "translate-x-0",
+                    ].join(" ")}
+                  />
+                </button>
+                <span
+                  aria-hidden
+                  className="select-none font-sans text-[13px] text-ink-soft"
+                >
+                  {card.enabled ? "On" : "Off"}
+                </span>
               </form>
-              <span
-                className="font-mono text-[11px] tracking-eyebrow uppercase text-mute"
-                aria-label={`Discipline is ${card.enabled ? "on" : "off"}`}
-              >
-                {card.enabled ? "on" : "off"}
-              </span>
             </footer>
           </article>
         ))}
@@ -290,12 +344,12 @@ export default async function DisciplinesPanelPage({ params }: PageProps) {
 
       <ApPaperCard className="mt-10" density="dense">
         <p className="text-[14px] leading-relaxed text-ink-soft">
-          A discipline can show <span className="font-mono text-ink">active</span>{" "}
+          A discipline shows <span className="text-ink">Working</span>{" "}
           only when a real connector is connected AND a real agent or
-          skill is wired up for this vertical. Anything less reads{" "}
-          <span className="font-mono text-ink">connector needed</span> or{" "}
-          <span className="font-mono text-ink">build pending</span>. We do
-          not claim live work that is not running.
+          skill is wired up for this vertical. Anything less shows{" "}
+          <span className="text-ink">connect to start</span> or{" "}
+          <span className="text-ink">Setting up</span>. We do not claim
+          live work that is not running.
         </p>
       </ApPaperCard>
     </div>

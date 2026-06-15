@@ -10,6 +10,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test \"tests/*.test.ts\" \"lib/**/*.test.ts\"",
+    "test:e2e": "playwright test",
     "test:ui": "tsx --tsconfig ./tests/tsconfig.test.json --test \"tests/customer-workspace-home.test.tsx\" \"tests/customer-approvals.test.tsx\" \"tests/customer-talk.test.tsx\" \"tests/customer-settings-states.test.tsx\" \"tests/customer-visibility-states.test.tsx\" \"tests/operator-workspace-detail.test.tsx\" \"tests/plaino-widget-lead-capture.test.tsx\" \"tests/plaino-avatar.test.tsx\" \"tests/plaino-scene-wiring.test.tsx\" \"tests/customer-surface-loaders.test.tsx\" \"tests/customer-activity-failure-visibility.test.tsx\" \"tests/signup-first-value-funnel.test.tsx\"",
     "brand-gate": "node tools/brand/brand-gate.mjs",
     "check:schema-drift": "tsx scripts/check-schema-drift.ts",

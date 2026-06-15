@@ -2,24 +2,31 @@
  * tests/auth-webauthn-config.test.ts
  *
  * Pins the WebAuthn relying-party config resolver and the env list parsing
- * it depends on. The 2026-05-27 passkey regression on the apex
- * (`agentplain.com`) was: the server returned `rpId: app.agentplain.com`
- * to a user on the apex host because rpID was derived from a single
- * subdomain-scoped APP_PUBLIC_ORIGIN. The browser then rejected the call
- * with SecurityError (rpID is not a registrable-domain suffix of the
- * current host) and the client silently swallowed it as "user cancelled."
+ * it depends on.
  *
- * The defenses pinned here:
- *   1. RP_ID overrides the host-from-origin derivation, so prod can scope
- *      passkeys to the registrable apex even while APP_PUBLIC_ORIGIN
- *      remains a subdomain.
- *   2. WEBAUTHN_ALLOWED_ORIGINS parses to a list of origins (trimmed,
- *      trailing-slash-stripped, comma-separated) and feeds expectedOrigins
- *      so verify*Response accepts assertions from any served host.
- *   3. When WEBAUTHN_ALLOWED_ORIGINS is unset, expectedOrigins falls back
- *      to [APP_PUBLIC_ORIGIN] — single-host dev/preview stays working.
+ * THE REGRESSION THIS GUARDS (returned twice — 2026-05-27 and 2026-06-15):
+ * production served `rpId: app.agentplain.com` to users on the apex
+ * (`agentplain.com`) and www. The browser rejects that with SecurityError,
+ * because an rpID must equal, or be a PARENT of, the current host — a child
+ * subdomain is never valid. Passkey sign-in then fails on every host except
+ * app.* (and the client UI surfaced a generic "blocked" message).
  *
- * A regression in any of these silently breaks sign-in on a sibling host.
+ * Root cause both times: correctness was offloaded to env vars (RP_ID,
+ * WEBAUTHN_ALLOWED_ORIGINS) that were not set in Vercel, and the code's
+ * DEFAULT derived the literal host (`app.agentplain.com`) instead of the
+ * registrable apex. The earlier version of this test pinned that broken
+ * default as "correct" (asserting rpID === "app.agentplain.com"), so it
+ * stayed green while prod was broken.
+ *
+ * The invariant now pinned — and the reason this is a durable guard:
+ *   1. With ONLY APP_PUBLIC_ORIGIN set (the actual prod env shape), rpID is
+ *      the registrable apex and expectedOrigins covers apex + www + app.
+ *      Correctness lives in code, not in env that can drift.
+ *   2. RP_ID / WEBAUTHN_ALLOWED_ORIGINS still override for topologies the
+ *      derivation can't infer.
+ *   3. localhost / preview hosts stay single-host and self-consistent.
+ *
+ * A regression in (1) silently breaks sign-in on a sibling host.
  */
 
 import { describe, it, beforeEach } from "node:test";
@@ -48,54 +55,99 @@ const freshConfig = async () => {
   return getWebAuthnConfig();
 };
 
-describe("getWebAuthnConfig — rpID resolution", () => {
+describe("getWebAuthnConfig — rpID resolution (correct-by-default)", () => {
   beforeEach(resetEnv);
 
-  it("derives rpID from APP_PUBLIC_ORIGIN host when RP_ID is unset", async () => {
+  it("derives the registrable APEX from an app.* canonical host with NO env override", async () => {
+    // This is the exact production env shape. The default MUST be the apex,
+    // not the literal host — otherwise sign-in breaks on apex + www.
     process.env.APP_PUBLIC_ORIGIN = "https://app.agentplain.com";
-    const config = await freshConfig();
-    assert.equal(config.rpID, "app.agentplain.com");
-  });
-
-  it("uses RP_ID verbatim when set — apex scope overrides subdomain host", async () => {
-    // The prod fix: APP_PUBLIC_ORIGIN stays the canonical app subdomain,
-    // RP_ID is set to the registrable apex so credentials work across
-    // every sibling subdomain.
-    process.env.APP_PUBLIC_ORIGIN = "https://app.agentplain.com";
-    process.env.RP_ID = "agentplain.com";
     const config = await freshConfig();
     assert.equal(config.rpID, "agentplain.com");
+  });
+
+  it("collapses a www.* canonical host to the apex too", async () => {
+    process.env.APP_PUBLIC_ORIGIN = "https://www.agentplain.com";
+    const config = await freshConfig();
+    assert.equal(config.rpID, "agentplain.com");
+  });
+
+  it("leaves an apex canonical host unchanged", async () => {
+    process.env.APP_PUBLIC_ORIGIN = "https://agentplain.com";
+    const config = await freshConfig();
+    assert.equal(config.rpID, "agentplain.com");
+  });
+
+  it("uses RP_ID verbatim when set — explicit override wins", async () => {
+    process.env.APP_PUBLIC_ORIGIN = "https://app.agentplain.com";
+    process.env.RP_ID = "custom.example.com";
+    const config = await freshConfig();
+    assert.equal(config.rpID, "custom.example.com");
+  });
+
+  it("keeps a preview *.vercel.app host verbatim (NOT collapsed to the public suffix)", async () => {
+    // A preview deploy is its own self-consistent RP — collapsing to
+    // "vercel.app" (a public suffix) would be rejected by the browser.
+    process.env.APP_PUBLIC_ORIGIN =
+      "https://agentplain-git-feature-team.vercel.app";
+    const config = await freshConfig();
+    assert.equal(config.rpID, "agentplain-git-feature-team.vercel.app");
+  });
+
+  it("keeps localhost as the rpID for local dev", async () => {
+    process.env.APP_PUBLIC_ORIGIN = "http://localhost:3000";
+    const config = await freshConfig();
+    assert.equal(config.rpID, "localhost");
   });
 
   it("falls back to 'localhost' rpID when APP_PUBLIC_ORIGIN is not a URL", async () => {
     process.env.APP_PUBLIC_ORIGIN = "not-a-url";
     const config = await freshConfig();
-    // Fail-closed: empty rpID would be silently rejected by the browser
-    // with a confusing error; 'localhost' at least matches local dev.
+    // Fail-closed: empty rpID would be silently rejected by the browser.
     assert.equal(config.rpID, "localhost");
   });
 });
 
-describe("getWebAuthnConfig — expectedOrigins list", () => {
+describe("getWebAuthnConfig — expectedOrigins list (correct-by-default)", () => {
   beforeEach(resetEnv);
 
-  it("falls back to [APP_PUBLIC_ORIGIN] when WEBAUTHN_ALLOWED_ORIGINS is unset", async () => {
+  it("derives apex + www + app from an app.* canonical host with NO env override", async () => {
     process.env.APP_PUBLIC_ORIGIN = "https://app.agentplain.com";
     const config = await freshConfig();
-    assert.deepEqual(config.expectedOrigins, ["https://app.agentplain.com"]);
+    assert.deepEqual(config.expectedOrigins, [
+      "https://agentplain.com",
+      "https://www.agentplain.com",
+      "https://app.agentplain.com",
+    ]);
     assert.equal(config.canonicalOrigin, "https://app.agentplain.com");
   });
 
-  it("strips a trailing slash from the canonical origin", async () => {
+  it("strips a trailing slash from the canonical origin before deriving", async () => {
     process.env.APP_PUBLIC_ORIGIN = "https://app.agentplain.com/";
     const config = await freshConfig();
     assert.equal(config.canonicalOrigin, "https://app.agentplain.com");
-    assert.deepEqual(config.expectedOrigins, ["https://app.agentplain.com"]);
+    assert.deepEqual(config.expectedOrigins, [
+      "https://agentplain.com",
+      "https://www.agentplain.com",
+      "https://app.agentplain.com",
+    ]);
   });
 
-  it("parses WEBAUTHN_ALLOWED_ORIGINS as the full accept-list", async () => {
-    // The prod fix: apex + www + app all in the accept-list so any host
-    // can complete sign-in.
+  it("stays single-host for localhost / preview (no sibling hosts to accept)", async () => {
+    process.env.APP_PUBLIC_ORIGIN = "http://localhost:3000";
+    const local = await freshConfig();
+    assert.deepEqual(local.expectedOrigins, ["http://localhost:3000"]);
+
+    resetEnv();
+    process.env.APP_PUBLIC_ORIGIN =
+      "https://agentplain-git-feature-team.vercel.app";
+    const preview = await freshConfig();
+    assert.deepEqual(preview.expectedOrigins, [
+      "https://agentplain-git-feature-team.vercel.app",
+    ]);
+  });
+
+  it("uses WEBAUTHN_ALLOWED_ORIGINS verbatim when set — explicit override wins", async () => {
     process.env.APP_PUBLIC_ORIGIN = "https://app.agentplain.com";
     process.env.WEBAUTHN_ALLOWED_ORIGINS =
       "https://agentplain.com, https://www.agentplain.com ,https://app.agentplain.com/";
@@ -109,7 +161,7 @@ describe("getWebAuthnConfig — expectedOrigins list", () => {
     assert.equal(config.canonicalOrigin, "https://app.agentplain.com");
   });
 
-  it("ignores empty entries inside the comma-separated list", async () => {
+  it("ignores empty entries inside the comma-separated override list", async () => {
     process.env.APP_PUBLIC_ORIGIN = "https://app.agentplain.com";
     process.env.WEBAUTHN_ALLOWED_ORIGINS =
       "https://agentplain.com,,  ,https://app.agentplain.com";

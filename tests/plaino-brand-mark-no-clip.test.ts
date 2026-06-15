@@ -129,6 +129,84 @@ describe("Plaino brand mark — clip-proof safe-area (8bit.png)", () => {
       `figure only ${(Math.max(wFrac, hFrac) * 100).toFixed(1)}% of canvas — over-padded, mark reads too small`,
     );
   });
+
+  // ─── Character detail guards (nose + collar tag) — 2026-06-15 ────────────
+  // These two details were absent from every prior crop because the EIGHT_BIT
+  // rect in crop-plaino-sheet.mjs started at x=617 while the snout/nose pixels
+  // live at x=603-616. This is the SECOND time regeneration silently lost
+  // character detail (previous was the orb-clip trilogy). Pinning these here
+  // so any future re-crop that loses the nose or collar fails CI immediately.
+  //
+  // Both checks operate as fractions of the figure bounding box so they stay
+  // valid across pad/scale changes — they pin CHARACTER PRESENCE, not pixel
+  // coordinates. The canonical reference is
+  //   public/plaino/source/9.8-bit-plaino-canonical.jpeg
+  // (stored 2026-06-15; design intent for all future re-exports).
+
+  it("nose pixel is present (dark pixel at snout tip — left edge of figure, upper-half)", () => {
+    // In the canonical, the dog faces LEFT. The nose is the leftmost dark detail
+    // of the figure, sitting vertically ~22-42% down from the figure top.
+    // Expanding the crop from x=617 to x=595 made this pixel available; this
+    // test ensures a future narrowing of the crop never silently removes it.
+    const img = loadMark();
+    const { top, bottom, left, right } = figureBounds(img);
+    const figH = bottom - top;
+    const figW = right - left;
+
+    const noseScanLeft = left;
+    const noseScanRight = Math.round(left + figW * 0.13);
+    const noseScanTop = Math.round(top + figH * 0.22);
+    const noseScanBottom = Math.round(top + figH * 0.42);
+
+    let darkPixels = 0;
+    const { channels, data, width } = img;
+    for (let y = noseScanTop; y <= noseScanBottom; y++) {
+      for (let x = noseScanLeft; x <= noseScanRight; x++) {
+        if (!isBackground(img, x, y)) {
+          const i = (y * width + x) * channels;
+          if (data[i] + data[i + 1] + data[i + 2] < 200) darkPixels++;
+        }
+      }
+    }
+    assert.ok(
+      darkPixels >= 1,
+      `nose pixel missing — no dark pixel found in expected snout region (left 0-13% of figure width, 22-42% from figure top). ` +
+      `Regression: prior crop EIGHT_BIT=[617,810,210,205] started at x=617 while the nose is at x≈603. ` +
+      `Re-run tools/brand/crop-plaino-sheet.mjs after correcting source crop to capture the snout.`,
+    );
+  });
+
+  it("collar tag is present (warm-brown pixel cluster on chest — left-center of figure)", () => {
+    // The collar is a brown/terracotta circular tag with the "a" agentplain logo.
+    // It sits roughly 5-35% from the left of the figure and 45-72% down from the
+    // figure top (mid-chest). Warm-brown = R significantly higher than B.
+    const img = loadMark();
+    const { top, bottom, left, right } = figureBounds(img);
+    const figH = bottom - top;
+    const figW = right - left;
+
+    const collarLeft = Math.round(left + figW * 0.05);
+    const collarRight = Math.round(left + figW * 0.36);
+    const collarTop = Math.round(top + figH * 0.45);
+    const collarBottom = Math.round(top + figH * 0.72);
+
+    let warmBrownPixels = 0;
+    const { channels, data, width } = img;
+    for (let y = collarTop; y <= collarBottom; y++) {
+      for (let x = collarLeft; x <= collarRight; x++) {
+        if (!isBackground(img, x, y)) {
+          const i = (y * width + x) * channels;
+          const r = data[i], g = data[i + 1], b = data[i + 2];
+          if (r > 100 && r > b * 1.4 && g > 50) warmBrownPixels++;
+        }
+      }
+    }
+    assert.ok(
+      warmBrownPixels >= 3,
+      `collar tag missing — expected warm-brown (terracotta) pixels in chest region (5-36% figure width, 45-72% height). ` +
+      `The "a" tag is part of Plaino's canonical identity. Check that the crop includes the chest area.`,
+    );
+  });
 });
 
 // ─── Every DERIVED icon raster must also clear the orb ───────────────────────

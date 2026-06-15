@@ -68,7 +68,10 @@ const POSES = {
   'resting':        [755, 570, 312, 115], // dog y=581..674; tightly cropped to illustration only
   'head-icon':      [1090, 462, 240, 185], // circle x=1104..1316, y=475..643; excludes caption at y=640+ (circle outline ends y=639)
 };
-const EIGHT_BIT = [617, 810, 210, 205]; // pixel-art dog x=645-800, y=823-1010; orb top=y823, 13px buffer above
+const EIGHT_BIT = [595, 810, 237, 205]; // pixel-art dog snout x=603, body x=645-800, orb right x=829, y=823-1014;
+// left=595 captures nose at x≈603 with 8px buffer (prior crop at x=617 cut the snout tip off — 2026-06-15 fix)
+// width=237 so right edge = 595+237 = 832, covering full orb/tail sparkles at x≈829
+// top=810 gives 13px paper above orb top y=823; height=205 reaches paw bottom y=1014
 const HERITAGE = [890, 796, 495, 258];  // landscape x=896-1378, y=800-1049; clean
 
 // 1) Eight poses + head-icon → poses/<slug>.png

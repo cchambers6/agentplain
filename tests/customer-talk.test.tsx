@@ -40,7 +40,7 @@ test("empty state invites the first message and explains what Plaino does", () =
   assert.match(html, /the draft lands in your approval queue/i);
 });
 
-test("degraded state shows a calm offline notice; operator note gated", () => {
+test("degraded state shows a calm resting notice; operator note gated", () => {
   const customer = render(
     <DegradedNotice
       customerNotice="Plaino is briefly offline. Your fleet keeps running."
@@ -48,7 +48,7 @@ test("degraded state shows a calm offline notice; operator note gated", () => {
       isOperator={false}
     />,
   );
-  assert.match(customer, /Plaino is offline/i);
+  assert.match(customer, /Plaino is resting/i);
   assert.match(customer, /briefly offline/i);
   assert.doesNotMatch(customer, /ENCRYPTION_KEY/); // operator-only, hidden
 

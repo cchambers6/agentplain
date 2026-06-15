@@ -50,6 +50,8 @@ export {
   clearSession,
   sealSessionToken,
   unsealSessionToken,
+  buildSessionCookieOpts,
+  REMEMBER_MAX_AGE_SECONDS,
   type SessionPayload,
 } from "./session";
 export {

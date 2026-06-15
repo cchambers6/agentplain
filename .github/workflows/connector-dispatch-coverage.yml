@@ -1,0 +1,59 @@
+# Connector dispatch-coverage gate + MCP dispatch smoke tests.
+#
+# WHY THIS WORKFLOW EXISTS: the click-path triage on 2026-06-15 found that
+# HubSpot, Salesforce, Notion, Follow Up Boss, Sierra, and Buildium all
+# CONNECTED and background-synced successfully but had NO interactive MCP
+# dispatch route — so every agent action through them silently 404'd. The card
+# said "connected"; the tool could not act. That is the single biggest driver
+# of the "every button I press has something wrong with it" experience.
+#
+# This workflow enforces the invariant going forward: every marketplace entry
+# marked status:"available" MUST have a live dispatch route at
+# app/api/integrations/<slug>/[workspaceId]/route.ts. It also runs the per-
+# connector dispatch smoke tests that prove the route's dispatcher returns
+# structured results (never a generic 500) for tools/list + a read + a write.
+#
+# DB-free and fast: the gate is pure Node built-ins; the smoke tests use the
+# in-process MCP client + fixture servers (no network, no Postgres).
+#
+# Run locally:
+#   npm run check:connector-dispatch
+#   node --import tsx --test lib/integrations/*/*-dispatch.test.ts
+
+name: connector-dispatch-coverage
+
+on:
+  pull_request:
+    paths:
+      - "lib/integrations/marketplace.ts"
+      - "lib/integrations/**/tools.ts"
+      - "lib/integrations/**/index.ts"
+      - "app/api/integrations/**/route.ts"
+      - "tools/connector-dispatch-coverage.mjs"
+      - ".github/workflows/connector-dispatch-coverage.yml"
+  push:
+    branches: [main]
+    paths:
+      - "lib/integrations/marketplace.ts"
+      - "lib/integrations/**/tools.ts"
+      - "app/api/integrations/**/route.ts"
+      - "tools/connector-dispatch-coverage.mjs"
+      - ".github/workflows/connector-dispatch-coverage.yml"
+
+jobs:
+  connector-dispatch-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci
+      - name: Connector dispatch-coverage gate
+        run: npm run check:connector-dispatch
+      - name: MCP dispatch smoke tests
+        # Unquoted so bash expands the glob to explicit files — node's --test
+        # glob support varies by version, so we never hand node a literal pattern.
+        run: node --import tsx --test lib/integrations/*/*-dispatch.test.ts

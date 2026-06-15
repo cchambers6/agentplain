@@ -49,6 +49,18 @@ npm run brand-gate || {
   exit 1
 }
 
+# --- Layer 1.6: connector dispatch-coverage gate (fast, dependency-free) ---
+# Every marketplace connector marked status:"available" must have a live MCP
+# dispatch route at app/api/integrations/<slug>/[workspaceId]/route.ts. Wired
+# 2026-06-15 after the click-path triage found HubSpot/Salesforce/Notion/FUB/
+# Sierra/Buildium connected + synced but had no dispatch route — so every agent
+# action through them silently 404'd ("every button feels broken").
+npm run check:connector-dispatch || {
+  echo "❌ Push blocked: a connectable connector is missing its MCP dispatch route."
+  echo "   Add the route, or mark the connector status:\"coming-soon\" in lib/integrations/marketplace.ts."
+  exit 1
+}
+
 # --- Layer 2: build gate ---
 echo ""
 echo "▶ Running build gate (npm run build:no-migrate) — catches TS errors + broken pages before push."

@@ -1,10 +1,25 @@
 /**
  * lib/integrations/hubspot-mcp/index.ts
  *
- * Public surface for the HubSpot MCP. Skills + cron sweeps import from
- * here only.
+ * Builder + barrel for the HubSpot MCP. `buildHubspotMcpServer` returns the
+ * prod server, or the in-memory recording server when
+ * `INTEGRATIONS_PROVIDER=test` (parity with the registry switch in
+ * `lib/integrations/index.ts`). Skills + cron sweeps + the HTTP route import
+ * from here only.
  */
 
+import { ProdHubspotMcpServer } from './server';
+import { RecordingHubspotMcpServer } from './test-server';
+import type { HubspotMcpServer } from './types';
+
+export function buildHubspotMcpServer(args: { workspaceId: string }): HubspotMcpServer {
+  if (process.env.INTEGRATIONS_PROVIDER === 'test') {
+    return new RecordingHubspotMcpServer(args);
+  }
+  return new ProdHubspotMcpServer(args);
+}
+
+export { HUBSPOT_TOOLS, HUBSPOT_NAMESPACE } from './tools';
 export { ProdHubspotMcpServer } from './server';
 export { RecordingHubspotMcpServer } from './test-server';
 export { HubspotLeadFetcher } from './hubspot-lead-fetcher';

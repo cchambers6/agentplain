@@ -15,12 +15,17 @@ import { useEffect, useState } from "react";
 //
 // Rendered only when the server confirmed `hasPasskey === false`. We additionally
 // gate on browser support and a per-device dismissal so we never nag.
+//
+// Dismiss model:
+//   "not now"         → sessionStorage (reappears on next browser session)
+//   "don't show again" → localStorage (permanent on this device)
 
-const DISMISS_KEY = "agentplain_passkey_nudge_dismissed";
+const sessionKey = (wsId: string) => `pk-nudge-session-${wsId}`;
+const neverKey = (wsId: string) => `pk-nudge-never-${wsId}`;
 
 type Status = "idle" | "working" | "added" | "error";
 
-export function PasskeyEnrollNudge() {
+export function PasskeyEnrollNudge({ workspaceId }: { workspaceId: string }) {
   const [visible, setVisible] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -28,16 +33,28 @@ export function PasskeyEnrollNudge() {
   useEffect(() => {
     if (!browserSupportsWebAuthn()) return;
     try {
-      if (window.localStorage.getItem(DISMISS_KEY) === "1") return;
+      if (
+        window.sessionStorage.getItem(sessionKey(workspaceId)) === "1" ||
+        window.localStorage.getItem(neverKey(workspaceId)) === "1"
+      ) return;
     } catch {
-      // localStorage blocked (private mode) — still fine to show.
+      // storage blocked (private mode) — still fine to show.
     }
     setVisible(true);
-  }, []);
+  }, [workspaceId]);
 
   const dismiss = () => {
     try {
-      window.localStorage.setItem(DISMISS_KEY, "1");
+      window.sessionStorage.setItem(sessionKey(workspaceId), "1");
+    } catch {
+      /* ignore */
+    }
+    setVisible(false);
+  };
+
+  const neverShow = () => {
+    try {
+      window.localStorage.setItem(neverKey(workspaceId), "1");
     } catch {
       /* ignore */
     }
@@ -73,7 +90,7 @@ export function PasskeyEnrollNudge() {
       setStatus("added");
       setMessage("Passkey added — next time you can skip the email link.");
       try {
-        window.localStorage.setItem(DISMISS_KEY, "1");
+        window.localStorage.setItem(neverKey(workspaceId), "1");
       } catch {
         /* ignore */
       }
@@ -134,13 +151,22 @@ export function PasskeyEnrollNudge() {
             >
               {status === "working" ? "waiting for your device…" : "set up a passkey"}
             </button>
-            <button
-              type="button"
-              onClick={dismiss}
-              className="text-[13px] text-mute underline-offset-4 hover:text-ink hover:underline"
-            >
-              not now
-            </button>
+            <div className="flex flex-col gap-1 text-right">
+              <button
+                type="button"
+                onClick={dismiss}
+                className="text-[12px] text-mute underline-offset-4 hover:text-ink hover:underline"
+              >
+                not now
+              </button>
+              <button
+                type="button"
+                onClick={neverShow}
+                className="text-[12px] text-mute underline-offset-4 hover:text-ink hover:underline"
+              >
+                don&rsquo;t show again
+              </button>
+            </div>
           </div>
         ) : null}
       </div>

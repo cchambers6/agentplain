@@ -61,3 +61,8 @@ next-env.d.ts
 pr-sweep.mjs
 *.private-key*
 .playwright-mcp/
+
+# Playwright E2E artifacts
+playwright-report/
+test-results/
+blob-report/

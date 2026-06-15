@@ -11,7 +11,14 @@
 // sign-in page renders as a flash above the form.
 
 import { NextResponse, type NextRequest } from "next/server";
-import { verifyMagicLink, writeSession, type SessionPayload } from "@/lib/auth";
+import {
+  verifyMagicLink,
+  sealSessionToken,
+  buildSessionCookieOpts,
+  REMEMBER_MAX_AGE_SECONDS,
+  type SessionPayload,
+} from "@/lib/auth";
+import { env } from "@/lib/env";
 import { withSystemContext } from "@/lib/db";
 
 type FailureReason = "missing" | "invalid" | "expired" | "used";
@@ -60,7 +67,17 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     activeWorkspaceId: result.defaultWorkspaceId,
     issuedAt: new Date().toISOString(),
   };
-  await writeSession(session, { remember });
+
+  // Seal the session token. Then set it directly on the redirect response via
+  // response.cookies.set() rather than the cookies() jar from next/headers.
+  // In Next.js 14, mutations to the next/headers cookie jar may not propagate
+  // Max-Age into a subsequent NextResponse.redirect() — the cookie value lands
+  // but the Max-Age attribute is dropped, silently converting a 30-day
+  // persistent cookie into a session cookie cleared on browser close.
+  const sealed = await sealSessionToken(session, { remember });
+  console.log(
+    `[auth] session created — rememberMe=${remember}, maxAge=${remember ? `${REMEMBER_MAX_AGE_SECONDS}s` : "session"}`,
+  );
 
   // Wave-9 — land non-onboarded customers directly on the onboarding
   // wizard so the self-serve flow is the first thing they see. Once
@@ -80,5 +97,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   } else {
     destination = "/app";
   }
-  return NextResponse.redirect(new URL(destination, origin), { status: 303 });
+  const response = NextResponse.redirect(new URL(destination, origin), { status: 303 });
+  response.cookies.set(env.sessionCookieName(), sealed, buildSessionCookieOpts(remember));
+  return response;
 }

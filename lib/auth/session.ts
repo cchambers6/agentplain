@@ -31,7 +31,7 @@ export interface WriteSessionOptions {
   remember?: boolean;
 }
 
-const REMEMBER_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
+export const REMEMBER_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
 const SESSION_COOKIE_SEAL_TTL_SECONDS = 60 * 60 * 24; // 24h cap on session cookies
 
 const cookieBase = (origin: string) => ({
@@ -47,6 +47,24 @@ const cookieOpts = (origin: string, remember: boolean) => {
     // Omit maxAge → browser treats as a session cookie and clears on close.
     return base;
   }
+  return { ...base, maxAge: REMEMBER_MAX_AGE_SECONDS };
+};
+
+/**
+ * Returns cookie options suitable for direct use with response.cookies.set()
+ * in a Route Handler. Use this when you need to set the cookie on a specific
+ * NextResponse (e.g. a redirect), rather than mutating the global cookie jar
+ * via cookies() from next/headers — the latter can drop Max-Age on redirects
+ * in Next.js 14.
+ */
+export const buildSessionCookieOpts = (remember: boolean) => {
+  const base = {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax" as const,
+    path: "/",
+  };
+  if (!remember) return base;
   return { ...base, maxAge: REMEMBER_MAX_AGE_SECONDS };
 };
 

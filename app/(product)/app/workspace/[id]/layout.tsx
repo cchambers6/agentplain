@@ -4,6 +4,7 @@ import { withSystemContext } from "@/lib/db";
 import { ApWorkspaceStrip } from "@/components/ui/ap";
 import { signOutAction } from "../../actions";
 import { WorkspaceNavLink } from "./WorkspaceNavLink";
+import { WorkspaceMobileNav } from "./WorkspaceMobileNav";
 import { PasskeyEnrollNudge } from "./PasskeyEnrollNudge";
 import { isWorkspacePaused } from "@/lib/billing/workspace-paused-gate";
 import { getUnhealthyIntegrations } from "@/lib/integrations/health-banner";
@@ -13,21 +14,23 @@ interface WorkspaceLayoutProps {
   params: Promise<{ id: string }>;
 }
 
+// 5 customer-job tabs (workspace-ia-simplification-2026-06-14). Replaces the
+// 14-entry engineer IA. Each tab is one of the five jobs a local-business
+// owner actually does:
+//   Today       — J1 "What needs me right now?" (approvals + activity + brief)
+//   Plaino      — J2 "Let me talk to Plaino"   (chat + memory + support chat)
+//   Connections — J3 "What can Plaino do + is it wired in?" (integrations…)
+//   Reports     — J4 "Money's worth + safety"  (weekly value + compliance)
+//   Account     — J5 "Manage my account"       (billing, sign-in, support)
+// Phase A points the nav at the new canonical routes; the dissolved tabs
+// (Fleet/Disciplines/Activity/Briefings/Agents/Compliance/Support) stay
+// reachable by URL so no bookmark 404s until their content merges in Phase B.
 const NAV: Array<{ href: string; label: string }> = [
-  { href: "", label: "Overview" },
-  { href: "/talk", label: "Talk to Plaino" },
-  { href: "/disciplines", label: "Disciplines" },
-  { href: "/fleet", label: "Fleet" },
-  { href: "/activity", label: "Activity" },
-  { href: "/approvals", label: "Approvals" },
-  { href: "/agents", label: "Agents" },
-  { href: "/compliance", label: "Compliance" },
-  { href: "/briefings", label: "Briefings" },
-  { href: "/reports/weekly", label: "Weekly report" },
-  { href: "/integrations", label: "Integrations" },
-  { href: "/settings", label: "Settings" },
-  { href: "/support", label: "Support" },
-  { href: "/support/new", label: "Get help" },
+  { href: "/today", label: "Today" },
+  { href: "/plaino", label: "Plaino" },
+  { href: "/connections", label: "Connections" },
+  { href: "/reports", label: "Reports" },
+  { href: "/account", label: "Account" },
 ];
 
 export default async function WorkspaceLayout({
@@ -212,10 +215,11 @@ export default async function WorkspaceLayout({
         id="workspace-main"
         tabIndex={-1}
         aria-label="workspace content"
-        className="container-wide py-10 focus:outline-none"
+        className="container-wide py-10 pb-28 focus:outline-none md:pb-10"
       >
         {children}
       </section>
+      <WorkspaceMobileNav base={base} />
     </div>
   );
 }

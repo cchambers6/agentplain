@@ -26,7 +26,16 @@ const MARK_PATH = resolve(HERE, "..", "..", "public", "brand", "plaino-system", 
 const MARK_DATA_URI = `data:image/png;base64,${readFileSync(MARK_PATH).toString("base64")}`;
 
 const PAGE_BG = "#ff00ff"; // magenta sentinel — never in the brand mark
-const SIZES = [24, 32, 48, 64, 128];
+// The exact px sizes PlainoMark is mounted at across real surfaces:
+//   16 — inline chat author icon (talk-view, support chat)
+//   20 — marketing chat FAB (PlainoWidget)
+//   28 — expanded FAB header (PlainoWidget)
+//   32 — site header / footer lockup (LogoLockup default)
+//   48 — chat panel headers (talk-view, memory, support)
+//   64/128 — favicon / large render headroom
+// Small sizes lead: that is where the old 5.4% top margin collapsed under
+// sub-pixel rounding and clipped even object-fit:contain surfaces.
+const SIZES = [16, 20, 28, 32, 48, 64, 128];
 
 // The container variants that have historically clipped the mark.
 const CONTAINERS: Array<{ name: string; style: string; imgStyle: string }> = [

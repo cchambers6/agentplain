@@ -130,3 +130,38 @@ describe("Plaino brand mark — clip-proof safe-area (8bit.png)", () => {
     );
   });
 });
+
+// ─── Every DERIVED icon raster must also clear the orb ───────────────────────
+//
+// The mark ships at multiple resolutions through TWO generators
+// (tools/brand/crop-plaino-sheet.mjs → favicon; tools/brand/gen-app-icons.mjs →
+// iOS/PWA). Each is a distinct rendering pipeline + a real browse surface
+// (browser tab, iOS home screen, Android launcher/PWA). The orb-clip recurred
+// because a single source was tight; this pins the WHOLE family so no one
+// resolution can regress on its own. Each raster renders as a full square (no
+// container crop), so the bar is: a real top margin above the orb (≥10%) and a
+// clean row 0. apple-icon.png was 7.8% top / 1.7% sides before the source fix —
+// this block fails on that asset.
+describe("Plaino mark — derived icon rasters clear the orb (multi-pipeline)", () => {
+  const RASTERS: Array<{ label: string; path: string; minTop: number }> = [
+    { label: "favicon 64 (app/icon.png — browser tab)", path: "app/icon.png", minTop: 0.1 },
+    { label: "favicon source (8bit-64.png)", path: "public/brand/plaino-system/8bit-64.png", minTop: 0.1 },
+    { label: "apple-icon 180 (iOS home screen)", path: "app/apple-icon.png", minTop: 0.1 },
+    { label: "maskable 512 (Android/PWA)", path: "public/icon-maskable.png", minTop: 0.1 },
+  ];
+
+  for (const r of RASTERS) {
+    it(`${r.label} — orb has ≥${r.minTop * 100}% top clearance + clean row 0`, () => {
+      const img = decodePng(readFileSync(resolve(HERE, "..", r.path))) as Img;
+      const { top } = figureBounds(img);
+      const topFrac = top / img.height;
+      assert.ok(
+        topFrac >= r.minTop,
+        `${r.label}: orb clearance ${(topFrac * 100).toFixed(1)}% < ${r.minTop * 100}% — re-run tools/brand/gen-app-icons.mjs after correcting 8bit.png`,
+      );
+      let row0 = 0;
+      for (let x = 0; x < img.width; x++) if (!isBackground(img, x, 0)) row0++;
+      assert.equal(row0, 0, `${r.label}: ${row0} non-bg pixel(s) on row 0 — crop too tight`);
+    });
+  }
+});

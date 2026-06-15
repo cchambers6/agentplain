@@ -237,6 +237,16 @@ enum WorkApprovalKind {
   // Deterministic (no LLM) so it lands every time; draft-only by contract —
   // the magic-moment surface (/welcome) lets the owner approve in one click.
   ACTIVATION_DRAFT
+  // DocuSign approval gate. Unlike every draft-only kind above, these two
+  // gate a MUTATING outbound action: sending an envelope for signature, or
+  // voiding an in-flight one. Per project_no_outbound_architecture.md, neither
+  // may fire from an autonomous agent run — the DocuSign MCP server's approval
+  // gate (lib/integrations/docusign-mcp/with-approval.ts) persists a PENDING
+  // row here, the operator approves on /approvals, and only the next attempt
+  // carrying that approval id reaches the customer's DocuSign account. Always
+  // human-decided; never auto-approved (legal documents).
+  DOCUSIGN_SEND_ENVELOPE
+  DOCUSIGN_VOID_ENVELOPE
 }
 
 enum WorkApprovalStatus {

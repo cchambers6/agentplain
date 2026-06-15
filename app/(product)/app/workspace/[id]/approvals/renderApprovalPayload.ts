@@ -128,6 +128,9 @@ const KIND_LABEL: Record<WorkApprovalKind, string> = {
   FINANCE_PULSE: "weekly finance pulse",
   // First-5-min activation — Plaino's first draft for a brand-new workspace.
   ACTIVATION_DRAFT: "your first draft",
+  // DocuSign approval gate — mutating outbound actions awaiting your decision.
+  DOCUSIGN_SEND_ENVELOPE: "DocuSign — send for signature",
+  DOCUSIGN_VOID_ENVELOPE: "DocuSign — void envelope",
 };
 
 export function renderApprovalPayload(
@@ -186,6 +189,10 @@ export function renderApprovalPayload(
       return renderFinancePulse(p);
     case "ACTIVATION_DRAFT":
       return renderActivationDraft(p);
+    case "DOCUSIGN_SEND_ENVELOPE":
+      return renderDocuSignSend(p);
+    case "DOCUSIGN_VOID_ENVELOPE":
+      return renderDocuSignVoid(p);
     default: {
       const _exhaustive: never = kind;
       // Runtime safety: if a new enum value reaches production before the
@@ -1061,6 +1068,63 @@ function renderActivationDraft(p: Record<string, unknown>): RenderedApproval {
     inboundSummary: partyName ? `First draft for ${partyName}.` : undefined,
     persisted: false,
     editableBody: body || undefined,
+  };
+}
+
+/**
+ * DOCUSIGN_SEND_ENVELOPE — a send the fleet proposed and is holding until you
+ * approve. This is NOT a draft you edit: it is a mutating outbound action
+ * (mailing a legal document for signature) that the DocuSign MCP server will
+ * execute against your DocuSign account once — and only once — you approve.
+ * The card names the recipients, subject, and what's being sent so the
+ * decision is fully informed. Reject and nothing leaves.
+ */
+function renderDocuSignSend(p: Record<string, unknown>): RenderedApproval {
+  const subject = pickString(p, ["emailSubject", "subject"]);
+  const source = pickString(p, ["source"]);
+  const templateId = pickString(p, ["templateId"]);
+  const recipients = pickStringArray(p, ["recipientEmails"]);
+  const documents = pickStringArray(p, ["documentNames"]);
+
+  const lines: string[] = [
+    "Awaiting your approval — Plaino will send this envelope for signature only after you approve. Nothing has been sent.",
+  ];
+  if (source === "template" && templateId) {
+    lines.push(`From template: ${templateId}`);
+  } else if (documents.length > 0) {
+    lines.push(`Documents: ${documents.join(", ")}`);
+  }
+
+  const metaParts: string[] = ["awaiting your approval"];
+  if (source) metaParts.push(`from ${source}`);
+
+  return {
+    kindLabel: KIND_LABEL.DOCUSIGN_SEND_ENVELOPE,
+    title: subject ?? "Send envelope for signature",
+    recipientLine:
+      recipients.length > 0 ? `To: ${recipients.join(", ")}` : undefined,
+    body: lines,
+    metaLine: metaParts.join(" · "),
+  };
+}
+
+/**
+ * DOCUSIGN_VOID_ENVELOPE — a void the fleet proposed and is holding until you
+ * approve. Voiding cancels an in-flight envelope, so it too is gated: nothing
+ * is voided until you approve, and the card names the envelope and the reason.
+ */
+function renderDocuSignVoid(p: Record<string, unknown>): RenderedApproval {
+  const envelopeId = pickString(p, ["envelopeId"]);
+  const reason = pickString(p, ["voidedReason", "reason"]);
+  const lines: string[] = [
+    "Awaiting your approval — Plaino will void this in-flight envelope only after you approve. Nothing has been voided.",
+  ];
+  if (reason) lines.push(`Reason: ${reason}`);
+  return {
+    kindLabel: KIND_LABEL.DOCUSIGN_VOID_ENVELOPE,
+    title: envelopeId ? `Void envelope ${envelopeId}` : "Void envelope",
+    body: lines,
+    metaLine: "awaiting your approval",
   };
 }
 

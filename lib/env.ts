@@ -71,23 +71,31 @@ export const env = {
 
   // WebAuthn / passkeys (feat/passkey-auth). The Relying Party ID is the
   // registrable domain the browser binds the credential to — NO scheme, NO
-  // port (e.g. "agentplain.com" or "localhost"). When RP_ID is unset we derive
-  // it from APP_PUBLIC_ORIGIN's hostname, which is correct for localhost dev.
-  // In production, set RP_ID to the registrable apex (e.g. "agentplain.com")
-  // so a single credential works across every subdomain the product is served
-  // on (apex + www + app) — the browser only accepts an rpID equal to or a
-  // registrable-domain suffix of the current host, so a subdomain-scoped rpID
-  // breaks sign-in on sibling hosts. RP_NAME is the user-visible name shown
-  // in the OS passkey prompt.
+  // port (e.g. "agentplain.com" or "localhost").
+  //
+  // RP_ID is an OPTIONAL override. When unset, lib/auth/webauthn/config.ts
+  // derives the registrable apex from APP_PUBLIC_ORIGIN's host (stripping a
+  // leading "app."/"www." → "agentplain.com"), so production is correct WITH
+  // NO env var set. Only set RP_ID for topologies the heuristic can't infer:
+  // a non-app/www production subdomain, or a multi-part public suffix.
+  //
+  // Why optional-and-derived rather than required: a credential is bound to a
+  // registrable apex so one passkey works across apex + www + app. The browser
+  // only accepts an rpID equal to, or a PARENT of, the current host — a child
+  // subdomain rpID throws SecurityError on sibling hosts. Offloading this to a
+  // required env var is what reintroduced the 2026-05-27 apex regression when
+  // the var drifted unset; keeping the default correct in code prevents that.
+  // RP_NAME is the user-visible name shown in the OS passkey prompt.
   webauthnRpId: () => optional("RP_ID"),
   webauthnRpName: () => optional("RP_NAME") ?? "agentplain",
   // WebAuthn expected-origins list — every host the product is served on.
   // Comma-separated full origins (scheme + host, no trailing slash):
   //   WEBAUTHN_ALLOWED_ORIGINS=https://agentplain.com,https://www.agentplain.com,https://app.agentplain.com
   // The server passes this array to verify*Response so an assertion from any
-  // listed origin verifies. When unset we fall back to [APP_PUBLIC_ORIGIN]
-  // — correct for single-host dev/preview, NOT correct for prod where the
-  // marketing apex, www redirect, and app subdomain all serve sign-in.
+  // listed origin verifies. OPTIONAL override: when unset, config.ts derives
+  // the accept-list from APP_PUBLIC_ORIGIN — apex + www + app for a production
+  // host, or just the single canonical origin for localhost/preview. Only set
+  // this to serve sign-in from hosts the derivation can't infer.
   webauthnAllowedOrigins: (): string[] => {
     const raw = optional("WEBAUTHN_ALLOWED_ORIGINS");
     if (!raw) return [];

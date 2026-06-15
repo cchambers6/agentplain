@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { ApHeritageButton, ApHeritageField } from "@/components/ui/ap";
 import {
-  PARTNER_RESERVED_HOURS_PER_MONTH,
   PER_SEAT_MONTHLY_USD_CENTS,
   TIER_TAGLINE,
   tierDisplayName,
@@ -58,8 +57,8 @@ export function SignUpForm({
   verticals,
   defaultVerticalSlug,
   defaultTier = "regular",
-  trialDays = 14,
-  cardAtSignup = false,
+  trialDays = 7,
+  cardAtSignup = true,
 }: {
   verticals: VerticalOption[];
   defaultVerticalSlug?: string;
@@ -251,13 +250,6 @@ function TierSummary({
       </span>{" "}
       · {TIER_TAGLINE[tier]} {trialDays} days free.{" "}
       {trialCardPolicy(trialDays, cardAtSignup)} Cancel any time.
-      {tier === "plus" ? (
-        <>
-          {" "}
-          A named service partner reserves{" "}
-          {PARTNER_RESERVED_HOURS_PER_MONTH} hours/month for your workspace.
-        </>
-      ) : null}
     </p>
   );
 }

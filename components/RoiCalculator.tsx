@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { tokens } from "@/lib/brand/tokens";
 import {
-  PARTNER_RESERVED_HOURS_PER_MONTH,
   PER_SEAT_MONTHLY_USD_CENTS,
   TIER_TAGLINE,
   tierDisplayName,
@@ -105,13 +104,7 @@ export default function RoiCalculator() {
     const subscription = perSeat * clampedSeats;
     const automationValuePerSeat = hours * rate * WEEKS_PER_MONTH;
     const automationValue = automationValuePerSeat * clampedSeats;
-    // Partner adds the reserved-hours value on top of automation value;
-    // Regular has no partner-hour line.
-    const partnerHoursValue =
-      tier === "plus"
-        ? PARTNER_RESERVED_HOURS_PER_MONTH * PARTNER_HOUR_VALUE_USD_ESTIMATE
-        : 0;
-    const value = automationValue + partnerHoursValue;
+    const value = automationValue;
     const roi = subscription > 0 ? value / subscription : 0;
     const overEnterprise = seats > 99;
     return {
@@ -119,7 +112,6 @@ export default function RoiCalculator() {
       subscription,
       automationValuePerSeat,
       automationValue,
-      partnerHoursValue,
       value,
       roi,
       overEnterprise,
@@ -189,20 +181,13 @@ export default function RoiCalculator() {
                 <Row
                   label="Subscription cost"
                   value={fmtDollars(result.subscription)}
-                  detail={`${result.clampedSeats} seat${result.clampedSeats > 1 ? "s" : ""} @ ${fmtDollars(result.perSeat)}/seat · first month free`}
+                  detail={`${result.clampedSeats} seat${result.clampedSeats > 1 ? "s" : ""} @ ${fmtDollars(result.perSeat)}/seat · 7-day free trial`}
                 />
                 <Row
                   label="Automation value recovered"
                   value={fmtDollars(result.automationValue)}
                   detail={`${hours} hr/wk × $${rate}/hr × ${WEEKS_PER_MONTH} wks × ${result.clampedSeats} seat${result.clampedSeats > 1 ? "s" : ""}`}
                 />
-                {tier === "plus" ? (
-                  <Row
-                    label="Named-partner hours value"
-                    value={fmtDollars(result.partnerHoursValue)}
-                    detail={`${PARTNER_RESERVED_HOURS_PER_MONTH} hrs/mo × $${PARTNER_HOUR_VALUE_USD_ESTIMATE}/hr [estimate]`}
-                  />
-                ) : null}
                 <Row
                   label="Total value"
                   value={fmtDollars(result.value)}

@@ -1,0 +1,15 @@
+# Per-PR customer-value bar self-score + reasoning.
+# Appended by Librarian when a PR with a self-score lands.
+# Used to calibrate which prompt templates produce 4+/5 first try.
+# DO NOT write directly — go through the Librarian's INBOX (memory/inbox/).
+schema_version: 1
+scores:
+  # Example entry:
+  # - pr_number: 239
+  #   pr_title: "fix(reliability): silent-fail-loud hardening"
+  #   session_id: local_cf0e9e2c-392f-4cc1-9ba7-40345eefbcb9
+  #   model: claude-opus-4-8
+  #   self_score: 4
+  #   persona: "SMB owner first 30 days"
+  #   reasoning: "Customer-trust hardening lands clean; missing 5/5 because no live incident yet to validate."
+  #   scored_at: 2026-06-12T17:54:00Z

@@ -1,0 +1,49 @@
+# memory/data/pending-fires.yaml — the audit-fire → dispatch-parent file-bridge queue
+#
+# WHY THIS EXISTS
+# The Tier-2 `agentplain-audit-queue-autofire` scheduled task can triage the audit
+# queue but cannot actually FIRE work: `mcp__dispatch__start_code_task` is not
+# reachable from its VM. Today the Dispatch parent has to round-trip every fire,
+# so autonomy stops whenever Conner isn't messaging. This file closes that gap as
+# the short-term bridge (the long-term path is the GHA `repository_dispatch` route
+# specced in docs/specs/audit-fire-gha-bridge-2026-06-15.md).
+#
+# LIFECYCLE (distinct from every other file in memory/data/)
+#   pending  -> appended by audit-fire when it WOULD fire but dispatch is unreachable
+#   claimed  -> set by the Librarian roll-up; mirrored into WORKING_STATE.md so the
+#               Dispatch parent sees it on the next message
+#   fired    -> set by the Dispatch parent after it calls dispatch; records the session id
+#   failed   -> set by the Dispatch parent if the fire could not be started (with reason)
+#
+# WRITE CONTRACT — DELIBERATELY DIFFERENT FROM THE OTHER YAMLs
+#   * This file is APPEND-ONLY by the audit-fire task, written DIRECTLY (not via
+#     memory/inbox/). It is a fast-path operational queue, not durable prose memory,
+#     so it is exempt from the Librarian's inbox write-contract.
+#   * Never rewrite or reorder existing entries. Only (a) append new entries, or
+#     (b) flip a single entry's `status`/`claimed_at`/`fired_session_id`/`fired_at`.
+#   * These entries do NOT go into INBOX.md — they are a separate queue with a
+#     separate lifecycle (audit-fire owns append; Librarian claims; Dispatch fires).
+#   * The audit-fire task creates this file with this header if it is absent on disk.
+schema_version: 1
+fires:
+  # Example entry (commented — the live queue starts empty):
+  # - id: fire-2026-06-15T22-30-00Z-plaino-paused-banner
+  #   requested_at: 2026-06-15T22:30:00Z
+  #   requested_by: agentplain-audit-queue-autofire
+  #   title: "Plaino-paused universal banner"
+  #   cwd: C:\agentplain
+  #   model: claude-opus-4-8
+  #   budget_cap_usd: 80
+  #   prompt: |
+  #     Audit-queue auto-fire (fired by the file-bridge, NOT by Conner).
+  #     Quote of the audit-queue item: "Plaino-paused degraded banner is wired to
+  #     /talk only; surface it everywhere via the workspace layout."
+  #     Open a PR, do NOT merge to main. Budget cap $80, Opus 4.8[1m].
+  #     Work in a git worktree off main (I-8). Self-score 4+/5 on the customer-value
+  #     bar or do not open a PR (I-3).
+  #   cv_bar_score: 5
+  #   severity: P1               # P0 | P1 | P2
+  #   status: pending            # pending | claimed | fired | failed
+  #   claimed_at: null
+  #   fired_session_id: null
+  #   fired_at: null

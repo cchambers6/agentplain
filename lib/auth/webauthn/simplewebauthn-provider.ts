@@ -63,16 +63,21 @@ export class SimpleWebAuthnProvider implements WebAuthnProvider {
         transports: asTransports(c.transports),
       })),
       // Resident (discoverable) keys let the user sign in with no email typed.
+      // No authenticatorAttachment — leave unset so all types are allowed.
       authenticatorSelection: {
         residentKey: "preferred",
         userVerification: "preferred",
       },
     });
-    // W3C-standard JSON; cast at the vendor boundary to the neutral seam type.
-    return {
-      optionsJSON: options as unknown as PasskeyOptionsJSON,
-      challenge: options.challenge,
-    };
+    // simplewebauthn v13 emits hints:[] when preferredAuthenticatorType is
+    // omitted, which causes iOS Safari to show only iCloud Keychain. Override
+    // with all three WebAuthn L3 hint values so the OS dialog also surfaces
+    // Chrome cross-device (hybrid) and hardware security keys.
+    const optionsJSON = {
+      ...options,
+      hints: ["client-device", "hybrid", "security-key"],
+    } as unknown as PasskeyOptionsJSON;
+    return { optionsJSON, challenge: options.challenge };
   }
 
   async verifyRegistration(
@@ -126,10 +131,13 @@ export class SimpleWebAuthnProvider implements WebAuthnProvider {
             }))
           : undefined,
     });
-    return {
-      optionsJSON: options as unknown as PasskeyOptionsJSON,
-      challenge: options.challenge,
-    };
+    // Same hint injection as registration — surface all picker modes so Chrome
+    // cross-device and security keys appear alongside iCloud Keychain.
+    const optionsJSON = {
+      ...options,
+      hints: ["client-device", "hybrid", "security-key"],
+    } as unknown as PasskeyOptionsJSON;
+    return { optionsJSON, challenge: options.challenge };
   }
 
   async verifyAuthentication(

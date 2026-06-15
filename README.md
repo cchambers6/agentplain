@@ -21,6 +21,14 @@ npm run build
 npm run start
 ```
 
+## Testing
+
+- `npm test` — DB-free unit/integration suite (node:test).
+- `npm run test:e2e` — Playwright customer-path E2E smoke + visual suite (needs `E2E_BASE_URL` pointed at a running app). Runs nightly via `.github/workflows/e2e-nightly.yml`.
+- The **audit-queue longevity loop** turns regressions (CI/Vercel/brand-gate/stale-PR/E2E) into INBOX entries the `agentplain-audit-queue-autofire` task auto-fires: `npx tsx scripts/audit-queue-seeder.ts`.
+
+See [`docs/e2e/README.md`](docs/e2e/README.md) for tiers, env vars, and the cloud-vs-local deployment note.
+
 ## Stack
 
 - Next.js 14.2 (App Router)

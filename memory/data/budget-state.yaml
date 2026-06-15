@@ -1,0 +1,47 @@
+# Week-to-date burn per tier + cap status + projected end-of-week.
+# Updated by Librarian on every session completion.
+# Used to enforce budget caps (don't fire Tier 2 if Tier 2 cap exceeded).
+# DO NOT write directly — go through the Librarian's INBOX (memory/inbox/).
+schema_version: 1
+current_week:
+  starts_at: 2026-06-15T00:00:00Z
+  ends_at: 2026-06-22T00:00:00Z
+  tier_1_continuous:
+    cap_usd: 70  # ~$10/day x 7
+    spent_usd: 0
+    remaining_usd: 70
+    pct_used: 0
+  tier_2_daily:
+    cap_usd: 2100  # ~$300/day x 7
+    spent_usd: 0
+    remaining_usd: 2100
+    pct_used: 0
+  tier_3_weekly:
+    cap_usd: 2500
+    spent_usd: 0
+    remaining_usd: 2500
+    pct_used: 0
+  tier_4_wholistic:
+    cap_usd: 4000  # 1-2 attacks/week x ~$2-4k
+    spent_usd: 0
+    remaining_usd: 4000
+    pct_used: 0
+  tier_5_burst:
+    active: false
+    activated_by: null
+    cap_usd_lift: null
+  total_cap_usd: 8670
+  total_spent_usd: 0
+  total_projected_eow_usd: 0
+historical_weeks:
+  # 4-week rolling history
+  # Example entry:
+  # - starts_at: 2026-06-08T00:00:00Z
+  #   ends_at: 2026-06-15T00:00:00Z
+  #   total_cap_usd: 8670
+  #   total_spent_usd: 312.40
+  #   tier_1_spent_usd: 18.20
+  #   tier_2_spent_usd: 145.00
+  #   tier_3_spent_usd: 149.20
+  #   tier_4_spent_usd: 0
+  #   tier_5_spent_usd: 0

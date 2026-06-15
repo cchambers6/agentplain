@@ -1,0 +1,24 @@
+# Running calibration: what works, what wastes, what re-fires.
+# Updated by Librarian on weekly roll-up from session-costs + cv-bar-scores + INBOX_PROCESSED.
+# DO NOT write directly — go through the Librarian's INBOX (memory/inbox/).
+schema_version: 1
+last_rollup_at: null
+prompt_patterns:
+  # Example entry:
+  # - pattern: "Wave with customer-value bar 4+/5 gate + Librarian inbox-append + worktree isolation"
+  #   typical_outcome: "PRs land first try at 4/5 self-score"
+  #   sample_size: 12
+  #   first_pass_success_rate: 0.83
+model_routing:
+  # Example entry:
+  # - work_type: "strategic synthesis (1M ctx)"
+  #   model: claude-opus-4-8[1m]
+  #   typical_cost_usd: 250
+  #   typical_quality: high
+  #   notes: "Fable 5 disabled 2026-06-12; Opus 1M is the new default"
+known_waste_patterns:
+  # Example entry:
+  # - pattern: "Firing new model without 30-sec test ping"
+  #   instances:
+  #     - "Fable 5 wave 2026-06-14 — $50 lost"
+  #   rule: "Always test model availability with a 1-token ping before firing >$100 of work"

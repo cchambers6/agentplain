@@ -1,0 +1,22 @@
+# Conner-decision-pending queue. Auto-pulled into morning brief.
+# Appended by any session that raises a blocker needing Conner input.
+# DO NOT write directly — go through the Librarian's INBOX (memory/inbox/).
+schema_version: 1
+pending:
+  # Example entry:
+  # - id: conner-2026-06-14-001
+  #   title: "Restore ANTHROPIC_API_KEY in Vercel Production"
+  #   raised_at: 2026-06-14T16:27:00Z
+  #   raised_by: dispatch-main
+  #   source: "Conner-dead simulation #236"
+  #   recommended_default: "Keep paused — policy"
+  #   priority: low  # low | medium | high | blocker
+  #   age_days: 1
+  #   estimated_conner_time_min: 5
+  #   blocks: []
+resolved:
+  # Archived once Conner answers.
+  # Example entry:
+  # - id: conner-2026-06-14-001
+  #   resolved_at: 2026-06-15T09:00:00Z
+  #   resolution: "Kept paused per policy"

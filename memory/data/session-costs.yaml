@@ -1,0 +1,21 @@
+# Per-session model + tokens-in + tokens-out + estimated cost + outcome.
+# Appended by Librarian on session completion.
+# Used by Tier 3 cost retro + budget-state.yaml derivation.
+# DO NOT write directly — go through the Librarian's INBOX (memory/inbox/).
+schema_version: 1
+sessions:
+  # Example entry:
+  # - session_id: local_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+  #   title: "Block A — silent-fail-loud hardening"
+  #   model: claude-opus-4-8
+  #   model_context_size: 200k
+  #   started_at: 2026-06-12T17:00:00Z
+  #   completed_at: 2026-06-12T17:54:00Z
+  #   tokens_in: 850000
+  #   tokens_out: 120000
+  #   estimated_cost_usd: 18.50
+  #   outcome: delivered  # delivered | errored | killed | partial
+  #   pr_number: 239
+  #   pr_url: https://github.com/cchambers6/agentplain/pull/239
+  #   tier: 3  # 1-5 per OS spec
+  #   notes: ""

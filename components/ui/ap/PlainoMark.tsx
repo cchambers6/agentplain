@@ -30,9 +30,17 @@ import type { CSSProperties } from "react";
 // Accessibility: decorative by default (a paired wordmark/name labels the
 // brand). Pass `alt` to expose a label when the mark stands alone.
 
-// 8bit.png crop must include ≥10px of paper buffer above the raised-tail orb.
-// Orb topmost pixel = sheet y=823; crop starts at y=810 (13px buffer).
-// If this asset is ever re-cropped, run tools/brand/fix-8bit-crop.mjs to verify.
+// 8bit.png carries its own baked-in paper SAFE-AREA: the pixel-art dog's
+// raised-tail orb (top) + paws (sides/bottom) sit inside a uniform paper margin
+// — figure ≈78% of the canvas, ≥15% clear above the orb. This is a STRUCTURAL
+// guarantee so the mark cannot clip regardless of the container's object-fit,
+// overflow, or aspect ratio (the orb-clip regression has surfaced three times
+// on three surfaces — header, login, card tile — each from a container the
+// asset's bounds left no room for). Callers therefore do NOT need overflow:
+// visible or extra padding. The safe-area is generated in
+// tools/brand/crop-plaino-sheet.mjs and verified on every PR by
+// tests/plaino-brand-mark-no-clip.test.ts — do not re-crop without re-running
+// both. objectFit:"contain" below preserves the baked safe-area at any size.
 const MARK_SRC = "/brand/plaino-system/8bit.png";
 
 type PlainoMarkProps = {

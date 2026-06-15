@@ -81,8 +81,33 @@ const headIcon = cut(...POSES['head-icon']);
 const eightBit = cut(...EIGHT_BIT);
 const heritage = cut(...HERITAGE);
 write('public/brand/plaino-system/head-icon.png', headIcon);
-write('public/brand/plaino-system/8bit.png', eightBit);
 write('public/brand/plaino-system/heritage.png', heritage);
+
+// 8bit.png is the BRAND MARK rendered full-bleed by PlainoMark on identity
+// surfaces (site header, footer, login, OG, chat entry). Unlike the favicon /
+// mobile / app-icon derivations below — which each composite onto their own
+// platform safe zone — this file is consumed RAW, so its own bounds ARE the
+// mark's bounds. The raised-tail orb (top) and the paws (bottom/sides) of the
+// pixel-art dog bleed to the very edge of the tight EIGHT_BIT crop (≤6% buffer
+// above the orb, 0px on the other three sides). Any container that uses
+// `object-fit: cover`, `overflow: hidden`, or a height-constrained / non-square
+// box therefore clips the orb first — the failure mode reported THREE times on
+// three different surfaces (header, then login, then this card tile).
+//
+// STRUCTURAL FIX (Option A — asset-level safe-area): bake a uniform paper
+// margin into the SHIPPED mark so the figure occupies ~78% of the canvas with
+// ≥15% clear paper above the orb. Every container is now clip-proof regardless
+// of its sizing/overflow — there is nothing to re-solve per surface. The tight
+// `eightBit` crop is deliberately reused unchanged by the favicon/mobile/icon
+// builders below, which apply their own (smaller) platform safe zones.
+//
+// Guard: tests/plaino-brand-mark-no-clip.test.ts asserts this safe-area on the
+// committed PNG and fails CI if a future re-crop removes it (would have caught
+// all three prior regressions). See docs/brand/icon-families.md.
+const MARK_SAFE_COVERAGE = 0.78; // figure ≤78% of canvas → ≥11% margin/side, ≥15% above the orb
+const markSide = Math.round(Math.max(eightBit.width, eightBit.height) / MARK_SAFE_COVERAGE);
+const eightBitMark = padToSquare(eightBit, markSide, PAPER);
+write('public/brand/plaino-system/8bit.png', eightBitMark);
 
 // 3) Favicon — 8-bit Plaino. Self-contained pixelated SVG (crisp at 16-32px)
 //    plus a PNG fallback. The 8-bit art is a *textured* raster, so we embed it

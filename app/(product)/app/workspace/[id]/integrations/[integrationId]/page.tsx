@@ -95,6 +95,52 @@ export default async function IntegrationSettingsPage({
 
   const isComingSoon = entry.status === "coming-soon";
   const isConnected = credential !== null && credential.status === "ACTIVE";
+
+  // Truthful watch-state for inbox connectors (Gmail / Outlook). "Connected"
+  // for these means Plaino has READ access and a push subscription was
+  // created — it does NOT mean existing mail was imported. There is no
+  // backfill (lib/inngest/functions/mcp-connected-seed-inbox.ts is a wave-10
+  // no-op) and no inbox surface to browse; Plaino reads on demand + as new
+  // mail arrives, landing drafts in /approvals. We surface the REAL state so
+  // the card never over-claims: whether the push subscription is actively
+  // watching, and how much new mail has actually been handled since connect.
+  const isInboxProvider =
+    entry.providerKey === "GOOGLE" || entry.providerKey === "M365";
+  const inboxWatch =
+    isInboxProvider && isConnected
+      ? await withRls(ctx, async (tx) => {
+          const [sub, handled, latest] = await Promise.all([
+            tx.webhookSubscription.findFirst({
+              where: { workspaceId, provider: entry.providerKey ?? undefined },
+              orderBy: { updatedAt: "desc" },
+              select: { status: true, expiresAt: true },
+            }),
+            tx.webhookEvent.count({
+              where: {
+                workspaceId,
+                processed: true,
+                subscription: { provider: entry.providerKey ?? undefined },
+              },
+            }),
+            tx.webhookEvent.findFirst({
+              where: {
+                workspaceId,
+                subscription: { provider: entry.providerKey ?? undefined },
+              },
+              orderBy: { receivedAt: "desc" },
+              select: { receivedAt: true },
+            }),
+          ]);
+          return {
+            watching:
+              sub != null &&
+              sub.status === "ACTIVE" &&
+              sub.expiresAt.getTime() > Date.now(),
+            handled,
+            lastSeenAt: latest?.receivedAt ?? null,
+          };
+        }).catch(() => null)
+      : null;
   // Same honesty seam the marketplace tiles + onboarding gate on: when the
   // provider's OAuth credentials aren't wired in this environment, the
   // connect CTA would dead-end at the start route's not-configured redirect,
@@ -271,6 +317,43 @@ export default async function IntegrationSettingsPage({
               integrationName={entry.name}
             />
           </div>
+
+          {isInboxProvider && (
+            <div className="mt-6 border border-rule bg-paper p-5">
+              <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                what happens now
+              </p>
+              <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink-soft">
+                {inboxWatch?.watching
+                  ? `Plaino is watching ${credential.accountEmail} for new mail. `
+                  : "Plaino has read access, but the live watch isn't active yet — your service partner is on it. "}
+                When new mail arrives, Plaino drafts, categorizes, and queues
+                what needs you. It doesn&rsquo;t import your existing inbox, and
+                there&rsquo;s no inbox to browse here — everything it drafts
+                waits in your{" "}
+                <Link
+                  href={`/app/workspace/${workspaceId}/approvals`}
+                  className="underline underline-offset-4 hover:text-ink"
+                >
+                  queue
+                </Link>{" "}
+                for your go-ahead.
+              </p>
+              <p className="mt-2 text-[13px] leading-relaxed text-mute">
+                {inboxWatch && inboxWatch.handled > 0
+                  ? `${inboxWatch.handled} ${
+                      inboxWatch.handled === 1 ? "message" : "messages"
+                    } handled so far${
+                      inboxWatch.lastSeenAt
+                        ? ` · last activity ${new Date(
+                            inboxWatch.lastSeenAt,
+                          ).toLocaleString()}`
+                        : ""
+                    }.`
+                  : "Nothing new has landed since you connected — that's expected. Plaino works on mail that arrives from here on, not your existing inbox."}
+              </p>
+            </div>
+          )}
 
           {entry.id === "buildium" && (
             <div className="mt-6 border border-rule bg-paper p-5">

@@ -55,13 +55,17 @@ export function ConnectionFlash({
       title={`${connectedName} is connected.`}
     >
       <p className="text-[15px] leading-relaxed text-ink-soft">
-        We&rsquo;ll start watching your inbox in the next 5 minutes. Once
-        new mail or webhooks land, your fleet drafts, categorizes, and
-        queues — you decide.
+        Plaino can now read your {connectedName} — when you ask in chat,
+        and when new activity lands. It doesn&rsquo;t pull in what&rsquo;s
+        already there, and it isn&rsquo;t a second inbox to check. When
+        something needs you, Plaino drafts it and puts it in your queue —
+        you decide, and nothing is sent without you.
       </p>
       <p className="text-[14px] leading-relaxed text-mute">
-        Your service partner is notified. Disconnecting is one tap from
-        this screen and pauses reads immediately.
+        Your service partner is notified. Until new activity arrives,
+        there&rsquo;s nothing to see here yet — that&rsquo;s expected.
+        Disconnecting is one tap from this screen and pauses reads
+        immediately.
       </p>
       <div className="flex flex-wrap gap-3">
         <ApHeritageButton variant="primary" withArrow href={primaryHref}>

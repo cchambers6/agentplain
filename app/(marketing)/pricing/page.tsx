@@ -280,6 +280,13 @@ export default function PricingPage() {
           everything between &ldquo;powerful tool&rdquo; and &ldquo;running your
           business.&rdquo; That gap is the service.
         </p>
+        <Link
+          href="/compare"
+          className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-ink underline underline-offset-4 hover:text-clay"
+        >
+          See the full comparison
+          <span aria-hidden>→</span>
+        </Link>
       </Section>
 
       <Section

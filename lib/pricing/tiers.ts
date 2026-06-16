@@ -122,6 +122,37 @@ export const PER_SEAT_MONTHLY_USD_CENTS: Record<
   },
 };
 
+// Marketing display label per seat band — the customer-facing band name
+// rendered on every pricing surface ("Solo (1 seat)" reads warmer than the
+// enum-derived "1 seat"). Kept here, not in the renderers, so the homepage,
+// /pricing, and the vertical pricing banner all show identical band labels.
+const SEAT_BAND_DISPLAY_LABEL: Record<SeatBand, string> = {
+  SEATS_1: "Solo (1 seat)",
+  SEATS_2_9: "2–9 seats",
+  SEATS_10_24: "10–24 seats",
+  SEATS_25_49: "25–49 seats",
+  SEATS_50_99: "50–99 seats",
+};
+
+export interface TierLadderRow {
+  band: string;
+  /** Whole-dollar per-seat price formatted for display, e.g. "$199". */
+  price: string;
+}
+
+// The per-seat ladder for a tier, formatted for marketing display. SINGLE
+// SOURCE OF TRUTH so the homepage, /pricing, and the vertical pricing banner
+// can never drift from PER_SEAT_MONTHLY_USD_CENTS. Before this helper the
+// Partner 2–9 and 10–24 bands had been hand-typed $10 low on the homepage
+// ($269/$239 vs the canonical $279/$249) — a silent under-quote. Deriving
+// the bands makes that class of drift unrepresentable.
+export function tierLadderBands(tier: TierName): TierLadderRow[] {
+  return SEAT_BAND_ORDER.map((band) => ({
+    band: SEAT_BAND_DISPLAY_LABEL[band],
+    price: `$${PER_SEAT_MONTHLY_USD_CENTS[tier][band] / 100}`,
+  }));
+}
+
 // Trial policy (ratified 2026-06-14):
 //   Default 7 days — card captured at signup via Stripe Checkout.
 //   CPA + Law verticals get 14 days (weekly-or-slower ops cadence; one

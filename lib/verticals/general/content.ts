@@ -206,7 +206,7 @@ export const general: VerticalContent = {
   roi: {
     multiplier: "15x",
     inputCost:
-      "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
+      "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — 7-day free trial, card at signup",
     outputValue:
       "$3,000 / mo per seat at the conservative end of the value range",
     math:
@@ -246,10 +246,10 @@ export const general: VerticalContent = {
     shipped: [
       { name: "Gmail", category: "Email" },
       { name: "Microsoft 365 / Outlook", category: "Email + calendar" },
-      { name: "Google Calendar", category: "Calendar" },
       { name: "QuickBooks Online", category: "Accounting (read-only)" },
     ],
     planned: [
+      { name: "Google Calendar", category: "Calendar" },
       {
         name: "Generic CRM webhook receiver",
         category: "Catch-all",

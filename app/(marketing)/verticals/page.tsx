@@ -43,8 +43,8 @@ export default function VerticalsIndexPage() {
           </p>
           <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-mute">
             Three service-partnership tiers cover every vertical — Regular
-            $199 → $99, Partner $299 → $199, Max quoted to scope. First month
-            free. Month-to-month.
+            $199 → $99, Partner $299 → $199, Max quoted to scope. 7-day free
+            trial (14 days for CPA &amp; Law), card at signup. Month-to-month.
           </p>
         </div>
       </section>

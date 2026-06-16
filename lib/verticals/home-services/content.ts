@@ -13,8 +13,8 @@ import type { VerticalContent } from "../types";
 // (2026-05-15 — three customer-facing tiers Regular / Partner / Max).
 // Partner is the recommended starting tier for trades operations because
 // storm-cycle volatility (estimate-to-supplement coordination, carrier
-// adjuster channel maintenance) benefits from the 4 hrs/mo of named-
-// service-partner reserved time. Schema enum stays `plus` on disk;
+// adjuster channel maintenance) benefits from priority support and a
+// quarterly async check-in with the service team. Schema enum stays `plus` on disk;
 // `tierDisplayName("plus")` returns "Partner" so customers never see the
 // on-disk identifier. Storm-cycle / supplement depth and white-label
 // engagements route to Max (quote-based) or /custom (capability build).
@@ -291,14 +291,14 @@ export const homeServices: VerticalContent = {
 
   roi: {
     multiplier: "14x–21x",
-    inputCost: "Partner tier · $299 per seat (solo), sliding to $199 per seat (50–99 seats) — first month free, includes 4 hrs/mo of named-service-partner time",
+    inputCost: "Partner tier · $299 per seat (solo), sliding to $199 per seat (50–99 seats) — 7-day free trial, card at signup",
     outputValue: "$50,000+ / yr in supplement reclamation alone at a storm-heavy shop",
     math:
-      "Per `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3: \"This single agent [insurance supplement] saves $50K+/yr at a storm-heavy shop.\" That single value stream alone is ~$4,167/mo per seat. Solo case: against the Partner-tier solo seat ($299/mo) = ~14x ROI. At-scale case: same per-seat value against the 50-seat-band price ($199/mo) = ~21x. Stack on cycle-time compression (estimate-to-contract velocity), reduced lead leakage across HomeAdvisor / Angi / LSA / GBP, and back-office reclamation — total is materially higher than $50k for shops doing $5–25M/yr. The 4 hrs/mo of named-service-partner time bundled with Partner is treated as commitment, not as ROI uplift here. White-label, multi-state ops, or 100+ seats route to Max (quote-based) or /custom (capability build).",
+      "Per `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3: \"This single agent [insurance supplement] saves $50K+/yr at a storm-heavy shop.\" That single value stream alone is ~$4,167/mo per seat. Solo case: against the Partner-tier solo seat ($299/mo) = ~14x ROI. At-scale case: same per-seat value against the 50-seat-band price ($199/mo) = ~21x. Stack on cycle-time compression (estimate-to-contract velocity), reduced lead leakage across HomeAdvisor / Angi / LSA / GBP, and back-office reclamation — total is materially higher than $50k for shops doing $5–25M/yr. White-label, multi-state ops, or 100+ seats route to Max (quote-based) or /custom (capability build).",
     citation:
       "Supplement-savings claim cited verbatim from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3. Pricing per `project_stripe_both_surfaces.md` (Partner tier per 2026-05-15 ratification; per-seat ladder $299→$199 with 4 hrs/mo of named-service-partner time included). ROI band per `project_pricing_value_anchor.md`.",
     violationAvoidance:
-      "Customer outreach — appointment texts, follow-ups, review requests — falls squarely under the TCPA, where statutory damages run $500 per text and up to $1,500 for willful violations, with no statutory cap (47 U.S.C. §227). A single non-consented blast to a few hundred numbers is six-figure exposure, which is exactly why agentplain does not auto-send: the fleet drafts the message and a person approves the send against the consent record, so a TCPA-violating text never goes out by machine. That avoided exposure is value the 14x–21x hours math doesn't count — and the one promise an auto-dialer competitor structurally cannot make.",
+      "Customer outreach — appointment texts, follow-ups, review requests — falls squarely under the TCPA, where statutory damages run $500 per text and up to $1,500 for willful violations, with no statutory cap (47 U.S.C. §227). A single non-consented blast to a few hundred numbers is six-figure exposure, which is exactly why agentplain does not auto-send: the fleet drafts the message and a person reviews and approves it before it sends, so a TCPA-violating text never goes out by machine. That avoided exposure is value the 14x–21x hours math doesn't count — and the one promise an auto-dialer competitor structurally cannot make.",
   },
 
   claims: {
@@ -348,7 +348,7 @@ export const homeServices: VerticalContent = {
     before:
       "Triage every call, qualify the storm-damage leads, dispatch crews to the highest-margin ones, draft homeowner intake forms, scope insurance estimates, follow up on the ones still deciding. Office manager is on the phone 8 hours straight.",
     after:
-      "The fleet classified every inbound by storm-zone proximity + roof age, prioritized 41 high-margin leads, drafted intake replies for each with a measurement window from EagleView, queued crew dispatch routes, and surfaced the 14 estimates that need Xactimate scoping. All ranked by close probability.",
+      "The fleet classified every inbound by storm-zone proximity + roof age, prioritized 41 high-margin leads, drafted intake replies for each, and queued crew dispatch routes — all ranked by close probability. Once your measurement and estimating tools are connected, it will also attach a measurement window to each intake and surface the estimates that need scoping.",
     outcome:
       "The office manager runs a one-hour review block. Crews dispatch by 1pm. The other 39 leads get drafted follow-up the next morning — none drop.",
   },

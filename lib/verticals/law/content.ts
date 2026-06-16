@@ -147,7 +147,7 @@ export const law: VerticalContent = {
     // below and surface honestly there as planned, not in this present-tense
     // hero clause.
     valueProp:
-      "agentplain REPLACES the intake-to-engagement bottleneck, INTEGRATES with Outlook, OneDrive, and DocuSign on day one, and AUGMENTS the partner's read on every client communication and every drafted pleading with a privilege-aware compliance pass.",
+      "agentplain REPLACES the intake-to-engagement bottleneck, INTEGRATES with Outlook, OneDrive, and DocuSign on day one, and AUGMENTS the partner's read on every client communication and every drafted pleading with attorney approval on every draft.",
     sbmSubhead:
       "The intake-to-drafting skills, agents, and memory you'd otherwise have to build yourself",
   },
@@ -173,7 +173,7 @@ export const law: VerticalContent = {
           when: "Reactive, urgent",
           today: "Read every outbound — slow, inconsistent",
           withAgentplain:
-            "Compliance agent flags privilege + work-product + ABA Model Rule 1.6 concerns before send",
+            "Compliance agent (activating after counsel review) flags privilege / work-product / ABA Model Rule 1.6 concerns; until then every draft is held for attorney approval before send",
         },
         {
           job: "Approve a fee escalation or billing exception",
@@ -290,7 +290,7 @@ export const law: VerticalContent = {
     citation:
       "Pricing per `project_stripe_both_surfaces.md` (Max tier per 2026-05-15 ratification — AD-HOC quote-based engagement; routes through `/custom?type=max` intake to operator triage). ROI band per `project_pricing_value_anchor.md` (Regular tier 15x–50x as the floor; Max engagements scope from there). Competitive context per `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 + §5 (Clio Work April 2026; CoCounsel/Smokeball March 2026). Hourly-rate input is operator-modeled — flagged in capability inbox.",
     violationAvoidance:
-      "Client communications are bound by the ABA Model Rules — Rule 1.6 on confidentiality and Rule 7.1 on false or misleading statements about a lawyer's services. There's no fixed civil fine, but the exposure is heavier than one: disciplinary action up to disbarment, plus legal-malpractice liability that follows a single privileged detail sent to the wrong recipient. A tool that auto-sends can breach privilege or misstate in one message; agentplain drafts under the Model Rule 1.6 corpus and an attorney approves every client-facing draft, so a privilege breach or misleading line never leaves the firm. That avoided exposure is the part of ROI no hours-saved multiplier can show — and no auto-execution tool can promise.",
+      "Client communications are bound by the ABA Model Rules — Rule 1.6 on confidentiality and Rule 7.1 on false or misleading statements about a lawyer's services. There's no fixed civil fine, but the exposure is heavier than one: disciplinary action up to disbarment, plus legal-malpractice liability that follows a single privileged detail sent to the wrong recipient. A tool that auto-sends can breach privilege or misstate in one message; agentplain drafts and an attorney reviews and approves every client-facing draft before it sends, so a privilege breach or misleading line never leaves the firm. That avoided exposure is the part of ROI no hours-saved multiplier can show — and no auto-execution tool can promise.",
   },
 
   claims: {

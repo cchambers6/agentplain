@@ -290,14 +290,14 @@ export const recruiting: VerticalContent = {
 
   roi: {
     multiplier: "23x",
-    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
+    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — 7-day free trial, card at signup",
     outputValue: "$54,000 / yr per recruiter in cycle-time and placement-rate reclamation",
     math:
       "1 recruiter @ 30% of week on sourcing + outreach drafting (~12 hours) × $75/hr loaded = $46,800/yr in labor reclamation. Add response-rate lift from substantiated outreach (modeled at +20% to placements) → $7k/yr at 2 placements baseline. Total ~$54k/yr per recruiter against the solo Regular-tier seat at $199/mo ($2,388/yr) = ~23x at one recruiter; team-of-10 on the $149 band runs ~30x+ on the same inputs.",
     citation:
       "Pricing per `project_stripe_both_surfaces.md` (Regular tier per the 2026-05-15 three-tier ratification — Regular is the default entry path; recruiting shops wanting named-service-partner reserved time can step up to Partner ($299→$199/seat), and high-intensity exec-search engagements route to Max (quote-based)). ROI band per `project_pricing_value_anchor.md` (Regular-tier value $2,900–$10,600/mo per seat). Time-allocation estimates pending primary-research validation — flagged in capability inbox. Response-rate-lift claim is operator-modeled, not customer-attested.",
     violationAvoidance:
-      "Candidate outreach and screening fall under EEOC enforcement of Title VII and a growing patchwork of state and local Ban-the-Box laws — Title VII compensatory-and-punitive damages are capped at $50,000 to $300,000 per claimant by employer size (Civil Rights Act of 1991), and a single discriminatory phrasing or a premature criminal-history question is enough to trigger a claim. Auto-execution sends the screening question before anyone checks it; agentplain's fleet drafts the outreach and screening copy and a recruiter approves it, so an EEOC- or Ban-the-Box-violating message is caught as a draft. That avoided claim is downside the 23x hours math never captures, and only a human-approval loop can stand behind it.",
+      "Candidate outreach and screening fall under EEOC enforcement of Title VII and a growing patchwork of state and local Ban-the-Box laws — Title VII compensatory-and-punitive damages are capped at $50,000 to $300,000 per claimant by employer size (Civil Rights Act of 1991), and a single discriminatory phrasing or a premature criminal-history question is enough to trigger a claim. Auto-execution sends the screening question before anyone checks it; agentplain's fleet drafts the outreach and screening copy and a recruiter reviews and approves every draft before it sends, so a problematic message never goes out by machine. That avoided claim is downside the 23x hours math never captures, and only a human-approval loop can stand behind it.",
   },
 
   claims: {
@@ -315,7 +315,7 @@ export const recruiting: VerticalContent = {
     augment: [
       "Recruiter review on every outreach draft — opt-out line always present",
       "Substantiation citation — every production claim references the source record",
-      "TCPA / CAN-SPAM posture — no SMS without documented prior consent",
+      "Drafts only — you send from your own system with your own consent records",
       "Pipeline forecasting — drafted with candidate-stage evidence, not vibes",
     ],
   },
@@ -344,7 +344,7 @@ export const recruiting: VerticalContent = {
     before:
       "Source on LinkedIn Recruiter, qualify against the JD, draft individualized opening messages, log everything in Bullhorn, follow up the ones who reply. ~12 hours across the week.",
     after:
-      "The fleet sourced 40 candidates against the JD, enriched them through Apollo, ranked the top 12 by stated-skill match + employer history, drafted 12 substantiated openers (each citing a specific reason from the candidate's record), and queued them for the recruiter's review.",
+      "The fleet drafted 12 substantiated openers (each citing a specific reason from the candidate's record) and queued them for the recruiter's review. Once your sourcing tools and ATS are connected, it will also source candidates against the JD, enrich them, and rank the top matches by stated-skill match + employer history.",
     outcome:
       "The recruiter reviews 12 drafts in 40 minutes, sends 9, and books 5 calls by Friday. The 12 hours becomes 90 minutes.",
   },

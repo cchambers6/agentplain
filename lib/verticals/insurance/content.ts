@@ -261,7 +261,7 @@ export const insurance: VerticalContent = {
 
   roi: {
     multiplier: "11x–23x",
-    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
+    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — 7-day free trial, card at signup",
     outputValue: "$27,000 / yr per CSR seat saved",
     math:
       "1 CSR @ $52k all-in × 30% of day on COIs (per b2b_vertical_opportunity_analysis_2026-04-27.md §3.2) = $15,600/yr in COI labor alone. Add renewal-prep reclamation (~$11,400/yr) and the per-CSR value is ~$27k/yr (~$2,250/mo) returned. Solo case: against the Regular-tier solo seat ($199/mo) = ~11x ROI. At-scale case: same per-CSR value against the 50-seat-band price ($99/mo) = ~23x. Multi-CSR agencies typically see the at-scale economics.",
@@ -323,8 +323,8 @@ export const insurance: VerticalContent = {
     before:
       "Manually pull each policy in EZLynx, rerate against current carrier appetites, flag the accounts most likely to non-renew or get hit with a premium hike, draft retention outreach for each. ~3 days of producer time.",
     after:
-      "The fleet rerated all 47 against current pricing, flagged the 9 highest non-renewal risks with a one-line reason each, drafted retention notes in the agency's voice, and queued them for review. Carrier-appetite mismatches are surfaced before the renewal deadline.",
+      "Once the agency's EZLynx and comparative rater are connected, the fleet pulls all 47 policies, reranks the 9 highest non-renewal risks with a one-line reason each against current pricing, drafts retention notes in the agency's voice, and queues them for review; carrier-appetite mismatches are surfaced before the renewal deadline. Until the rater is connected, the fleet drafts the retention outreach from the producer's declarations and pricing inputs.",
     outcome:
-      "Three days of work compresses to one morning of review. The producer handles relationships; the fleet handles the rerating.",
+      "Three days of work compresses to one morning of review. The producer handles relationships; once the rater is connected, the fleet handles the rerating.",
   },
 };

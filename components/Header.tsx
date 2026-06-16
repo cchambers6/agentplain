@@ -31,7 +31,7 @@ import LogoLockup from "./brand/LogoLockup";
 //   /custom      — Custom-engagement page
 //   /about       — Long-form positioning page
 //   /app/sign-in — Product sign-in surface
-//   /app/sign-up — Start free trial (first month free)
+//   /app/sign-up — Start free trial (7-day free trial; 14 days for CPA + Law)
 
 const PRIMARY_NAV: Array<{ href: string; label: string }> = [
   { href: "/verticals", label: "Verticals" },

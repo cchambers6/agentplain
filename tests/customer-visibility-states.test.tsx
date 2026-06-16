@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 
 // Render-state coverage for the C.3 visibility cluster (parallel-path wave 3):
-// /activity, /agents (+[slug]), /fleet, /disciplines (+[disciplineId]),
-// /compliance.
+// /activity, /agents (+[slug]), /disciplines (+[disciplineId]), /compliance.
+// (/fleet dropped — the route was retired in the 13→5 IA collapse.)
 //
 // Like the settings cluster, these are force-dynamic server pages that read
 // workspace state under RLS — not unit-renderable without a DB. This file
@@ -19,7 +19,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import ActivityLoading from "@/app/(product)/app/workspace/[id]/activity/loading";
 import AgentsLoading from "@/app/(product)/app/workspace/[id]/agents/loading";
 import AgentDetailLoading from "@/app/(product)/app/workspace/[id]/agents/[slug]/loading";
-import FleetLoading from "@/app/(product)/app/workspace/[id]/fleet/loading";
 import DisciplinesLoading from "@/app/(product)/app/workspace/[id]/disciplines/loading";
 import DisciplineDetailLoading from "@/app/(product)/app/workspace/[id]/disciplines/[disciplineId]/loading";
 import ComplianceLoading from "@/app/(product)/app/workspace/[id]/compliance/loading";
@@ -34,7 +33,6 @@ const LOADERS: Array<{ route: string; Comp: () => React.ReactElement; copy: RegE
   { route: "/activity", Comp: ActivityLoading, copy: /reading your inbox/i },
   { route: "/agents", Comp: AgentsLoading, copy: /tallying your fleet/i },
   { route: "/agents/[slug]", Comp: AgentDetailLoading, copy: /pulling this capability/i },
-  { route: "/fleet", Comp: FleetLoading, copy: /reading the queue/i },
   { route: "/disciplines", Comp: DisciplinesLoading, copy: /reading your disciplines/i },
   { route: "/disciplines/[disciplineId]", Comp: DisciplineDetailLoading, copy: /building this discipline/i },
   { route: "/compliance", Comp: ComplianceLoading, copy: /pulling sentinel/i },

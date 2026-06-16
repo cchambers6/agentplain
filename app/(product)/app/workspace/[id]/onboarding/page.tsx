@@ -222,12 +222,12 @@ export default async function OnboardingPage({ params }: PageProps) {
           >
             Settings
           </Link>
-          , or see the whole fleet on the{" "}
+          , or see what your service covers on the{" "}
           <Link
-            href={`/app/workspace/${workspaceId}/agents`}
+            href={`/app/workspace/${workspaceId}/connections`}
             className="text-ink underline-offset-4 hover:underline"
           >
-            agents page
+            Connections page
           </Link>
           .
         </p>

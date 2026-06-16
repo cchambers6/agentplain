@@ -10,6 +10,13 @@ interface WorkspaceNavLinkProps {
    *  href base). Overview matches only the exact workspace base — other
    *  sub-paths handle their own active check. */
   exact?: boolean;
+  /**
+   * Extra full hrefs that should also mark this tab active. In the 13→5 IA
+   * collapse one tab absorbs several routes (e.g. Connections owns
+   * /integrations, /marketplace, /agents) that are still reachable via in-tab
+   * hubs; this keeps the right tab lit when the customer lands on one of them.
+   */
+  match?: string[];
   children: ReactNode;
 }
 
@@ -22,11 +29,13 @@ interface WorkspaceNavLinkProps {
  * styling alone — keyboard users had no way to tell which workspace
  * section they were inside without reading the URL.
  */
-export function WorkspaceNavLink({ href, exact, children }: WorkspaceNavLinkProps) {
+export function WorkspaceNavLink({ href, exact, match, children }: WorkspaceNavLinkProps) {
   const pathname = usePathname();
+  const onPath = (p: string) => pathname === p || pathname.startsWith(`${p}/`);
+  const matchesAbsorbed = match?.some(onPath) ?? false;
   const isActive = exact
-    ? pathname === href
-    : pathname === href || pathname.startsWith(`${href}/`);
+    ? pathname === href || matchesAbsorbed
+    : onPath(href) || matchesAbsorbed;
 
   return (
     <Link

@@ -297,10 +297,10 @@ function TodaysWork({
       <header className="mb-4 flex items-baseline justify-between">
         <ApEyebrow>what we did</ApEyebrow>
         <Link
-          href={`/app/workspace/${workspaceId}/agents`}
+          href={`/app/workspace/${workspaceId}/activity`}
           className="rounded-none font-mono text-[11px] tracking-eyebrow uppercase text-mute hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
         >
-          see fleet&nbsp;→
+          see all&nbsp;→
         </Link>
       </header>
 

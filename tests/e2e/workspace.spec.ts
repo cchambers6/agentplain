@@ -19,7 +19,7 @@
  * DisconnectButton, TalkComposer).
  */
 
-import { test, expect, hasAuth, WORKSPACE_NAV, SETTINGS_SEGMENTS, workspacePath, maybeSnapshot, AUTH_FLOW } from "./fixtures/test-mode";
+import { test, expect, hasAuth, WORKSPACE_NAV, WORKSPACE_ABSORBED_ROUTES, SETTINGS_SEGMENTS, workspacePath, maybeSnapshot, AUTH_FLOW } from "./fixtures/test-mode";
 
 test.describe("authenticated workspace", () => {
   test.skip(
@@ -35,7 +35,7 @@ test.describe("authenticated workspace", () => {
     await maybeSnapshot(page, "workspace-overview");
   });
 
-  // All 12 nav tabs render their page (no dead tab, no auth bounce).
+  // All 5 nav tabs render their page (no dead tab, no auth bounce).
   for (const tab of WORKSPACE_NAV) {
     test(`nav tab "${tab.label}" renders`, async ({ authedPage: page }) => {
       const res = await page.goto(workspacePath(tab.segment));
@@ -45,13 +45,43 @@ test.describe("authenticated workspace", () => {
     });
   }
 
-  test("nav strip exposes every tab as a link", async ({ authedPage: page }) => {
+  // Routes absorbed by the 13→5 collapse are out of the nav but must still
+  // render — nothing was lost, only reorganized.
+  for (const segment of WORKSPACE_ABSORBED_ROUTES) {
+    test(`absorbed route "${segment}" still renders`, async ({ authedPage: page }) => {
+      const res = await page.goto(workspacePath(segment));
+      expect(res?.status(), `${segment} should load`).toBeLessThan(400);
+      await expect(page).not.toHaveURL(/\/app\/sign-in/);
+      await expect(page.getByRole("heading").first()).toBeVisible();
+    });
+  }
+
+  // The two killed routes 308-redirect to their new home (backward-compat).
+  test("old /fleet URL redirects to Today", async ({ authedPage: page }) => {
+    await page.goto(workspacePath("/fleet"));
+    await expect(page).toHaveURL(new RegExp(`${workspacePath("").replace(/[/]/g, "\\/")}\\/?$`));
+  });
+
+  test("old /help URL redirects to support intake", async ({ authedPage: page }) => {
+    await page.goto(workspacePath("/help"));
+    await expect(page).toHaveURL(/\/support\/new/);
+  });
+
+  test("nav strip exposes exactly the 5 tabs as links", async ({ authedPage: page }) => {
     await page.goto(workspacePath(""));
     for (const tab of WORKSPACE_NAV) {
       await expect(
         page.getByRole("link", { name: tab.label, exact: false }).first(),
         `nav should show "${tab.label}"`,
       ).toBeVisible();
+    }
+    // The retired tabs must be gone from the nav strip.
+    const nav = page.getByRole("navigation", { name: /workspace sections/i });
+    for (const gone of ["Disciplines", "Fleet", "Activity", "Briefings", "Agents"]) {
+      await expect(
+        nav.getByRole("link", { name: gone, exact: true }),
+        `nav should NOT show "${gone}"`,
+      ).toHaveCount(0);
     }
   });
 

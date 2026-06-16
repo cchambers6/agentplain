@@ -23,6 +23,27 @@ const nextConfig = {
         destination: "/#how",
         permanent: true,
       },
+      // ── Workspace IA collapse (13 tabs → 5) backward-compat ──────────────
+      // docs/specs/workspace-ia-simplification-2026-06-14.md. The five-tab IA
+      // (Today / Plaino / Connections / Reports / Account) drops two routes
+      // entirely; keep their old URLs alive so no bookmark, onboarding deep
+      // link, or operator link 404s. Query strings carry through automatically.
+      {
+        // /help was the dead predecessor of /support/new — a different,
+        // untracked note form. One support intake now, reached from Account.
+        // Onboarding's "stuck?" deep links carried a ?subject= that survives.
+        source: "/app/workspace/:id/help",
+        destination: "/app/workspace/:id/support/new",
+        permanent: true,
+      },
+      {
+        // Fleet ("mission control") was pure engineer-built redundancy — all
+        // five panels duplicated other tabs. It dissolves into Today, the new
+        // "what needs me right now" home.
+        source: "/app/workspace/:id/fleet",
+        destination: "/app/workspace/:id",
+        permanent: true,
+      },
     ];
   },
 };

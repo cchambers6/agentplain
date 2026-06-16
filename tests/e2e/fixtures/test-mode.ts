@@ -81,20 +81,35 @@ export const FOOTER_LINKS: ReadonlyArray<string> = [
   "/security",
 ];
 
-/** Workspace nav tabs, in order (app/(product)/app/workspace/[id]/layout.tsx:14–27). */
+/**
+ * Workspace nav tabs, in order — the 5 customer-job tabs after the 13→5 IA
+ * collapse (lib/workspace/nav.ts → WORKSPACE_TABS, rendered in layout.tsx).
+ */
 export const WORKSPACE_NAV: ReadonlyArray<{ label: string; segment: string }> = [
-  { label: "Overview", segment: "" },
-  { label: "Talk to Plaino", segment: "/talk" },
-  { label: "Disciplines", segment: "/disciplines" },
-  { label: "Fleet", segment: "/fleet" },
-  { label: "Activity", segment: "/activity" },
-  { label: "Approvals", segment: "/approvals" },
-  { label: "Agents", segment: "/agents" },
-  { label: "Compliance", segment: "/compliance" },
-  { label: "Briefings", segment: "/briefings" },
-  { label: "Integrations", segment: "/integrations" },
-  { label: "Settings", segment: "/settings" },
-  { label: "Help", segment: "/help" },
+  { label: "Today", segment: "" },
+  { label: "Plaino", segment: "/talk" },
+  { label: "Connections", segment: "/connections" },
+  { label: "Reports", segment: "/reports" },
+  { label: "Account", segment: "/settings" },
+];
+
+/**
+ * Routes the 5 tabs absorbed — no longer in the top nav, but still reachable
+ * via in-tab hubs and backward-compat. Each must still render (no 404/500).
+ * /fleet and /help are intentionally absent: they 308-redirect (next.config).
+ */
+export const WORKSPACE_ABSORBED_ROUTES: ReadonlyArray<string> = [
+  "/activity",
+  "/approvals",
+  "/integrations",
+  "/marketplace",
+  "/agents",
+  "/disciplines",
+  "/compliance",
+  "/briefings",
+  "/reports/weekly",
+  "/support",
+  "/support/new",
 ];
 
 /** Settings sub-tabs (app/(product)/app/workspace/[id]/settings/*). */

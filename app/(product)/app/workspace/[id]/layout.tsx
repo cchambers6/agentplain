@@ -9,28 +9,12 @@ import { isWorkspacePaused } from "@/lib/billing/workspace-paused-gate";
 import { getUnhealthyIntegrations } from "@/lib/integrations/health-banner";
 import { checkDegradedMode } from "@/lib/plaino";
 import { PlainoRestingBanner } from "@/components/plaino/PlainoRestingBanner";
+import { WORKSPACE_TABS } from "@/lib/workspace/nav";
 
 interface WorkspaceLayoutProps {
   children: React.ReactNode;
   params: Promise<{ id: string }>;
 }
-
-const NAV: Array<{ href: string; label: string }> = [
-  { href: "", label: "Overview" },
-  { href: "/talk", label: "Talk to Plaino" },
-  { href: "/disciplines", label: "Disciplines" },
-  { href: "/fleet", label: "Fleet" },
-  { href: "/activity", label: "Activity" },
-  { href: "/approvals", label: "Approvals" },
-  { href: "/agents", label: "Agents" },
-  { href: "/compliance", label: "Compliance" },
-  { href: "/briefings", label: "Briefings" },
-  { href: "/reports/weekly", label: "Weekly report" },
-  { href: "/integrations", label: "Integrations" },
-  { href: "/settings", label: "Settings" },
-  { href: "/support", label: "Support" },
-  { href: "/support/new", label: "Get help" },
-];
 
 export default async function WorkspaceLayout({
   children,
@@ -116,11 +100,12 @@ export default async function WorkspaceLayout({
             </form>
           </>
         }
-        nav={NAV.map((item) => (
+        nav={WORKSPACE_TABS.map((item) => (
           <WorkspaceNavLink
             key={item.label}
             href={`${base}${item.href}`}
             exact={item.href === ""}
+            match={item.match?.map((m) => `${base}${m}`)}
           >
             {item.label}
           </WorkspaceNavLink>

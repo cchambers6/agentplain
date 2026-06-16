@@ -30,6 +30,28 @@ export const ria: VerticalContent = {
   tier: "max",
   missionSubject: "RIAs and wealth advisors",
 
+  directAnswer:
+    "agentplain for RIAs is a managed AI service partnership for independent registered investment advisors and wealth practices. A service team installs a fleet that prepares for client meetings, writes post-meeting notes and tasks, runs plan-refresh cadences, and applies a fiduciary-aware review pass to client-facing communications — working inside Outlook, OneDrive, Excel, and DocuSign. The advisor reviews every client-facing draft before it goes out; the fleet drafts and proposes but never sends on its own.",
+
+  verticalFaq: [
+    {
+      q: "How does agentplain handle fiduciary and compliance obligations?",
+      a: "Within the augment model. The fleet drafts client-facing communications with a fiduciary-aware review pass and surfaces what needs attention for the advisor — it doesn't make the compliance determination or send anything. The advisor reviews every draft, and liability for licensed work stays with your firm.",
+    },
+    {
+      q: "Is agentplain a replacement for my CRM or portfolio software?",
+      a: "No. agentplain works inside the Outlook, OneDrive, Excel, and DocuSign you already run and replaces the manual work between them — meeting prep, post-meeting notes and tasks, plan-refresh cadences. It isn't a CRM or a portfolio-management system, and there's nothing to migrate.",
+    },
+    {
+      q: "How much does agentplain cost for an RIA?",
+      a: "RIAs are recommended at the Max tier — an ad-hoc service partnership quoted to your engagement and sold sales-led rather than by self-checkout, because the stakes per draft warrant a named partner and a weekly cadence. Every agentplain tier is month-to-month with the first month free; Max is quoted to scope.",
+    },
+    {
+      q: "Does the fleet send anything to clients on its own?",
+      a: "No. Every draft — a meeting agenda, a follow-up note, a plan-refresh message — lands in your approval queue as a pending item. The fleet drafts and proposes; you approve and send from inside your own systems. It never auto-sends, moves money, or makes commitments on your behalf.",
+    },
+  ],
+
   // Fleet surfaced in-product on /agents, grounded in the RIA JTBD tables.
   // All seven capabilities are honestly rooting today. Each one depends on
   // a portfolio / CRM / planning surface that the RIA runs in (Wealthbox /

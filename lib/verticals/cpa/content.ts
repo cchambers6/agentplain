@@ -28,6 +28,28 @@ export const cpa: VerticalContent = {
   tier: "plus",
   missionSubject: "CPAs and tax practices",
 
+  directAnswer:
+    "agentplain for CPA and tax firms is a managed AI service partnership for small accounting practices. A service team installs a fleet that runs engagement onboarding, chases client documents, reconciles books, handles milestone billing, and runs a federal-plus-state checklist before a return reaches the partner's desk — working inside Outlook, OneDrive, QuickBooks Online, and DocuSign. The partner reviews and signs every return; the fleet drafts and proposes but never sends or files on its own.",
+
+  verticalFaq: [
+    {
+      q: "How does agentplain handle tax compliance?",
+      a: "Within the augment model. The fleet runs a federal-plus-state checklist over a return before it hits the partner's desk and surfaces the items that need attention — it doesn't make the filing determination or sign anything. The CPA reviews and signs every return, and liability for licensed work stays with your firm.",
+    },
+    {
+      q: "Is agentplain a replacement for my tax or practice-management software?",
+      a: "No. agentplain works inside the Outlook, OneDrive, QuickBooks Online, and DocuSign you already run and replaces the manual work between them — engagement onboarding, document chase, books reconciliation, milestone billing. It isn't tax-prep or practice-management software, and there's nothing to migrate.",
+    },
+    {
+      q: "How much does agentplain cost for a CPA firm?",
+      a: "CPA firms are recommended at the Partner tier — a named service partner with a weekly review cadence — $299 per seat per month for a solo CPA, sliding to $199 per seat at scale. Every tier is per seat, month-to-month, with the first month free, and you can cancel anytime.",
+    },
+    {
+      q: "Does the fleet send anything to clients or file returns on its own?",
+      a: "No. Every draft — a document request, a books summary, a prepared return — lands in your approval queue as a pending item. The fleet drafts and proposes; you approve, sign, and file from inside your own systems. It never auto-sends, files, moves money, or makes commitments on your behalf.",
+    },
+  ],
+
   // Fleet surfaced in-product on /agents, grounded in the CPA JTBD tables.
   // Client Inbound is the live capability — it owns the inbox loop's
   // buyer-inquiry bucket (classify + first-touch draft). Every other agent

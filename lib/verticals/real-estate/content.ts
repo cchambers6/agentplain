@@ -12,6 +12,28 @@ export const realEstate: VerticalContent = {
   tier: "regular",
   missionSubject: "realtors and brokerages",
 
+  directAnswer:
+    "agentplain for real estate is a managed AI service partnership for independent brokerages and agents. A service team installs a vertical-aware fleet that handles listing intake, routes inbound buyer inquiries, coordinates showings, runs a fair-housing pass on every customer-facing draft, keeps the CRM clean, and builds production reports — working inside the Outlook, Gmail, Google Drive, and DocuSign you already use. The fleet drafts and proposes; the broker approves and sends. Nothing leaves the brokerage without a person's name on it.",
+
+  verticalFaq: [
+    {
+      q: "Does agentplain handle fair-housing compliance?",
+      a: "Within the augment model, yes. A real-estate Compliance Sentinel runs a fair-housing pass on every customer-facing draft, checking HUD-enumerated trigger phrases before the broker-of-record reviews it. It flags wording for a person to decide on — it doesn't make the legal call and it doesn't send anything. Liability for licensed activity stays with your brokerage.",
+    },
+    {
+      q: "Is agentplain a replacement for my CRM or MLS?",
+      a: "No. agentplain connects to the Outlook, Gmail, Google Drive, and DocuSign you already pay for and replaces the manual coordination work between them — listing intake, buyer routing, showing scheduling, CRM hygiene, production reports. It isn't a CRM, an MLS, or a transaction-management system, and there's nothing to migrate.",
+    },
+    {
+      q: "How much does agentplain cost for a brokerage?",
+      a: "Real estate is recommended at the Regular tier — $199 per seat per month for a solo agent, sliding to $99 per seat at 50+ seats. Every tier is per seat, month-to-month, with the first month free, and you can cancel anytime.",
+    },
+    {
+      q: "Does the fleet send anything to clients on its own?",
+      a: "No. Every draft — a buyer reply, a showing proposal, a status note — lands in your approval queue as a pending item. The fleet drafts and proposes; you approve and send from inside your own email, calendar, and CRM, where your name and domain are already on the message. It never auto-sends, moves money, or makes commitments on your behalf.",
+    },
+  ],
+
   // The pre-trained realty fleet, surfaced in-product on /agents. Each entry
   // declares its runtime binding so the agents page renders a TRUTHFUL state
   // instead of a perpetual "rooting in" spinner:

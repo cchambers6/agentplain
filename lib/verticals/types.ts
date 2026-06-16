@@ -185,6 +185,25 @@ export interface ValueLoopExample {
 }
 
 /**
+ * A single FAQ pair for a vertical landing page. Mirrors the `{q, a}` shape
+ * the homepage/pricing FAQ uses (`components/faq-items.ts`) and that the
+ * `faqPageJsonLd()` builder consumes — defined here (not imported from the
+ * component layer) so `lib/` never depends on `components/`.
+ *
+ * AEO (answer-engine optimization) intent: these are the questions an AI
+ * answer engine fields about a vertical — "is there an AI service for {X}?",
+ * "how much does it cost?", "does it send things on its own?". Each answer
+ * is self-contained and quotable, so an engine can lift one verbatim and have
+ * it stand on its own. Every answer is grounded in the vertical's own content
+ * (hero, JTBD, tier, integrations) or a ratified memory rule — nothing is
+ * invented, per `feedback_no_guesses_no_estimates.md`.
+ */
+export interface VerticalFaqItem {
+  q: string;
+  a: string;
+}
+
+/**
  * One capability in the vertical's pre-trained fleet, as surfaced in-product
  * on `/app/workspace/[id]/agents`. This is the source of truth for the
  * roster the operator-facing agents page renders — it replaces the static
@@ -369,4 +388,33 @@ export interface VerticalContent {
    * never renders empty.
    */
   agentRoster?: AgentRosterEntry[];
+
+  /**
+   * AEO direct-answer block — a single, self-contained, quotable paragraph
+   * answering "What is agentplain for {vertical}?". Rendered prominently near
+   * the top of the vertical page under that exact heading, AND emitted as the
+   * first entry of the page's FAQPage JSON-LD so an answer engine fielding
+   * "is there an AI service for {vertical}?" can lift it verbatim.
+   *
+   * Must be grounded in the vertical's own `hero.valueProp` / JTBD / tier —
+   * no claim that isn't already substantiated elsewhere on the page. Optional
+   * for back-compat; populated on all ten ratified verticals + the /general
+   * on-ramp. When absent, the page falls back to `hero.valueProp` for the
+   * block and omits the direct-answer item from the FAQPage payload.
+   */
+  directAnswer?: string;
+
+  /**
+   * Per-vertical FAQ — 3–4 grounded, quotable Q&A pairs rendered as a
+   * disclosure list near the foot of the page and emitted (alongside the
+   * `directAnswer`) as the page's FAQPage JSON-LD. Per Google's FAQPage
+   * policy the structured data must mirror visible content, so the same
+   * items drive both the rendered list and the schema.
+   *
+   * Optional for back-compat; populated on all ten ratified verticals + the
+   * /general on-ramp. When absent, no FAQ section renders and the FAQPage
+   * payload carries only the direct-answer item (or is omitted entirely if
+   * `directAnswer` is also absent).
+   */
+  verticalFaq?: VerticalFaqItem[];
 }

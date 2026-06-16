@@ -18,6 +18,28 @@ export const insurance: VerticalContent = {
   tier: "regular",
   missionSubject: "insurance brokers and agencies",
 
+  directAnswer:
+    "agentplain for insurance is a managed AI service partnership for independent P&C agencies. A service team installs a fleet that generates certificates of insurance, coordinates renewals, drafts claims-status outreach, reconciles commissions, and tracks carrier appetite — working inside Outlook, OneDrive, and DocuSign. The producer reviews every customer-facing draft before it leaves the agency; the fleet drafts and proposes but never sends on its own.",
+
+  verticalFaq: [
+    {
+      q: "What work does agentplain take off a P&C agency's plate?",
+      a: "The recurring CSR load: generating certificates of insurance, coordinating renewals and renewal-proposal prep, drafting claims-status outreach, reconciling commission statements, and keeping carrier-appetite intel current. The fleet drafts the work and surfaces it for the producer's review — the producer makes every account decision.",
+    },
+    {
+      q: "Is agentplain a replacement for my AMS?",
+      a: "No. agentplain works inside the Outlook, OneDrive, and DocuSign you already run and replaces the manual work between them — COIs, renewal coordination, claims-status outreach. It isn't an agency-management system, and there's nothing to migrate.",
+    },
+    {
+      q: "How much does agentplain cost for an agency?",
+      a: "Insurance is recommended at the Regular tier — $199 per seat per month for a solo producer, sliding to $99 per seat at 50+ seats. Every tier is per seat, month-to-month, with the first month free, and you can cancel anytime.",
+    },
+    {
+      q: "Does the fleet send anything to clients or carriers on its own?",
+      a: "No. Every draft — a COI, a renewal note, a claims-status update — lands in your approval queue as a pending item. The fleet drafts and proposes; you approve and send from inside your own email and systems. It never auto-sends, moves money, or makes commitments on your behalf.",
+    },
+  ],
+
   // Fleet surfaced in-product on /agents, grounded in the insurance JTBD
   // tables. Inbound Triage owns the V1 inbox loop's buyer-inquiry bucket
   // (intent classify + first-touch draft for COI / FNOL / billing /

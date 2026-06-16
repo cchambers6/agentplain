@@ -19,6 +19,28 @@ export const recruiting: VerticalContent = {
   tier: "regular",
   missionSubject: "recruiters and staffing firms",
 
+  directAnswer:
+    "agentplain for recruiting is a managed AI service partnership for boutique recruiting and staffing firms. A service team installs a fleet that sources candidates from public data, drafts first-touch outreach backed by a substantiated reference, honors opt-out handling, and tracks the pipeline — working inside Outlook, Gmail, Slack, and DocuSign. The recruiter reviews every outreach before it sends; the fleet drafts and proposes but never sends on its own.",
+
+  verticalFaq: [
+    {
+      q: "How does agentplain handle outreach opt-outs and compliance?",
+      a: "Within the augment model. The fleet drafts outreach that respects opt-out handling and grounds each message in a substantiated reference rather than a generic pitch, then surfaces it for the recruiter's review. The recruiter approves and sends every message — the fleet doesn't send on its own.",
+    },
+    {
+      q: "Is agentplain a replacement for my ATS?",
+      a: "No. agentplain works inside the Outlook, Gmail, Slack, and DocuSign you already run and replaces the manual work between them — sourcing, first-touch drafting, pipeline tracking. It isn't an applicant-tracking system, and there's nothing to migrate.",
+    },
+    {
+      q: "How much does agentplain cost for a recruiting firm?",
+      a: "Recruiting is recommended at the Regular tier — $199 per seat per month for a solo recruiter, sliding to $99 per seat at 50+ seats. Every tier is per seat, month-to-month, with the first month free, and you can cancel anytime.",
+    },
+    {
+      q: "Does the fleet send outreach to candidates on its own?",
+      a: "No. Every drafted opener and follow-up lands in your approval queue as a pending item. The fleet drafts and proposes; you approve and send from inside your own email and systems. It never auto-sends, moves money, or makes commitments on your behalf.",
+    },
+  ],
+
   // Fleet surfaced in-product on /agents, grounded in the recruiting JTBD
   // tables. Outreach owns the inbox loop's buyer-inquiry bucket — classify
   // an inbound candidate reply and draft the next touch. Scheduler owns

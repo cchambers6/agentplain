@@ -126,7 +126,7 @@ export default async function WorkspaceLayout({
           </WorkspaceNavLink>
         ))}
       />
-      {!hasPasskey ? <PasskeyEnrollNudge /> : null}
+      {!hasPasskey ? <PasskeyEnrollNudge workspaceId={id} /> : null}
       {degraded.degraded ? (
         <PlainoRestingBanner
           variant="strip"

@@ -19,6 +19,28 @@ export const mortgage: VerticalContent = {
   tier: "regular",
   missionSubject: "mortgage brokers and loan officers",
 
+  directAnswer:
+    "agentplain for mortgage is a managed AI service partnership for independent brokerages and loan officers. A service team installs a fleet that triages new borrowers, runs the document chase that drowns every loan file, sends status updates, and drafts disclosures with a RESPA/TRID-aware review pass — working inside Outlook, OneDrive, and DocuSign. The loan officer reviews and sends every draft; the fleet drafts and proposes but never sends on its own.",
+
+  verticalFaq: [
+    {
+      q: "How does agentplain handle RESPA and TRID compliance?",
+      a: "Within the augment model. The fleet drafts borrower communications and TRID-sensitive disclosures and surfaces the RESPA/TRID considerations for the loan officer's review — it doesn't make the compliance determination or send anything. The licensed human signs off on every draft, and liability for licensed activity stays with your brokerage.",
+    },
+    {
+      q: "Is agentplain a replacement for my LOS or CRM?",
+      a: "No. agentplain works inside the Outlook, OneDrive, and DocuSign you already run and replaces the manual work between them — borrower triage, document collection, status updates. It isn't a loan-origination system or a CRM, and there's nothing to migrate.",
+    },
+    {
+      q: "How much does agentplain cost for a mortgage brokerage?",
+      a: "Mortgage is recommended at the Regular tier — $199 per seat per month for a solo loan officer, sliding to $99 per seat at 50+ seats. Every tier is per seat, month-to-month, with the first month free, and you can cancel anytime.",
+    },
+    {
+      q: "Does the fleet send anything to borrowers on its own?",
+      a: "No. Every draft — a borrower reply, a document request, a status update — lands in your approval queue as a pending item. The fleet drafts and proposes; you approve and send from inside your own email and systems. It never auto-sends, moves money, or makes commitments on your behalf.",
+    },
+  ],
+
   // Fleet surfaced in-product on /agents, grounded in the mortgage JTBD tables.
   // Runtime bindings follow the realty pattern (lib/verticals/real-estate/content.ts):
   // `live` agents are wired into the V1 inbox loop so /agents shows real handoff

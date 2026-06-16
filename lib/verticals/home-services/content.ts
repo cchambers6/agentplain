@@ -30,6 +30,28 @@ export const homeServices: VerticalContent = {
   tier: "plus",
   missionSubject: "home services contractors",
 
+  directAnswer:
+    "agentplain for home services is a managed AI service partnership for residential trades operations. A service team installs a fleet that routes leads across sources, drafts estimates from measurement data, prepares insurance supplements for storm work, and coordinates projects — working inside Outlook, Gmail, and QuickBooks Online. The owner reviews every estimate, supplement, and homeowner-facing reply before it leaves the shop; the fleet drafts and proposes but never sends on its own.",
+
+  verticalFaq: [
+    {
+      q: "What work does agentplain take off a contractor's plate?",
+      a: "The lead-source juggle and the back-office scramble: routing leads across sources so none go cold, drafting estimates from measurement data, preparing insurance supplements for storm work, and coordinating projects. The fleet drafts each piece and surfaces it for the owner's review.",
+    },
+    {
+      q: "Is agentplain a replacement for my field-service software?",
+      a: "No. agentplain works inside the Outlook, Gmail, and QuickBooks Online you already run and replaces the manual work between them — lead routing, estimate drafting, supplement prep, project coordination. It isn't a field-service-management platform, and there's nothing to migrate.",
+    },
+    {
+      q: "How much does agentplain cost for a trades operation?",
+      a: "Home services is recommended at the Partner tier — a named service partner with a weekly review cadence — $299 per seat per month for a solo operator, sliding to $199 per seat at scale. Every tier is per seat, month-to-month, with the first month free, and you can cancel anytime.",
+    },
+    {
+      q: "Does the fleet send anything to homeowners or insurers on its own?",
+      a: "No. Every draft — an estimate, a supplement, a homeowner reply — lands in your approval queue as a pending item. The fleet drafts and proposes; you approve and send from inside your own email and systems. It never auto-sends, moves money, or makes commitments on your behalf.",
+    },
+  ],
+
   // Fleet surfaced in-product on /agents, grounded in the home-services
   // JTBD tables. Lead Router owns the inbox loop's buyer-inquiry bucket
   // (score + route + draft first-touch). Every other agent rooting on

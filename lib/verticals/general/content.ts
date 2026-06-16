@@ -40,6 +40,28 @@ export const general: VerticalContent = {
   status: "on-ramp",
   missionSubject: "local businesses",
 
+  directAnswer:
+    "agentplain for local businesses is a managed AI service partnership for shops outside our ten named verticals. A service team installs the same fleet that handles inbox triage, scheduling, follow-up, and routine documentation — working inside the Gmail, Outlook, Google Drive, QuickBooks, and DocuSign you already run. It ships without a vertical-specific compliance corpus; if your work needs one, we scope it as a Custom engagement. The owner reviews every customer-facing draft; the fleet drafts and proposes but never sends on its own.",
+
+  verticalFaq: [
+    {
+      q: "What does agentplain do for a business that isn't one of your ten verticals?",
+      a: "It runs the universal admin work every local business carries: inbox triage, scheduling, follow-up, and routine documentation. The fleet drafts each piece and surfaces it for the owner's review. What it doesn't ship with is a vertical-specific compliance corpus — if your work needs one, that's a Custom engagement.",
+    },
+    {
+      q: "Is agentplain a replacement for my existing tools?",
+      a: "No. agentplain works inside the Gmail, Outlook, Google Drive, QuickBooks, and DocuSign you already run and replaces the manual work between them. There's nothing to migrate.",
+    },
+    {
+      q: "How much does agentplain cost?",
+      a: "The on-ramp is offered at the Regular tier — $199 per seat per month for a solo operator, sliding to $99 per seat at 50+ seats. Every tier is per seat, month-to-month, with the first month free, and you can cancel anytime.",
+    },
+    {
+      q: "Does the fleet send anything on its own?",
+      a: "No. Every draft lands in your approval queue as a pending item. The fleet drafts and proposes; you approve and send from inside your own email and systems. It never auto-sends, moves money, or makes commitments on your behalf.",
+    },
+  ],
+
   // Cross-role roster — every card is HORIZONTAL (serves any role: a
   // contractor, a board member, a solo operator, an office manager, an
   // owner-operator outside the ten ratified verticals). Per

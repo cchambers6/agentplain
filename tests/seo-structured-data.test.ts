@@ -8,13 +8,18 @@ import {
   verticalServiceJsonLd,
   verticalProductJsonLd,
   verticalBreadcrumbJsonLd,
+  verticalFaqQuestion,
   faqPageJsonLd,
   ROI_BAND,
   ROI_FRAME,
   BASE_URL,
 } from "@/lib/seo/structured-data";
 import { alternatesFor, hreflangLanguages } from "@/lib/seo/metadata";
-import { getAllVerticals, getVerticalContent } from "@/lib/verticals";
+import {
+  getAllVerticals,
+  getAllVerticalsIncludingOnRamps,
+  getVerticalContent,
+} from "@/lib/verticals";
 import { FAQ_ITEMS } from "@/components/FAQ";
 import { pricingFaqItems } from "@/components/FAQ";
 
@@ -147,6 +152,74 @@ describe("seo — FAQ payloads + breadcrumbs", () => {
     const items = bc.itemListElement as Array<Record<string, unknown>>;
     assert.equal(items.length, 3);
     assert.equal(items[2].item, `${BASE_URL}/real-estate`);
+  });
+});
+
+describe("seo — AEO direct-answer + per-vertical FAQ", () => {
+  // Every ratified vertical AND the /general on-ramp must carry an
+  // answer-engine-extractable direct answer and a grounded FAQ. This is the
+  // payload that lets an AI answer engine field "is there an AI service for
+  // {vertical}?" with a quotable agentplain paragraph.
+  const all = getAllVerticalsIncludingOnRamps();
+
+  it("every vertical has a self-contained, quotable direct answer", () => {
+    for (const v of all) {
+      assert.ok(
+        v.directAnswer && v.directAnswer.length > 120,
+        `${v.slug} missing a substantive directAnswer`,
+      );
+      // Quotable + self-contained: names the product and the audience frame.
+      assert.ok(
+        v.directAnswer!.toLowerCase().startsWith("agentplain for "),
+        `${v.slug} directAnswer should open "agentplain for …" so it stands alone`,
+      );
+    }
+  });
+
+  it("every vertical has at least 3 grounded FAQ items (q ends with ?, a non-trivial)", () => {
+    for (const v of all) {
+      assert.ok(
+        v.verticalFaq && v.verticalFaq.length >= 3,
+        `${v.slug} needs ≥3 FAQ items`,
+      );
+      for (const item of v.verticalFaq!) {
+        assert.ok(item.q.trim().endsWith("?"), `${v.slug} FAQ q must be a question: ${item.q}`);
+        assert.ok(item.a.trim().length > 60, `${v.slug} FAQ answer too short: ${item.q}`);
+      }
+    }
+  });
+
+  it("the FAQPage payload mirrors the visible direct-answer + FAQ items", () => {
+    for (const v of all) {
+      const items = [
+        { q: verticalFaqQuestion(v.name), a: v.directAnswer! },
+        ...(v.verticalFaq ?? []),
+      ];
+      const faq = faqPageJsonLd(items);
+      assert.equal(faq["@type"], "FAQPage");
+      assert.equal(
+        (faq.mainEntity as unknown[]).length,
+        items.length,
+        `${v.slug} FAQPage must mirror every visible item`,
+      );
+      // The first question is the exact rendered direct-answer heading.
+      const first = (faq.mainEntity as Array<Record<string, unknown>>)[0];
+      assert.equal(first.name, verticalFaqQuestion(v.name));
+    }
+  });
+
+  it("direct-answer + FAQ copy is vendor-invisible (no AI model/provider name)", () => {
+    for (const v of all) {
+      const blob = [
+        v.directAnswer ?? "",
+        ...(v.verticalFaq ?? []).flatMap((i) => [i.q, i.a]),
+      ]
+        .join(" ")
+        .toLowerCase();
+      for (const vendor of ["claude", "anthropic", "chatgpt", "openai", "gpt-"]) {
+        assert.ok(!blob.includes(vendor), `${v.slug} AEO copy leaks vendor "${vendor}"`);
+      }
+    }
   });
 });
 

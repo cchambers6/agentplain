@@ -31,6 +31,28 @@ export const law: VerticalContent = {
   tier: "max",
   missionSubject: "law firms and solo practitioners",
 
+  directAnswer:
+    "agentplain for law firms is a managed AI service partnership for solo and small (2–5 attorney) firms. A service team installs a fleet that handles client intake, drafts engagement letters, runs conflict checks, chases documents, and applies a privilege-aware review pass to client communications and drafted pleadings — working inside Outlook, OneDrive, and DocuSign. The attorney reviews every client communication and filing; the fleet drafts and proposes but never sends or files on its own.",
+
+  verticalFaq: [
+    {
+      q: "How does agentplain protect privilege and handle conflicts?",
+      a: "Within the augment model. The fleet drafts client communications and pleadings with a privilege-aware review pass, runs conflict checks at intake, and surfaces what needs attention for the attorney — it doesn't make the legal determination or send anything. The attorney reviews everything, and liability for licensed work stays with your firm.",
+    },
+    {
+      q: "Is agentplain a replacement for my practice-management software?",
+      a: "No. agentplain works inside the Outlook, OneDrive, and DocuSign you already run and replaces the manual work between them — intake, engagement letters, conflict checks, document chase, milestone billing. It isn't a practice-management system, and there's nothing to migrate.",
+    },
+    {
+      q: "How much does agentplain cost for a law firm?",
+      a: "Law firms are recommended at the Max tier — an ad-hoc service partnership quoted to your engagement and sold sales-led rather than by self-checkout, because the stakes per draft warrant a named partner and a weekly cadence. Every agentplain tier is month-to-month with the first month free; Max is quoted to scope.",
+    },
+    {
+      q: "Does the fleet send communications or file pleadings on its own?",
+      a: "No. Every draft — an intake reply, an engagement letter, a pleading — lands in your approval queue as a pending item. The fleet drafts and proposes; you approve, send, and file from inside your own systems. It never auto-sends, files, moves money, or makes commitments on your behalf.",
+    },
+  ],
+
   // Fleet surfaced in-product on /agents, grounded in the law JTBD tables.
   // All seven capabilities are honestly rooting today: each one needs the
   // matter-management / privilege-review surface a law firm runs in (Clio,

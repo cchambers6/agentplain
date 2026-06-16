@@ -248,6 +248,16 @@ function verticalOffer(tier: TierName): Record<string, unknown> | null {
 }
 
 /**
+ * The exact direct-answer question for a vertical — "What is agentplain for
+ * {name}?". Single source of truth so the rendered heading
+ * (`VerticalDirectAnswer`) and the FAQPage `name` field are byte-identical;
+ * Google requires the structured-data question to match the visible one.
+ */
+export function verticalFaqQuestion(name: string): string {
+  return `What is agentplain for ${name.toLowerCase()}?`;
+}
+
+/**
  * BreadcrumbList for `/[vertical]` — Home → Verticals → {Vertical}.
  * `/verticals` is the canonical index page (it ships in the sitemap).
  */

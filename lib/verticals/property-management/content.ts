@@ -18,6 +18,28 @@ export const propertyManagement: VerticalContent = {
   tier: "regular",
   missionSubject: "property managers and management companies",
 
+  directAnswer:
+    "agentplain for property management is a managed AI service partnership for single-family property managers running roughly 50–500 doors. A service team installs a fleet that triages tenant inbound, routes maintenance tickets, chases rent, runs lease-renewal cadences, and produces owner reports — working inside Outlook, Gmail, and QuickBooks Online. The manager approves every customer-facing draft; the fleet drafts and proposes but never sends on its own.",
+
+  verticalFaq: [
+    {
+      q: "What work does agentplain take off a property manager's plate?",
+      a: "The repetitive operations load: triaging tenant inbound, routing maintenance work orders, chasing rent, running lease-renewal cadences, and producing owner reports so landlords stop calling for status. The fleet drafts each piece and surfaces it for the manager's review.",
+    },
+    {
+      q: "Is agentplain a replacement for my property-management software?",
+      a: "No. agentplain works inside the Outlook, Gmail, and QuickBooks Online you already run and replaces the manual work between them — tenant triage, maintenance routing, rent chase, owner reporting. It isn't a property-management system, and there's nothing to migrate.",
+    },
+    {
+      q: "How much does agentplain cost for a property-management company?",
+      a: "Property management is recommended at the Regular tier — $199 per seat per month for a solo operator, sliding to $99 per seat at 50+ seats. Every tier is per seat, month-to-month, with the first month free, and you can cancel anytime.",
+    },
+    {
+      q: "Does the fleet send anything to tenants or owners on its own?",
+      a: "No. Every draft — a tenant reply, a maintenance update, an owner report — lands in your approval queue as a pending item. The fleet drafts and proposes; you approve and send from inside your own email and systems. It never auto-sends, moves money, or makes commitments on your behalf.",
+    },
+  ],
+
   // Tenant Inbound owns the inbox loop's buyer-inquiry bucket (classify
   // tenant message + draft the reply). Every other agent rooting on a
   // property-mgmt platform connection (AppFolio / Buildium / Propertyware).

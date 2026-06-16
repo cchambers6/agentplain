@@ -18,6 +18,28 @@ export const titleEscrow: VerticalContent = {
   tier: "regular",
   missionSubject: "title and escrow agencies",
 
+  directAnswer:
+    "agentplain for title & escrow is a managed AI service partnership for local title and escrow agencies. A service team installs a fleet that handles file intake from realtor and lender channels, tracks closing milestones, prepares closing-day packets, follows up on recording, and keeps communications CFPB-aware — working inside Outlook, OneDrive, Excel, and DocuSign. The closer reviews every prep packet and message before it goes out; the fleet drafts and proposes but never sends on its own.",
+
+  verticalFaq: [
+    {
+      q: "How does agentplain keep title and escrow communications compliant?",
+      a: "Within the augment model. The fleet drafts file communications and closing-day packets with a CFPB-aware review pass and surfaces them for the closer — it flags considerations for a person to decide on rather than making the call itself. The licensed human reviews and sends every message, and liability for licensed activity stays with your agency.",
+    },
+    {
+      q: "Is agentplain a replacement for my title-production software?",
+      a: "No. agentplain works inside the Outlook, OneDrive, Excel, and DocuSign you already run and replaces the manual work between them — file intake, milestone tracking, closing prep, recording follow-up. It isn't a title-production system, and there's nothing to migrate.",
+    },
+    {
+      q: "How much does agentplain cost for a title shop?",
+      a: "Title & escrow is recommended at the Regular tier — $199 per seat per month for a solo operator, sliding to $99 per seat at 50+ seats. Every tier is per seat, month-to-month, with the first month free, and you can cancel anytime.",
+    },
+    {
+      q: "Does the fleet send anything on its own?",
+      a: "No. Every draft — an intake acknowledgement, a milestone update, a closing packet — lands in your approval queue as a pending item. The fleet drafts and proposes; you approve and send from inside your own email and systems. It never auto-sends, moves money, or makes commitments on your behalf.",
+    },
+  ],
+
   // Fleet surfaced in-product on /agents, grounded in the title-escrow
   // JTBD tables. All seven capabilities are honestly rooting today — each
   // depends on the title production system (SoftPro / Qualia / RamQuest),

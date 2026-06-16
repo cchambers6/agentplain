@@ -264,10 +264,10 @@ export function WelcomeTour({ workspaceId, steps = WELCOME_TOUR_STEPS }: Welcome
                 key={s.id}
                 className={
                   i === index
-                    ? "h-1.5 w-1.5 rounded-full bg-clay"
+                    ? "h-1.5 w-1.5 bg-clay"
                     : i < index
-                      ? "h-1.5 w-1.5 rounded-full bg-ink/40"
-                      : "h-1.5 w-1.5 rounded-full bg-rule"
+                      ? "h-1.5 w-1.5 bg-ink/40"
+                      : "h-1.5 w-1.5 bg-rule"
                 }
               />
             ))}

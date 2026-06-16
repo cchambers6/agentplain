@@ -43,16 +43,16 @@ const LAST_UPDATED = "2026-06-06";
 // Priority weighting per the SEO pack brief:
 //   homepage 1.0 · vertical pages 0.9 · /pricing 0.9 · /verticals 0.9
 //   /about 0.7 · /custom 0.7 · /privacy /terms /security 0.3
-// (The brief also lists /how-it-works 0.8 and /agents 0.7 — neither exists
-//  as a marketing route today: how-it-works is the homepage `#how` anchor,
-//  and /agents is a gated product route excluded by robots. Flagged in the
-//  PR description rather than inventing routes.)
+// (The brief also lists /agents 0.7 — that's a gated product route excluded
+//  by robots, so it stays out. /how-it-works 0.8 now exists as a standalone
+//  marketing route and is enumerated below.)
 const MARKETING_ROUTES: Array<{
   path: string;
   changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"];
   priority: number;
 }> = [
   { path: "/", changeFrequency: "weekly", priority: 1.0 },
+  { path: "/how-it-works", changeFrequency: "monthly", priority: 0.8 },
   { path: "/pricing", changeFrequency: "monthly", priority: 0.9 },
   { path: "/verticals", changeFrequency: "weekly", priority: 0.9 },
   { path: "/about", changeFrequency: "monthly", priority: 0.7 },

@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import { VERTICAL_SLUGS, ON_RAMP_SLUGS } from "@/lib/verticals";
+import { COMPARISON_SLUGS } from "@/lib/marketing/comparisons";
 
 // Sitemap for agentplain.com.
 //
@@ -59,6 +60,8 @@ const MARKETING_ROUTES: Array<{
   { path: "/about", changeFrequency: "monthly", priority: 0.7 },
   { path: "/custom", changeFrequency: "monthly", priority: 0.7 },
   { path: "/waitlist", changeFrequency: "monthly", priority: 0.6 },
+  // AEO surfaces — glossary. Per-comparison pages enumerated below.
+  { path: "/glossary", changeFrequency: "monthly", priority: 0.6 },
   { path: "/privacy", changeFrequency: "yearly", priority: 0.3 },
   { path: "/terms", changeFrequency: "yearly", priority: 0.3 },
   { path: "/security", changeFrequency: "monthly", priority: 0.3 },
@@ -91,5 +94,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
-  return [...marketing, ...verticals, ...onRamps];
+  // AEO comparison pages (`/compare/<alt>`) — enumerated from the comparison
+  // registry so adding a comparison propagates here automatically.
+  const comparisons = COMPARISON_SLUGS.map((slug) => ({
+    url: `${BASE}/compare/${slug}`,
+    lastModified: LAST_UPDATED,
+    changeFrequency: "monthly" as const,
+    priority: 0.6,
+  }));
+
+  return [...marketing, ...verticals, ...onRamps, ...comparisons];
 }

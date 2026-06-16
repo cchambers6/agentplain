@@ -67,9 +67,35 @@ export function organizationJsonLd(): Record<string, unknown> {
     legalName: "agentplain",
     url: BASE_URL,
     slogan: tokens.tagline,
+    // Logo points at the in-repo brand mark (public/favicon.svg). Real asset,
+    // no invented CDN URL. `sameAs` stays omitted until agentplain has
+    // canonical social profiles to point at — no invented handles.
+    logo: {
+      "@type": "ImageObject",
+      url: `${BASE_URL}/favicon.svg`,
+    },
     description:
       "agentplain is a managed AI fleet for local businesses. We bring the pre-built skills and agents a shop would otherwise build itself, curate the memory that keeps it useful, connect the tools you already run, and operate the whole thing for a low flat fee — run for you, not configured by you. Built for ten verticals: real estate, mortgage, insurance, property management, title & escrow, recruiting, home services, CPA / tax, law, and RIA.",
     knowsAbout: getAllVerticals().map((v) => v.name),
+  };
+}
+
+/**
+ * WebSite node — the entity-recognition anchor for "tell me about agentplain"
+ * style queries and for Google's site-name resolution. No SearchAction is
+ * emitted because the marketing site has no site-search endpoint (claiming one
+ * would be a lie). Wired once, on the homepage.
+ */
+export function webSiteJsonLd(): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${BASE_URL}/#website`,
+    name: tokens.wordmark,
+    url: BASE_URL,
+    description: tokens.tagline,
+    publisher: { "@id": `${BASE_URL}/#organization` },
+    inLanguage: "en-US",
   };
 }
 
@@ -285,6 +311,54 @@ export function verticalBreadcrumbJsonLd(v: VerticalContent): Record<string, unk
         item: `${BASE_URL}/${v.slug}`,
       },
     ],
+  };
+}
+
+/**
+ * Generic BreadcrumbList — pass an ordered trail of {name, path}. Paths are
+ * resolved against BASE_URL. Used by the /compare and /glossary surfaces
+ * (the vertical pages keep their dedicated builder above).
+ */
+export function breadcrumbJsonLd(
+  trail: Array<{ name: string; path: string }>,
+): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: trail.map((node, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: node.name,
+      // Root → `${BASE_URL}/`; every other node → no trailing slash, matching
+      // the canonical URLs (`alternatesFor`) and `verticalBreadcrumbJsonLd`.
+      item: node.path === "/" ? `${BASE_URL}/` : `${BASE_URL}${node.path}`,
+    })),
+  };
+}
+
+/**
+ * DefinedTermSet payload for the glossary — emits one DefinedTerm per entry,
+ * each addressable by its on-page anchor. This is the structured-data home for
+ * the positioning vocabulary agentplain wants answer engines to cite
+ * ("service partnership", "run-for-you", "draft-then-approve").
+ */
+export function definedTermSetJsonLd(
+  terms: Array<{ slug: string; term: string; definition: string }>,
+): Record<string, unknown> {
+  const glossaryUrl = `${BASE_URL}/glossary`;
+  return {
+    "@context": "https://schema.org",
+    "@type": "DefinedTermSet",
+    "@id": `${glossaryUrl}/#glossary`,
+    name: `${tokens.wordmark} glossary`,
+    url: glossaryUrl,
+    hasDefinedTerm: terms.map((t) => ({
+      "@type": "DefinedTerm",
+      "@id": `${glossaryUrl}#${t.slug}`,
+      name: t.term,
+      description: t.definition,
+      inDefinedTermSet: `${glossaryUrl}/#glossary`,
+    })),
   };
 }
 

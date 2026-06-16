@@ -22,6 +22,7 @@ import {
   organizationJsonLd,
   serviceJsonLd,
   softwareApplicationJsonLd,
+  webSiteJsonLd,
   faqPageJsonLd,
 } from "@/lib/seo/structured-data";
 import { alternatesFor } from "@/lib/seo/metadata";
@@ -70,6 +71,7 @@ export default function HomePage() {
           Per `lib/seo/structured-data.ts`: no invented claims, no review
           counts, no schema we can't substantiate from existing content. */}
       <JsonLd id="ld-organization" data={organizationJsonLd()} />
+      <JsonLd id="ld-website" data={webSiteJsonLd()} />
       <JsonLd id="ld-software" data={softwareApplicationJsonLd()} />
       <JsonLd id="ld-service" data={serviceJsonLd()} />
       <JsonLd id="ld-faqpage" data={faqPageJsonLd(FAQ_ITEMS)} />

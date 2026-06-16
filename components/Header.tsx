@@ -25,9 +25,9 @@ import LogoLockup from "./brand/LogoLockup";
 // "Start free trial" CTA.
 //
 // Routes:
-//   /verticals   — index of all 10 verticals
-//   /#how        — How it works anchor on the marketing home
-//   /pricing     — Standalone pricing page
+//   /verticals     — index of all 10 verticals
+//   /how-it-works  — Standalone "how it works" page (was the /#how anchor)
+//   /pricing       — Standalone pricing page
 //   /custom      — Custom-engagement page
 //   /about       — Long-form positioning page
 //   /app/sign-in — Product sign-in surface
@@ -35,7 +35,7 @@ import LogoLockup from "./brand/LogoLockup";
 
 const PRIMARY_NAV: Array<{ href: string; label: string }> = [
   { href: "/verticals", label: "Verticals" },
-  { href: "/#how", label: "How it works" },
+  { href: "/how-it-works", label: "How it works" },
   { href: "/pricing", label: "Pricing" },
   { href: "/custom", label: "Custom" },
   { href: "/about", label: "About" },

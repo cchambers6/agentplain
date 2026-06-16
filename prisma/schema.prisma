@@ -949,6 +949,14 @@ model Membership {
   /// only signal pre-wave-6; this column adds a queryable timestamp so the
   /// audit + roster views can show "removed N days ago".
   removedAt       DateTime?
+  /// First-run welcome-tour state. NULL = this member has not yet seen (or
+  /// dismissed) the Plaino workspace walkthrough; set to the instant they
+  /// finish or skip it (POST /api/onboarding/welcome-tour/complete). Lives
+  /// on Membership — NOT User or WorkspacePreference — so the tour fires
+  /// once *per user, per workspace*: a second seat joining an existing
+  /// workspace still gets oriented, and a returning owner never re-sees it.
+  /// Server-side so it survives device / browser changes (no localStorage).
+  welcomeTourSeenAt DateTime?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)

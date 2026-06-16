@@ -22,6 +22,8 @@ describe("withWorkspace surface", () => {
         workspaceId: "w",
         role: "BROKER_OWNER",
         isOperator: false,
+        membershipId: "m",
+        welcomeTourSeenAt: null,
       },
       workspace: {
         id: "w",

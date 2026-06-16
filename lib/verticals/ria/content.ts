@@ -158,7 +158,7 @@ export const ria: VerticalContent = {
           when: "Per outbound, urgent",
           today: "Read every outbound — slow, inconsistent",
           withAgentplain:
-            "Compliance agent runs an ADV + suitability + plain-English check; advisor signs",
+            "Compliance agent (activating after counsel review) runs an ADV + suitability check; until then every draft is held for advisor approval",
         },
       ],
     },
@@ -256,7 +256,7 @@ export const ria: VerticalContent = {
           when: "Per-piece, ongoing",
           today: "Read every public communication, flag testimonials / endorsements / hypotheticals manually",
           withAgentplain:
-            "Marketing-rule agent runs an automated first pass citing the specific Rule 206(4)-1 clause for each flag; CCO reviews the substantive calls",
+            "Marketing-rule agent (activating after counsel review) will run a first pass citing the specific Rule 206(4)-1 clause for each flag; until then the CCO reviews every draft before it's published",
         },
         {
           job: "Run the annual compliance review",
@@ -278,7 +278,7 @@ export const ria: VerticalContent = {
     citation:
       "Pricing per `project_stripe_both_surfaces.md` (Max tier per 2026-05-15 ratification — AD-HOC quote-based engagement; routes through `/custom?type=max` intake to operator triage). ROI band per `project_pricing_value_anchor.md` (Regular tier 15x–50x as the floor; Max engagements scope from there). RIA segment economics per `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 (financial advisors, composite 33). Hourly-rate input is operator-modeled — flagged in capability inbox.",
     violationAvoidance:
-      "Adviser communications live under the SEC Marketing Rule (Rule 206(4)-1) and the fiduciary duty — the SEC's 2024 enforcement sweeps settled at $60,000 to $325,000 per adviser for unsubstantiated or untrue advertising claims and missing testimonial disclosures, and a single non-compliant performance line or endorsement is enough to draw one. Auto-execution publishes before substantiation; agentplain's fleet drafts the marketing and client comms, the SEC Marketing Rule corpus flags them, and a person approves before send — so an unsubstantiated claim never becomes a filed advertisement. The avoided settlement is downside the hours-reclaimed multiplier doesn't price, and only a draft-then-approve loop can promise it.",
+      "Adviser communications live under the SEC Marketing Rule (Rule 206(4)-1) and the fiduciary duty — the SEC's 2024 enforcement sweeps settled at $60,000 to $325,000 per adviser for unsubstantiated or untrue advertising claims and missing testimonial disclosures, and a single non-compliant performance line or endorsement is enough to draw one. Auto-execution publishes before substantiation; agentplain's fleet drafts the marketing and client comms, and an advisor reviews and approves every draft before it sends — so an unsubstantiated claim never becomes a filed advertisement. The avoided settlement is downside the hours-reclaimed multiplier doesn't price, and only a draft-then-approve loop can promise it.",
   },
 
   claims: {
@@ -327,7 +327,7 @@ export const ria: VerticalContent = {
     before:
       "Pull each client's positions in Wealthbox + custodian, run the planning model in eMoney, draft a one-page review summary with the highlights and risks, build the agenda, schedule the call. ~90 minutes per packet × 87 clients.",
     after:
-      "The fleet pulled positions, ran the planning models, drafted 87 one-page review packets with portfolio drift highlighted, surfaced the 11 clients with planning-assumption changes worth raising, and queued the scheduling. SEC archiveable; every claim cites the source.",
+      "The fleet pulled positions, ran the planning models, drafted 87 one-page review packets with portfolio drift highlighted, surfaced the 11 clients with planning-assumption changes worth raising, and queued the scheduling. Every claim cites the source record it was drafted from.",
     outcome:
       "The advisor reviews 87 drafts in two mornings instead of three weeks. Calls happen on schedule; the advisor walks in with prep, not catch-up.",
   },

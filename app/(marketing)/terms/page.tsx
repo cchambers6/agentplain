@@ -58,9 +58,11 @@ export default function TermsPage() {
       <Section title="Payment + cancellation">
         <p>
           Subscription tiers are billed per seat, monthly in advance, via the
-          payment method on file. First month is free across Regular and
-          Partner; your card is captured at signup and charged at the start of
-          your second month unless you cancel.
+          payment method on file. Regular and Partner include a free trial — 7
+          days by default, 14 days for the CPA and Law verticals; your card is
+          captured at signup and the first charge occurs when the trial ends
+          unless you cancel. A 14-day money-back guarantee applies from the
+          date of first charge.
         </p>
         <p>
           You can cancel any time from the billing page in your workspace. We

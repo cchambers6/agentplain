@@ -11,18 +11,20 @@ import {
 } from "@/lib/pricing/tiers";
 
 // Interactive ROI calculator. Anchored to the three customer-facing tiers
-// per the 2026-05-15 amendment to `project_stripe_both_surfaces.md`:
+// per the 2026-05-15 amendment to `project_stripe_both_surfaces.md`, updated
+// for the 2026-06-14 Partner ratification:
 //
-//   Regular — standard managed AI ops. Existing math.
-//   Partner — Regular + named-service-partner hours/month value-add.
+//   Regular — standard managed AI ops. Automation math.
+//   Partner — same automation math; Partner adds priority support and a
+//             quarterly async check-in (not dollarized here). Its higher
+//             per-seat price makes the ROI multiple read lower than Regular
+//             for the same reclaimed hours — which is honest.
 //   Max     — quote-based; no math, CTA into /custom?type=max.
 //
-// Per `feedback_no_guesses_no_estimates.md`, the value rate for the
-// reserved-partner hours and the Regular productive-hour rate both cite
-// `project_pricing_value_anchor.md`. That memory was not committed at
-// task time — the Partner rate defaults to a documented estimate
-// (`PARTNER_HOUR_VALUE_USD_ESTIMATE`) and the inline source line flags it
-// as an estimate so a reader knows where the number came from.
+// Per `feedback_no_guesses_no_estimates.md`, the Regular productive-hour rate
+// cites `project_pricing_value_anchor.md`. The earlier "named-service-partner
+// hours" value-add was removed when reserved Partner hours were dropped
+// (2026-06-14) — the calculator no longer prices a benefit that doesn't exist.
 //
 // Per `feedback_no_silent_vendor_lock.md` + `feedback_runner_portability.md`,
 // this is a pure client component — no SDK calls, no analytics-side effects,
@@ -74,12 +76,6 @@ const WEEKS_PER_MONTH = 4.3;
 // shows a "+" when the raw inputs would exceed it, rather than printing an
 // uncapped figure the page can't stand behind.
 const ROI_CEILING = 50;
-
-// Estimated dollar value of a named-service-partner hour. Used as a
-// placeholder until `project_pricing_value_anchor.md` ships with a
-// committed Partner value rate; surfaced in copy as "[estimate]" so the
-// number is not mistaken for a load-bearing anchor.
-const PARTNER_HOUR_VALUE_USD_ESTIMATE = 200;
 
 type CalculatorTier = TierName;
 
@@ -193,8 +189,8 @@ export default function RoiCalculator() {
                   value={fmtDollars(result.value)}
                   detail={
                     tier === "plus"
-                      ? "Automation + named-partner hours"
-                      : "Automation only"
+                      ? "Automation value — Partner also adds priority support + a quarterly check-in (not priced here)"
+                      : "Automation value"
                   }
                 />
 
@@ -244,10 +240,9 @@ export default function RoiCalculator() {
                 ) : null}
 
                 <p className="mt-6 font-mono text-[11px] leading-relaxed text-mute">
-                  Named-partner hour value at $
-                  {PARTNER_HOUR_VALUE_USD_ESTIMATE}/hr is an illustrative
-                  estimate. First month is $0 across every Regular and
-                  Partner seat band.
+                  7-day free trial across every Regular and Partner seat band
+                  (14 days for CPA + Law), card at signup. 14-day money-back
+                  guarantee.
                 </p>
               </>
             ) : null}

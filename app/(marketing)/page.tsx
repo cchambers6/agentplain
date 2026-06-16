@@ -595,7 +595,7 @@ export default function HomePage() {
         tone="deep"
         eyebrow="Pricing + ROI"
         title="Affordable access to enterprise-grade tools — with the service team that runs them."
-        intro="Three ways to partner with us. Every tier includes the fleet, the per-vertical compliance corpus, and a service team that installs, reviews, and customizes alongside you. The calculator below is anchored to Regular; Partner adds dedicated overlay; Max is quoted to scope."
+        intro="Three ways to partner with us. Every tier includes the fleet, the per-vertical compliance corpus, and a service team that installs, reviews, and customizes alongside you. The calculator below is anchored to Regular; Partner adds priority support and a quarterly check-in; Max is quoted to scope."
       >
         <RoiCalculator />
 
@@ -608,17 +608,17 @@ export default function HomePage() {
             ctaLabel="Start free trial"
             ctaHref="/app/sign-up"
             ctaStyle="primary"
-            footnote="First month free. Month-to-month. Per seat."
+            footnote="7-day free trial. Month-to-month. Per seat."
           />
           <TierCard
             name="Partner"
-            tagline="Named service partner."
-            description="Same fleet, with a dedicated service partner who runs weekly reviews, owns customization, and handles change management as your ops shift."
+            tagline="Priority support + a quarterly check-in."
+            description="Same fleet, plus priority support and a quarterly async check-in with your service team — a faster line and a regular pulse on the fleet as your ops shift."
             bands={partnerBands}
             ctaLabel="Talk to a service partner"
             ctaHref="mailto:hello@agentplain.com?subject=agentplain%20Partner%20tier%20interest"
             ctaStyle="secondary"
-            footnote="First month free. Month-to-month. Per seat."
+            footnote="7-day free trial. Month-to-month. Per seat."
             featured
           />
           <TierCard
@@ -716,9 +716,10 @@ export default function HomePage() {
             </span>
           </p>
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-paper/75">
-            First month free. Month-to-month from day one. Cancel anytime. By
-            the time you&apos;d pay for month two, your service team has
-            either earned its seat or it hasn&apos;t.
+            7-day free trial, card at signup. Month-to-month from day one.
+            Cancel anytime. By the time the trial ends, your service team has
+            either earned its seat or it hasn&apos;t — and there&apos;s a
+            14-day money-back guarantee if it hasn&apos;t.
           </p>
 
           <div className="mt-10 flex flex-wrap gap-4">

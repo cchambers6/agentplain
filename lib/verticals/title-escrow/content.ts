@@ -145,7 +145,7 @@ export const titleEscrow: VerticalContent = {
           when: "Pre-close",
           today: "Closer-by-closer judgment, no consistent review",
           withAgentplain:
-            "Compliance agent reviews every customer-facing draft; flags before send",
+            "Every customer-facing draft is held for the closer to review and approve before send; the title compliance pass activates after counsel review",
         },
       ],
     },
@@ -234,7 +234,7 @@ export const titleEscrow: VerticalContent = {
 
   roi: {
     multiplier: "10x–20x",
-    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
+    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — 7-day free trial, card at signup",
     outputValue: "$24,000 / yr per closer in cycle-time reclamation",
     math:
       "Average closer handles 30–50 files/month. File-intake automation saves ~45 minutes/file. 40 files × 0.75 hours × $40/hr × 12 months = $14,400/yr per closer. Closing-prep automation saves another ~30 minutes/file = ~$9,600/yr — total ~$24k/yr (~$2,000/mo) per closer. Solo case: against the Regular-tier solo seat ($199/mo) = ~10x ROI. At-scale case: same per-closer value against the 50-seat-band price ($99/mo) = ~20x. Multi-closer title/escrow offices typically see the at-scale economics.",
@@ -295,7 +295,7 @@ export const titleEscrow: VerticalContent = {
     before:
       "Pull the title file in SoftPro, find the prior payoff, re-request from the lender, draft the wire instructions update, notify the buyer's agent, the seller's agent, and the lender, then chase confirmations until 8pm. ~90 minutes.",
     after:
-      "The fleet identified the discrepancy at 5:04pm, pulled the original payoff, drafted the lender re-request, drafted the agent + buyer notifications with the new figure, and queued the SoftPro update. All four messages are waiting in the closer's review queue at 5:08pm.",
+      "The fleet identified the discrepancy at 5:04pm, pulled the original payoff (from the closing file once Qualia is connected, otherwise from the figures the closer confirms), drafted the lender re-request, and drafted the agent + buyer notifications with the new figure; the production-system update drops into SoftPro once that connector is built. All four messages are waiting in the closer's review queue at 5:08pm.",
     outcome:
       "The closer ships four reviewed messages before 5:30pm. Thursday's closing happens on schedule.",
   },

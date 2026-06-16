@@ -178,10 +178,10 @@ export default function AboutPage() {
             </p>
             <p>
               <span className="text-ink">Not magic.</span> Intelligence
-              rooted in reality means real product, real operators, real
-              outcomes. We don&apos;t sell pixie dust. Every claim on this
-              site cites a memory rule we can show you, or a real customer
-              outcome.
+              rooted in reality means real product, real operators, and the
+              working precursor we run on our own brokerage. We don&apos;t sell
+              pixie dust. Every claim on this site cites a memory rule or a
+              working precursor we can show you.
             </p>
             <p>
               <span className="text-ink">
@@ -225,8 +225,9 @@ export default function AboutPage() {
             {tokens.tagline}
           </h2>
           <p className="mt-6 max-w-2xl text-paper/75">
-            First month free. Month-to-month. Cancel anytime. By month two,
-            the fleet has either earned its seat or it hasn&apos;t.
+            7-day free trial, card at signup. Month-to-month. Cancel anytime.
+            By the time the trial ends, the fleet has either earned its seat
+            or it hasn&apos;t.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Link

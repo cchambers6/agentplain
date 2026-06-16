@@ -213,7 +213,7 @@ export const realEstate: VerticalContent = {
 
   roi: {
     multiplier: "26x",
-    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
+    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — 7-day free trial, card at signup",
     outputValue: "$5,300 saved/mo at the broker-owner level alone",
     math:
       "8–12 owner-hours/week on coordination work × $120/hr blended (owner-as-producer opportunity cost) × 4.3 weeks = $4,128–$6,192/mo. Midpoint $5,160. Against the solo Regular-tier seat ($199/mo) the broker-owner alone recovers cost in the first working week and runs ~26x ROI. Conservative annualized: $61,920/yr returned to producing.",
@@ -280,8 +280,8 @@ export const realEstate: VerticalContent = {
     before:
       "Open dotloop, pull the counter, scan the buyer's agent thread, find three comparable closings in MLS, draft a response in Outlook. ~45 minutes before her first showing.",
     after:
-      "The fleet has already drafted the counter-offer response, summarized the buyer's agent's response history across this transaction, and surfaced three comparable closings from the brokerage's own past-listing files in Drive. Sarah reviews, edits one number, signs and sends from dotloop.",
+      "The fleet has already drafted the counter-offer response, summarized the buyer's agent's response history across this transaction, and surfaced three comparable closings from the brokerage's own past-listing files in Drive. Sarah reviews, edits one number, then signs and sends from her transaction system (once dotloop is connected, the draft drops straight into it).",
     outcome:
-      "Four minutes instead of forty-five. The fleet drafts; Sarah's broker-of-record review stays in place; dotloop sends.",
+      "Four minutes instead of forty-five. The fleet drafts; Sarah's broker-of-record review stays in place; she sends from her own transaction system.",
   },
 };

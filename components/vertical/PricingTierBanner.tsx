@@ -3,6 +3,7 @@ import Section from "@/components/Section";
 import {
   TIER_TAGLINE,
   tierDisplayName,
+  tierLadderBands,
   type TierName,
 } from "@/lib/pricing/tiers";
 import type { VerticalTier } from "@/lib/verticals/types";
@@ -17,30 +18,16 @@ import type { VerticalTier } from "@/lib/verticals/types";
 //
 // Renderer contract:
 // - Regular   → ladder card grid with per-band prices, links to /pricing
-// - Partner   → ladder card grid with Partner per-band prices, named-
-//               service-partner-hours bullet, links to /pricing
+// - Partner   → ladder card grid with Partner per-band prices, links to /pricing
 // - Max       → quote-based card with "Talk to a service partner" CTA
 //               routing to /custom?type=max
+//
+// Per-band prices come from `tierLadderBands()` (single source of truth in
+// `lib/pricing/tiers.ts`) so this banner can never drift from billing.
 //
 // `VerticalTier` and `TierName` are the same string union — `plus` and
 // `regular` and `max` — so `tierDisplayName(tier)` accepts either and
 // the type cast is a documentation cast, not a runtime conversion.
-
-const REGULAR_LADDER: { band: string; price: string }[] = [
-  { band: "Solo (1 seat)", price: "$199" },
-  { band: "2–9 seats", price: "$179" },
-  { band: "10–24 seats", price: "$149" },
-  { band: "25–49 seats", price: "$119" },
-  { band: "50–99 seats", price: "$99" },
-];
-
-const PARTNER_LADDER: { band: string; price: string }[] = [
-  { band: "Solo (1 seat)", price: "$299" },
-  { band: "2–9 seats", price: "$279" },
-  { band: "10–24 seats", price: "$249" },
-  { band: "25–49 seats", price: "$219" },
-  { band: "50–99 seats", price: "$199" },
-];
 
 export default function PricingTierBanner({ tier }: { tier?: VerticalTier }) {
   const resolvedTier: TierName = (tier ?? "regular") as TierName;
@@ -97,7 +84,7 @@ export default function PricingTierBanner({ tier }: { tier?: VerticalTier }) {
     );
   }
 
-  const ladder = resolvedTier === "plus" ? PARTNER_LADDER : REGULAR_LADDER;
+  const ladder = tierLadderBands(resolvedTier === "plus" ? "plus" : "regular");
   const headlineLow = ladder[ladder.length - 1].price;
   const headlineHigh = ladder[0].price;
 
@@ -116,7 +103,7 @@ export default function PricingTierBanner({ tier }: { tier?: VerticalTier }) {
       intro={
         resolvedTier === "plus"
           ? `Per seat, month-to-month. Priority support + quarterly async check-in with your service team. 7-day free trial, card at signup; cancel any time.`
-          : "Per seat, month-to-month. Standard managed AI ops + onboarding bundled in. First month is free; cancel any time."
+          : "Per seat, month-to-month. Standard managed AI ops + onboarding bundled in. 7-day free trial, card at signup; cancel any time."
       }
     >
       <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-5">

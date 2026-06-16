@@ -48,7 +48,7 @@ export const BASE_URL = "https://agentplain.com";
  */
 export const ROI_BAND = "15–50× per workflow";
 export const ROI_FRAME =
-  "Typically 15–50× ROI per workflow — plus the regulatory violations a draft-then-approve loop catches as a draft and never sends, the one thing an auto-execution tool can't promise to dodge.";
+  "Modeled 15–50× ROI per workflow on hours reclaimed — plus the regulatory violations a draft-then-approve loop catches as a draft and never sends, the one thing an auto-execution tool can't promise to dodge.";
 
 /**
  * Organization payload — names agentplain as the publisher across every

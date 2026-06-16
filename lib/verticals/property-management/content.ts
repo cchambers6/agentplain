@@ -254,14 +254,14 @@ export const propertyManagement: VerticalContent = {
 
   roi: {
     multiplier: "15x",
-    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
+    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — 7-day free trial, card at signup",
     outputValue: "$36,000 / yr saved on PM-hour and delinquency reclamation",
     math:
       "1 PM @ $48k all-in × ~25% of day on tenant inbound and maintenance routing = $12k/yr per PM in labor reclamation. At 3 PMs that is $36k against 3 Regular-tier seats at $199/mo solo ($7,164/yr) — ~5x at three PMs, sliding to ~15x+ as a portfolio grows past 25 seats and per-seat drops to $119/mo. Delinquency-day compression of 2 days/month at $200/door in rent float × 200 doors = $80k/yr additional in worst-case operations (modeled as upside, not committed).",
     citation:
       "Pricing per `project_stripe_both_surfaces.md` (Regular tier per the 2026-05-15 three-tier ratification — Regular is the default entry path; PM operations wanting named-service-partner reserved time can step up to Partner ($299→$199/seat), and high-intensity multi-state portfolios route to Max (quote-based)). ROI band per `project_pricing_value_anchor.md`. PM-hour distribution and delinquency-float math pending primary-research validation — flagged in capability inbox. Buildium/AppFolio market dynamics referenced from public segment reporting; specific savings claims are operator-modeled, not customer-attested.",
     violationAvoidance:
-      "Tenant communications carry Fair Housing Act exposure (first-offense HUD civil penalty of $26,262, 2025 inflation-adjusted, 24 CFR §180.671) plus each state's landlord-tenant notice, disclosure, and timing rules — an improper eviction or entry notice is its own per-violation liability. An auto-sent tenant reply can become a fair-housing or improper-notice violation instantly; agentplain's fleet drafts the reply, the fair-housing scanner flags it, and a PM approves before it sends — keeping the per-violation penalty off the ledger. That avoided downside is real ROI the 15x hours math leaves out, and it depends on nothing going out without a human.",
+      "Tenant communications carry Fair Housing Act exposure (first-offense HUD civil penalty of $26,262, 2025 inflation-adjusted, 24 CFR §180.671) plus each state's landlord-tenant notice, disclosure, and timing rules — an improper eviction or entry notice is its own per-violation liability. An auto-sent tenant reply can become a fair-housing or improper-notice violation instantly; agentplain's fleet drafts the reply and holds it for a property manager to approve before it sends, so fair-housing-risky or improper-notice language is caught at the draft stage — keeping the per-violation penalty off the ledger. (A property-management fair-housing pass is loaded and activates after counsel review; today the safeguard is the human approval gate, which depends on nothing going out without a person.) That avoided downside is real ROI the 15x hours math leaves out.",
   },
 
   claims: {
@@ -279,7 +279,7 @@ export const propertyManagement: VerticalContent = {
     augment: [
       "Owner-policy matching on every work order — drafts cite the policy line, never invent",
       "Renewal pricing — drafted with comparable-rent evidence from the local feed",
-      "Compliance review on tenant communications — fair housing + state-specific notice rules",
+      "Tenant communications drafted then held for your approval — the fair-housing pass activates after counsel review",
       "Trust-accounting exception triage — drafted with bank-feed evidence attached",
     ],
   },
@@ -315,7 +315,7 @@ export const propertyManagement: VerticalContent = {
     before:
       "Triage in Buildium, check the work-order history, message the vendor, message the owner, schedule the visit, follow up Monday. ~25 minutes of inbox ping-pong over the weekend.",
     after:
-      "The fleet classified the request as urgent water damage, pulled unit 4B's three prior plumbing tickets, drafted the vendor dispatch message, drafted the owner notification with the likely cost band, and proposed a Saturday morning slot. Everything queued for the property manager's review.",
+      "The fleet classified the request as urgent water damage and — once your Buildium API key is connected — pulled unit 4B's three prior plumbing tickets; it drafted the vendor dispatch message, drafted the owner notification with the likely cost band, and proposed a Saturday morning slot. Everything queued for the property manager's review.",
     outcome:
       "One review, three approvals, one Saturday visit. The manager spends the weekend on owners and tenants, not on coordination.",
   },

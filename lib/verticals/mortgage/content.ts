@@ -218,14 +218,14 @@ export const mortgage: VerticalContent = {
 
   roi: {
     multiplier: "9x–19x",
-    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — first month free",
+    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — 7-day free trial, card at signup",
     outputValue: "$22,000 / yr per LO seat in cycle-time reclamation",
     math:
       "Solo case: ~$1,833/mo per LO against the Regular-tier solo seat ($199/mo) = ~9x ROI. At-scale case: same per-LO value against the 50-seat-band price ($99/mo) = ~19x. Multi-LO mortgage shops typically see the at-scale economics.",
     citation:
       "Pricing per `project_stripe_both_surfaces.md` (Regular tier per the 2026-05-15 three-tier ratification — Regular is the default entry path; mortgage shops wanting named-service-partner reserved time can step up to Partner ($299→$199/seat), and high-intensity multi-state engagements route to Max (quote-based)). Value math per `project_pricing_value_anchor.md` (Regular-tier ROI range 15x–50x). Loan-cycle and doc-chase reference points pending primary-research validation — flagged in capability inbox. Sales-cycle compression mechanism modeled on the roofing-supplement analog in `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3.",
     violationAvoidance:
-      "Mortgage communications sit on top of RESPA, ECOA, HMDA, and TRID at once — a kickback-implying referral note (RESPA §8 carries $10,000 criminal exposure plus CFPB civil penalties reaching $1,443,275 for knowing violations, 2025 inflation-adjusted), a careless adverse-action line (ECOA / Regulation B), a reporting gap (HMDA), or a mis-stated fee (TRID) each become regulator-fileable the moment they send. Auto-execution means the violation is already out the door before anyone reviews it; agentplain's fleet drafts the LO's borrower outreach and disclosures and routes every one through human approval, so a non-compliant message is caught as a draft rather than litigated as a sent record. That avoided exposure is value the hours-reclaimed multiplier doesn't count.",
+      "Mortgage communications sit on top of RESPA, ECOA, HMDA, and TRID at once — a kickback-implying referral note (RESPA §8 carries $10,000 criminal exposure plus CFPB civil penalties reaching $1,443,275 for knowing violations, 2025 inflation-adjusted), a careless adverse-action line (ECOA / Regulation B), a reporting gap (HMDA), or a mis-stated fee (TRID) each become regulator-fileable the moment they send. Auto-execution means the violation is already out the door before anyone reviews it; agentplain's fleet drafts the LO's borrower outreach and disclosures, and a licensed human reviews and approves every customer-facing message before it sends — so a non-compliant line is caught at the draft stage rather than litigated as a sent record. That avoided exposure is value the hours-reclaimed multiplier doesn't count.",
   },
 
   claims: {
@@ -280,8 +280,8 @@ export const mortgage: VerticalContent = {
     before:
       "Pull the loan file in Encompass, check current pricing in Optimal Blue, model the relock cost, draft a comparison email, run the numbers a second time before sending. ~30 minutes on a phone before bed.",
     after:
-      "The fleet pulls the loan, runs a relock comparison against current pricing, drafts a borrower-ready email with the new monthly payment and the cost-to-relock, and queues it for Marcus's review. The borrower's full thread is summarized at the top.",
+      "Once Marcus's LOS and pricing engine are connected, the fleet pulls the loan, runs a relock comparison against current pricing, and drafts a borrower-ready email with the new monthly payment and the cost-to-relock; otherwise it drafts from the figures Marcus provides. Either way it queues the email for Marcus's review, with the borrower's full thread summarized at the top.",
     outcome:
-      "Marcus approves in two taps the next morning. Optimal Blue executes the relock; the borrower keeps the rate without a midnight phone call.",
+      "Marcus approves in two taps the next morning and sends from his own inbox. The relock runs in his LOS once the pricing engine is connected; the borrower keeps the rate without a midnight phone call.",
   },
 };

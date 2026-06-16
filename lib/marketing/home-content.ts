@@ -8,39 +8,28 @@
  * every concrete claim traces back to the named memory rule.
  */
 
+import { tierLadderBands } from "@/lib/pricing/tiers";
+
 // Service-partnership tiers (ratified 2026-05-15 — three productized tiers
 // under the service-partnership lock; supersedes the 2026-05-12 single-tier
 // surfacing while preserving the per-seat ladder as Regular's price shape).
 // Regular: standard service partnership, per-seat ladder, our team running
-// install + config + reviews on a cadence.
-// Partner: named service partner, weekly review cadence, deeper customization,
-//          uplift on the per-seat number to fund the dedicated overlay.
+//          install + config + managed ops.
+// Partner: everything in Regular, plus priority support and a quarterly async
+//          check-in with the service team (ratified 2026-06-14 — NO reserved
+//          hours / weekly reviews / dedicated named human); a modest per-seat
+//          uplift over Regular.
 // Max:     ad-hoc service partnership for firms with non-standard scope —
 //          quoted, not productized; sales-led CTA.
 // /custom remains a separate surface for bespoke ENGAGEMENTS (white-label,
 // integrations off the roadmap, 100+ seats) — that surface is not a tier.
-export const ladderBands = [
-  { band: "Solo (1 seat)", price: "$199" },
-  { band: "2–9 seats", price: "$179" },
-  { band: "10–24 seats", price: "$149" },
-  { band: "25–49 seats", price: "$119" },
-  { band: "50–99 seats", price: "$99" },
-];
-
-// Partner per-seat numbers map to the schema-backed `PLUS` enum in
-// `prisma/schema.prisma` (kept since 2026-05-09) — the productized uplift
-// covers the named-partner overlay (onboarding, weekly review, customization).
-// Customer copy renders this as "Partner" via `tierDisplayName()` — the
-// schema name itself is internal-only.
-// Source: HISTORICAL block of `project_stripe_both_surfaces.md` —
-// $299 solo → $199 at scale.
-export const partnerBands = [
-  { band: "Solo (1 seat)", price: "$299" },
-  { band: "2–9 seats", price: "$269" },
-  { band: "10–24 seats", price: "$239" },
-  { band: "25–49 seats", price: "$219" },
-  { band: "50–99 seats", price: "$199" },
-];
+//
+// Both ladders are DERIVED from the canonical `PER_SEAT_MONTHLY_USD_CENTS`
+// via `tierLadderBands()` so they can never drift from the billing source of
+// truth (they did before: the Partner 2–9 / 10–24 bands were hand-typed $10
+// low). `plus` renders as "Partner" via `tierDisplayName()` at the call site.
+export const ladderBands = tierLadderBands("regular");
+export const partnerBands = tierLadderBands("plus");
 
 // Q4 — what makes agentplain unique. Five points pulled verbatim from the
 // mission rule (Vertical-aware / Control / Integrates / Built BY agents /
@@ -68,11 +57,12 @@ export const uniques = [
   },
 ];
 
-// "Why pay vs. free?" — names the real alternative plainly and answers the
-// objection head-on. LEFT = Claude for Small Business (the real free
-// alternative we name explicitly per the 2026-05-15 service-partnership
-// positioning lock); RIGHT = agentplain run for you. The "us" side carries a
-// moss checkmark as a verified-good signal only — never decorative.
+// "Why pay vs. free?" — answers the do-it-yourself objection head-on. LEFT =
+// the free/DIY general-purpose AI path (kept vendor-generic per the 2026-06-11
+// customer-surface rule — the underlying model is never named on a customer
+// surface, and the rendered copy below names no vendor); RIGHT = agentplain
+// run for you. The "us" side carries a moss checkmark as a verified-good
+// signal only — never decorative.
 export const chatbotContrast = [
   {
     free: "Waits for you to prompt it.",

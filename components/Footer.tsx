@@ -146,7 +146,7 @@ export default function Footer() {
         <div className="container-wide flex flex-col gap-2 py-5 text-xs text-mute sm:flex-row sm:items-center sm:justify-between">
           <p className="font-mono tracking-wide">© 2026 agentplain</p>
           <p className="font-mono tracking-wide">
-            10 verticals · 3 service-partnership tiers · first month free
+            10 verticals · 3 service-partnership tiers · 7-day free trial
           </p>
         </div>
       </div>

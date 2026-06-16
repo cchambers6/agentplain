@@ -31,11 +31,11 @@ export type FAQItem = {
 export const FAQ_ITEMS: FAQItem[] = [
   {
     q: "What is agentplain?",
-    a: "A service partnership for local businesses. Your service team installs a fleet of capable AI partners inside your shop, configures it for your vertical, runs weekly reviews, and customizes the agents as your ops shift. The fleet reads from your existing tools — email, calendar, CRM, transaction systems, accounting — categorizes what matters, drafts what you'd otherwise type, schedules what needs scheduling, and coordinates across threads. The fleet drafts; you decide. We run the operation; you run the business. Built for ten verticals: real estate, mortgage, insurance, property management, title & escrow, recruiting, home services contractors, CPA / tax firms, law firms, and RIA / wealth practices.",
+    a: "A service partnership for local businesses. Your service team installs a fleet of capable AI partners inside your shop, configures it for your vertical, runs reviews on a regular cadence, and customizes the agents as your ops shift. The fleet reads from your existing tools — email, calendar, CRM, transaction systems, accounting — categorizes what matters, drafts what you'd otherwise type, schedules what needs scheduling, and coordinates across threads. The fleet drafts; you decide. We run the operation; you run the business. Built for ten verticals: real estate, mortgage, insurance, property management, title & escrow, recruiting, home services contractors, CPA / tax firms, law firms, and RIA / wealth practices.",
   },
   {
     q: "What does the service partner actually do?",
-    a: "Five things. (1) Install — the partner sets up the fleet, connects your tools, loads your vertical's JTBD table and compliance corpus, and runs the first week alongside you. (2) Review — a recurring call (monthly for Regular, weekly for Partner) covering what the fleet drafted, what got approved, what needs tuning. (3) Customize — when your ops shift (new compliance rule, new transaction system, new comp model), the partner updates the agents so you don't have to. (4) Escalate — if a draft hits a hard call, the partner brings it to you with the context. (5) Translate — when something looks off, the partner is your single human contact, not a ticket queue.",
+    a: "Five things. (1) Install — the partner sets up the fleet, connects your tools, loads your vertical's JTBD table and compliance corpus, and runs the first week alongside you. (2) Review — a recurring touchpoint (a monthly review for Regular; priority support plus a quarterly async check-in for Partner) covering what the fleet drafted, what got approved, what needs tuning. (3) Customize — when your ops shift (new compliance rule, new transaction system, new comp model), the partner updates the agents so you don't have to. (4) Escalate — if a draft hits a hard call, the partner brings it to you with the context. (5) Translate — when something looks off, the partner is your single human contact, not a ticket queue.",
   },
   {
     q: "Is this just an AI chatbot with extra steps?",
@@ -68,17 +68,17 @@ export const FAQ_ITEMS: FAQItem[] = [
   {
     q: "How does pricing work?",
     topic: "pricing",
-    a: "Three tiers of service partnership, all per seat, month-to-month, first month free. (1) Regular — standard partnership, monthly review cadence, $199 solo sliding to $99 at 50+ seats. (2) Partner — named service partner with weekly review cadence and deeper customization, $299 solo sliding to $199 at scale. (3) Max — ad-hoc service partnership for firms with non-standard scope; quoted to the engagement, sales-led. No setup charges. No long-term contract. Cancel anytime from your billing settings.",
+    a: "Three tiers of service partnership, all per seat, month-to-month, with a 7-day free trial (14 days for CPA & Law), card captured at signup. (1) Regular — standard partnership, monthly review, $199 solo sliding to $99 at 50+ seats. (2) Partner — everything in Regular plus priority support and a quarterly async check-in with your service team, $299 solo sliding to $199 at scale. (3) Max — ad-hoc service partnership for firms with non-standard scope; quoted to the engagement, sales-led. No setup charges. No long-term contract. 14-day money-back guarantee. Cancel anytime from your billing settings.",
   },
   {
     q: "What's the difference between Regular, Partner, and Max?",
     topic: "pricing",
-    a: "Cadence and dedication. Regular is the standard service partnership: a partner installs, runs a monthly review call, handles tuning between calls. Most local-business shops fit Regular. Partner adds a named service partner who's dedicated to your account, runs a weekly review, owns customization, and handles change management as your ops shift — typically firms with more complex ops or higher stakes per draft. Max is sales-led: ad-hoc service partnership for firms whose ops don't fit the productized shape — different cadence, different deliverables, quoted to scope.",
+    a: "Cadence and depth of support. Regular is the standard service partnership: we install, run a monthly review, and handle tuning between reviews. Most local-business shops fit Regular. Partner is everything in Regular plus priority support and a quarterly async check-in with your service team — for firms that want a faster line and a regular pulse on what the fleet is doing. Max is sales-led: ad-hoc service partnership for firms whose ops don't fit the productized shape — different cadence, different deliverables, quoted to scope.",
   },
   {
     q: "When would I want Partner instead of Regular?",
     topic: "pricing",
-    a: "Three common patterns. (1) Your week-over-week change is high — new listings, new clients, new compliance rules — and you want a weekly review instead of a monthly one. (2) Your stakes per draft are higher than the average shop (litigation work, wealth management, broker-of-record-sensitive comms) and you want a partner who's dedicated to your account and knows your conventions. (3) You're growing or restructuring and want change management built into the relationship, not retrofitted later. If none of those apply, Regular usually fits.",
+    a: "A few patterns. (1) You want priority support — a faster line when something needs attention — rather than standard turnaround. (2) Your stakes per draft are higher than the average shop (litigation work, wealth management, broker-of-record-sensitive comms) and you want a regular pulse on what the fleet is doing. (3) You want a quarterly async check-in with your service team to step back and tune as your ops shift. If none of those apply, Regular usually fits.",
   },
   {
     q: "What is /custom and how is it different from Max?",

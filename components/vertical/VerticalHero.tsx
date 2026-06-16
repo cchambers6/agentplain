@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { VerticalContent } from "@/lib/verticals/types";
+import { tierLadderBands, type TierName } from "@/lib/pricing/tiers";
 import { tokens } from "@/lib/brand/tokens";
 import { verticalSceneName } from "@/components/ui/ap";
 import HeroBackdrop from "@/components/marketing/HeroBackdrop";
@@ -35,6 +36,18 @@ export default function VerticalHero({
       : `/app/sign-up?vertical=${content.slug}`;
 
   const sceneName = verticalSceneName(content.slug);
+
+  // Per-seat hero stat, derived from THIS vertical's tier so it never
+  // contradicts the pricing banner further down the page. Was hard-coded
+  // "$199 → $99" (Regular) on every vertical — wrong for the Partner
+  // verticals ($299 → $199) and the Max verticals (quote-based).
+  const perSeatStat =
+    content.tier === "max"
+      ? "Quoted"
+      : (() => {
+          const ladder = tierLadderBands(content.tier as TierName);
+          return `${ladder[0].price} → ${ladder[ladder.length - 1].price}`;
+        })();
 
   return (
     <section className="relative overflow-hidden border-b border-rule bg-paper">
@@ -83,7 +96,7 @@ export default function VerticalHero({
 
         <div className="mt-14 grid max-w-3xl gap-6 border-t border-rule pt-8 sm:grid-cols-3">
           <Stat label="ROI multiplier" value={content.roi.multiplier} />
-          <Stat label="Per seat" value="$199 → $99" />
+          <Stat label="Per seat" value={perSeatStat} />
           <Stat
             label="Integrations planned"
             value={String(content.integrations.planned.length)}

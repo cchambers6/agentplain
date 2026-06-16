@@ -19,12 +19,15 @@
  *
  * Per-seat ladder (solo → 50–99 seats):
  * - `regular` → "Regular" → $199 → $99 per seat (productized)
- * - `plus`    → "Partner" → $299 → $199 per seat (productized; +4 hrs/mo named-service-partner time)
+ * - `plus`    → "Partner" → $299 → $199 per seat (productized; everything in
+ *               Regular plus priority support + a quarterly async check-in —
+ *               no reserved hours, ratified 2026-06-14)
  * - `max`     → "Max"     → AD-HOC quote-based (no fixed seat price)
  *
- * Month-to-month, first month free across Regular + Partner. Max is
- * custom-quoted month-to-month or annual per engagement. 100+ seats moves
- * to enterprise terms via /custom.
+ * Month-to-month, 7-day free trial across Regular + Partner (14 days for the
+ * CPA + Law verticals), card captured at signup. Max is custom-quoted
+ * month-to-month or annual per engagement. 100+ seats moves to enterprise
+ * terms via /custom.
  */
 export type VerticalTier = "regular" | "plus" | "max";
 

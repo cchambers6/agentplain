@@ -6,6 +6,7 @@ import JsonLd from "@/components/seo/JsonLd";
 import { FaqList, pricingFaqItems } from "@/components/FAQ";
 import { faqPageJsonLd } from "@/lib/seo/structured-data";
 import { alternatesFor } from "@/lib/seo/metadata";
+import { tierLadderBands } from "@/lib/pricing/tiers";
 import HeroBackdrop from "@/components/marketing/HeroBackdrop";
 
 export const metadata: Metadata = {
@@ -30,21 +31,11 @@ export const metadata: Metadata = {
 
 type Band = { band: string; price: string };
 
-const regularBands: Band[] = [
-  { band: "Solo (1 seat)", price: "$199" },
-  { band: "2–9 seats", price: "$179" },
-  { band: "10–24 seats", price: "$149" },
-  { band: "25–49 seats", price: "$119" },
-  { band: "50–99 seats", price: "$99" },
-];
-
-const partnerBands: Band[] = [
-  { band: "Solo (1 seat)", price: "$299" },
-  { band: "2–9 seats", price: "$269" },
-  { band: "10–24 seats", price: "$239" },
-  { band: "25–49 seats", price: "$219" },
-  { band: "50–99 seats", price: "$199" },
-];
+// Derived from the canonical per-seat ladder in `lib/pricing/tiers.ts` so the
+// pricing page can never drift from billing (the Partner 2–9 / 10–24 bands
+// were previously hand-typed $10 low here).
+const regularBands: Band[] = tierLadderBands("regular");
+const partnerBands: Band[] = tierLadderBands("plus");
 
 const sharedGuarantees = [
   "A service partner who installs the fleet and runs reviews",
@@ -70,12 +61,12 @@ const whenToChoose = [
   },
   {
     tier: "Partner",
-    headline: "Named service partner.",
-    body: "Higher stakes or higher week-over-week change. A dedicated partner runs weekly reviews, owns customization, and handles change management as your ops shift.",
+    headline: "Priority support + a quarterly check-in.",
+    body: "Higher stakes or higher week-over-week change. Everything in Regular, plus priority support — a faster line when something needs attention — and a quarterly async check-in with your service team to step back and tune.",
     examples: [
       "Litigation, wealth management, broker-of-record-heavy comms",
       "Multi-team firm with growth or restructure in flight",
-      "You'd rather get a call than open a support ticket",
+      "You'd rather have a priority line than standard turnaround",
     ],
   },
   {
@@ -182,8 +173,8 @@ export default function PricingPage() {
           />
           <TierColumn
             name="Partner"
-            tagline="Named service partner."
-            description="A dedicated partner runs weekly reviews, owns customization, handles change management as your ops shift."
+            tagline="Priority support + a quarterly check-in."
+            description="Everything in Regular, plus priority support and a quarterly async check-in with your service team — for shops that want a faster line and a regular pulse on the fleet."
             bands={partnerBands}
             ctaLabel="Talk to a service partner"
             ctaHref="mailto:hello@agentplain.com?subject=agentplain%20Partner%20tier%20interest"
@@ -209,7 +200,7 @@ export default function PricingPage() {
         tone="deep"
         eyebrow="ROI"
         title="The math, not the vibes."
-        intro="Enter your own numbers. The calculator is pure client-side; you can audit the formula in view-source. Conservative inputs are 8–15 hr/wk on systematic ops at a $75–$150/hr productive-hour opportunity cost. Calculator anchors to Regular; Partner uplift pays for the named-partner overlay."
+        intro="Enter your own numbers. The calculator is pure client-side; you can audit the formula in view-source. Conservative inputs are 8–15 hr/wk on systematic ops at a $75–$150/hr productive-hour opportunity cost. Calculator anchors to Regular; Partner is the same automation at a higher per-seat price for priority support and a quarterly check-in."
       >
         <RoiCalculator />
       </Section>
@@ -447,7 +438,7 @@ function TierColumn({
         </p>
         {featured ? (
           <p className="font-mono text-[10px] tracking-eyebrow uppercase text-clay">
-            Named partner
+            Priority support
           </p>
         ) : null}
       </div>

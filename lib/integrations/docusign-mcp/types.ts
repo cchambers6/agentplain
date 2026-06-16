@@ -107,6 +107,14 @@ export interface SendEnvelopeInput {
   signers?: SignerInput[];
   /** `sent` (default — delivers immediately) or `created` (saved as draft). */
   status?: 'sent' | 'created';
+  /**
+   * Approval token (a `WorkApprovalQueueItem.id`) the operator approved for
+   * THIS send. Carried forward on the second attempt once approved. The
+   * approval gate (`with-approval.ts`) rejects the call with APPROVAL_REQUIRED
+   * when this is absent, mismatched, un-approved, or expired — DocuSign is
+   * never contacted in that case.
+   */
+  pendingApprovalId?: string;
 }
 
 export interface SendEnvelopeOutput {
@@ -133,6 +141,8 @@ export interface DownloadCompletedDocumentOutput {
 export interface VoidEnvelopeInput {
   envelopeId: string;
   voidedReason: string;
+  /** Approval token for THIS void — see `SendEnvelopeInput.pendingApprovalId`. */
+  pendingApprovalId?: string;
 }
 
 export interface VoidEnvelopeOutput {

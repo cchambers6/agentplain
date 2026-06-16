@@ -110,6 +110,11 @@ export const MINUTES_SAVED_BY_KIND: Record<WorkApprovalKind, number> = {
   FINANCE_PULSE: 25,
   // Demo activation draft — excluded from real metrics (see header note).
   ACTIVATION_DRAFT: 0,
+  // DocuSign send/void are safety GATES, not time-saving drafts: the gate may
+  // write many PENDING rows that are never approved. Scored at 0 so the value
+  // ledger is never inflated by a gated-but-unexecuted action.
+  DOCUSIGN_SEND_ENVELOPE: 0,
+  DOCUSIGN_VOID_ENVELOPE: 0,
 };
 
 // ── Per-kind labor-rate table (USD/hour) ─────────────────────────────────────
@@ -153,6 +158,9 @@ export const LABOR_RATE_USD_PER_HOUR_BY_KIND: Record<WorkApprovalKind, number> =
     FINANCE_PULSE: 75,
     // Demo activation draft — excluded from real metrics (see header note).
     ACTIVATION_DRAFT: 0,
+    // DocuSign send/void — legal-document actions; rate is moot (0 minutes).
+    DOCUSIGN_SEND_ENVELOPE: 75,
+    DOCUSIGN_VOID_ENVELOPE: 75,
   };
 
 // ── Public types ──────────────────────────────────────────────────────────────

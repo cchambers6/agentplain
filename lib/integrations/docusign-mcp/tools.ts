@@ -40,6 +40,7 @@ const sendEnvelopeSchema = z.object({
   documents: z.array(documentSchema).optional(),
   signers: z.array(signerSchema).optional(),
   status: z.enum(['sent', 'created']).optional(),
+  pendingApprovalId: z.string().min(1).optional(),
 });
 
 const downloadSchema = z.object({
@@ -50,6 +51,7 @@ const downloadSchema = z.object({
 const voidSchema = z.object({
   envelopeId: z.string().min(1),
   voidedReason: z.string().min(1),
+  pendingApprovalId: z.string().min(1).optional(),
 });
 
 export const DOCUSIGN_TOOLS: ReadonlyArray<ToolRegistration<DocuSignMcpServer>> = [

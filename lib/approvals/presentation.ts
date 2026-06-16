@@ -147,6 +147,10 @@ const STAKES_KINDS = new Set<string>([
   "ADMIN_BILLING_NOTICE",
   "ADMIN_TRIAL_ENDING",
   "CHIEF_OF_STAFF_MEETING",
+  // DocuSign send/void are the highest-stakes actions we gate — mailing or
+  // cancelling a legal document. Never sweep them up in a batch approve.
+  "DOCUSIGN_SEND_ENVELOPE",
+  "DOCUSIGN_VOID_ENVELOPE",
 ]);
 
 /** Routine kinds that are always safe to batch when not flagged critical. */

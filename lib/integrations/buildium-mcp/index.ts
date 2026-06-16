@@ -31,6 +31,7 @@ export function buildBuildiumMcpServer(args: { workspaceId: string }): BuildiumM
   return new TestBuildiumMcpServer(args);
 }
 
+export { BUILDIUM_TOOLS, BUILDIUM_NAMESPACE } from './tools';
 export { ProdBuildiumMcpServer } from './server';
 export { TestBuildiumMcpServer } from './test-server';
 export { resolveBuildiumCredential, type ResolvedBuildium } from './auth';

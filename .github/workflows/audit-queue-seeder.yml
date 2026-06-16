@@ -1,0 +1,60 @@
+# Audit-queue seeder — every 30 min.
+#
+# Gathers regression signals (CI failures, Vercel deploy failures, brand-gate
+# drift, stale-but-green PRs, E2E failures) and renders audit-queue INBOX
+# entries. See scripts/audit-queue-seeder.ts.
+#
+# ── IMPORTANT: cloud vs local ──────────────────────────────────────────────────
+# The autofire task's INBOX is a LOCAL file on Conner's machine — a cloud runner
+# CANNOT write to it. So THIS workflow runs the seeder for VISIBILITY only: it
+# posts found signals to the job summary and uploads them as an artifact.
+#
+# The authoritative write to the real INBOX happens from a LOCAL 30-min cadence
+# (a scheduled task / `/loop`) where the seeder has BOTH a GitHub token AND the
+# INBOX on disk. That local run's `gatherCiFailures()` also catches anything THIS
+# job (or the nightly E2E job) flags as a failed workflow run — so signals reach
+# the autofire task even though CI can't touch the local file. Docs: docs/e2e/README.md.
+
+name: audit-queue-seeder
+
+on:
+  schedule:
+    - cron: "*/30 * * * *" # every 30 minutes
+  workflow_dispatch:
+
+concurrency:
+  group: audit-queue-seeder
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+  statuses: read
+  pull-requests: read
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Gather regression signals → audit-queue
+        env:
+          # GITHUB_TOKEN grants the read scopes above for CI/Vercel/PR queries.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: npx tsx scripts/audit-queue-seeder.ts
+      - name: Upload seeded entries (CI fallback)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-queue-seeded
+          path: audit-queue/
+          retention-days: 7
+          if-no-files-found: ignore

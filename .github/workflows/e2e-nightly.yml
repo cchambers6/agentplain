@@ -1,0 +1,77 @@
+# Nightly customer-path E2E.
+#
+# Runs the Playwright smoke + visual suite (tests/e2e) against a deployed
+# preview/prod URL once a night, plus on-demand. The specs SELF-SKIP when their
+# env tier isn't configured (no E2E_BASE_URL → clean no-op; no session → authed
+# specs skip), so this never false-reds — it only goes red on a real regression
+# in a path that IS configured to run.
+#
+# On failure it runs scripts/playwright-failures-to-inbox.ts, which renders
+# audit-queue entries. In CI the local autofire INBOX is unreachable, so those
+# entries land in the job summary + an artifact for visibility. The LOCAL
+# audit-queue-seeder (run on a 30-min cadence) independently catches THIS run's
+# failure via the GitHub Actions API and writes it to the real INBOX — that's
+# the bridge that actually feeds the autofire task. See docs/e2e/README.md.
+
+name: e2e-nightly
+
+on:
+  schedule:
+    - cron: "0 8 * * *" # 08:00 UTC ≈ 03:00/04:00 ET, before the morning autofire
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Override E2E_BASE_URL (else uses the E2E_PREVIEW_URL secret/var)"
+        required: false
+        type: string
+
+concurrency:
+  group: e2e-nightly
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Install Playwright browser (chromium)
+        run: npx playwright install --with-deps chromium
+      - name: Run E2E suite
+        env:
+          CI: "1"
+          # Resolution order: dispatch input → secret → repo var. Unset → specs skip.
+          E2E_BASE_URL: ${{ github.event.inputs.base_url || secrets.E2E_PREVIEW_URL || vars.E2E_PREVIEW_URL }}
+          # Optional authed tier — only set these if you've provisioned a seeded
+          # workspace + sealed session for the target deployment.
+          E2E_WORKSPACE_ID: ${{ secrets.E2E_WORKSPACE_ID }}
+          E2E_SESSION_COOKIE: ${{ secrets.E2E_SESSION_COOKIE }}
+          E2E_AUTH_FLOW: ${{ vars.E2E_AUTH_FLOW }}
+        run: npm run test:e2e:nightly
+      - name: Seed audit-queue from failures
+        if: failure()
+        env:
+          PLAYWRIGHT_JSON_REPORT: playwright-report/results.json
+          GITHUB_STEP_SUMMARY: ${{ env.GITHUB_STEP_SUMMARY }}
+        run: npx tsx scripts/playwright-failures-to-inbox.ts
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+      - name: Upload seeded audit-queue entries
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-queue-seeded
+          path: audit-queue/
+          retention-days: 14
+          if-no-files-found: ignore

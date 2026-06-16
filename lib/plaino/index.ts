@@ -17,7 +17,9 @@ export { buildSystemPrompt, PLAINO_SYSTEM_PROMPT_VERSION } from './system-prompt
 export {
   checkDegradedMode,
   DEGRADED_MODE_METADATA_KIND,
+  PLAINO_RESTING_CUSTOMER_NOTICE,
   type DegradedMode,
+  type DegradedReason,
 } from './degraded-mode';
 export {
   buildPreferenceMemoryBody,

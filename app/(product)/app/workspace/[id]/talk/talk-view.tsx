@@ -2,6 +2,7 @@ import { ApEyebrow, ApRootedEmptyState, PlainoMark } from "@/components/ui/ap";
 import type { PersistedChatMessage } from "@/lib/plaino";
 import { parsePlainoCard } from "@/lib/plaino";
 import { PlainoCardView } from "@/components/plaino/PlainoCardView";
+import { PlainoRestingBanner } from "@/components/plaino/PlainoRestingBanner";
 
 // DB-free presentation for the Plaino talk thread. `page.tsx` owns the
 // chat store, decryption, and approval-state lookups; it hands this
@@ -251,22 +252,16 @@ export function DegradedNotice({
   operatorNotice,
   isOperator,
 }: DegradedNoticeProps) {
+  // Delegates to the universal resting banner so the chat surface shows the
+  // same calm sleep-pose state as the rest of the app (the top-of-app strip,
+  // mobile, the marketing widget) — one component, no drift.
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="mb-8 border border-clay/40 bg-paper-deep p-4 text-[15px] leading-relaxed text-ink"
-    >
-      <p className="mb-1 font-mono text-[11px] tracking-eyebrow uppercase text-clay">
-        Plaino is offline
-      </p>
-      <p>{customerNotice}</p>
-      {isOperator ? (
-        <p className="mt-3 border-t border-rule pt-3 font-mono text-[12px] leading-relaxed text-ink-soft">
-          <span className="text-clay">operator only:</span> {operatorNotice}
-        </p>
-      ) : null}
-    </div>
+    <PlainoRestingBanner
+      variant="notice"
+      customerNotice={customerNotice}
+      operatorNotice={operatorNotice}
+      isOperator={isOperator}
+    />
   );
 }
 

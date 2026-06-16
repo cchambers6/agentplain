@@ -49,25 +49,66 @@
 import { isEncryptionConfigured } from '../security/encryption';
 import { isPausedApiKey } from '../llm/paused';
 
+export type DegradedReason =
+  | 'ENCRYPTION_KEY_MISSING'
+  | 'ANTHROPIC_API_KEY_MISSING'
+  | 'ANTHROPIC_API_KEY_PAUSED'
+  | 'LLM_DEGRADED_MODE_FORCED';
+
 export type DegradedMode =
   | { degraded: false }
   | {
       degraded: true;
-      reason:
-        | 'ENCRYPTION_KEY_MISSING'
-        | 'ANTHROPIC_API_KEY_MISSING'
-        | 'ANTHROPIC_API_KEY_PAUSED';
+      reason: DegradedReason;
       /** Customer-facing one-liner — what they see in the thread. */
       customerNotice: string;
       /** Operator-facing follow-on — what `settings` should display. */
       operatorNotice: string;
     };
 
+/**
+ * Customer-facing "Plaino's resting" line — the calm, intentional framing
+ * used for an EXPECTED pause (the `LLM_DEGRADED_MODE` override and, by
+ * extension, the default copy the reusable `PlainoRestingBanner` falls back
+ * to). It says nothing about *why* (key, quota, vendor) on purpose — the
+ * customer surface never names a model vendor or a credential
+ * (feedback_no_silent_vendor_lock). The dog is resting; that's all they
+ * need to know, and it reads as a deliberate state, not a broken button.
+ */
+export const PLAINO_RESTING_CUSTOMER_NOTICE =
+  "Plaino's resting just now — he'll be back for the next round of work " +
+  "as soon as we're ready. Nothing you've set up is lost; it picks right " +
+  'back up when he wakes.';
+
 /** Inspect the environment for credentials the dispatcher needs. The
  *  check is intentionally permissive in test mode (`LLM_PROVIDER=test`):
  *  tests don't need a real Anthropic key, and the encryption-test path
  *  injects its own key. */
 export function checkDegradedMode(env: NodeJS.ProcessEnv = process.env): DegradedMode {
+  // Manual override — checked FIRST, ahead of every other signal including
+  // the `LLM_PROVIDER=test` bypass. Two jobs:
+  //   1. Local testing. Conner sets `LLM_DEGRADED_MODE=true` in `.env.local`
+  //      to see exactly what a customer sees during a pause — the calm
+  //      "Plaino's resting" state on every LLM surface — without rotating
+  //      the prod key or pausing real spend.
+  //   2. A generic forward kill-switch. The current production trigger is the
+  //      paused `ANTHROPIC_API_KEY` sentinel (caught below), but if Anthropic
+  //      has an outage, quota is exhausted, or the dispatch service degrades
+  //      for any reason the env signals haven't yet caught, flipping this on
+  //      puts every surface into the same honest resting state in one move.
+  if (isDegradedModeForced(env)) {
+    return {
+      degraded: true,
+      reason: 'LLM_DEGRADED_MODE_FORCED',
+      customerNotice: PLAINO_RESTING_CUSTOMER_NOTICE,
+      operatorNotice:
+        'LLM_DEGRADED_MODE is set on this deployment, so every customer-' +
+        'facing Plaino surface is showing the calm "resting" state and no ' +
+        'model calls are being attempted. This is a manual override (local ' +
+        'testing or a deliberate dispatch pause) — unset LLM_DEGRADED_MODE ' +
+        '(or set it to off/0/false) and redeploy to bring Plaino back online.',
+    };
+  }
   if (!isEncryptionConfigured(env.ENCRYPTION_KEY ?? undefined)) {
     return {
       degraded: true,
@@ -128,6 +169,15 @@ export function checkDegradedMode(env: NodeJS.ProcessEnv = process.env): Degrade
     };
   }
   return { degraded: false };
+}
+
+/** True when an operator has forced degraded mode via `LLM_DEGRADED_MODE`.
+ *  Accepts the on-ish values `true` / `1` / `on` so it matches the other
+ *  env switches in `lib/llm/index.ts`. Unset (or `off` / `0` / `false`)
+ *  leaves the real key-state signals in charge. */
+function isDegradedModeForced(env: NodeJS.ProcessEnv): boolean {
+  const v = env.LLM_DEGRADED_MODE;
+  return v === 'true' || v === '1' || v === 'on';
 }
 
 /** Mirror of `lib/llm/index.ts`'s `sentinelEnabled()` bypass read, inlined

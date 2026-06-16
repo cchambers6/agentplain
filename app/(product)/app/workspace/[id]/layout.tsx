@@ -7,6 +7,8 @@ import { WorkspaceNavLink } from "./WorkspaceNavLink";
 import { PasskeyEnrollNudge } from "./PasskeyEnrollNudge";
 import { isWorkspacePaused } from "@/lib/billing/workspace-paused-gate";
 import { getUnhealthyIntegrations } from "@/lib/integrations/health-banner";
+import { checkDegradedMode } from "@/lib/plaino";
+import { PlainoRestingBanner } from "@/components/plaino/PlainoRestingBanner";
 
 interface WorkspaceLayoutProps {
   children: React.ReactNode;
@@ -70,6 +72,14 @@ export default async function WorkspaceLayout({
     isOperator: false,
   }).catch(() => []);
 
+  // Universal degraded-mode signal. Env-only (no DB) — cheap to read on
+  // every page. When the LLM dispatch can't run (paused-spend sentinel,
+  // missing credential, forced `LLM_DEGRADED_MODE`, upstream outage) every
+  // interactive surface would otherwise look broken: chat replies, agent
+  // fires and drafts return silently. The top-of-app resting banner reframes
+  // that as a deliberate, calm pause across ALL product pages at once.
+  const degraded = checkDegradedMode();
+
   const base = `/app/workspace/${id}`;
 
   return (
@@ -117,6 +127,14 @@ export default async function WorkspaceLayout({
         ))}
       />
       {!hasPasskey ? <PasskeyEnrollNudge /> : null}
+      {degraded.degraded ? (
+        <PlainoRestingBanner
+          variant="strip"
+          customerNotice={degraded.customerNotice}
+          operatorNotice={degraded.operatorNotice}
+          isOperator={member.isOperator}
+        />
+      ) : null}
       {pauseState.isPaused ? (
         <div className="container-wide mt-4">
           <div

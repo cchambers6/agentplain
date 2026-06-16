@@ -17,6 +17,10 @@ interface WorkspaceNavLinkProps {
    * hubs; this keeps the right tab lit when the customer lands on one of them.
    */
   match?: string[];
+  /** Optional stable hook for the first-run welcome tour (e.g. "nav-talk").
+   *  Rendered as `data-tour` so WelcomeTour can spotlight this link without
+   *  depending on label text or DOM order. */
+  dataTour?: string;
   children: ReactNode;
 }
 
@@ -29,7 +33,7 @@ interface WorkspaceNavLinkProps {
  * styling alone — keyboard users had no way to tell which workspace
  * section they were inside without reading the URL.
  */
-export function WorkspaceNavLink({ href, exact, match, children }: WorkspaceNavLinkProps) {
+export function WorkspaceNavLink({ href, exact, match, dataTour, children }: WorkspaceNavLinkProps) {
   const pathname = usePathname();
   const onPath = (p: string) => pathname === p || pathname.startsWith(`${p}/`);
   const matchesAbsorbed = match?.some(onPath) ?? false;
@@ -40,6 +44,7 @@ export function WorkspaceNavLink({ href, exact, match, children }: WorkspaceNavL
   return (
     <Link
       href={href}
+      data-tour={dataTour}
       aria-current={isActive ? "page" : undefined}
       className={
         isActive

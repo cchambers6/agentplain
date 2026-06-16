@@ -84,5 +84,7 @@ export async function requireMobileWorkspaceMember(
     workspaceId,
     role: membership.role,
     isOperator: session.isOperator,
+    membershipId: membership.id,
+    welcomeTourSeenAt: membership.welcomeTourSeenAt,
   };
 }

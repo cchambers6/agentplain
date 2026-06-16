@@ -37,6 +37,14 @@ export interface MembershipAssertion {
   /** Operator flag from the session — lets workspace surfaces show the
    *  internal operator entry point without a second session read. */
   isOperator: boolean;
+  /** The resolved Membership row id. The membership is already loaded to
+   *  authorize the request, so surfacing its id costs nothing and lets
+   *  callers (e.g. the welcome-tour complete route) write back to the exact
+   *  user×workspace row without a second lookup. */
+  membershipId: string;
+  /** First-run welcome-tour state for this member. NULL = not yet seen;
+   *  the workspace layout renders the walkthrough only while this is null. */
+  welcomeTourSeenAt: Date | null;
 }
 
 /**
@@ -68,6 +76,8 @@ export async function requireWorkspaceMember(
     workspaceId,
     role: membership.role,
     isOperator: session.isOperator,
+    membershipId: membership.id,
+    welcomeTourSeenAt: membership.welcomeTourSeenAt,
   };
 }
 

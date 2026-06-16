@@ -10,6 +10,8 @@ import { getUnhealthyIntegrations } from "@/lib/integrations/health-banner";
 import { checkDegradedMode } from "@/lib/plaino";
 import { PlainoRestingBanner } from "@/components/plaino/PlainoRestingBanner";
 import { WORKSPACE_TABS } from "@/lib/workspace/nav";
+import { WelcomeTour } from "@/components/onboarding/WelcomeTour";
+import { NAV_TOUR_KEYS } from "@/lib/onboarding/tour-steps";
 
 interface WorkspaceLayoutProps {
   children: React.ReactNode;
@@ -106,11 +108,18 @@ export default async function WorkspaceLayout({
             href={`${base}${item.href}`}
             exact={item.href === ""}
             match={item.match?.map((m) => `${base}${m}`)}
+            dataTour={NAV_TOUR_KEYS[item.href]}
           >
             {item.label}
           </WorkspaceNavLink>
         ))}
       />
+      {/* First-run walkthrough. Renders only until this member finishes or
+          skips it (welcomeTourSeenAt set by the complete route). Non-blocking
+          spotlight — never gates the workspace below it. */}
+      {member.welcomeTourSeenAt === null ? (
+        <WelcomeTour workspaceId={id} />
+      ) : null}
       {!hasPasskey ? <PasskeyEnrollNudge workspaceId={id} /> : null}
       {degraded.degraded ? (
         <PlainoRestingBanner

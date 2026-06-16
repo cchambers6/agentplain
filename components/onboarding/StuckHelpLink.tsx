@@ -26,7 +26,7 @@ export function StuckHelpLink({
   label?: string;
   className?: string;
 }) {
-  const href = `/app/workspace/${workspaceId}/help?subject=${encodeURIComponent(
+  const href = `/app/workspace/${workspaceId}/support/new?subject=${encodeURIComponent(
     subject,
   )}`;
   return (

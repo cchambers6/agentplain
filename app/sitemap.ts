@@ -58,6 +58,7 @@ const MARKETING_ROUTES: Array<{
   { path: "/compare", changeFrequency: "monthly", priority: 0.7 },
   { path: "/about", changeFrequency: "monthly", priority: 0.7 },
   { path: "/custom", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/waitlist", changeFrequency: "monthly", priority: 0.6 },
   { path: "/privacy", changeFrequency: "yearly", priority: 0.3 },
   { path: "/terms", changeFrequency: "yearly", priority: 0.3 },
   { path: "/security", changeFrequency: "monthly", priority: 0.3 },

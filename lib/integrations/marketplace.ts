@@ -566,6 +566,42 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     disciplines: ['sales-enablement', 'customer-success'],
     verticalRelevance: ['real-estate'],
   },
+  // ── Law practice-management ─────────────────────────────────────────
+  // Clio + MyCase are the two most-named practice-management systems among
+  // small firms. Both gate their public APIs behind partner-program
+  // enrollment that agentplain has NOT completed — so the catalog stays
+  // HONEST: `coming-soon`, no provider key, waitlist CTA. They give a law
+  // workspace a vertical-relevant recommendation surface today; the law
+  // killer workflow (conflict screen) needs no third-party credential to
+  // begin and rides the document library (OneDrive) in the meantime.
+  {
+    id: 'clio',
+    name: 'Clio',
+    category: 'Documents',
+    description:
+      'Plaino will read your Clio matters and contacts and screen each new intake for conflicts once we complete the Clio developer-partner enrollment. Join the waitlist below.',
+    mcpEndpointTemplate: '/api/integrations/clio-mcp/{workspaceId}',
+    scopes: ['matters:read', 'contacts:read', 'documents:read'],
+    oauthConfigKey: 'CLIO_OAUTH',
+    status: 'coming-soon',
+    providerKey: null,
+    disciplines: ['legal', 'operations'],
+    verticalRelevance: ['law'],
+  },
+  {
+    id: 'mycase',
+    name: 'MyCase',
+    category: 'Documents',
+    description:
+      'Plaino will read your MyCase matters and client list to screen intakes and keep filings on track once we complete the MyCase partner-program enrollment. Join the waitlist below.',
+    mcpEndpointTemplate: '/api/integrations/mycase-mcp/{workspaceId}',
+    scopes: ['cases:read', 'contacts:read'],
+    oauthConfigKey: 'MYCASE_API',
+    status: 'coming-soon',
+    providerKey: null,
+    disciplines: ['legal', 'operations'],
+    verticalRelevance: ['law'],
+  },
   // ── Wave-7 universal MCPs ───────────────────────────────────────────
   // Salesforce + Notion join HubSpot (above) as the three customer-
   // installable, universal MCPs. They serve every vertical and unlock

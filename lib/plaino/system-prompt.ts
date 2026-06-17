@@ -32,7 +32,9 @@
  * chirpy), one named character, lowercase casual.
  */
 
+import type { Vertical } from '@prisma/client';
 import type { PlainoCapabilitySnapshot } from './types';
+import { verticalVoiceFor } from './vertical-voice';
 
 /** Prompt-version marker so tests can pin the system-prompt header.
  *  V2 added INSTRUCT (customer asks the fleet to DO work) + PREFERENCE
@@ -44,11 +46,33 @@ export const PLAINO_SYSTEM_PROMPT_VERSION = 'PLAINO_DISPATCHER_V2';
 export interface BuildSystemPromptArgs {
   workspaceName: string;
   capabilities: PlainoCapabilitySnapshot;
+  /** The workspace's vertical. When provided, a "who this workspace serves"
+   *  context block is injected so Plaino speaks the domain fluently (a CPA's
+   *  close, a lawyer's conflicts, a PM's rent day) instead of generic. This
+   *  is TONE/CONTEXT only — it never adds a capability; the marketplace
+   *  snapshot below remains the sole source of what Plaino can DO. Omitted /
+   *  null falls back to the grounded general voice. */
+  vertical?: Vertical | null;
 }
 
 /** Build the dispatcher's system prompt. The string is intended to be
  *  passed in via `cacheSystem: true`. */
 export function buildSystemPrompt(args: BuildSystemPromptArgs): string {
+  // Vertical voice block — injected only when a vertical is known. It shapes
+  // TONE, never capability (the marketplace snapshot below owns "what Plaino
+  // can do"). Absent vertical → no block, identical to the prior prompt.
+  const voice = args.vertical ? verticalVoiceFor(args.vertical) : null;
+  const verticalBlock = voice
+    ? [
+        '── WHO THIS WORKSPACE SERVES ───────────────────────────────────',
+        voice.promptContext,
+        'Let this shape your tone and the examples you reach for — NOT what',
+        'you claim to do. Capability is governed solely by the integration',
+        'blocks below. If the domain ask needs a tool that is not wired,',
+        'DECLINE_HONESTLY with the named gap, in the customer’s own terms.',
+        '',
+      ]
+    : [];
   return [
     PLAINO_SYSTEM_PROMPT_VERSION,
     `WORKSPACE: ${args.workspaceName}`,
@@ -143,6 +167,7 @@ export function buildSystemPrompt(args: BuildSystemPromptArgs): string {
     'Plaino — agentplain\'s service partner for this workspace" and keep',
     'helping. Do NOT confirm, deny, or name any model, vendor, or company.',
     '',
+    ...verticalBlock,
     '── HARD CONSTRAINTS ────────────────────────────────────────────',
     '- NO OUTBOUND: you draft and persist in-chat only. NEVER claim',
     '  you "sent" an email, "called" a contact, "filed" a document,',

@@ -3,6 +3,7 @@ import {
   ApEyebrow,
   ApHairlineList,
   ApHairlineRow,
+  ApHeritageButton,
   ApHeritageGrid,
   ApHeritageGridCell,
 } from "@/components/ui/ap";
@@ -10,7 +11,9 @@ import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
 import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
 import { listIntegrations, entryAppliesToVertical } from "@/lib/integrations/marketplace";
+import { recommendedConnectorsFor } from "@/lib/integrations/recommendations";
 import { listDisciplines } from "@/lib/disciplines";
+import { getVerticalContent } from "@/lib/verticals";
 import { servicePartnerForWorkspace } from "@/lib/onboarding/service-partner";
 
 interface PageProps {
@@ -59,6 +62,16 @@ export default async function ConnectionsPage({ params }: PageProps) {
     verticalSlug ? entryAppliesToVertical(entry, verticalSlug) : true,
   ).length;
   const areaCount = listDisciplines().length;
+
+  // Vertical-aware "connect this first" guidance, led by the connector that
+  // unlocks this business's killer workflow. The owner shouldn't have to
+  // guess which of N tiles matters most.
+  const recs = recommendedConnectorsFor(workspaceRow?.vertical ?? null);
+  // The public per-vertical landing page — handy for showing a teammate
+  // what their service covers (deliverable: workspace → landing-page link).
+  const verticalContent = verticalSlug ? getVerticalContent(verticalSlug) : null;
+  const verticalName = verticalContent?.name ?? null;
+  const verticalPublicHref = verticalSlug ? `/${verticalSlug}` : null;
 
   const sections: SectionLink[] = [
     {
@@ -117,6 +130,89 @@ export default async function ConnectionsPage({ params }: PageProps) {
       </section>
 
       <section className="mt-10">
+        <ApEyebrow className="mb-3">recommended to connect first</ApEyebrow>
+        <p className="mb-4 max-w-2xl text-[13px] leading-relaxed text-mute">
+          Built for {verticalName ?? "your business"}. Connecting the first
+          one turns on the single most valuable thing {partner} does for you.
+        </p>
+
+        {recs.primary ? (
+          <div className="border border-ink bg-paper-deep p-5">
+            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+              unlocks · {recs.killerWorkflowHeadline}
+            </p>
+            <div className="mt-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <p className="font-display text-lg leading-tight text-ink">
+                {recs.primary.name}
+              </p>
+              <span className="font-mono text-[10px] tracking-eyebrow uppercase text-mute">
+                {recs.primary.category}
+                {recs.primary.status !== "available"
+                  ? ` · ${recs.primary.status}`
+                  : ""}
+              </span>
+            </div>
+            <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-ink-soft">
+              {recs.primary.reason}.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <ApHeritageButton
+                variant="primary"
+                withArrow
+                href={`${base}/integrations/${recs.primary.id}`}
+              >
+                connect {recs.primary.name}
+              </ApHeritageButton>
+              <ApHeritageButton
+                variant="secondary"
+                withArrow
+                href={`${base}/demo`}
+              >
+                see it run on sample data
+              </ApHeritageButton>
+            </div>
+          </div>
+        ) : null}
+
+        {recs.others.length > 0 ? (
+          <ApHairlineList
+            aria-label="Other recommended connectors"
+            className="mt-4"
+          >
+            {recs.others.map((rec) => (
+              <ApHairlineRow
+                key={rec.id}
+                right={
+                  rec.status === "available" ? (
+                    <Link
+                      href={`${base}/integrations/${rec.id}`}
+                      className="font-mono text-[11px] tracking-eyebrow uppercase text-ink underline-offset-4 hover:underline"
+                    >
+                      connect →
+                    </Link>
+                  ) : (
+                    <span className="font-mono text-[10px] tracking-eyebrow uppercase text-mute">
+                      coming soon
+                    </span>
+                  )
+                }
+              >
+                <p className="font-display text-base leading-tight text-ink">
+                  {rec.name}
+                  <span className="ml-2 font-mono text-[10px] tracking-eyebrow uppercase text-mute">
+                    {rec.category}
+                  </span>
+                </p>
+                <p className="mt-1 text-[13px] leading-relaxed text-mute">
+                  {rec.reason}
+                </p>
+              </ApHairlineRow>
+            ))}
+          </ApHairlineList>
+        ) : null}
+      </section>
+
+      <section className="mt-10">
         <ApEyebrow className="mb-3">manage</ApEyebrow>
         <ApHairlineList aria-label="Connection sections">
           {sections.map((s) => (
@@ -134,10 +230,24 @@ export default async function ConnectionsPage({ params }: PageProps) {
         </ApHairlineList>
       </section>
 
-      <p className="mt-10 border-t border-rule pt-6 max-w-2xl text-[13px] leading-relaxed text-mute">
-        Not sure what to connect first? Ask {partner} in the Plaino tab — it
-        will tell you exactly which tool unlocks the most for your business.
-      </p>
+      <div className="mt-10 border-t border-rule pt-6">
+        <p className="max-w-2xl text-[13px] leading-relaxed text-mute">
+          Not sure what to connect first? Ask {partner} in the Plaino tab — it
+          will tell you exactly which tool unlocks the most for your business.
+        </p>
+        {verticalPublicHref ? (
+          <p className="mt-3 text-[13px] leading-relaxed text-mute">
+            Want to show a teammate what {partner} does for{" "}
+            {verticalName ?? "your business"}?{" "}
+            <Link
+              href={verticalPublicHref}
+              className="text-ink underline-offset-4 hover:underline"
+            >
+              see your public {verticalName ?? "vertical"} page →
+            </Link>
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

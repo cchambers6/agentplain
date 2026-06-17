@@ -226,6 +226,11 @@ export interface PlainoCapabilitySnapshot {
 export interface PlainoTurnInput {
   workspaceId: string;
   workspaceName: string;
+  /** The workspace's vertical. Threaded into the system prompt so Plaino
+   *  speaks the customer's domain fluently (a CPA's close, a lawyer's
+   *  conflicts). Optional + null-safe: a turn without it runs on the
+   *  grounded general voice, exactly as before. */
+  vertical?: import('@prisma/client').Vertical | null;
   /** Required so the support-handler REGISTER hand-off can attribute
    *  the resulting SupportRequest to the actual user. */
   fromUserId: string;

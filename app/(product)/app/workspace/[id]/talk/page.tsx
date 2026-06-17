@@ -6,6 +6,7 @@ import {
   PrismaChatStore,
   type PersistedChatMessage,
 } from "@/lib/plaino";
+import { verticalVoiceFor } from "@/lib/plaino/vertical-voice";
 import { decryptPayloadForRead } from "@/lib/security/payload-crypto";
 import { TalkComposer } from "./TalkComposer";
 import {
@@ -28,6 +29,17 @@ interface PageProps {
 export default async function TalkPage({ params }: PageProps) {
   const { id: workspaceId } = await params;
   const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
+
+  // Vertical voice — so the header subline + empty state read like Plaino
+  // understands THIS business (a CPA's close, a lawyer's conflicts), not a
+  // generic assistant. Renders even in degraded mode (no LLM involved).
+  const workspaceRow = await withSystemContext((tx) =>
+    tx.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { vertical: true },
+    }),
+  );
+  const voice = verticalVoiceFor(workspaceRow?.vertical ?? null);
 
   // Phase-1 honesty seam — if the deploy is missing ENCRYPTION_KEY or
   // ANTHROPIC_API_KEY, the dispatcher would throw or stub. Detect
@@ -82,7 +94,7 @@ export default async function TalkPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <TalkHeader workspaceId={workspaceId} />
+      <TalkHeader workspaceId={workspaceId} subline={voice.understands} />
 
       {degraded.degraded ? (
         <DegradedNotice
@@ -93,7 +105,13 @@ export default async function TalkPage({ params }: PageProps) {
       ) : null}
 
       {messages.length === 0 && !degraded.degraded ? (
-        <TalkEmptyState />
+        <TalkEmptyState
+          voice={{
+            reality: voice.talkReality,
+            prompt: voice.talkPrompt,
+            exampleAsks: voice.exampleAsks,
+          }}
+        />
       ) : (
         <TalkThread
           messages={messages}

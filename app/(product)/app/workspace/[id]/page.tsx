@@ -100,6 +100,7 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
       verticalIntegrationsWindow={
         verticalContent?.integrations.plannedWindow ?? null
       }
+      verticalPublicHref={verticalSlug ? `/${verticalSlug}` : null}
       activePause={activePause}
     />
   );

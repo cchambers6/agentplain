@@ -2,7 +2,7 @@
 
 **Version:** 0.1 (spec only — NO implementation in this PR) · **Authored:** 2026-06-15 · **Owner:** the fleet · **Ratifier:** Conner
 **File of record:** `docs/specs/audit-fire-gha-bridge-2026-06-15.md`
-**Companion (short-term):** `memory/data/pending-fires.yaml` + the Librarian "Pending-fires pickup protocol" (`memory/LIBRARIAN_CHARTER.md`)
+**Companion (short-term):** `C:\Users\conne\AppData\Local\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\local-agent-mode-sessions\e96926c9-f6b4-447c-b651-556629bc1f98\3e6a77a8-104b-4774-8239-85aac4c3463b\agent\memory\data\pending-fires.yaml` + the Librarian "Pending-fires pickup protocol" (`C:\Users\conne\AppData\Local\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\local-agent-mode-sessions\e96926c9-f6b4-447c-b651-556629bc1f98\3e6a77a8-104b-4774-8239-85aac4c3463b\agent\memory\LIBRARIAN_CHARTER.md`)
 **Process source:** `docs/specs/AGENTPLAIN_OPERATING_SYSTEM_2026_06_15.md` (Tier-2 autonomous polish)
 
 ---

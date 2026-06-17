@@ -126,6 +126,38 @@ describe('plaino system prompt', () => {
     assert.match(prompt, /robot dog/);
   });
 
+  it('injects a vertical voice block ONLY when a vertical is supplied', () => {
+    const snapshot = buildCapabilitySnapshotSync({
+      connectedProviders: new Set(),
+    });
+    const withoutVertical = buildSystemPrompt({
+      workspaceName: 'Acme Firm',
+      capabilities: snapshot,
+    });
+    assert.doesNotMatch(withoutVertical, /WHO THIS WORKSPACE SERVES/);
+
+    const cpa = buildSystemPrompt({
+      workspaceName: 'Acme Firm',
+      capabilities: snapshot,
+      vertical: 'CPA',
+    });
+    assert.match(cpa, /WHO THIS WORKSPACE SERVES/);
+    assert.match(cpa, /CPA \/ accounting firm/);
+    // Tone, not capability — the block must say so explicitly.
+    assert.match(cpa, /NOT what[\s\S]*you claim to do/);
+
+    // The block is vertical-specific: a law workspace reads differently.
+    const law = buildSystemPrompt({
+      workspaceName: 'Acme Firm',
+      capabilities: snapshot,
+      vertical: 'LAW',
+    });
+    assert.match(law, /law firm/);
+    assert.notEqual(cpa, law);
+    // Adding the block must NOT disturb the version marker / cache key.
+    assert.ok(cpa.startsWith(PLAINO_SYSTEM_PROMPT_VERSION));
+  });
+
   it('includes the 8 disciplines from the catalog', () => {
     const snapshot = buildCapabilitySnapshotSync({
       connectedProviders: new Set(),

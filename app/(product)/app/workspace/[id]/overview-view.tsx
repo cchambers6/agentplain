@@ -58,6 +58,10 @@ export interface OverviewViewProps {
   verticalIsLive: boolean;
   /** Plain-language window for when vertical integrations land, if any. */
   verticalIntegrationsWindow: string | null;
+  /** Href of the public per-vertical landing page (e.g. "/cpa"), so the
+   *  owner can show a teammate what their service covers. Null when the
+   *  vertical isn't resolved. */
+  verticalPublicHref: string | null;
   activePause: OverviewActivePause | null;
 }
 
@@ -86,6 +90,7 @@ export function OverviewView({
   verticalTier,
   verticalIsLive,
   verticalIntegrationsWindow,
+  verticalPublicHref,
   activePause,
 }: OverviewViewProps) {
   const headline = buildHeadline({
@@ -174,6 +179,17 @@ export function OverviewView({
             <>
               <span aria-hidden>·</span>
               <span className="text-mute">per-vertical fleet rooting in</span>
+            </>
+          ) : null}
+          {verticalPublicHref && verticalName ? (
+            <>
+              <span aria-hidden>·</span>
+              <Link
+                href={verticalPublicHref}
+                className="rounded-none text-mute underline-offset-4 hover:text-ink hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+              >
+                see your public {verticalName} page&nbsp;→
+              </Link>
             </>
           ) : null}
         </div>
@@ -319,23 +335,35 @@ function TodaysWork({
                 : "Finish onboarding to point the fleet at your tools."
             }
             cta={
-              onboardingComplete ? (
+              <div className="flex flex-wrap gap-3">
+                {onboardingComplete ? (
+                  <ApHeritageButton
+                    variant="secondary"
+                    withArrow
+                    href={`/app/workspace/${workspaceId}/integrations`}
+                  >
+                    connect another tool
+                  </ApHeritageButton>
+                ) : (
+                  <ApHeritageButton
+                    variant="primary"
+                    withArrow
+                    href={`/app/workspace/${workspaceId}/onboarding`}
+                  >
+                    continue onboarding
+                  </ApHeritageButton>
+                )}
+                {/* See the killer workflow on synthetic data before any
+                    tool is connected — the empty-state void becomes a
+                    try-it path. */}
                 <ApHeritageButton
                   variant="secondary"
                   withArrow
-                  href={`/app/workspace/${workspaceId}/integrations`}
+                  href={`/app/workspace/${workspaceId}/demo`}
                 >
-                  connect another tool
+                  try with sample data
                 </ApHeritageButton>
-              ) : (
-                <ApHeritageButton
-                  variant="primary"
-                  withArrow
-                  href={`/app/workspace/${workspaceId}/onboarding`}
-                >
-                  continue onboarding
-                </ApHeritageButton>
-              )
+              </div>
             }
           />
           <LoopPreview />

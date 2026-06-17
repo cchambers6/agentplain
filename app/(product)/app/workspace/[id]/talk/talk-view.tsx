@@ -23,14 +23,47 @@ export type InstructionState =
   | "approved"
   | "rejected";
 
-export function TalkEmptyState() {
+export interface TalkVoice {
+  reality: string;
+  prompt: string;
+  exampleAsks: readonly string[];
+}
+
+export function TalkEmptyState({ voice }: { voice?: TalkVoice }) {
+  const reality = voice?.reality ?? "Plaino's waiting at the workspace door.";
+  const prompt =
+    voice?.prompt ??
+    "Ask a question and I'll fetch from your files and everything your workspace has learned. Hand me work and I'll herd it through the team — the draft lands in your approval queue. I'll wait here in the meantime.";
+  const examples = voice?.exampleAsks ?? [];
   return (
-    <ApRootedEmptyState
-      eyebrow="your service partner"
-      scene="empty-talk"
-      reality="Plaino's waiting at the workspace door."
-      change="Ask a question and I'll fetch from your files and everything your workspace has learned. Hand me work and I'll herd it through the team — the draft lands in your approval queue. I'll wait here in the meantime."
-    />
+    <div>
+      <ApRootedEmptyState
+        eyebrow="your service partner"
+        scene="empty-talk"
+        reality={reality}
+        change={prompt}
+      />
+      {examples.length > 0 ? (
+        <div className="mt-6 border border-rule bg-paper-deep p-5">
+          <p className="font-mono text-[10px] tracking-eyebrow uppercase text-mute">
+            try asking
+          </p>
+          <ul className="mt-3 space-y-2">
+            {examples.map((ex) => (
+              <li
+                key={ex}
+                className="text-[14px] leading-relaxed text-ink-soft"
+              >
+                <span className="mr-2 text-mute" aria-hidden>
+                  →
+                </span>
+                {ex}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -265,7 +298,14 @@ export function DegradedNotice({
   );
 }
 
-export function TalkHeader({ workspaceId }: { workspaceId: string }) {
+export function TalkHeader({
+  workspaceId,
+  subline,
+}: {
+  workspaceId: string;
+  /** Vertical "I understand your world" line, shown under the heading. */
+  subline?: string;
+}) {
   return (
     <div className="mb-6 flex items-start justify-between gap-4 text-ink">
       <div className="flex items-center gap-3">
@@ -275,6 +315,11 @@ export function TalkHeader({ workspaceId }: { workspaceId: string }) {
           <h1 className="font-display text-3xl leading-tight text-ink">
             What do you need fetched, herded, or figured out?
           </h1>
+          {subline ? (
+            <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-ink-soft">
+              {subline}
+            </p>
+          ) : null}
         </div>
       </div>
       <a

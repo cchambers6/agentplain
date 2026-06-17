@@ -139,6 +139,7 @@ export async function runPlainoTurn(
   const system = buildSystemPrompt({
     workspaceName: input.workspaceName,
     capabilities: input.capabilities,
+    vertical: input.vertical ?? null,
   });
   const userMessage = buildUserMessage({
     customerMessage: trimmedMessage,

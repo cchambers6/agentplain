@@ -137,6 +137,7 @@ export default async function OperatorImpersonatePage(props: PageProps) {
           verticalIntegrationsWindow={
             verticalContent?.integrations.plannedWindow ?? null
           }
+          verticalPublicHref={verticalSlug ? `/${verticalSlug}` : null}
           activePause={loaded.activePause}
         />
       </div>

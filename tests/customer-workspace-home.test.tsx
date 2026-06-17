@@ -44,6 +44,7 @@ const baseProps = {
   verticalTier: "REGULAR",
   verticalIsLive: true,
   verticalIntegrationsWindow: "this summer",
+  verticalPublicHref: "/real-estate",
   activePause: null,
 };
 
@@ -54,6 +55,18 @@ test("empty state explains why + offers a connect CTA", () => {
   assert.match(html, /connect another tool/i);
   // The illustrative loop preview is clearly labeled as an example.
   assert.match(html, /An illustration, not your data/i);
+});
+
+test("empty state offers a 'try with sample data' demo path", () => {
+  const html = render(<OverviewView {...baseProps} />);
+  assert.match(html, /try with sample data/i);
+  assert.match(html, new RegExp(`/app/workspace/${WS}/demo`));
+});
+
+test("vertical metadata links to the public landing page", () => {
+  const html = render(<OverviewView {...baseProps} />);
+  assert.match(html, /see your public Real Estate page/i);
+  assert.match(html, /href="\/real-estate"/);
 });
 
 test("populated state names today's work in the headline + feed", () => {

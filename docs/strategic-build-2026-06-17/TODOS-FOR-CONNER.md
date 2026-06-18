@@ -522,3 +522,43 @@ PR: `feat(guarantee): time-savings tracking + Day 7 walk-away offer + auto-refun
   says "clearly saved you time," not "5 hours" — to avoid pinning us to a
   figure before sign-off and to avoid gaming. If you want the precise bar
   public, that's a copy change once the number is ratified.
+
+---
+
+## Item 9 — Multi-employee team support
+
+Shipped in `feat(team): multi-employee roles, context-aware routing, playbook generator`.
+
+- [ ] **Pricing for team seats.** `lib/billing/tiers.ts` does not separate
+      per-seat pricing today — a workspace is billed at one plan price
+      regardless of headcount. Multi-employee support makes seats a real
+      cost axis. **Decide:** per-seat add-on, seats bundled into the plan,
+      or unlimited seats on Partner+ (and a seat cap on Regular)? The team
+      surfaces are built and live; nothing in this PR changed `tiers.ts`
+      (load-bearing rule). Wire the chosen model in a follow-up.
+
+- [ ] **Invite-acceptance UX.** Invites currently create a Membership in
+      `INVITED` status (inert until the user signs in) — but the actual
+      acceptance path is parked. **Decide:** email magic-link only (reuses
+      the existing `MagicLinkToken` flow), or add SSO as an option once a
+      team is large enough to warrant it? Today an invited seat shows on
+      the roster as "invited" and grants nothing until acceptance lands.
+
+- [ ] **Visibility defaults.** **Recommendation (implemented):** full
+      visibility for owner + manager (OWNER/ADMIN); staff (MEMBER) and
+      viewers see only their own activity + work assigned to them. Confirm
+      this is the right default, or flip to a configurable per-workspace
+      toggle if a customer asks for tighter or looser sharing. The rule
+      lives in `lib/team/activity.ts#visibleActivityFor` and is unit-tested
+      (staff never receives a teammate's PII-bearing row).
+
+### Follow-ups (codeable, not Conner-gated — noted so they aren't lost)
+- Wire `lib/team/routing.ts#resolveWorkRouting` into the per-skill approval
+  sinks so tag/urgency context actually stamps `requiredApproverUserId` at
+  insert time. Today the richer routing is a usable library + the wave-6
+  discipline-head routing (`lib/auth/route-approval.ts`) remains the live
+  path. Equivalent for the discipline-only case; the superset adds
+  URGENT→owner, tag→lead, and intake-assigned-staff.
+- Optional LLM polish pass on the playbook (behind the existing degraded-
+  mode seam) once the ANTHROPIC_API_KEY is restored — the generator is
+  deterministic/heuristic today by design (no key needed).

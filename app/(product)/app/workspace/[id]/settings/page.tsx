@@ -149,9 +149,10 @@ export default async function SettingsPage({ params }: PageProps) {
         ]
       : []),
     {
+      href: `/app/workspace/${workspaceId}/team`,
       label: "team members",
-      description: "Add, remove, and assign roles.",
-      status: "coming-soon",
+      description:
+        "Add, remove, and assign roles. See who's handling what, and generate a new-hire playbook.",
     },
     {
       label: "notifications",

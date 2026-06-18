@@ -109,6 +109,12 @@ export default async function ConnectionsPage({ params }: PageProps) {
       description:
         "Turn whole areas of work — like finance, marketing, or legal — on or off.",
     },
+    {
+      href: `${base}/team`,
+      label: "your team",
+      description:
+        "Invite teammates, set what each person can do, see who's handling what, and generate a new-hire playbook.",
+    },
   ];
 
   return (

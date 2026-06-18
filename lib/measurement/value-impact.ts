@@ -118,6 +118,12 @@ export const MINUTES_SAVED_BY_KIND: Record<WorkApprovalKind, number> = {
   // Connector write actions are safety GATES too (same reasoning as DocuSign):
   // many PENDING rows may never be approved. Scored at 0.
   CONNECTOR_WRITE_ACTION: 0,
+  // Inbound call captured + summarized into a reviewable follow-up: ~12 min
+  // saved vs. taking the message by hand, transcribing, and deciding next step.
+  VOICE_CALL_ACTION_ITEM: 12,
+  // Recording consent is a safety GATE, not a time-saving draft — scored 0
+  // (mirrors the DocuSign gates) so the ledger is never inflated by an opt-in.
+  VOICE_RECORDING_CONSENT: 0,
 };
 
 // ── Per-kind labor-rate table (USD/hour) ─────────────────────────────────────
@@ -166,6 +172,10 @@ export const LABOR_RATE_USD_PER_HOUR_BY_KIND: Record<WorkApprovalKind, number> =
     DOCUSIGN_VOID_ENVELOPE: 75,
     // Connector writes span disciplines; rate is moot (0 minutes scored).
     CONNECTOR_WRITE_ACTION: 55,
+    // Voice — reception / customer-success labor ($45/hr admin tier). The
+    // consent gate's rate is moot (0 minutes) but the table must be total.
+    VOICE_CALL_ACTION_ITEM: 45,
+    VOICE_RECORDING_CONSENT: 45,
   };
 
 // ── Public types ──────────────────────────────────────────────────────────────

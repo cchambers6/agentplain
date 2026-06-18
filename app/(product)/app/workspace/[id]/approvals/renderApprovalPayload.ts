@@ -134,6 +134,9 @@ const KIND_LABEL: Record<WorkApprovalKind, string> = {
   // Generic connector write action awaiting your decision — the eyebrow is
   // refined per connector + action inside renderConnectorWriteAction.
   CONNECTOR_WRITE_ACTION: "connected app — pending action",
+  // Voice integration layer — inbound call follow-ups + recording opt-in.
+  VOICE_CALL_ACTION_ITEM: "call follow-up",
+  VOICE_RECORDING_CONSENT: "call recording consent",
 };
 
 export function renderApprovalPayload(
@@ -198,6 +201,10 @@ export function renderApprovalPayload(
       return renderDocuSignVoid(p);
     case "CONNECTOR_WRITE_ACTION":
       return renderConnectorWriteAction(p);
+    case "VOICE_CALL_ACTION_ITEM":
+      return renderVoiceCallActionItem(p);
+    case "VOICE_RECORDING_CONSENT":
+      return renderVoiceRecordingConsent(p);
     default: {
       const _exhaustive: never = kind;
       // Runtime safety: if a new enum value reaches production before the
@@ -944,6 +951,65 @@ function pickChiefOfStaffSlots(p: Record<string, unknown>): ProposedSlot[] {
     }
   }
   return out;
+}
+
+// ── Voice integration layer renderers ───────────────────────────────────────
+
+/** A follow-up extracted from a completed inbound call (draft-only). */
+function renderVoiceCallActionItem(p: Record<string, unknown>): RenderedApproval {
+  const title = pickString(p, ["title"]) ?? "Follow up on inbound call";
+  const summary = pickString(p, ["summary"]) ?? "A caller left a message.";
+  const priority = pickString(p, ["priority"]);
+  const intent = pickString(p, ["intent"]);
+  const sentiment = pickString(p, ["sentiment"]);
+  const callbackNumber = pickString(p, ["callbackNumber"]);
+  const nextSteps = pickStringArray(p, ["suggestedNextSteps"]);
+
+  const lines = splitParagraphs(summary);
+  if (nextSteps.length > 0) {
+    lines.push("");
+    lines.push("Suggested next steps:");
+    for (const s of nextSteps) lines.push(`• ${s}`);
+  }
+
+  const metaParts: string[] = [];
+  if (priority && priority !== "normal") metaParts.push(`${priority} priority`);
+  if (callbackNumber) metaParts.push(`callback: ${callbackNumber}`);
+  if (intent) metaParts.push(intent);
+  if (sentiment) metaParts.push(`${sentiment} tone`);
+
+  return {
+    kindLabel: KIND_LABEL.VOICE_CALL_ACTION_ITEM,
+    title,
+    body: lines.length > 0 ? lines : ["A caller left a message."],
+    metaLine: metaParts.length > 0 ? metaParts.join(" · ") : undefined,
+  };
+}
+
+/** The owner's opt-in to record + retain calls. Recording stays OFF until
+ *  approved; this card is the explicit, policy-bound consent decision. */
+function renderVoiceRecordingConsent(p: Record<string, unknown>): RenderedApproval {
+  const retentionDays = pickNumber(p, ["retentionDays"]);
+  const twoParty = p.requireTwoPartyConsentPrompt === true;
+
+  const body = [
+    "Approving this turns on call recording for your workspace. Recording stays off until you approve it here.",
+  ];
+  if (typeof retentionDays === "number") {
+    body.push(`Recordings are kept for ${retentionDays} days, then deleted.`);
+  }
+  body.push(
+    twoParty
+      ? "In two-party-consent states, callers hear a recording disclosure before the call is recorded."
+      : "A recording disclosure is spoken whenever the caller's state requires all-party consent.",
+  );
+
+  return {
+    kindLabel: KIND_LABEL.VOICE_RECORDING_CONSENT,
+    title: "Turn on call recording?",
+    body,
+    metaLine: typeof retentionDays === "number" ? `retention: ${retentionDays} days` : undefined,
+  };
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {

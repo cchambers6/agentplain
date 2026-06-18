@@ -3,6 +3,7 @@ import type { PersistedChatMessage } from "@/lib/plaino";
 import { parsePlainoCard } from "@/lib/plaino";
 import { PlainoCardView } from "@/components/plaino/PlainoCardView";
 import { PlainoRestingBanner } from "@/components/plaino/PlainoRestingBanner";
+import { CitationList, type CitationSource } from "@/components/chat/Citation";
 
 // DB-free presentation for the Plaino talk thread. `page.tsx` owns the
 // chat store, decryption, and approval-state lookups; it hands this
@@ -173,26 +174,7 @@ function PlainoFooter({
   const preferenceScope = extractPreferenceScope(message);
   return (
     <div className="mt-2 space-y-1 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-      {citations.length > 0 ? (
-        <div>
-          <span className="text-ink-soft">cited:</span>{" "}
-          {citations.map((c, i) => (
-            <span key={`${c.title}-${i}`}>
-              {i > 0 ? ", " : ""}
-              {c.sourceUrl ? (
-                <a
-                  href={c.sourceUrl}
-                  className="text-ink underline-offset-4 hover:underline"
-                >
-                  {c.title}
-                </a>
-              ) : (
-                <span>{c.title}</span>
-              )}
-            </span>
-          ))}
-        </div>
-      ) : null}
+      <CitationList sources={citations} />
       {kind === "DECLINE_HONESTLY" && namedGap ? (
         <div className="text-clay">can&rsquo;t fetch yet: {namedGap}</div>
       ) : null}
@@ -385,10 +367,7 @@ function extractNamedGap(message: PersistedChatMessage): string | null {
   return typeof v === "string" ? v : null;
 }
 
-interface CitationLite {
-  title: string;
-  sourceUrl: string | null;
-}
+type CitationLite = CitationSource;
 
 function extractCitations(message: PersistedChatMessage): CitationLite[] {
   if (!message.metadata) return [];
@@ -402,6 +381,12 @@ function extractCitations(message: PersistedChatMessage): CitationLite[] {
     out.push({
       title: obj.title,
       sourceUrl: typeof obj.sourceUrl === "string" ? obj.sourceUrl : null,
+      // Corpus-grounded citations (lib/knowledge rule corpus) carry a legal
+      // citation + jurisdiction; older skill/customer citations don't.
+      citation: typeof obj.citation === "string" ? obj.citation : null,
+      jurisdiction: typeof obj.jurisdiction === "string" ? obj.jurisdiction : null,
+      body: typeof obj.body === "string" ? obj.body : null,
+      similarity: typeof obj.similarity === "number" ? obj.similarity : null,
     });
   }
   return out;

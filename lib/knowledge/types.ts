@@ -119,11 +119,26 @@ export interface KnowledgeUpsertInput {
   body: string;
   sourceUrl?: string | null;
   verticalSlug?: string | null;
+  /** Optional jurisdiction code (e.g. "GA", "US"). NULL = jurisdiction-
+   *  agnostic. Persisted on KnowledgeDocument.jurisdiction; retrieval
+   *  treats NULL rows as always eligible. */
+  jurisdiction?: string | null;
   metadata?: Record<string, unknown>;
   /** Optional natural-key override. Defaults to `knowledge_document`
    *  + freshly-minted document id. */
   sourceType?: string;
   sourceId?: string;
+  /** Stable ingestion key for corpus-managed rows. Persisted on
+   *  KnowledgeDocument.sourceKey for the refresh cron to diff by. */
+  sourceKey?: string | null;
+  /** SHA-256 of the normalized body. When provided AND it matches the
+   *  existing row's stored hash, the store SKIPS re-embedding and only
+   *  bumps `lastSeenAt` (cost-free unchanged-content refresh). When it
+   *  differs, the store re-embeds and clears `supersededAt`. */
+  contentHash?: string | null;
+  /** When the source was last confirmed present. Defaults to now() on
+   *  any write. */
+  lastSeenAt?: Date | null;
   /** Pre-computed vector. Skip the embedder call when present (e.g. seed
    *  pass that batched embeddings via the provider's batch API). */
   vector?: number[];
@@ -141,6 +156,10 @@ export interface KnowledgeUpsertResult {
   /** True when this call created a new row; false when it updated an
    *  existing (sourceType, sourceId) row. */
   created: boolean;
+  /** True when the incoming `contentHash` matched the stored hash, so the
+   *  store skipped re-embedding and only refreshed `lastSeenAt`. Always
+   *  false on create and on any write without `contentHash`. */
+  unchanged: boolean;
 }
 
 export interface KnowledgeSearchInput {
@@ -156,6 +175,14 @@ export interface KnowledgeSearchInput {
    *  matches (NULL verticalSlug rows are EXCLUDED). Used for vertical-
    *  scoped lookups in the categorize / draft skills. */
   verticalSlug?: string | null;
+  /** When set, restrict to rows whose KnowledgeDocument.jurisdiction is
+   *  NULL or in this list. NULL jurisdiction is ALWAYS eligible — so a
+   *  workspace in GA passing ["GA","US"] still gets every jurisdiction-
+   *  agnostic skill/customer/vertical row plus GA + federal corpus rows.
+   *  Empty array or omitted = no jurisdiction filter at all. This soft
+   *  semantics is deliberate: it never narrows the existing substrate,
+   *  only layers state-specific corpora on top. */
+  jurisdictions?: string[] | null;
 }
 
 export interface KnowledgeSearchHit {
@@ -167,6 +194,9 @@ export interface KnowledgeSearchHit {
   body: string;
   sourceUrl: string | null;
   verticalSlug: string | null;
+  /** Jurisdiction code of the backing document, or NULL when
+   *  jurisdiction-agnostic. */
+  jurisdiction: string | null;
   metadata: Record<string, unknown>;
   /** Cosine distance (0 = identical, 2 = opposite). */
   distance: number;
@@ -216,6 +246,26 @@ export interface KnowledgeDeleteInput {
   };
 }
 
+/**
+ * Refresh-cron supersede sweep. After re-ingesting a corpus source, mark
+ * every row of `sourceType` whose `sourceId` is NOT in `liveSourceIds`
+ * (i.e. the upstream no longer produces it) as superseded — retained for
+ * audit but treated as stale. Scoped to one sourceType so a failed/empty
+ * fetch of OTHER sources never tombstones this one's rows. Only ever
+ * called by the refresh path with a known-good live set.
+ */
+export interface MarkSupersededExceptInput {
+  /** Embedding.sourceType namespace, e.g. "corpus:ga-real-estate". */
+  sourceType: string;
+  /** The sourceIds still produced by this run. Rows outside this set get
+   *  supersededAt stamped. An EMPTY array supersedes every row of the
+   *  sourceType — callers MUST guard against passing empty on a failed
+   *  fetch. */
+  liveSourceIds: string[];
+  /** Stamp. Defaults to now(). */
+  at?: Date;
+}
+
 export interface IKnowledgeStore {
   readonly name: 'pgvector' | 'test';
   /** Vector dimension this store enforces on writes. MUST match the
@@ -224,4 +274,7 @@ export interface IKnowledgeStore {
   upsert(input: KnowledgeUpsertInput): Promise<KnowledgeResult<KnowledgeUpsertResult>>;
   search(input: KnowledgeSearchInput): Promise<KnowledgeResult<KnowledgeSearchHit[]>>;
   delete(input: KnowledgeDeleteInput): Promise<KnowledgeResult<{ deleted: number }>>;
+  markSupersededExcept(
+    input: MarkSupersededExceptInput,
+  ): Promise<KnowledgeResult<{ superseded: number }>>;
 }

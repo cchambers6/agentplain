@@ -73,6 +73,25 @@ describe('buildSupportSystemPrompt', () => {
     assert.ok(prompt.includes('NO OUTBOUND'));
   });
 
+  it('renders a corpus snippet with its legal citation + jurisdiction', () => {
+    const prompt = buildSupportSystemPrompt({
+      ...BASE,
+      knowledge: [
+        {
+          title: 'Georgia broker license requirements',
+          body: 'A broker must complete 60 instructional hours...',
+          sourceUrl: 'https://law.justia.com/x',
+          citation: 'O.C.G.A. § 43-40-8',
+          jurisdiction: 'GA',
+        },
+      ],
+    });
+    assert.ok(prompt.includes('O.C.G.A. § 43-40-8'));
+    assert.ok(prompt.includes('GA'));
+    // Citation is preferred over the bare URL when present.
+    assert.ok(!prompt.includes('https://law.justia.com/x'));
+  });
+
   it('bounds an over-long snippet body', () => {
     const longBody = 'x'.repeat(2000);
     const prompt = buildSupportSystemPrompt({

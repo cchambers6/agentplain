@@ -364,3 +364,62 @@ _Context: `docs/connections/byo-vs-we-bring.md`._
       `npx tsx scripts/classify-connections.ts`). Move anything you disagree
       with: a connection's bucket is one field — `sourcing` on a marketplace
       entry, or `costModel` on a we-bring registry entry.
+
+---
+
+## Item 6 — Knowledge corpus (pgvector RAG + GA free-source ingestion)
+
+PR: `feat(knowledge): pgvector RAG + ingestion of GA free-source corpora (RE/CPA/Law/PM)`
+
+The pgvector substrate, embedding pipeline, retrieval, and citation
+rendering **already existed on `main`** (`lib/knowledge/`, `prisma`
+`KnowledgeDocument`/`Embedding`, the chat grounding path). This item added
+what was missing: jurisdiction-awareness, the ingestion framework
+(`scripts/corpus-ingest/`), real GA free-source content (60 cited chunks),
+the weekly refresh cron, and a dedicated `Citation` component. The
+following need your call / your account:
+
+- [ ] **Decide: free-only corpus (zero ongoing cost) vs. paid sources later.**
+  V1 ships free public sources only (O.C.G.A., GREC, IRS publications, GA
+  DOR, GA Bar Rules). Paid options if we want deeper/benchmark data:
+  ALM legal (~$15–30K/yr), Tax Notes (~$5–10K/yr), RealPage benchmarks
+  (~$10–30K/yr), Stessa landlord data (variable). The framework already
+  supports adding a paid source as a new `CorpusSource` with a real
+  `fetch()` — no architecture change needed.
+
+- [ ] **Verify Twilio Enterprise Knowledge as an alternative** to rolling our
+  own pgvector. A `twilio-enterprise-knowledge` MCP exists and may be
+  simpler to operate. (We did NOT rebuild pgvector — it was already on
+  `main` — so this is a "should we migrate the substrate later" question,
+  not a "which to build" one.)
+
+- [ ] **Sign off on use of public state-law content.** No licensing issue with
+  public statute/regulation/agency text, but counsel should bless surfacing
+  it as grounding for customer answers. Note: the corpus is stored as
+  `COMPLIANCE`-kind knowledge; the existing `COMPLIANCE_CORPUS_COUNSEL_REVIEWED`
+  sentinel gate governs agentplain's own marketing *claims*, NOT this
+  reference corpus — they're independent. Plaino is instructed to attribute
+  facts to the cited public source and never assert an ungrounded rule.
+
+- [ ] **OpenAI account for embeddings** (cheap: ~$0.02 per 1M tokens for
+  `text-embedding-3-small`). Initial ingestion of all GA sources costs
+  ~$0.0004–10 total (60 chunks ≈ 21k tokens). Add `OPENAI_API_KEY` to
+  Vercel. Until then: the corpus framework runs locally against the
+  deterministic test embedder, and the **weekly refresh cron is safe to
+  enable now** — it refuses to write hash vectors into prod pgvector when
+  the key is absent (falls back to a report-only dry run) and a no-change
+  week costs $0 regardless. Once the key lands, run
+  `npx tsx scripts/corpus-ingest/run.ts` once to embed the initial corpus.
+
+### Follow-ups (engineering, not account-gated)
+- Add a `Workspace.state` column so retrieval reads the workspace's real
+  jurisdiction instead of defaulting to `["GA","US"]`
+  (`app/api/chat/route.ts#WORKSPACE_JURISDICTIONS`, TODO marked inline).
+- Persist corpus `citation` + `jurisdiction` into the in-app dispatcher's
+  `PersistedChatMessage.metadata.citations` so the richer `Citation` modal
+  (source link + jurisdiction + excerpt) lights up on the `/talk` surface
+  as well as the support chat. The component + `extractCitations` already
+  read those fields when present.
+- Implement live `fetch()` scrapers per `CorpusSource` (pull + parse the
+  GREC/Justia/IRS HTML) to replace the curated arrays. The seam exists;
+  V1 is curated + citation-verified.

@@ -36,6 +36,7 @@ import {
   KnowledgeSearchInput,
   KnowledgeUpsertInput,
   KnowledgeUpsertResult,
+  MarkSupersededExceptInput,
   knowledgeError,
   knowledgeOk,
 } from './types';
@@ -64,6 +65,58 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
     const validation = validateContextWorkspaceFit(input.contextKind, input.workspaceId ?? null);
     if (!validation.ok) return validation;
 
+    const sourceType = input.sourceType ?? 'knowledge_document';
+    const explicitSourceId = !!(input.sourceId && input.sourceId.length > 0);
+    const jurisdiction = input.jurisdiction ?? null;
+    const sourceKey = input.sourceKey ?? null;
+    const contentHash = input.contentHash ?? null;
+    const lastSeenAt = input.lastSeenAt ?? new Date();
+
+    // ── UNCHANGED-CONTENT FAST PATH ────────────────────────────────────
+    // When the caller supplies a contentHash and a stable natural key, and
+    // the stored row already carries that exact hash, the source text has
+    // not changed since the last ingest. Skip the embedder entirely (the
+    // expensive, vendor-billed step) and only refresh lastSeenAt + clear any
+    // stale supersede mark. This is what makes a weekly refresh sweep over
+    // unchanged statute cost zero embedding calls.
+    if (contentHash && explicitSourceId) {
+      try {
+        const touched = await withRls(
+          this.rlsContext,
+          async (tx) => {
+            const existing = await tx.embedding.findUnique({
+              where: { sourceType_sourceId: { sourceType, sourceId: input.sourceId as string } },
+              select: { id: true, documentId: true, document: { select: { contentHash: true } } },
+            });
+            if (!existing || existing.document?.contentHash !== contentHash) return null;
+            if (existing.documentId) {
+              await tx.knowledgeDocument.update({
+                where: { id: existing.documentId },
+                data: { lastSeenAt, supersededAt: null, jurisdiction, sourceKey },
+              });
+            }
+            return { id: existing.id, documentId: existing.documentId };
+          },
+          { client: this.client },
+        );
+        if (touched) {
+          return knowledgeOk({
+            id: touched.id,
+            documentId: touched.documentId,
+            model: this.embedder.model,
+            created: false,
+            unchanged: true,
+          });
+        }
+      } catch (err) {
+        return knowledgeError(
+          'UPSTREAM_ERROR',
+          `pgvector upsert (unchanged probe) failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+
+    // ── CHANGED / NEW PATH (embeds) ────────────────────────────────────
     let vector = input.vector;
     if (!vector) {
       const emb = await this.embedder.embed(input.body);
@@ -76,9 +129,12 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
         `Vector length ${vector.length} != store dimensions ${this.dimensions}.`,
       );
     }
-    const sourceType = input.sourceType ?? 'knowledge_document';
     const literal = pgvectorLiteral(vector);
     const metadata = { ...(input.metadata ?? {}), model: this.embedder.model };
+    // Columns added in 20260617120000_knowledge_jurisdiction_refresh. Spread
+    // into every doc create/update so a changed-content write always restamps
+    // jurisdiction, sourceKey, contentHash, lastSeen, and clears supersededAt.
+    const docExtra = { jurisdiction, sourceKey, contentHash, lastSeenAt, supersededAt: null };
 
     try {
       const result = await withRls(
@@ -94,7 +150,6 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
 
           // If there's no upstream natural key (typical for fresh upserts of
           // knowledge_document), sourceId defaults to the new doc id.
-          const explicitSourceId = input.sourceId && input.sourceId.length > 0;
           if (!explicitSourceId && sourceType === 'knowledge_document') {
             const created = await tx.knowledgeDocument.create({
               data: {
@@ -105,6 +160,7 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
                 sourceUrl: input.sourceUrl ?? null,
                 verticalSlug: input.verticalSlug ?? null,
                 metadata: metadata as object,
+                ...docExtra,
               },
               select: { id: true },
             });
@@ -144,6 +200,7 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
                 sourceUrl: input.sourceUrl ?? null,
                 verticalSlug: input.verticalSlug ?? null,
                 metadata: metadata as object,
+                ...docExtra,
               },
               update: {
                 contextKind: input.contextKind,
@@ -153,6 +210,7 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
                 sourceUrl: input.sourceUrl ?? null,
                 verticalSlug: input.verticalSlug ?? null,
                 metadata: metadata as object,
+                ...docExtra,
               },
               select: { id: true },
             });
@@ -185,6 +243,7 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
               sourceUrl: input.sourceUrl ?? null,
               verticalSlug: input.verticalSlug ?? null,
               metadata: metadata as object,
+              ...docExtra,
             },
             select: { id: true },
           });
@@ -211,6 +270,7 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
         documentId: result.documentId,
         model: this.embedder.model,
         created: result.created,
+        unchanged: false,
       });
     } catch (err) {
       return knowledgeError(
@@ -234,12 +294,17 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
     const literal = pgvectorLiteral(q);
     const kinds = input.contextKinds && input.contextKinds.length > 0 ? input.contextKinds : null;
     const verticalFilter = input.verticalSlug ?? null;
+    const jurisdictionFilter =
+      input.jurisdictions && input.jurisdictions.length > 0 ? input.jurisdictions : null;
 
     // Build a single query with optional filters. Parameter positions:
     //   $1 = pgvector query literal
     //   $2 = k
-    //   $3 = jsonb array of allowed context kinds (NULL = no filter)
-    //   $4 = verticalSlug (NULL = no filter)
+    //   $3 = text[] of allowed context kinds (NULL = no filter)
+    //   $4 = verticalSlug (NULL = no filter; excludes NULL-vertical rows)
+    //   $5 = text[] of allowed jurisdictions (NULL = no filter). NULL
+    //        jurisdiction rows are ALWAYS eligible — soft layering, see
+    //        KnowledgeSearchInput.jurisdictions.
     const sql = `
       SELECT
         e."id"::text                                    AS "embeddingId",
@@ -250,6 +315,7 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
         COALESCE(d."body", '')                          AS "body",
         d."sourceUrl"                                   AS "sourceUrl",
         d."verticalSlug"                                AS "verticalSlug",
+        d."jurisdiction"                                AS "jurisdiction",
         COALESCE(d."metadata", '{}'::jsonb) || e."metadata"
                                                         AS "metadata",
         (e."vector" <=> $1::vector)                     AS "distance"
@@ -258,6 +324,7 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
       WHERE
         ($3::text[] IS NULL OR e."contextKind"::text = ANY($3::text[]))
         AND ($4::text IS NULL OR d."verticalSlug" = $4::text)
+        AND ($5::text[] IS NULL OR d."jurisdiction" IS NULL OR d."jurisdiction" = ANY($5::text[]))
       ORDER BY e."vector" <=> $1::vector ASC
       LIMIT $2::int
     `;
@@ -276,6 +343,7 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
               body: string;
               sourceUrl: string | null;
               verticalSlug: string | null;
+              jurisdiction: string | null;
               metadata: Record<string, unknown> | null;
               distance: number | string;
             }>
@@ -285,6 +353,7 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
             k,
             kinds === null ? null : kinds.map((k) => String(k)),
             verticalFilter,
+            jurisdictionFilter,
           ),
         { client: this.client },
       );
@@ -299,6 +368,7 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
           body: r.body,
           sourceUrl: r.sourceUrl,
           verticalSlug: r.verticalSlug,
+          jurisdiction: r.jurisdiction,
           metadata: (r.metadata ?? {}) as Record<string, unknown>,
           distance,
           similarity: 1 - distance,
@@ -421,6 +491,43 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
         return knowledgeOk({ deleted: 0 });
       }
       return knowledgeError('UPSTREAM_ERROR', `pgvector delete failed: ${msg}`);
+    }
+  }
+
+  async markSupersededExcept(
+    input: MarkSupersededExceptInput,
+  ): Promise<KnowledgeResult<{ superseded: number }>> {
+    if (input.liveSourceIds.length === 0) {
+      return knowledgeError(
+        'INVALID_ARGUMENT',
+        'markSupersededExcept refuses an empty liveSourceIds set (would tombstone the whole sourceType).',
+      );
+    }
+    const at = (input.at ?? new Date()).toISOString();
+    try {
+      const affected = await withRls(
+        this.rlsContext,
+        (tx) =>
+          tx.$executeRawUnsafe(
+            `UPDATE "KnowledgeDocument" d
+                SET "supersededAt" = $1::timestamp, "updatedAt" = CURRENT_TIMESTAMP
+               FROM "Embedding" e
+              WHERE e."documentId" = d."id"
+                AND e."sourceType" = $2
+                AND NOT (e."sourceId" = ANY($3::text[]))
+                AND d."supersededAt" IS NULL`,
+            at,
+            input.sourceType,
+            input.liveSourceIds,
+          ),
+        { client: this.client },
+      );
+      return knowledgeOk({ superseded: typeof affected === 'number' ? affected : 0 });
+    } catch (err) {
+      return knowledgeError(
+        'UPSTREAM_ERROR',
+        `pgvector markSupersededExcept failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
   }
 }

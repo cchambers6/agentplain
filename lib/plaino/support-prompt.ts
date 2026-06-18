@@ -41,8 +41,15 @@ export interface SupportPromptContext {
   /** How many items are waiting in the approval queue right now. */
   pendingApprovalsCount: number;
   /** Knowledge-substrate hits for the current question, already retrieved
-   *  by the route. Title + body + optional source url. */
-  knowledge: Array<{ title: string; body: string; sourceUrl: string | null }>;
+   *  by the route. Title + body + optional source url + (for the cited
+   *  rule corpus) a legal citation and jurisdiction. */
+  knowledge: Array<{
+    title: string;
+    body: string;
+    sourceUrl: string | null;
+    citation?: string | null;
+    jurisdiction?: string | null;
+  }>;
 }
 
 /** Pin for tests + the drift sweep. */
@@ -59,10 +66,17 @@ export function buildSupportSystemPrompt(ctx: SupportPromptContext): string {
       ? '  (no relevant snippets found for this question)'
       : ctx.knowledge
           .map((k, i) => {
-            const src = k.sourceUrl ? ` [${k.sourceUrl}]` : '';
+            // Prefer the legal citation (e.g. "O.C.G.A. § 43-40-8") over a
+            // bare URL when the corpus carries one — it's what the customer
+            // should hear cited. Fall back to the source URL.
+            const cite = k.citation
+              ? ` (${k.citation}${k.jurisdiction ? `, ${k.jurisdiction}` : ''})`
+              : k.sourceUrl
+                ? ` [${k.sourceUrl}]`
+                : '';
             // Bound each snippet so a long doc doesn't blow the prompt.
             const body = k.body.length > 700 ? `${k.body.slice(0, 700)}…` : k.body;
-            return `  [${i + 1}] ${k.title}${src}\n      ${body}`;
+            return `  [${i + 1}] ${k.title}${cite}\n      ${body}`;
           })
           .join('\n');
 
@@ -85,7 +99,11 @@ export function buildSupportSystemPrompt(ctx: SupportPromptContext): string {
     '',
     '── KNOWLEDGE FOR THIS QUESTION ─────────────────────────────────',
     'These are the substrate snippets retrieved for the current question.',
-    'Ground your answer in them and cite the ones you used by their title.',
+    'Ground your answer in them. When a snippet carries a legal citation in',
+    'parentheses (e.g. "(O.C.G.A. § 43-40-8, GA)"), cite that source in your',
+    'answer; otherwise cite the snippet by its title. For legal/tax/',
+    'regulatory facts, attribute them to the cited public source and never',
+    'state a rule you cannot ground in a snippet above.',
     knowledgeBlock,
     '',
     '── RESOLUTION PATHS ────────────────────────────────────────────',

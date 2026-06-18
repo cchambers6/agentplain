@@ -936,11 +936,54 @@ model Workspace {
   /// per workspace through which the SMB owner gives THEIR end clients
   /// status, doc upload, and gated Plaino chat. See PortalConfig.
   portalConfig             PortalConfig?
+  /// Trial-guarantee time-savings ledger. One append-only row per action
+  /// the fleet completed, valued in minutes via the calibration table.
+  /// Drives the workspace counter + the Day-7 walk-away evaluation.
+  timeSavingsEntries       TimeSavingsEntry[]
 
   @@index([slug])
   @@index([vertical])
   @@index([closureStatus, scheduledHardPurgeAt])
   @@index([signupSetupCompletedAt, setupDeactivatedAt])
+}
+
+// Trial-guarantee time-savings ledger (feat/guarantee, 2026-06-17).
+// Append-only: one row per completed action the fleet performed, valued
+// in minutes via lib/guarantee/savings-calibration.ts. The workspace
+// counter sums these live; the Day-7 cron evaluates the sum against the
+// guarantee bar; the walk-away receipt reports what we did.
+//
+// IDEMPOTENT by construction: the @@unique on (workspaceId, sourceTable,
+// sourceId, actionType) means an at-least-once runtime (a webhook re-fire,
+// a cron retry) can call recordSavedTime repeatedly and the counter never
+// double-counts — the duplicate insert is skipped.
+//
+// RLS: workspace-isolation OR operator, identical to the other
+// workspace-scoped tenant tables. The customer reads their own counter;
+// the cron + persist seam write under operator context.
+model TimeSavingsEntry {
+  id           String    @id @default(uuid()) @db.Uuid
+  workspaceId  String    @db.Uuid
+  /// One of lib/guarantee/savings-calibration GuaranteeActionType. Stored
+  /// as text (not an enum) so adding a calibrated action is a code change,
+  /// not a migration — the customer-visible numbers stay in one TS file.
+  actionType   String
+  /// Vertical slug the calibration was resolved for (audit + per-vertical
+  /// breakdowns).
+  verticalSlug String
+  /// Minutes credited for this action at write time. Snapshotted so a
+  /// later calibration change never silently rewrites history.
+  minutesSaved Int
+  /// Dedupe source — the workflow artifact this credit came from (e.g.
+  /// WebhookEvent + its id). Half of the idempotency key.
+  sourceTable  String
+  sourceId     String
+  occurredAt   DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, sourceTable, sourceId, actionType])
+  @@index([workspaceId, occurredAt])
 }
 
 // Phase 2 per-seat subscription. One row per workspace at most.

@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/ap";
 import { DemoModePanel } from "@/components/workspace/DemoModePanel";
 import type { WorkflowStory } from "@/lib/workflows/runtime";
+import { TimeSavingsCounter } from "@/components/guarantee/TimeSavingsCounter";
 
 // Broker-owner workspace overview — the daily report-back from the fleet.
 // Per design language §4.3 + Wave-B brief:
@@ -69,6 +70,11 @@ export interface OverviewViewProps {
    *  visible killer-workflow runtime running on synthetic data (instead of an
    *  empty "nothing's come in yet" void). Null = real work present, no demo. */
   demoStory?: WorkflowStory | null;
+  /** Trial-guarantee time-savings ledger totals. Optional (default 0) so
+   *  callers/tests that don't supply them render the counter's empty
+   *  state rather than breaking. */
+  savingsWeekMinutes?: number;
+  savingsTotalMinutes?: number;
 }
 
 /** Map DB enum tokens to customer-facing tier names. */
@@ -99,6 +105,8 @@ export function OverviewView({
   verticalPublicHref,
   activePause,
   demoStory = null,
+  savingsWeekMinutes = 0,
+  savingsTotalMinutes = 0,
 }: OverviewViewProps) {
   const headline = buildHeadline({
     pendingApprovals,
@@ -245,6 +253,11 @@ export function OverviewView({
         </div>
 
         <aside className="space-y-6">
+          <TimeSavingsCounter
+            weekMinutes={savingsWeekMinutes}
+            totalMinutes={savingsTotalMinutes}
+            partner={partner}
+          />
           <TodaysQueue
             workspaceId={workspaceId}
             pendingApprovals={pendingApprovals}

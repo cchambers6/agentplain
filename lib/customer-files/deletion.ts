@@ -249,6 +249,11 @@ export interface TearDownWorkspaceDataResult {
   // 2026-06-18): "your data is yours; we delete on cancel." Billing rows
   // (Subscription / WorkspaceInvoice) are preserved separately for tax.
   auditLogsDeleted: number;
+  // guarantee (2026-06-17) — the trial-guarantee time-savings ledger.
+  // Workspace-scoped tenant data with a Workspace cascade FK; because
+  // teardown PRESERVES the Workspace row, the cascade never fires, so it
+  // is purged explicitly (same reasoning as the pfd-4 tables above).
+  timeSavingsEntriesDeleted: number;
 }
 
 /**
@@ -389,6 +394,9 @@ export async function tearDownWorkspaceData(
     const auditLogsDeleted = (
       await tx.auditLog.deleteMany({ where: { workspaceId } })
     ).count;
+    const timeSavingsEntriesDeleted = (
+      await tx.timeSavingsEntry.deleteMany({ where: { workspaceId } })
+    ).count;
 
     return {
       workApprovalsDeleted,
@@ -415,6 +423,7 @@ export async function tearDownWorkspaceData(
       lifecycleEventsDeleted,
       preferenceFeedbackDeleted,
       auditLogsDeleted,
+      timeSavingsEntriesDeleted,
     };
   };
 

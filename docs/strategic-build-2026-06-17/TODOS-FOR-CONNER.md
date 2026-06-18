@@ -474,3 +474,51 @@ them). Everything below turns capabilities from "wired and safe" to "live."
       `POST /api/portal/setup` and clients invited via `POST /api/portal/invite`
       (both owner-gated). A workspace-settings screen to drive these from the
       product UI is a natural follow-up — the API contract is stable.
+
+---
+
+## Item 8 of 9 — Trial guarantee (time-savings tracking + Day-7 walk-away)
+
+PR: `feat(guarantee): time-savings tracking + Day 7 walk-away offer + auto-refund`
+
+- [ ] **Sign off on the bar.** Default is **5 hours saved by day 7**
+  (`GUARANTEE_BAR_HOURS`, env-tunable, no deploy needed). Higher bar =
+  stronger marketing claim but harder to clear; lower = easier to clear but
+  weaker promise. Confirm 5, or set per-vertical (a CPA month-end close
+  saves more hours than a one-person home-services shop — the calibration
+  already differs per vertical, the bar could too).
+- [ ] **Sign off on the time-saving calibrations.** These numbers are
+  **customer-visible** — they render on the workspace counter and decide the
+  Day-7 evaluation. They live in one file:
+  `lib/guarantee/savings-calibration.ts`. Current base estimates (minutes):
+  drafted email 10, lead enrichment 5, document chased 3, meeting scheduled
+  8, invoice prepared 6, tenant notice 12, admin task 4. They are
+  deliberately conservative (the "by hand" floor). Do **not** inflate — the
+  number has to survive a customer doing the math, or you lose them on day 7.
+- [ ] **Decide the refund window.** Currently: the walk-away offer surfaces
+  from day 7 through day 14 (a one-week action window) and a tap triggers an
+  instant full refund. Confirm instant Day-7 walk-away, or extend to a
+  longer money-back window (e.g. 14-day or 30-day money-back). The window is
+  a code constant today (`evaluationDays + 7` in the workspace loader) —
+  promote to env if you want it tunable.
+- [ ] **Decide the data-deletion policy.** Walk-away currently does a
+  **hard delete** (GDPR-clean): it runs the existing audited workspace
+  teardown — knowledge docs + embeddings, approvals, chat, memory,
+  integration tokens, the time-savings ledger — and marks the workspace
+  CLOSED. Billing history (Subscription/BillingEvent/AuditLog) and the empty
+  Workspace/Membership rows are preserved for refund reconciliation + audit.
+  Confirm hard-delete, or switch to anonymized-retain if you want the
+  aggregate analytics.
+- [ ] **Flip the refund kill-switch when ready.** Money movement on a
+  walk-away is gated by `GUARANTEE_WALKAWAY_REFUND` (default **on**) **and**
+  `STRIPE_BILLING_ENABLED`. While billing is disabled (today), a walk-away
+  still deletes data + closes the workspace and **pages a human** to issue
+  the refund manually — never silent. Once Stripe billing is live and the
+  bar is ratified, the auto-refund path runs end-to-end with a per-workspace
+  cap (`GUARANTEE_REFUND_CAP_USD`, default $500; above cap → refund to cap +
+  page a human for the remainder).
+- [ ] **Marketing copy is intentionally qualitative.** The public
+  `/guarantee` page does **not** publish the exact hours-saved number — it
+  says "clearly saved you time," not "5 hours" — to avoid pinning us to a
+  figure before sign-off and to avoid gaming. If you want the precise bar
+  public, that's a copy change once the number is ratified.

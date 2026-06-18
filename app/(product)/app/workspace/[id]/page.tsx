@@ -6,7 +6,16 @@ import { servicePartnerForWorkspace } from "@/lib/onboarding/service-partner";
 import { getVerticalContent } from "@/lib/verticals";
 import { isDemoMode } from "@/lib/demo/demo-mode";
 import { killerWorkflowStoryFor } from "@/lib/workflows/verticals";
+import { env } from "@/lib/env";
+import { readSavedTimeSummary } from "@/lib/guarantee/saved-time";
+import {
+  barHoursToMinutes,
+  evaluateGuarantee,
+  formatMinutes,
+} from "@/lib/guarantee/evaluation";
+import { WalkAwayOffer } from "@/components/guarantee/WalkAwayOffer";
 import { OverviewView } from "./overview-view";
+import { acceptWalkAway } from "./guarantee/actions";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -26,7 +35,16 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
     isOperator: false,
   };
 
-  const [pendingApprovals, openFlags, recentHandoffs, workspace, onboarding, activePause] =
+  const now = new Date();
+  const [
+    pendingApprovals,
+    openFlags,
+    recentHandoffs,
+    workspace,
+    onboarding,
+    activePause,
+    savings,
+  ] =
     await Promise.all([
       withRls(ctx, (tx) =>
         tx.workApprovalQueueItem.count({
@@ -46,7 +64,12 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
       withRls(ctx, (tx) =>
         tx.workspace.findUnique({
           where: { id: workspaceId },
-          select: { vertical: true, verticalTier: true },
+          select: {
+            vertical: true,
+            verticalTier: true,
+            createdAt: true,
+            closureStatus: true,
+          },
         }),
       ),
       withRls(ctx, (tx) =>
@@ -68,6 +91,9 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
           orderBy: { pausedUntil: "desc" },
         }),
       ),
+      // Trial-guarantee time-savings totals for the counter + the Day-7
+      // walk-away eligibility check. Read under the broker-owner's RLS.
+      withRls(ctx, (tx) => readSavedTimeSummary(tx, workspaceId, now)),
     ]);
 
   const verticalSlug = workspace
@@ -97,8 +123,43 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
     ? killerWorkflowStoryFor(workspace?.vertical ?? null)
     : null;
 
+  // Day-7 guarantee: surface the walk-away offer when the fleet hasn't
+  // cleared the bar by the evaluation day. Computed LIVE here (not gated on
+  // the cron having run) so the surface is correct even if the cron is
+  // paused. Bounded to a short action window after the evaluation day so it
+  // never haunts a settled, long-running customer.
+  const evaluationDays = env.guaranteeEvaluationDays();
+  const barMinutes = barHoursToMinutes(env.guaranteeBarHours());
+  const ageDays = workspace?.createdAt
+    ? Math.floor(
+        (now.getTime() - workspace.createdAt.getTime()) / (24 * 60 * 60 * 1000),
+      )
+    : 0;
+  const guaranteeEval = evaluateGuarantee({
+    totalMinutesSaved: savings.totalMinutes,
+    barMinutes,
+    ageDays,
+    evaluationDays,
+  });
+  const walkAwayEligible =
+    guaranteeEval.walkAwayEligible &&
+    ageDays <= evaluationDays + 7 &&
+    workspace?.closureStatus === "ACTIVE";
+
   return (
-    <OverviewView
+    <>
+      {walkAwayEligible ? (
+        <div className="mb-8">
+          <WalkAwayOffer
+            workspaceId={workspaceId}
+            partner={partner}
+            savedLabel={formatMinutes(savings.totalMinutes)}
+            barLabel={formatMinutes(barMinutes)}
+            onAccept={acceptWalkAway}
+          />
+        </div>
+      ) : null}
+      <OverviewView
       workspaceId={workspaceId}
       email={member.email}
       partner={partner}
@@ -116,6 +177,9 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
       verticalPublicHref={verticalSlug ? `/${verticalSlug}` : null}
       activePause={activePause}
       demoStory={demoStory}
-    />
+      savingsWeekMinutes={savings.weekMinutes}
+      savingsTotalMinutes={savings.totalMinutes}
+      />
+    </>
   );
 }

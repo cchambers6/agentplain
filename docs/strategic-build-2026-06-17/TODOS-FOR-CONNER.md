@@ -423,3 +423,54 @@ following need your call / your account:
 - Implement live `fetch()` scrapers per `CorpusSource` (pull + parse the
   GREC/Justia/IRS HTML) to replace the curated arrays. The seam exists;
   V1 is curated + citation-verified.
+
+---
+
+## Item 5 — Client portal (`feat(portal): per-customer client portal`)
+
+Account-needed / decision-gated items parked by the strategic build. Each is a
+deliberate boundary the code already respects (truthful degraded state, no
+fabrication) — flipping it on is a credential or a decision, not more code.
+
+The portal ships fully working on its safe defaults: slug-based routing, the
+`ref` storage adapter (records uploads, keeps them quarantined), and the
+fail-closed `noop` scanner (uploads stay PENDING until a real scanner clears
+them). Everything below turns capabilities from "wired and safe" to "live."
+
+- [ ] **Custom-subdomain strategy.** Decide `portal.{customer-domain}` (requires
+      per-customer DNS work) vs. the shipped `agentplain.com/portal/{slug}`
+      (zero setup). Recommendation: stay on slug-based routing for V1 — it's
+      live now, needs no DNS, and the `PortalConfig.slug` is already independent
+      of the workspace slug so a vanity address is a later, additive change.
+
+- [ ] **ClamAV REST: self-hosted vs. VirusTotal.** The virus-scan port
+      (`lib/portal/virus-scan.ts`) ships fail-closed: with no scanner, every
+      upload stays PENDING (quarantined, never downloadable). To enable
+      scanning, decide:
+        - **Self-hosted (free OSS, recommended):** stand up a ClamAV REST worker
+          (e.g. `clamav-rest` on Fly.io / Render / a small Vercel-adjacent
+          worker), then set `PORTAL_CLAMAV_URL=<worker-url>` and
+          `PORTAL_VIRUS_SCAN=clamav`.
+        - **VirusTotal API ($$$):** higher accuracy, per-scan cost; would need a
+          small adapter alongside `ClamAvRestScanner`.
+      Until one is wired, document uploads are accepted but never released.
+
+- [ ] **Vercel Blob for real uploads.** Storage ships behind a port with a
+      no-account `ref` default. To persist real bytes: `npm i @vercel/blob`, set
+      `BLOB_READ_WRITE_TOKEN` (from the Vercel dashboard), and set
+      `PORTAL_STORAGE=blob`. The `@vercel/blob` package is intentionally NOT a
+      dependency yet (kept optional via a guarded dynamic import) so the build
+      stays green without it.
+
+- [ ] **Email-from-customer-domain policy.** Invite emails currently send from
+      agentplain's Resend sender, branded with the owner's name in the copy
+      (with the owner's `replyTo` when provided). Sending *from* each owner's
+      own domain requires per-customer Resend custom-domain config (DNS:
+      SPF/DKIM). Decide the policy: agentplain-sender-with-owner-replyTo (today)
+      vs. per-customer verified domains (more setup, better deliverability +
+      trust). We have Resend; this is per-customer onboarding, not new code.
+
+- [ ] **(Optional) Owner setup UI.** The portal is provisioned via
+      `POST /api/portal/setup` and clients invited via `POST /api/portal/invite`
+      (both owner-gated). A workspace-settings screen to drive these from the
+      product UI is a natural follow-up — the API contract is stable.

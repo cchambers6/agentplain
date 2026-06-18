@@ -141,6 +141,42 @@ export default function AboutPage() {
       <section className="border-b border-rule bg-paper">
         <div className="container-wide grid gap-12 py-20 md:grid-cols-[1fr_2fr] md:py-28">
           <div>
+            <p className="eyebrow mb-4">How we treat your data</p>
+          </div>
+          <div className="max-w-prose space-y-5 text-[15px] leading-relaxed text-ink-soft">
+            <p className="font-display text-2xl leading-snug text-ink md:text-3xl">
+              We process your data. We don&apos;t hoard it.
+            </p>
+            <p>
+              A service partner has to see your work to do it — but seeing
+              isn&apos;t keeping. The fleet reads what a task needs, drafts the
+              work, and hands it to your queue. We don&apos;t pull a standing
+              copy of your inbox, your CRM, or your drive onto our servers. What
+              we keep is named and small: the drafts in your queue, an audit log
+              of what the fleet did, the documents you choose to connect, a
+              sealed copy of your connection token, and your settings — all
+              encrypted and walled off to your workspace alone.
+            </p>
+            <p>
+              We never train a model on your data, pool it across customers, or
+              sell it — agentplain has no training infrastructure. And
+              it&apos;s yours to take or delete whenever you want: export a full
+              copy with one click, or close the workspace and we purge
+              everything after a short grace window.
+            </p>
+            <p className="text-ink">
+              <Link href="/data" className="underline underline-offset-2">
+                The full breakdown — what we store, why, and what we
+                don&apos;t →
+              </Link>
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-rule bg-paper">
+        <div className="container-wide grid gap-12 py-20 md:grid-cols-[1fr_2fr] md:py-28">
+          <div>
             <p className="eyebrow mb-4">Where we&apos;re going</p>
           </div>
           <div className="max-w-prose space-y-5 text-[15px] leading-relaxed text-ink-soft">

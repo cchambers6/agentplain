@@ -11,6 +11,8 @@ export const realEstate: VerticalContent = {
   name: "Real estate",
   tier: "regular",
   missionSubject: "realtors and brokerages",
+  dataNote:
+    "Your CRM holds clients mid-transaction — their financials, their motivations, the details a competitor would love. The fleet reads what a lead or a listing task needs, drafts the reply, and writes the triage decision back to your CRM; it never copies your contact database onto a server we keep. What we retain is the drafts, the audit log, and the documents you connect, encrypted and scoped to your brokerage alone. We don't train on your client list, pool it across firms, or sell it.",
 
   directAnswer:
     "agentplain for real estate is a managed AI service partnership for independent brokerages and agents. A service team installs a vertical-aware fleet that handles listing intake, routes inbound buyer inquiries, coordinates showings, runs a fair-housing pass on every customer-facing draft, keeps the CRM clean, and builds production reports — working inside the Outlook, Gmail, Google Drive, and DocuSign you already use. The fleet drafts and proposes; the broker approves and sends. Nothing leaves the brokerage without a person's name on it.",

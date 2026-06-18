@@ -14,6 +14,7 @@ import {
 } from "@/lib/integrations/marketplace";
 import { isIntegrationConfigured } from "@/lib/integrations/config-status";
 import { summarizeRetryQueueForProvider } from "@/lib/integrations/retry-queue";
+import { ConnectorDataFlow } from "@/components/marketplace/ConnectorDataFlow";
 import { DisconnectButton } from "./DisconnectButton";
 import { TestConnectionButton } from "./TestConnectionButton";
 import { ApiKeyConnectForm } from "./ApiKeyConnectForm";
@@ -161,6 +162,11 @@ export default async function IntegrationSettingsPage({
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
         {entry.description}
       </p>
+
+      {/* Per-connector data-flow disclosure — what flows where, what we store,
+          what we don't — shown at the moment of consent. Category-driven from
+          `lib/integrations/data-flow.ts`. */}
+      <ConnectorDataFlow entry={entry} />
 
       {flash.tested === "ok" && (
         <div className="mt-6 border border-moss/40 bg-moss/10 px-4 py-3 text-sm text-ink">

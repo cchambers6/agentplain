@@ -124,7 +124,7 @@ export default async function SettingsPage({ params }: PageProps) {
       href: `/app/workspace/${workspaceId}/settings/data`,
       label: "your data",
       description:
-        "Export a copy of everything in this workspace, or close the workspace.",
+        "Export a full copy of everything we hold for this workspace, or close the workspace and we purge it after a grace window. We process your data; we don't hoard it.",
     },
     {
       href: `/app/workspace/${workspaceId}/settings/voice`,
@@ -162,6 +162,27 @@ export default async function SettingsPage({ params }: PageProps) {
         Tell {partner} how you like things. Every setting here is a note
         to your service team, not a knob you have to fiddle with.
       </p>
+
+      {/* Data Rights — surfaced prominently, not buried in the section list.
+          The stance is the positioning, so the control to act on it is one
+          tap from the top of settings. */}
+      <Link
+        href={`/app/workspace/${workspaceId}/settings/data`}
+        className="mt-6 block border border-ink bg-paper p-5 transition hover:bg-paper-deep focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+      >
+        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+          your data — your call
+        </p>
+        <p className="mt-2 font-display text-lg leading-snug text-ink">
+          Export everything, or close the workspace and we purge it.
+        </p>
+        <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-mute">
+          Your data flows through Plaino; he doesn&rsquo;t keep a copy of your
+          accounts. What we hold is the drafts, the audit log, the documents you
+          connect, and a sealed token — encrypted and yours to take or delete
+          anytime. Open your data controls →
+        </p>
+      </Link>
 
       <section className="mt-8">
         <ApEyebrow className="mb-3">workspace</ApEyebrow>

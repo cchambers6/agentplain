@@ -107,6 +107,18 @@ export const FAQ_ITEMS: FAQItem[] = [
     a: "You do. Every draft the fleet produces belongs to your firm — your IP, your record, your liability. We don't claim a license to the work, we don't republish it, we don't analyze it across customers. The fleet drafts on your behalf the way a contractor drafts on your behalf: the output is yours from the moment it lands in your queue.",
   },
   {
+    q: "Do you store my customer data?",
+    a: "Some of it, named and encrypted — not all of it. We keep the drafts in your approval queue, an append-only audit log of what the fleet did, the documents you choose to connect as a knowledge source, a sealed copy of your connection token, and your account and settings. We do NOT keep a standing mirror of your inbox, CRM, or accounting ledger — the fleet reads what a task needs on demand and writes the result back to your own system. Everything we hold is encrypted at rest with AES-256-GCM and isolated to your workspace by row-level security. The full breakdown of what we store and why is on our data page.",
+  },
+  {
+    q: "Do you train AI on my data?",
+    a: "No. Your inbox, client list, transaction records, and drafts are never used to train a foundation model — ours or anyone's. agentplain has no training infrastructure. The only thing your data tunes is your own workspace: an append-only log of the edits you make to drafts, so the work gets more like you over time. What the model providers do with API content is governed by their own terms, on a no-training tier; our privacy policy names them and links to their data-usage policies.",
+  },
+  {
+    q: "Can I delete everything?",
+    a: "Yes, anytime, yourself. Export a full JSON copy of everything we hold from Account → Your data, then close the workspace — we purge every customer-data row after a short grace window, and after the window it's irreversible. Only your invoice history and a minimal who-closed-it audit line remain, for tax and compliance. For any deletion request broader than the in-product controls, email hello@agentplain.com and we'll handle it in writing.",
+  },
+  {
     q: "What happens if I cancel?",
     a: "Cancel from billing settings anytime — month-to-month from day one. Your seats stop billing at the end of the current month. The fleet stops drafting at that boundary; nothing keeps writing into your tools after you've ended the relationship. Self-serve workspace export is on the roadmap and not shipped yet — if you need your handoff log, approval history, or draft archive before cancellation, ask your service partner. What happens to your data after a workspace closes lives in our privacy policy; we don't use your client list to train models and we don't keep it to relaunch.",
   },

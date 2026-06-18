@@ -30,6 +30,8 @@ export const law: VerticalContent = {
   name: "Law firms",
   tier: "max",
   missionSubject: "law firms and solo practitioners",
+  dataNote:
+    "Privilege doesn't survive careless handling. The fleet reads only what a task needs — an intake, a conflict screen, a filing deadline — drafts the work, and hands it to your queue; it never pulls a standing copy of your matters or client files onto our servers. What we keep is the drafts, the audit log, and the documents you connect, encrypted and walled off to your firm alone. We don't train on your data, pool it across firms, or sell it, and every draft waits for your review before it leaves the building.",
 
   directAnswer:
     "agentplain for law firms is a managed AI service partnership for solo and small (2–5 attorney) firms. A service team installs a fleet that handles client intake, drafts engagement letters, runs conflict checks, chases documents, and applies a privilege-aware review pass to client communications and drafted pleadings — working inside Outlook, OneDrive, and DocuSign. The attorney reviews every client communication and filing; the fleet drafts and proposes but never sends or files on its own.",

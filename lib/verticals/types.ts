@@ -420,4 +420,21 @@ export interface VerticalContent {
    * `directAnswer` is also absent).
    */
   verticalFaq?: VerticalFaqItem[];
+
+  /**
+   * Per-vertical data-confidentiality note — one short paragraph speaking to
+   * the specific confidentiality obligation this vertical's clients care about
+   * (client records for CPAs, privilege for law, tenant PII for property
+   * management). Rendered by `components/vertical/VerticalDataNote.tsx` under a
+   * "Your clients' data" section, which then links to /data for the full
+   * breakdown.
+   *
+   * OPTIONAL BY DESIGN: only set on verticals with a distinct, truthful
+   * confidentiality angle. A vertical with nothing vertical-specific to say
+   * renders nothing rather than generic filler — per
+   * `feedback_no_guesses_no_estimates.md` (a truthful entry beats a vague one).
+   * Every note must stay within what the data-minimization stance actually
+   * delivers (see `lib/marketing/data-commitments.ts`).
+   */
+  dataNote?: string;
 }

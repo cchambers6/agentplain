@@ -121,6 +121,11 @@ export default function Footer() {
               </Link>
             </li>
             <li>
+              <Link href="/data" className="text-ink hover:text-clay">
+                Your data
+              </Link>
+            </li>
+            <li>
               <Link href="/privacy" className="text-ink hover:text-clay">
                 Privacy
               </Link>

@@ -16,6 +16,7 @@ import ViolationAvoidance from "@/components/vertical/ViolationAvoidance";
 import ClaimsTriadGrid from "@/components/vertical/ClaimsTriadGrid";
 import PricingTierBanner from "@/components/vertical/PricingTierBanner";
 import IntegrationsList from "@/components/vertical/IntegrationsList";
+import { VerticalDataNote } from "@/components/vertical/VerticalDataNote";
 import VerticalFaq from "@/components/vertical/VerticalFaq";
 import VerticalCta from "@/components/vertical/VerticalCta";
 import JsonLd from "@/components/seo/JsonLd";
@@ -118,6 +119,9 @@ export default function VerticalPage({
       <ClaimsTriadGrid claims={content.claims} />
       <PricingTierBanner tier={content.tier} />
       <IntegrationsList integrations={content.integrations} />
+      {content.dataNote ? (
+        <VerticalDataNote name={content.name} note={content.dataNote} />
+      ) : null}
       {content.verticalFaq && content.verticalFaq.length > 0 ? (
         <VerticalFaq name={content.name} items={content.verticalFaq} />
       ) : null}

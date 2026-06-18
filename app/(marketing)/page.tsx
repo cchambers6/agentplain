@@ -18,6 +18,7 @@ import {
   uniques,
   proof,
 } from "@/lib/marketing/home-content";
+import { DATA_COMMITMENTS } from "@/lib/marketing/data-commitments";
 import {
   organizationJsonLd,
   serviceJsonLd,
@@ -585,6 +586,41 @@ export default function HomePage() {
             <ProofCard key={p.label} {...p} />
           ))}
         </div>
+      </Section>
+
+      {/* DATA-MINIMIZATION TRUST PILLAR — a positioning pillar, not a footnote.
+          The no-outbound discipline is its own section above ("Nothing leaves
+          without your name on it"); this complements it on the storage side:
+          we process, we don't hoard. Cards come from the single source of truth
+          in `lib/marketing/data-commitments.ts` (grounded in the same
+          architecture /privacy + /security describe). We render the first four
+          commitments (the fifth, "take it or delete it", gets the deep link to
+          /data). Vendor-neutral per the customer-surface rule. */}
+      <Section
+        eyebrow="Your data"
+        title="Your data stays yours. We process it; we don't hoard it."
+        intro="A do-it-yourself AI stack scatters your client data across five tools. agentplain reads what a task needs, does the work, and hands you a draft — without copying your inbox, your CRM, or your files onto our servers to keep. Here's the commitment in four lines."
+      >
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2">
+          {DATA_COMMITMENTS.slice(0, 4).map((c) => (
+            <div key={c.key} className="flex flex-col bg-paper p-7 md:p-8">
+              <p className="font-display text-lg leading-snug text-ink md:text-xl">
+                {c.title}
+              </p>
+              <p className="mt-3 text-[15px] leading-relaxed text-ink-soft">
+                {c.body}
+              </p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-8 max-w-prose text-[13px] leading-relaxed text-mute">
+          We don&apos;t claim &ldquo;zero data stored&rdquo; — that wouldn&apos;t
+          be true. We store specific things for specific reasons and name every
+          one.{" "}
+          <Link href="/data" className="text-ink underline underline-offset-2">
+            See exactly what we store, why, and how to take it back →
+          </Link>
+        </p>
       </Section>
 
       {/* Q6/Q7 — Pricing + ROI under the service-partnership lock.

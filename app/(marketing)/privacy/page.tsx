@@ -87,6 +87,32 @@ export default function PrivacyPage() {
         </Body>
       </Section>
 
+      <Section title="Data minimization">
+        <Body>
+          <p>
+            Our governing principle is to process your data, not hoard it. The
+            fleet reads what a task needs through read-only and read-and-draft
+            access, does the work, and writes the result back to your own
+            systems. We do not pull a standing mirror of your inbox, CRM, or
+            file store onto our infrastructure.
+          </p>
+          <p>
+            What we retain is deliberately small and named: the drafts in your
+            approval queue, the append-only handoff log, the documents you
+            choose to connect as a knowledge source, a sealed copy of your
+            connection tokens, your account and configuration, and an
+            append-only log of your draft edits (so the work tunes to your
+            voice). We retain this only to deliver the service to you, and only
+            for as long as your workspace is open. A plain-language breakdown of
+            exactly what we store and why lives on our{" "}
+            <Link className="underline text-clay" href="/data">
+              data page
+            </Link>
+            .
+          </p>
+        </Body>
+      </Section>
+
       <Section title="Encryption and isolation">
         <Body>
           <p>

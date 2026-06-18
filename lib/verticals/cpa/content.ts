@@ -27,6 +27,8 @@ export const cpa: VerticalContent = {
   name: "CPA firms",
   tier: "plus",
   missionSubject: "CPAs and tax practices",
+  dataNote:
+    "Your clients trust you with their financials, their SSNs, their whole tax picture. The fleet reads what a close or a filing task needs, drafts the work, and writes it back to your tools — it never copies your client roster or their records into a standing database we keep. What we retain is the drafts, the audit log, and the documents you connect, encrypted and scoped to your firm alone. We don't train on client data, pool it across firms, or sell it — so confidential stays confidential.",
 
   directAnswer:
     "agentplain for CPA and tax firms is a managed AI service partnership for small accounting practices. A service team installs a fleet that runs engagement onboarding, chases client documents, reconciles books, handles milestone billing, and runs a federal-plus-state checklist before a return reaches the partner's desk — working inside Outlook, OneDrive, QuickBooks Online, and DocuSign. The partner reviews and signs every return; the fleet drafts and proposes but never sends or files on its own.",

@@ -383,6 +383,28 @@ enum IntegrationProvider {
   EZLYNX
   ENCOMPASS
   QUALIA
+  // Vertical-MCP scaffold wave (2026-06-17). Adapter scaffolds for four new
+  // vertical practice-management / CRM systems — each `coming-soon` in the
+  // marketplace until the credential path opens (partner enrollment or a
+  // self-serve key). MCP servers at `lib/integrations/{clio,mycase,kvcore,
+  // appfolio}-mcp/`. BoldTrail already has its enum value (BOLDTRAIL, above).
+  //
+  // Clio (law, OAuth2 + refresh): instance region on
+  //   providerMetadata.regionHost; refresh token rotates. MCP backs the law
+  //   conflict-screen + billing surface. Drop-in: register the OAuth app at
+  //   app.clio.com, set CLIO_OAUTH_CLIENT_ID/SECRET, add connect/callback.
+  // MyCase (law, API token): the firm pastes a token from MyCase settings.
+  //   Same accessTokenEncrypted-as-token pattern as FOLLOW_UP_BOSS / SIERRA.
+  // kvCORE (real estate, API key): self-serve key from kvCORE account
+  //   settings (Inside Real Estate parent). accessTokenEncrypted-as-key.
+  // AppFolio (property management, partner-approval basic auth): client-id +
+  //   client-secret pair issued after AppFolio's ~2-month partner review.
+  //   Secret in accessTokenEncrypted, non-secret client id in
+  //   providerMetadata.clientId — same shape as BUILDIUM.
+  CLIO
+  MYCASE
+  KVCORE
+  APPFOLIO
 }
 
 // Credential lifecycle states. ACTIVE = tokens valid and refresh-eligible.

@@ -112,7 +112,11 @@ export interface DecryptedCredential {
     | 'BUILDIUM'
     | 'EZLYNX'
     | 'ENCOMPASS'
-    | 'QUALIA';
+    | 'QUALIA'
+    | 'CLIO'
+    | 'MYCASE'
+    | 'KVCORE'
+    | 'APPFOLIO';
   accountId: string;
   accountEmail: string;
   accessToken: string;

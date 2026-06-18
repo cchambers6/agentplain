@@ -339,6 +339,11 @@ const DEFERRED = new Set([
   'sierra',
   'salesforce',
   'notion',
+  // Buildium ships its own dedicated dispatch + contract coverage
+  // (`lib/integrations/buildium-mcp/buildium-dispatch.test.ts` +
+  // `buildium-mcp.test.ts`) rather than a fixture in this manual registry —
+  // deferred here so the guardrail counts it as covered, not silently missed.
+  'buildium',
 ]);
 
 // ── The contract, applied to every `available` marketplace entry ────────────

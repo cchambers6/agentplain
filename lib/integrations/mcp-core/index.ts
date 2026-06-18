@@ -47,3 +47,5 @@ export {
   resolveApiKeyCredential,
   type ResolveApiKeyArgs,
 } from './api-key-credential';
+
+export { approvalRequired, gateMutation } from './approval';

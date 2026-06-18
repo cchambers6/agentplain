@@ -426,6 +426,32 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     verticalRelevance: ['property-management'],
     connectMode: 'api-key',
   },
+  // AppFolio — the second property-management system. Its API is gated behind
+  // a partner-program application with a ~2-month review, so the catalog stays
+  // HONEST: `coming-soon`, no provider key, waitlist CTA. The MCP server
+  // scaffolding (basic-auth client, 4-tool surface) lives at
+  // `lib/integrations/appfolio-mcp/`; the credential path opens when the
+  // partner approval lands. Highest-priority PM connector — see
+  // docs/strategic-build-2026-06-17/TODOS-FOR-CONNER.md.
+  {
+    id: 'appfolio',
+    name: 'AppFolio',
+    category: 'Accounting',
+    description:
+      'Plaino will read your units and rent roll, draft work orders, tenant charges, and notices into /approvals once we complete AppFolio\'s partner-program enrollment. Nothing posts to AppFolio without your review. Join the waitlist below.',
+    mcpEndpointTemplate: '/api/integrations/appfolio-mcp/{workspaceId}',
+    // Partner-approval basic auth — the agency receives a client-id +
+    // client-secret pair after AppFolio's partner review. Same
+    // accessTokenEncrypted-as-secret + providerMetadata.clientId shape as
+    // Buildium. No OAuth scopes.
+    scopes: [],
+    oauthConfigKey: 'APPFOLIO_API_KEY',
+    status: 'coming-soon',
+    providerKey: null,
+    disciplines: ['finance', 'operations'],
+    verticalRelevance: ['property-management'],
+    connectMode: 'api-key',
+  },
   {
     id: 'canva',
     name: 'Canva',

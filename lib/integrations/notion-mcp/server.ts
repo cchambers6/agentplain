@@ -22,6 +22,8 @@ import { mcpError, mcpOk, type McpResult } from '@/lib/integrations/mcp-core';
 import { NOTION_API_BASE, NOTION_API_VERSION } from '@/lib/integrations/notion/oauth';
 import { resolveNotionCredential, type ResolvedNotion } from './auth';
 import type {
+  AddCommentInput,
+  AddCommentOutput,
   CreatePageInput,
   CreatePageOutput,
   GetPageInput,
@@ -196,6 +198,21 @@ export class ProdNotionMcpServer implements NotionMcpServer {
     });
   }
 
+  async addComment(input: AddCommentInput): Promise<McpResult<AddCommentOutput>> {
+    if (!input.pageId) return mcpError('INVALID_ARGUMENT', 'addComment requires pageId');
+    if (!input.body || input.body.trim().length === 0) {
+      return mcpError('INVALID_ARGUMENT', 'addComment requires a non-empty body');
+    }
+    return this.withApi(async (api) => {
+      const res = await api<RawComment>('POST', '/comments', {
+        parent: { page_id: input.pageId },
+        rich_text: [{ type: 'text', text: { content: input.body } }],
+      });
+      if (!res.ok) return res;
+      return mcpOk({ commentId: res.value.id ?? '' });
+    });
+  }
+
   async searchWorkspace(input: SearchWorkspaceInput): Promise<McpResult<SearchWorkspaceOutput>> {
     if (!input.query) return mcpError('INVALID_ARGUMENT', 'searchWorkspace requires query');
     const limit = clampLimit(input.limit);
@@ -360,6 +377,11 @@ interface RawBlocksResponse {
 
 interface RawDatabaseQueryResponse {
   results?: RawPage[];
+}
+
+interface RawComment {
+  object?: 'comment';
+  id?: string;
 }
 
 function extractPageTitle(page: RawPage): string {

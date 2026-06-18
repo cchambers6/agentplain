@@ -171,6 +171,15 @@ describe('follow-up-boss-mcp — FubLeadFetcher.fetchAgentRoster maps users → 
       ): Promise<McpResult<ListLeadListsOutput>> {
         return mcpError('CREDENTIAL_NOT_FOUND', 'no fub key');
       },
+      async createLead() {
+        return mcpError('NOT_IMPLEMENTED', 'no');
+      },
+      async sendTextTemplate() {
+        return mcpError('NOT_IMPLEMENTED', 'no');
+      },
+      async scheduleActionPlan() {
+        return mcpError('NOT_IMPLEMENTED', 'no');
+      },
     };
     const fetcher = new FubLeadFetcher({ workspaceId: WORKSPACE_ID, mcp });
     const roster = await fetcher.fetchAgentRoster({ workspaceId: WORKSPACE_ID });

@@ -87,6 +87,12 @@ function buildMockMcp(args: {
     async getEstimate(): Promise<McpResult<import('./../../integrations/quickbooks-mcp/types').GetEstimateOutput>> {
       return mcpError('NOT_FOUND', 'not used in this test');
     },
+    async sendInvoice(): Promise<McpResult<import('./../../integrations/quickbooks-mcp/actions').SendInvoiceOutput>> {
+      return mcpError('APPROVAL_REQUIRED', 'not used in this test');
+    },
+    async createCustomer(): Promise<McpResult<import('./../../integrations/quickbooks-mcp/actions').CreateCustomerOutput>> {
+      return mcpError('APPROVAL_REQUIRED', 'not used in this test');
+    },
   };
 }
 

@@ -20,10 +20,11 @@ function client() {
 }
 
 describe('quickbooks-mcp dispatch', () => {
-  it('tools/list exposes the nine QuickBooks tools', async () => {
+  it('tools/list exposes the eleven QuickBooks tools', async () => {
     const tools = await client().listTools();
     const names = tools.map((t) => t.name).sort();
     assert.deepEqual(names, [
+      'quickbooks.create_customer',
       'quickbooks.create_invoice',
       'quickbooks.get_estimate',
       'quickbooks.get_invoice',
@@ -33,6 +34,7 @@ describe('quickbooks-mcp dispatch', () => {
       'quickbooks.list_expenses',
       'quickbooks.list_invoices',
       'quickbooks.record_payment',
+      'quickbooks.send_invoice',
     ]);
   });
 

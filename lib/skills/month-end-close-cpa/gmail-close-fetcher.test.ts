@@ -285,6 +285,9 @@ describe('GmailCloseFetcher — attachment detection', () => {
       draftMessage: async () => ({ ok: false as const, error: { code: 'NOT_IMPLEMENTED' as const, message: 'x' } }),
       labelMessage: async () => ({ ok: false as const, error: { code: 'NOT_IMPLEMENTED' as const, message: 'x' } }),
       listLabels: async () => ({ ok: true as const, value: { labels: [] } }),
+      composeFromTemplate: async () => ({ ok: false as const, error: { code: 'NOT_IMPLEMENTED' as const, message: 'x' } }),
+      scheduleSend: async () => ({ ok: false as const, error: { code: 'NOT_IMPLEMENTED' as const, message: 'x' } }),
+      archive: async () => ({ ok: false as const, error: { code: 'NOT_IMPLEMENTED' as const, message: 'x' } }),
       listResources: async () => ({ ok: true as const, value: [] }),
       readResource: async () => ({ ok: false as const, error: { code: 'NOT_FOUND' as const, message: 'x' } }),
     };

@@ -10,9 +10,11 @@
  * that names Salesforce's REST shape. Skills + cron sweeps speak the
  * typed MCP interface below.
  *
- * Per `project_no_outbound_architecture.md`: writes are restricted to
- * `create_task` — INTERNAL annotations on the customer's own CRM. No
- * tool here sends mail, SMS, or anything customer-facing.
+ * Per `project_no_outbound_architecture.md`: every mutating method is
+ * approval-gated at the factory seam (`with-approval.ts`). Internal
+ * annotations (create_task / log_call / create_opportunity / update_record)
+ * and the one genuinely OUTBOUND action (send_email_template) all require a
+ * recorded human approval before the REST call is reached.
  *
  * Per `feedback_runner_portability.md`: two impls — `ProdSalesforceMcpServer`
  * (production REST) and `RecordingSalesforceMcpServer` (test).
@@ -23,6 +25,27 @@
  */
 
 import type { McpResult } from '@/lib/integrations/mcp-core';
+import type {
+  CreateOpportunityInput,
+  CreateOpportunityOutput,
+  UpdateRecordInput,
+  UpdateRecordOutput,
+  SendEmailTemplateInput,
+  SendEmailTemplateOutput,
+  LogCallInput,
+  LogCallOutput,
+} from './actions';
+
+export type {
+  CreateOpportunityInput,
+  CreateOpportunityOutput,
+  UpdateRecordInput,
+  UpdateRecordOutput,
+  SendEmailTemplateInput,
+  SendEmailTemplateOutput,
+  LogCallInput,
+  LogCallOutput,
+};
 
 // ── DTOs the MCP returns ──────────────────────────────────────────────
 
@@ -149,6 +172,8 @@ export interface CreateTaskInput {
   status?: string;
   /** Priority picklist — defaults to "Normal". */
   priority?: string;
+  /** Approval token once the operator has approved this exact task. */
+  pendingApprovalId?: string;
 }
 export interface CreateTaskOutput {
   taskId: string;
@@ -168,4 +193,10 @@ export interface SalesforceMcpServer {
   getAccount(input: GetAccountInput): Promise<McpResult<GetAccountOutput>>;
   listContacts(input: ListContactsInput): Promise<McpResult<ListContactsOutput>>;
   createTask(input: CreateTaskInput): Promise<McpResult<CreateTaskOutput>>;
+
+  // ── Write-action-depth mutations (all approval-gated) ──────────────────
+  createOpportunity(input: CreateOpportunityInput): Promise<McpResult<CreateOpportunityOutput>>;
+  updateRecord(input: UpdateRecordInput): Promise<McpResult<UpdateRecordOutput>>;
+  sendEmailTemplate(input: SendEmailTemplateInput): Promise<McpResult<SendEmailTemplateOutput>>;
+  logCall(input: LogCallInput): Promise<McpResult<LogCallOutput>>;
 }

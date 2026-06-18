@@ -220,3 +220,56 @@ pass-through, never stored.
   Anonymous marketing-widget conversations have no workspace and aren't covered
   by the account-lifetime model. Decide a retention policy for pre-conversion
   lead conversations (sales/marketing may want them) — tracked as a follow-up.
+
+---
+## Write-action depth across 9 connectors (PR: feat/integrations-write-action-depth-2026-06-18)
+
+Added 30+ approval-gated write actions across HubSpot, Salesforce, Notion, Follow Up
+Boss, Sierra, Buildium, QuickBooks, Gmail, and Calendar, all flowing through one
+generic approval gate (`lib/integrations/approval/`) modeled on the DocuSign gate
+(PR #280). Every mutation is gated at the connector's factory seam; nothing reaches
+an external API without a recorded human approval. Decisions / follow-ups below.
+
+### 1. Verify REST endpoints against live sandboxes before enabling in prod
+The prod-server methods call documented REST endpoints, but tests mock at the SDK
+boundary — so the exact paths/payloads have NOT been exercised against live accounts.
+Verify these against a sandbox before flipping the connector live for a paying customer:
+- **HubSpot**: `POST /automation/v4/sequences/enrollments` (send_sequence_enrollment),
+  `POST /marketing/v3/transactional/single-email/send` (send_email_template). Sequences +
+  transactional email require specific HubSpot product tiers/scopes — confirm the
+  customer's plan includes them.
+- **Follow Up Boss**: `POST /v1/textMessages` (send_text_template), `POST /v1/actionPlansPeople`
+  (schedule_action_plan) — confirm the account has texting + action plans enabled.
+- **Sierra Interactive**: drip-enrollment endpoint (`send_drip`) — confirm API shape.
+- **Buildium**: `charge_late_fee` posts a lease transaction (MOVES MONEY) and
+  `send_tenant_msg` messages a resident — verify endpoints + that the customer wants
+  agents touching ledgers at all.
+- **QuickBooks**: `POST /v3/company/{realmId}/invoice/{id}/send` (send_invoice).
+- **Salesforce**: `/actions/standard/emailSimple` (send_email_template) — org must have
+  the action enabled.
+
+### 2. Gating-policy decision: gate-all vs outbound-only
+Most connectors gate **every** mutation (internal record edits AND outbound). **Gmail**
+gates **outbound-only** (`compose_from_template`, `schedule_send`); its internal
+mailbox ops (`draft_message`, `label_message`, `archive`) are ungated, matching the
+established wave-2 marketplace model (drafts/notes/labels = internal, not outreach).
+**Decision needed:** unify the policy. Recommend outbound/money-only gating everywhere
+(matches `project_no_outbound_architecture.md` + the wave-2 precedent that leaves
+`create_invoice` / `create_note` ungated) — the other connectors currently over-gate
+internal writes, which is safe but inconsistent and adds operator-approval friction.
+
+### 3. Approval-card rendering is generic
+`CONNECTOR_WRITE_ACTION` renders one generic card (connector + action + detail fields)
+in `/approvals` (`renderApprovalPayload.ts`). Good enough to ship; a per-connector
+richer render (e.g. a deal card, an invoice card) is a future polish.
+
+### 4. Migration on deploy
+This PR adds the `CONNECTOR_WRITE_ACTION` value to the `WorkApprovalKind` enum
+(`prisma/migrations/20260618000000_add_connector_write_action_kind/`). Deploy runs
+`prisma migrate deploy` — additive enum value, safe, no backfill.
+
+### 5. Marketplace smoke fixtures still deferred
+Salesforce, Notion, Follow Up Boss, Sierra, and Buildium remain in the wave-1
+marketplace-smoke `DEFERRED` set — each now has its own `write-actions.test.ts` +
+dispatch test, but a full marketplace value-loop fixture (read→write→audit against a
+seeded workspace) is a follow-up wave.

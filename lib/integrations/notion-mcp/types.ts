@@ -107,6 +107,8 @@ export interface CreatePageInput {
   title: string;
   /** Plain-text body — the MCP wraps it in a `paragraph` block. */
   body?: string;
+  /** Approval token once the operator has approved this exact page. */
+  pendingApprovalId?: string;
 }
 export interface CreatePageOutput {
   pageId: string;
@@ -119,9 +121,23 @@ export interface UpdatePageInput {
   archived?: boolean;
   /** Append a plain-text block to the end of the page. */
   appendBody?: string;
+  /** Approval token once the operator has approved this exact update. */
+  pendingApprovalId?: string;
 }
 export interface UpdatePageOutput {
   pageId: string;
+}
+
+export interface AddCommentInput {
+  /** Page (or block) the comment is attached to. */
+  pageId: string;
+  /** Plain-text comment body. */
+  body: string;
+  /** Approval token once the operator has approved this exact comment. */
+  pendingApprovalId?: string;
+}
+export interface AddCommentOutput {
+  commentId: string;
 }
 
 export interface SearchWorkspaceInput {
@@ -144,5 +160,6 @@ export interface NotionMcpServer {
   queryDatabase(input: QueryDatabaseInput): Promise<McpResult<QueryDatabaseOutput>>;
   createPage(input: CreatePageInput): Promise<McpResult<CreatePageOutput>>;
   updatePage(input: UpdatePageInput): Promise<McpResult<UpdatePageOutput>>;
+  addComment(input: AddCommentInput): Promise<McpResult<AddCommentOutput>>;
   searchWorkspace(input: SearchWorkspaceInput): Promise<McpResult<SearchWorkspaceOutput>>;
 }

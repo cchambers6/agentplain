@@ -20,10 +20,17 @@ function client() {
 }
 
 describe('buildium-mcp dispatch', () => {
-  it('tools/list exposes the Buildium dispatch tool, namespaced', async () => {
+  it('tools/list exposes the Buildium dispatch tools, namespaced', async () => {
     const tools = await client().listTools();
-    assert.equal(tools.length, 1);
-    assert.equal(tools[0].name, 'buildium.list_delinquent_leases');
+    assert.equal(tools.length, 5);
+    const names = tools.map((t) => t.name).sort();
+    assert.deepEqual(names, [
+      'buildium.charge_late_fee',
+      'buildium.create_work_order',
+      'buildium.list_delinquent_leases',
+      'buildium.post_notice',
+      'buildium.send_tenant_msg',
+    ]);
   });
 
   it('list_delinquent_leases dispatches and returns fixtures (non-500)', async () => {

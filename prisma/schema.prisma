@@ -247,6 +247,15 @@ enum WorkApprovalKind {
   // human-decided; never auto-approved (legal documents).
   DOCUSIGN_SEND_ENVELOPE
   DOCUSIGN_VOID_ENVELOPE
+  // Generic connector write-action gate. ONE kind covers every mutating
+  // action across all connectors (HubSpot/Salesforce/Notion/Follow Up Boss/
+  // Sierra/Buildium/QuickBooks/Gmail/Calendar) — the specific connector +
+  // action + (encrypted) payload live on the row, and refId carries the
+  // action fingerprint. Like DocuSign, every connector write is human-decided;
+  // a PENDING row lands here, the operator approves on /approvals, and only the
+  // next attempt carrying that approval id reaches the external API. Never
+  // auto-approved. See lib/integrations/approval/with-approval.ts.
+  CONNECTOR_WRITE_ACTION
 }
 
 enum WorkApprovalStatus {

@@ -131,6 +131,9 @@ const KIND_LABEL: Record<WorkApprovalKind, string> = {
   // DocuSign approval gate — mutating outbound actions awaiting your decision.
   DOCUSIGN_SEND_ENVELOPE: "DocuSign — send for signature",
   DOCUSIGN_VOID_ENVELOPE: "DocuSign — void envelope",
+  // Generic connector write action awaiting your decision — the eyebrow is
+  // refined per connector + action inside renderConnectorWriteAction.
+  CONNECTOR_WRITE_ACTION: "connected app — pending action",
 };
 
 export function renderApprovalPayload(
@@ -193,6 +196,8 @@ export function renderApprovalPayload(
       return renderDocuSignSend(p);
     case "DOCUSIGN_VOID_ENVELOPE":
       return renderDocuSignVoid(p);
+    case "CONNECTOR_WRITE_ACTION":
+      return renderConnectorWriteAction(p);
     default: {
       const _exhaustive: never = kind;
       // Runtime safety: if a new enum value reaches production before the
@@ -1123,6 +1128,46 @@ function renderDocuSignVoid(p: Record<string, unknown>): RenderedApproval {
   return {
     kindLabel: KIND_LABEL.DOCUSIGN_VOID_ENVELOPE,
     title: envelopeId ? `Void envelope ${envelopeId}` : "Void envelope",
+    body: lines,
+    metaLine: "awaiting your approval",
+  };
+}
+
+/**
+ * CONNECTOR_WRITE_ACTION — a mutating action on a connected app (HubSpot,
+ * Salesforce, Notion, Follow Up Boss, Sierra, Buildium, QuickBooks, Gmail,
+ * Calendar) that the fleet proposed and is holding until you approve. Nothing
+ * has happened in the external system; approving lets the next attempt execute.
+ * The payload carries { connector, action, detail } (see
+ * lib/integrations/approval/with-approval.ts); we render a calm, generic card
+ * that names the app + action and lists the human-meaningful detail fields.
+ */
+function renderConnectorWriteAction(p: Record<string, unknown>): RenderedApproval {
+  const connector = pickString(p, ["connector"]) ?? "connected app";
+  const action = pickString(p, ["action"]) ?? "action";
+  const detail = isRecord(p.detail) ? (p.detail as Record<string, unknown>) : {};
+
+  const prettyConnector = connector
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  const prettyAction = action.replace(/[-_]/g, " ");
+
+  const lines: string[] = [
+    `Awaiting your approval — Plaino will run this in ${prettyConnector} only after you approve. Nothing has happened in ${prettyConnector} yet.`,
+  ];
+  // Surface up to a handful of scalar detail fields so the operator sees
+  // exactly what will be written, without rendering nested blobs.
+  for (const key of Object.keys(detail).slice(0, 8)) {
+    const value = detail[key];
+    if (value === null || value === undefined) continue;
+    if (typeof value === "object") continue;
+    const label = key.replace(/[-_]/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2");
+    lines.push(`${label}: ${String(value)}`);
+  }
+
+  return {
+    kindLabel: `${prettyConnector} — ${prettyAction}`,
+    title: `${prettyAction} in ${prettyConnector}`,
     body: lines,
     metaLine: "awaiting your approval",
   };

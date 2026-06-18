@@ -37,9 +37,9 @@ function client() {
 }
 
 describe('sierra-mcp dispatch', () => {
-  it('tools/list exposes the six Sierra tools, all namespaced', async () => {
+  it('tools/list exposes the nine Sierra tools, all namespaced', async () => {
     const tools = await client().listTools();
-    assert.equal(tools.length, 6);
+    assert.equal(tools.length, 9);
     assert.ok(tools.every((t) => t.name.startsWith('sierra.')));
   });
 

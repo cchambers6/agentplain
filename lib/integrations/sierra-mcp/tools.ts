@@ -6,11 +6,12 @@
  * (`app/api/integrations/sierra-mcp/[workspaceId]/route.ts`) and the smoke test
  * via `lib/integrations/mcp-core/dispatch.ts`.
  *
- * The 6-tool surface mirrors the Follow Up Boss MCP so the
+ * The read + internal-annotation surface mirrors the Follow Up Boss MCP so the
  * lead-triage-realestate skill consumes both through one provider-neutral port.
  *
  * Per `project_no_outbound_architecture.md`: `create_note` and `add_tag` are
- * INTERNAL annotations on the broker's own CRM — never customer-facing outbound.
+ * INTERNAL annotations on the broker's own CRM. `send_drip` (write-action wave)
+ * IS outbound. All mutating tools are approval-gated at the factory seam.
  */
 
 import { z } from 'zod';
@@ -30,11 +31,13 @@ const createNoteSchema = z.object({
   leadId: z.string().min(1),
   body: z.string().min(1),
   isPrivate: z.boolean().optional(),
+  pendingApprovalId: z.string().optional(),
 });
 
 const addTagSchema = z.object({
   leadId: z.string().min(1),
   tags: z.array(z.string().min(1)).min(1),
+  pendingApprovalId: z.string().optional(),
 });
 
 const listPipelinesSchema = z.object({
@@ -44,6 +47,29 @@ const listPipelinesSchema = z.object({
 const getPipelineStageSchema = z.object({
   pipelineId: z.string().min(1),
   stageId: z.string().min(1),
+});
+
+// ── Write-action-depth schemas (all approval-gated) ────────────────────────
+
+const createContactSchema = z.object({
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  source: z.string().optional(),
+  pendingApprovalId: z.string().optional(),
+});
+
+const sendDripSchema = z.object({
+  contactId: z.string().min(1),
+  campaignId: z.string().min(1),
+  pendingApprovalId: z.string().optional(),
+});
+
+const updateStatusSchema = z.object({
+  leadId: z.string().min(1),
+  status: z.string().min(1),
+  pendingApprovalId: z.string().optional(),
 });
 
 export const SIERRA_TOOLS: ReadonlyArray<ToolRegistration<SierraMcpServer>> = [
@@ -84,5 +110,26 @@ export const SIERRA_TOOLS: ReadonlyArray<ToolRegistration<SierraMcpServer>> = [
     description: 'Get a single pipeline stage by pipelineId + stageId.',
     schema: getPipelineStageSchema,
     invoke: (s, a) => s.getPipelineStage(getPipelineStageSchema.parse(a)),
+  },
+  // ── Write-action-depth tools (approval-gated mutations) ──────────────────
+  {
+    name: `${SIERRA_NAMESPACE}.create_contact`,
+    description:
+      'Create a new lead/contact (firstName + lastName required; email/phone/source optional). Approval-gated.',
+    schema: createContactSchema,
+    invoke: (s, a) => s.createContact(createContactSchema.parse(a)),
+  },
+  {
+    name: `${SIERRA_NAMESPACE}.send_drip`,
+    description:
+      'Enroll a contact into a drip campaign (contactId + campaignId). OUTBOUND — approval-gated.',
+    schema: sendDripSchema,
+    invoke: (s, a) => s.sendDrip(sendDripSchema.parse(a)),
+  },
+  {
+    name: `${SIERRA_NAMESPACE}.update_status`,
+    description: "Update a lead's status (leadId + status). Approval-gated.",
+    schema: updateStatusSchema,
+    invoke: (s, a) => s.updateStatus(updateStatusSchema.parse(a)),
   },
 ];

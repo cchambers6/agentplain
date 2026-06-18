@@ -234,6 +234,8 @@ const ADAPTERS: DispatchAdapter[] = [
       'quickbooks.list_customers',
       'quickbooks.get_profit_and_loss',
       'quickbooks.list_expenses',
+      'quickbooks.list_estimates',
+      'quickbooks.get_estimate',
     ],
     refusal: { tool: 'list_invoices', args: {} },
     // record_payment MOVES MONEY — the canonical gated write.
@@ -246,6 +248,25 @@ const ADAPTERS: DispatchAdapter[] = [
         args: { customerId: '1', lines: [{ amount: 100, description: 'smoke' }] },
         kind: 'draft',
         reason: 'drafts an invoice (no money movement, nothing leaves the account)',
+      },
+      {
+        tool: 'create_customer',
+        args: { displayName: 'Smoke Co' },
+        kind: 'draft',
+        reason: 'creates an internal customer record (no money movement, nothing outbound)',
+      },
+      {
+        // send_invoice IS approval-gated — at the FACTORY seam
+        // (withQuickbooksApproval / buildQuickbooksMcpServer). This wave drives
+        // the un-wrapped inner TestQuickbooksMcpServer directly via dispatch,
+        // which fires without a token; same shape as DocuSign send_envelope's
+        // entry above. The factory gate is proven in
+        // quickbooks-mcp/write-actions.test.ts.
+        tool: 'send_invoice',
+        args: { invoiceId: 'inv-1' },
+        kind: 'outbound-gap',
+        reason:
+          'emails an invoice to the customer; gated at the factory decorator, ungated on this raw inner-server dispatch surface',
       },
     ],
     runValueLoop: async (client) => {

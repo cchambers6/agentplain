@@ -8,15 +8,29 @@
  * from here only.
  */
 
+import {
+  buildConnectorApprovalDeps,
+  type ConnectorApprovalDeps,
+} from '@/lib/integrations/approval';
 import { ProdSierraMcpServer } from './server';
 import { RecordingSierraMcpServer } from './test-server';
+import { withSierraApproval } from './with-approval';
 import type { SierraMcpServer } from './types';
 
-export function buildSierraMcpServer(args: { workspaceId: string }): SierraMcpServer {
+/**
+ * Build the Sierra MCP server. Every mutating method is approval-gated at this
+ * seam — an ungated server can't be obtained. Tests inject `deps` carrying an
+ * in-memory gate + audit sink so they can seed grants deterministically.
+ */
+export function buildSierraMcpServer(args: {
+  workspaceId: string;
+  deps?: ConnectorApprovalDeps;
+}): SierraMcpServer {
+  const deps = args.deps ?? buildConnectorApprovalDeps();
   if (process.env.INTEGRATIONS_PROVIDER === 'test') {
-    return new RecordingSierraMcpServer(args);
+    return withSierraApproval(new RecordingSierraMcpServer(args), deps);
   }
-  return new ProdSierraMcpServer(args);
+  return withSierraApproval(new ProdSierraMcpServer(args), deps);
 }
 
 export { SIERRA_TOOLS, SIERRA_NAMESPACE } from './tools';
@@ -45,3 +59,18 @@ export type {
   GetPipelineStageInput,
   GetPipelineStageOutput,
 } from './types';
+export {
+  SIERRA_CONNECTOR,
+  CREATE_CONTACT,
+  SEND_DRIP,
+  UPDATE_STATUS,
+  sierraAction,
+  type CreateContactInput,
+  type CreateContactOutput,
+  type SendDripInput,
+  type SendDripOutput,
+  type UpdateStatusInput,
+  type UpdateStatusOutput,
+  type WriteActionDescriptor,
+} from './actions';
+export { withSierraApproval } from './with-approval';

@@ -43,6 +43,14 @@ import type {
   SierraMcpServer,
   SierraPipelineSummary,
 } from './types';
+import type {
+  CreateContactInput,
+  CreateContactOutput,
+  SendDripInput,
+  SendDripOutput,
+  UpdateStatusInput,
+  UpdateStatusOutput,
+} from './actions';
 
 export const SIERRA_API_BASE = 'https://api.sierrainteractive.com/v1';
 const DEFAULT_LIMIT = 25;
@@ -196,6 +204,83 @@ export class ProdSierraMcpServer implements SierraMcpServer {
     });
   }
 
+  // ── Write-action-depth mutations (approval-gated at the factory seam) ──
+
+  async createContact(
+    input: CreateContactInput,
+  ): Promise<McpResult<CreateContactOutput>> {
+    if (!input.firstName || !input.lastName) {
+      return mcpError(
+        'INVALID_ARGUMENT',
+        'createContact requires firstName and lastName',
+      );
+    }
+    return this.withApi(async (api) => {
+      const res = await api<RawContact>('POST', '/contacts', {
+        firstName: input.firstName,
+        lastName: input.lastName,
+        emails: input.email ? [{ address: input.email }] : undefined,
+        phones: input.phone ? [{ number: input.phone }] : undefined,
+        source: input.source,
+      });
+      if (!res.ok) return res;
+      if (res.value.id === undefined || res.value.id === null) {
+        return mcpError(
+          'MALFORMED_RESPONSE',
+          'Sierra contact.create returned no id',
+        );
+      }
+      return mcpOk({ contactId: String(res.value.id) });
+    });
+  }
+
+  async sendDrip(input: SendDripInput): Promise<McpResult<SendDripOutput>> {
+    if (!input.contactId || !input.campaignId) {
+      return mcpError(
+        'INVALID_ARGUMENT',
+        'sendDrip requires contactId and campaignId',
+      );
+    }
+    return this.withApi(async (api) => {
+      const res = await api<RawEnrollment>(
+        'POST',
+        `/campaigns/${encodeURIComponent(input.campaignId)}/enrollments`,
+        { contactId: input.contactId },
+      );
+      if (!res.ok) return res;
+      if (res.value.id === undefined || res.value.id === null) {
+        return mcpError(
+          'MALFORMED_RESPONSE',
+          'Sierra campaign.enroll returned no id',
+        );
+      }
+      return mcpOk({ enrollmentId: String(res.value.id) });
+    });
+  }
+
+  async updateStatus(
+    input: UpdateStatusInput,
+  ): Promise<McpResult<UpdateStatusOutput>> {
+    if (!input.leadId) {
+      return mcpError('INVALID_ARGUMENT', 'updateStatus requires leadId');
+    }
+    if (!input.status || input.status.trim().length === 0) {
+      return mcpError(
+        'INVALID_ARGUMENT',
+        'updateStatus requires a non-empty status',
+      );
+    }
+    return this.withApi(async (api) => {
+      const res = await api<RawContact>(
+        'PUT',
+        `/contacts/${encodeURIComponent(input.leadId)}/status`,
+        { status: input.status },
+      );
+      if (!res.ok) return res;
+      return mcpOk({ leadId: input.leadId, status: input.status });
+    });
+  }
+
   // ── internals ───────────────────────────────────────────────────────
 
   private async withApi<T>(
@@ -300,6 +385,10 @@ interface RawListLeadsResponse {
 }
 
 interface RawNote {
+  id?: number | string;
+}
+
+interface RawEnrollment {
   id?: number | string;
 }
 

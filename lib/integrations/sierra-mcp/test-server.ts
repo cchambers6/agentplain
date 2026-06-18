@@ -24,6 +24,14 @@ import type {
   SierraMcpServer,
   SierraPipelineSummary,
 } from './types';
+import type {
+  CreateContactInput,
+  CreateContactOutput,
+  SendDripInput,
+  SendDripOutput,
+  UpdateStatusInput,
+  UpdateStatusOutput,
+} from './actions';
 
 export interface TestSierraSeed {
   leads?: SierraLeadSummary[];
@@ -37,7 +45,10 @@ export interface RecordedSierraCall {
     | 'createNote'
     | 'addTag'
     | 'listPipelines'
-    | 'getPipelineStage';
+    | 'getPipelineStage'
+    | 'createContact'
+    | 'sendDrip'
+    | 'updateStatus';
   input: unknown;
 }
 
@@ -48,6 +59,8 @@ export class RecordingSierraMcpServer implements SierraMcpServer {
   private readonly leads: Map<string, SierraLeadSummary>;
   private readonly pipelines: Map<string, SierraPipelineSummary>;
   private nextNoteId = 2000;
+  private nextContactId = 3000;
+  private nextEnrollmentId = 4000;
 
   constructor(args: { workspaceId: string; seed?: TestSierraSeed }) {
     this.workspaceId = args.workspaceId;
@@ -116,5 +129,44 @@ export class RecordingSierraMcpServer implements SierraMcpServer {
       );
     }
     return mcpOk({ stage });
+  }
+
+  // ── Write-action-depth mutations ──────────────────────────────────────
+
+  async createContact(
+    input: CreateContactInput,
+  ): Promise<McpResult<CreateContactOutput>> {
+    this.calls.push({ tool: 'createContact', input });
+    const contactId = `sierra-contact-${this.nextContactId++}`;
+    this.leads.set(contactId, {
+      id: contactId,
+      firstName: input.firstName,
+      lastName: input.lastName,
+      emails: input.email ? [input.email] : [],
+      phones: input.phone ? [input.phone] : [],
+      source: input.source ?? null,
+      stage: null,
+      tags: [],
+      lastActivityAt: null,
+      createdAt: null,
+    });
+    return mcpOk({ contactId });
+  }
+
+  async sendDrip(input: SendDripInput): Promise<McpResult<SendDripOutput>> {
+    this.calls.push({ tool: 'sendDrip', input });
+    const enrollmentId = `sierra-enroll-${this.nextEnrollmentId++}`;
+    return mcpOk({ enrollmentId });
+  }
+
+  async updateStatus(
+    input: UpdateStatusInput,
+  ): Promise<McpResult<UpdateStatusOutput>> {
+    this.calls.push({ tool: 'updateStatus', input });
+    const lead = this.leads.get(input.leadId);
+    if (lead) {
+      this.leads.set(input.leadId, { ...lead, stage: input.status });
+    }
+    return mcpOk({ leadId: input.leadId, status: input.status });
   }
 }

@@ -157,6 +157,14 @@ interface SmokeAdapter {
   /** Build a workspace-bound server; `prefer` true ⇒ deterministic test impl. */
   buildServer(workspaceId: string, prefer: boolean): unknown;
   expectedTools: string[];
+  /**
+   * Customer-outbound write tools that ARE present but are approval-gated at
+   * the factory seam (`withGmailApproval` etc., per the wave-2 model). They are
+   * exempt from the "no send tool" guard because the no-outbound guarantee is
+   * honored by the GATE, not the tool's absence; each is proven to refuse
+   * without an approval in the connector's own `write-actions.test.ts`.
+   */
+  gatedWriteTools?: string[];
   /** The lightest read tool to poke the prod refusal path with. */
   refusalTool: string;
   refusalArgs: Record<string, unknown>;
@@ -180,6 +188,9 @@ const ADAPTERS: SmokeAdapter[] = [
     buildServer: (workspaceId, prefer): GmailMcpServer =>
       buildGmailMcpServer({ workspaceId, preferTestImpl: prefer }),
     expectedTools: ['gmail.list_messages', 'gmail.get_message', 'gmail.label_message', 'gmail.list_labels'],
+    // compose_from_template + schedule_send SEND mail — approval-gated at the
+    // factory (withGmailApproval), proven in gmail-mcp/write-actions.test.ts.
+    gatedWriteTools: ['gmail.compose_from_template', 'gmail.schedule_send'],
     refusalTool: 'list_messages',
     refusalArgs: { maxResults: 5 },
     runValueLoop: async (client) => {
@@ -341,8 +352,11 @@ const DEFERRED = new Set([
   'notion',
   // Buildium ships its own dedicated dispatch + contract coverage
   // (`lib/integrations/buildium-mcp/buildium-dispatch.test.ts` +
-  // `buildium-mcp.test.ts`) rather than a fixture in this manual registry —
-  // deferred here so the guardrail counts it as covered, not silently missed.
+  // `buildium-mcp.test.ts`) plus approval-gated write actions + a
+  // `write-actions.test.ts`, rather than a fixture in this manual registry —
+  // it has no wave-1/wave-2 marketplace smoke fixture yet, so it is deferred
+  // here to keep the coverage guardrail honest (counted as covered, not
+  // silently missed) until that fixture lands.
   'buildium',
 ]);
 
@@ -394,12 +408,20 @@ function runContract(entry: MarketplaceEntry, adapter: SmokeAdapter): void {
     }
   });
 
-  it('exposes no outbound/send tool (honors no-outbound architecture)', async () => {
+  it('exposes no UNGATED outbound/send tool (honors no-outbound architecture)', async () => {
+    // No-outbound is honored either by the absence of a send tool OR (per the
+    // wave-2 model) by a send tool being approval-gated at the factory. Any
+    // send-shaped tool that is NOT declared in `gatedWriteTools` is an offender.
+    const gated = new Set((adapter.gatedWriteTools ?? []).map((n) => n.toLowerCase()));
     const names = (await clientFor(adapter, TEST_WORKSPACE_ID, true).listTools()).map((t) =>
       t.name.toLowerCase(),
     );
-    const offenders = names.filter((n) => /(^|[._])send([._]|$)/.test(n));
-    assert.deepEqual(offenders, [], `connector must expose no send tool; found: ${offenders.join(', ')}`);
+    const offenders = names.filter((n) => /(^|[._])send([._]|$)/.test(n) && !gated.has(n));
+    assert.deepEqual(
+      offenders,
+      [],
+      `connector must expose no UNGATED send tool; found: ${offenders.join(', ')}`,
+    );
   });
 
   it('returns workspace-scoped data through the value loop (test impl)', async () => {

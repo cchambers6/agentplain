@@ -28,6 +28,7 @@ const contactIdSchema = z.object({ contactId: z.string().min(1) });
 
 const updateContactSchema = z.object({
   contactId: z.string().min(1),
+  pendingApprovalId: z.string().optional(),
   properties: z
     .object({
       firstname: z.string(),
@@ -51,6 +52,7 @@ const dealIdSchema = z.object({ dealId: z.string().min(1) });
 
 const updateDealSchema = z.object({
   dealId: z.string().min(1),
+  pendingApprovalId: z.string().optional(),
   properties: z
     .object({
       dealname: z.string(),
@@ -72,6 +74,62 @@ const createNoteSchema = z.object({
   objectType: z.enum(['contacts', 'deals', 'companies']),
   objectId: z.string().min(1),
   body: z.string().min(1),
+  pendingApprovalId: z.string().optional(),
+});
+
+// ── Write-action-depth schemas (all approval-gated) ────────────────────────
+
+const objectEnum = z.enum(['contacts', 'deals', 'companies']);
+
+const createDealSchema = z.object({
+  dealName: z.string().min(1),
+  amount: z.string().optional(),
+  pipeline: z.string().optional(),
+  dealStage: z.string().optional(),
+  closeDate: z.string().optional(),
+  associatedContactId: z.string().optional(),
+  pendingApprovalId: z.string().optional(),
+});
+
+const updateDealStageSchema = z.object({
+  dealId: z.string().min(1),
+  dealStage: z.string().min(1),
+  pipeline: z.string().optional(),
+  pendingApprovalId: z.string().optional(),
+});
+
+const logActivitySchema = z.object({
+  objectType: objectEnum,
+  objectId: z.string().min(1),
+  activityType: z.enum(['NOTE', 'CALL', 'EMAIL', 'MEETING']),
+  body: z.string().min(1),
+  timestamp: z.string().optional(),
+  pendingApprovalId: z.string().optional(),
+});
+
+const createTaskSchema = z.object({
+  title: z.string().min(1),
+  body: z.string().optional(),
+  dueDate: z.string().optional(),
+  ownerId: z.string().optional(),
+  associatedObjectType: objectEnum.optional(),
+  associatedObjectId: z.string().optional(),
+  pendingApprovalId: z.string().optional(),
+});
+
+const sendEmailTemplateSchema = z.object({
+  contactId: z.string().min(1),
+  recipientEmail: z.string().min(1),
+  emailId: z.string().min(1),
+  customProperties: z.record(z.string(), z.string()).optional(),
+  pendingApprovalId: z.string().optional(),
+});
+
+const sendSequenceEnrollmentSchema = z.object({
+  contactId: z.string().min(1),
+  sequenceId: z.string().min(1),
+  senderEmail: z.string().min(1),
+  pendingApprovalId: z.string().optional(),
 });
 
 export const HUBSPOT_TOOLS: ReadonlyArray<ToolRegistration<HubspotMcpServer>> = [
@@ -128,8 +186,50 @@ export const HUBSPOT_TOOLS: ReadonlyArray<ToolRegistration<HubspotMcpServer>> = 
   {
     name: `${HUBSPOT_NAMESPACE}.create_note`,
     description:
-      'Attach an internal note to a contact, deal, or company (objectType + objectId + body). Internal annotation only.',
+      'Attach an internal note to a contact, deal, or company (objectType + objectId + body). Approval-gated.',
     schema: createNoteSchema,
     invoke: (s, a) => s.createNote(createNoteSchema.parse(a)),
+  },
+  // ── Write-action-depth tools (approval-gated mutations) ──────────────────
+  {
+    name: `${HUBSPOT_NAMESPACE}.create_deal`,
+    description:
+      'Create a new deal (dealName required; amount/pipeline/dealStage/closeDate/associatedContactId optional). Approval-gated.',
+    schema: createDealSchema,
+    invoke: (s, a) => s.createDeal(createDealSchema.parse(a)),
+  },
+  {
+    name: `${HUBSPOT_NAMESPACE}.update_deal_stage`,
+    description: 'Move a deal to a new pipeline stage (dealId + dealStage). Approval-gated.',
+    schema: updateDealStageSchema,
+    invoke: (s, a) => s.updateDealStage(updateDealStageSchema.parse(a)),
+  },
+  {
+    name: `${HUBSPOT_NAMESPACE}.log_activity`,
+    description:
+      'Log an activity (NOTE/CALL/EMAIL/MEETING) against a contact, deal, or company. Approval-gated.',
+    schema: logActivitySchema,
+    invoke: (s, a) => s.logActivity(logActivitySchema.parse(a)),
+  },
+  {
+    name: `${HUBSPOT_NAMESPACE}.create_task`,
+    description:
+      'Create a task (title required; body/dueDate/ownerId/association optional). Approval-gated.',
+    schema: createTaskSchema,
+    invoke: (s, a) => s.createTask(createTaskSchema.parse(a)),
+  },
+  {
+    name: `${HUBSPOT_NAMESPACE}.send_email_template`,
+    description:
+      'Send a HubSpot transactional (template) email to a contact. OUTBOUND — approval-gated.',
+    schema: sendEmailTemplateSchema,
+    invoke: (s, a) => s.sendEmailTemplate(sendEmailTemplateSchema.parse(a)),
+  },
+  {
+    name: `${HUBSPOT_NAMESPACE}.send_sequence_enrollment`,
+    description:
+      'Enroll a contact into a HubSpot sales sequence. OUTBOUND — approval-gated.',
+    schema: sendSequenceEnrollmentSchema,
+    invoke: (s, a) => s.sendSequenceEnrollment(sendSequenceEnrollmentSchema.parse(a)),
   },
 ];

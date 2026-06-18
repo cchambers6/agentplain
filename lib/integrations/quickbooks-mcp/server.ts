@@ -51,6 +51,12 @@ import {
   type RecordPaymentInput,
   type RecordPaymentOutput,
 } from './types';
+import {
+  type CreateCustomerInput,
+  type CreateCustomerOutput,
+  type SendInvoiceInput,
+  type SendInvoiceOutput,
+} from './actions';
 
 const DEFAULT_COUNT = 25;
 const MAX_COUNT = 100;
@@ -207,6 +213,41 @@ export class ProdQuickbooksMcpServer implements QuickbooksMcpServer {
       if (!res.ok) return res;
       if (!res.value.Estimate) return mcpError('NOT_FOUND', `No estimate ${input.estimateId}`);
       return mcpOk({ estimate: toEstimateSummary(res.value.Estimate) });
+    });
+  }
+
+  async sendInvoice(input: SendInvoiceInput): Promise<McpResult<SendInvoiceOutput>> {
+    // OUTBOUND — emails the invoice to the customer. The approval gate
+    // (with-approval.ts) guarantees a recorded human grant before this runs.
+    if (!input.invoiceId) return mcpError('INVALID_ARGUMENT', 'sendInvoice requires invoiceId');
+    // QBO: POST /v3/company/{realmId}/invoice/{invoiceId}/send
+    //   optional ?sendTo=<email> overrides the invoice's BillEmail.
+    const qs = input.recipientEmail
+      ? `?${new URLSearchParams({ sendTo: input.recipientEmail }).toString()}`
+      : '';
+    const path = `/invoice/${encodeURIComponent(input.invoiceId)}/send${qs}`;
+    return this.withApi(async (ctx) => {
+      // QBO requires Content-Type application/octet-stream with an empty body
+      // for the send operation; an empty object body is accepted by our helper.
+      const res = await ctx.api<{ Invoice?: RawInvoice }>('POST', path, {});
+      if (!res.ok) return res;
+      return mcpOk({ invoiceId: input.invoiceId, status: 'sent' as const });
+    });
+  }
+
+  async createCustomer(input: CreateCustomerInput): Promise<McpResult<CreateCustomerOutput>> {
+    if (!input.displayName) return mcpError('INVALID_ARGUMENT', 'createCustomer requires displayName');
+    const body: Record<string, unknown> = { DisplayName: input.displayName };
+    if (input.email) body.PrimaryEmailAddr = { Address: input.email };
+    if (input.phone) body.PrimaryPhone = { FreeFormNumber: input.phone };
+    if (input.companyName) body.CompanyName = input.companyName;
+    return this.withApi(async (ctx) => {
+      const res = await ctx.api<{ Customer?: RawCustomer }>('POST', '/customer', body);
+      if (!res.ok) return res;
+      if (!res.value.Customer?.Id) {
+        return mcpError('MALFORMED_RESPONSE', 'customer.create returned no Customer id');
+      }
+      return mcpOk({ customerId: res.value.Customer.Id });
     });
   }
 

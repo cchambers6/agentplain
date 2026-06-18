@@ -19,9 +19,9 @@ function client() {
 }
 
 describe('salesforce-mcp dispatch', () => {
-  it('tools/list exposes the eight Salesforce tools, all namespaced', async () => {
+  it('tools/list exposes the twelve Salesforce tools, all namespaced', async () => {
     const tools = await client().listTools();
-    assert.equal(tools.length, 8);
+    assert.equal(tools.length, 12);
     assert.ok(tools.every((t) => t.name.startsWith('salesforce.')));
   });
 

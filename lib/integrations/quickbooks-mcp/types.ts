@@ -66,6 +66,8 @@ export interface CreateInvoiceInput {
   lines: InvoiceLineInput[];
   /** Optional ItemRef value applied to each SalesItemLineDetail. */
   itemId?: string;
+  /** Approval token once the operator has approved this exact invoice draft. */
+  pendingApprovalId?: string;
 }
 
 export interface CreateInvoiceOutput {
@@ -95,6 +97,8 @@ export interface RecordPaymentInput {
   amount: number;
   /** Human-approval token from the approval queue. REQUIRED — moving money. */
   approvalToken: string;
+  /** Shared-gate approval token once the operator has approved this exact payment. */
+  pendingApprovalId?: string;
 }
 
 export interface RecordPaymentOutput {
@@ -200,6 +204,15 @@ export interface GetEstimateOutput {
   estimate: EstimateSummary;
 }
 
+// New write-action I/O types live in ./actions (the gate-facing source of
+// truth); imported here so the server interface can reference them.
+import type {
+  SendInvoiceInput,
+  SendInvoiceOutput,
+  CreateCustomerInput,
+  CreateCustomerOutput,
+} from './actions';
+
 // ── Interface every implementation honors ──────────────────────────────────
 
 export interface QuickbooksMcpServer extends McpServerBase {
@@ -215,6 +228,12 @@ export interface QuickbooksMcpServer extends McpServerBase {
   listEstimates(input: ListEstimatesInput): Promise<QuickbooksMcpResult<ListEstimatesOutput>>;
   /** Fetch a single Estimate by its QBO entity id. */
   getEstimate(input: GetEstimateInput): Promise<QuickbooksMcpResult<GetEstimateOutput>>;
+
+  // ── Write-action-depth mutations (all approval-gated at the factory) ──
+  /** Email an existing invoice to the customer (OUTBOUND). Approval-gated. */
+  sendInvoice(input: SendInvoiceInput): Promise<QuickbooksMcpResult<SendInvoiceOutput>>;
+  /** Create a new customer in the books. Approval-gated. */
+  createCustomer(input: CreateCustomerInput): Promise<QuickbooksMcpResult<CreateCustomerOutput>>;
 }
 
 export const QUICKBOOKS_NAMESPACE = 'quickbooks';

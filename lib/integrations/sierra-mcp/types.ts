@@ -16,13 +16,23 @@
  *
  * Per `project_no_outbound_architecture.md`: `createNote` and `addTag`
  * are INTERNAL annotations on the broker's own CRM — never customer-
- * facing outbound.
+ * facing outbound. `sendDrip` (write-action wave) IS outbound. All
+ * mutating methods are approval-gated at the factory seam
+ * (`withSierraApproval`), so an ungated Sierra server can't be obtained.
  *
  * Per `feedback_runner_portability.md`: two impls — `ProdSierraMcpServer`
  * (production REST) and `RecordingSierraMcpServer` (test).
  */
 
 import type { McpResult } from '@/lib/integrations/mcp-core';
+import type {
+  CreateContactInput,
+  CreateContactOutput,
+  SendDripInput,
+  SendDripOutput,
+  UpdateStatusInput,
+  UpdateStatusOutput,
+} from './actions';
 
 // ── DTOs the MCP returns ──────────────────────────────────────────────
 
@@ -73,6 +83,8 @@ export interface CreateNoteInput {
    *  per-note privacy flag; we default to internal so triage notes
    *  never accidentally surface to a customer-facing portal view. */
   isPrivate?: boolean;
+  /** Approval token once the operator has approved this exact note. */
+  pendingApprovalId?: string;
 }
 export interface CreateNoteOutput {
   noteId: string;
@@ -81,6 +93,8 @@ export interface CreateNoteOutput {
 export interface AddTagInput {
   leadId: string;
   tags: string[];
+  /** Approval token once the operator has approved this exact tag set. */
+  pendingApprovalId?: string;
 }
 export interface AddTagOutput {
   applied: string[];
@@ -117,4 +131,13 @@ export interface SierraMcpServer {
   getPipelineStage(
     input: GetPipelineStageInput,
   ): Promise<McpResult<GetPipelineStageOutput>>;
+
+  // ── Write-action-depth mutations (approval-gated) ──────────────────────
+  createContact(
+    input: CreateContactInput,
+  ): Promise<McpResult<CreateContactOutput>>;
+  sendDrip(input: SendDripInput): Promise<McpResult<SendDripOutput>>;
+  updateStatus(
+    input: UpdateStatusInput,
+  ): Promise<McpResult<UpdateStatusOutput>>;
 }

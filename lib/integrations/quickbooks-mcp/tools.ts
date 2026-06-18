@@ -36,6 +36,7 @@ const createInvoiceSchema = z.object({
   customerId: z.string().min(1),
   lines: z.array(invoiceLineSchema).min(1),
   itemId: z.string().optional(),
+  pendingApprovalId: z.string().optional(),
 });
 
 const listCustomersSchema = z.object({
@@ -46,6 +47,23 @@ const recordPaymentSchema = z.object({
   customerId: z.string().min(1),
   amount: z.number().positive(),
   approvalToken: z.string().optional(),
+  pendingApprovalId: z.string().optional(),
+});
+
+// ── Write-action-depth schemas (all approval-gated) ────────────────────────
+
+const sendInvoiceSchema = z.object({
+  invoiceId: z.string().min(1),
+  recipientEmail: z.string().optional(),
+  pendingApprovalId: z.string().optional(),
+});
+
+const createCustomerSchema = z.object({
+  displayName: z.string().min(1),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  companyName: z.string().optional(),
+  pendingApprovalId: z.string().optional(),
 });
 
 const profitAndLossSchema = z.object({
@@ -102,6 +120,7 @@ export const QUICKBOOKS_TOOLS: ReadonlyArray<ToolRegistration<QuickbooksMcpServe
         customerId: parsed.customerId,
         amount: parsed.amount,
         approvalToken: parsed.approvalToken ?? '',
+        pendingApprovalId: parsed.pendingApprovalId,
       });
     },
   },
@@ -129,5 +148,20 @@ export const QUICKBOOKS_TOOLS: ReadonlyArray<ToolRegistration<QuickbooksMcpServe
     description: 'Get a single Estimate by its QuickBooks entity id. Read-only — no money moves.',
     schema: estimateIdSchema,
     invoke: (s, a) => s.getEstimate(estimateIdSchema.parse(a)),
+  },
+  // ── Write-action-depth tools (approval-gated mutations) ──────────────────
+  {
+    name: `${QUICKBOOKS_NAMESPACE}.send_invoice`,
+    description:
+      'Email an existing invoice to the customer (invoiceId; optional recipientEmail override). OUTBOUND — approval-gated.',
+    schema: sendInvoiceSchema,
+    invoke: (s, a) => s.sendInvoice(sendInvoiceSchema.parse(a)),
+  },
+  {
+    name: `${QUICKBOOKS_NAMESPACE}.create_customer`,
+    description:
+      'Create a new customer (displayName required; email/phone/companyName optional). Approval-gated.',
+    schema: createCustomerSchema,
+    invoke: (s, a) => s.createCustomer(createCustomerSchema.parse(a)),
   },
 ];

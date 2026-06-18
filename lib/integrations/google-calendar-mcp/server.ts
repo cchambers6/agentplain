@@ -34,6 +34,14 @@ import {
   calendarError,
   calendarOk,
 } from './types';
+import type {
+  BookMeetingInput,
+  BookMeetingOutput,
+  RescheduleMeetingInput,
+  RescheduleMeetingOutput,
+  FindAvailabilityInput,
+  FindAvailabilityOutput,
+} from './actions';
 
 const DEFAULT_MAX_RESULTS = 250;
 const MAX_PAGE_SIZE = 2500;
@@ -74,6 +82,151 @@ export class ProdGoogleCalendarMcpServer implements GoogleCalendarMcpServer {
           .map(parseGoogleEvent)
           .filter((e): e is CalendarEventDto => e !== null);
         return calendarOk({ events });
+      } catch (err) {
+        return mapGoogleApiError(err);
+      }
+    });
+  }
+
+  async findAvailability(
+    input: FindAvailabilityInput,
+  ): Promise<GoogleCalendarMcpResult<FindAvailabilityOutput>> {
+    const timeMin = new Date(input.timeMin);
+    const timeMax = new Date(input.timeMax);
+    if (Number.isNaN(timeMin.getTime()) || Number.isNaN(timeMax.getTime())) {
+      return calendarError(
+        'INVALID_ARGUMENT',
+        'findAvailability requires ISO 8601 timeMin + timeMax',
+      );
+    }
+    if (timeMax.getTime() <= timeMin.getTime()) {
+      return calendarError(
+        'INVALID_ARGUMENT',
+        'findAvailability requires timeMax strictly after timeMin',
+      );
+    }
+    const calendarIds =
+      input.calendarIds && input.calendarIds.length > 0
+        ? input.calendarIds
+        : ['primary'];
+
+    return this.withClient(async (client) => {
+      try {
+        const res = await client.freebusy.query({
+          requestBody: {
+            timeMin: timeMin.toISOString(),
+            timeMax: timeMax.toISOString(),
+            items: calendarIds.map((id) => ({ id })),
+          },
+        });
+        const calendars = res.data.calendars ?? {};
+        const busy: { start: string; end: string }[] = [];
+        for (const cal of Object.values(calendars)) {
+          for (const slot of cal.busy ?? []) {
+            if (slot.start && slot.end) {
+              busy.push({ start: slot.start, end: slot.end });
+            }
+          }
+        }
+        return calendarOk({ busy });
+      } catch (err) {
+        return mapGoogleApiError(err);
+      }
+    });
+  }
+
+  async bookMeeting(
+    input: BookMeetingInput,
+  ): Promise<GoogleCalendarMcpResult<BookMeetingOutput>> {
+    if (!input.summary?.trim()) {
+      return calendarError('INVALID_ARGUMENT', 'bookMeeting requires a summary');
+    }
+    const start = new Date(input.start);
+    const end = new Date(input.end);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return calendarError(
+        'INVALID_ARGUMENT',
+        'bookMeeting requires ISO 8601 start + end',
+      );
+    }
+    if (end.getTime() <= start.getTime()) {
+      return calendarError(
+        'INVALID_ARGUMENT',
+        'bookMeeting requires end strictly after start',
+      );
+    }
+    const calendarId = input.calendarId?.trim() || 'primary';
+
+    return this.withClient(async (client) => {
+      try {
+        const res = await client.events.insert({
+          calendarId,
+          requestBody: {
+            summary: input.summary,
+            description: input.description,
+            start: { dateTime: start.toISOString() },
+            end: { dateTime: end.toISOString() },
+            attendees: input.attendees?.map((email) => ({ email })),
+          },
+        });
+        if (!res.data.id) {
+          return calendarError(
+            'MALFORMED_RESPONSE',
+            'Google events.insert returned no event id',
+          );
+        }
+        return calendarOk({
+          eventId: res.data.id,
+          htmlLink: res.data.htmlLink ?? undefined,
+        });
+      } catch (err) {
+        return mapGoogleApiError(err);
+      }
+    });
+  }
+
+  async rescheduleMeeting(
+    input: RescheduleMeetingInput,
+  ): Promise<GoogleCalendarMcpResult<RescheduleMeetingOutput>> {
+    if (!input.eventId?.trim()) {
+      return calendarError(
+        'INVALID_ARGUMENT',
+        'rescheduleMeeting requires an eventId',
+      );
+    }
+    const start = new Date(input.start);
+    const end = new Date(input.end);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return calendarError(
+        'INVALID_ARGUMENT',
+        'rescheduleMeeting requires ISO 8601 start + end',
+      );
+    }
+    if (end.getTime() <= start.getTime()) {
+      return calendarError(
+        'INVALID_ARGUMENT',
+        'rescheduleMeeting requires end strictly after start',
+      );
+    }
+    const calendarId = input.calendarId?.trim() || 'primary';
+
+    return this.withClient(async (client) => {
+      try {
+        const res = await client.events.patch({
+          calendarId,
+          eventId: input.eventId,
+          requestBody: {
+            start: { dateTime: start.toISOString() },
+            end: { dateTime: end.toISOString() },
+          },
+        });
+        if (!res.data.id) {
+          return calendarError(
+            'MALFORMED_RESPONSE',
+            'Google events.patch returned no event id',
+          );
+        }
+        return calendarOk({ eventId: res.data.id });
       } catch (err) {
         return mapGoogleApiError(err);
       }

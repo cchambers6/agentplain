@@ -41,6 +41,20 @@ import type {
   UpdateDealInput,
   UpdateDealOutput,
 } from './types';
+import type {
+  CreateDealInput,
+  CreateDealOutput,
+  UpdateDealStageInput,
+  UpdateDealStageOutput,
+  LogActivityInput,
+  LogActivityOutput,
+  CreateTaskInput,
+  CreateTaskOutput,
+  SendEmailTemplateInput,
+  SendEmailTemplateOutput,
+  SendSequenceEnrollmentInput,
+  SendSequenceEnrollmentOutput,
+} from './actions';
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
@@ -276,6 +290,166 @@ export class ProdHubspotMcpServer implements HubspotMcpServer {
     });
   }
 
+  // ── Write-action-depth mutations ─────────────────────────────────────
+  // Each is approval-gated at the factory (with-approval.ts); the methods
+  // themselves only perform the REST call once the gate has let them through.
+  // API: HubSpot CRM v3 objects + transactional/sequences endpoints
+  // (https://developers.hubspot.com/docs/api/crm/deals — read 2026-06-18).
+
+  async createDeal(input: CreateDealInput): Promise<McpResult<CreateDealOutput>> {
+    if (!input.dealName || input.dealName.trim().length === 0) {
+      return mcpError('INVALID_ARGUMENT', 'createDeal requires a dealName');
+    }
+    const properties: Record<string, string> = { dealname: input.dealName };
+    if (input.amount !== undefined) properties.amount = input.amount;
+    if (input.pipeline !== undefined) properties.pipeline = input.pipeline;
+    if (input.dealStage !== undefined) properties.dealstage = input.dealStage;
+    if (input.closeDate !== undefined) properties.closedate = input.closeDate;
+    return this.withApi(async (api) => {
+      const body: Record<string, unknown> = { properties };
+      if (input.associatedContactId) {
+        body.associations = [
+          {
+            to: { id: input.associatedContactId },
+            types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 3 }],
+          },
+        ];
+      }
+      const res = await api<{ id?: string }>('POST', '/crm/v3/objects/deals', body);
+      if (!res.ok) return res;
+      if (!res.value.id) return mcpError('MALFORMED_RESPONSE', 'HubSpot deal.create returned no id');
+      return mcpOk({ dealId: res.value.id });
+    });
+  }
+
+  async updateDealStage(
+    input: UpdateDealStageInput,
+  ): Promise<McpResult<UpdateDealStageOutput>> {
+    if (!input.dealId) return mcpError('INVALID_ARGUMENT', 'updateDealStage requires dealId');
+    if (!input.dealStage) return mcpError('INVALID_ARGUMENT', 'updateDealStage requires dealStage');
+    return this.withApi(async (api) => {
+      const properties: Record<string, string> = { dealstage: input.dealStage };
+      if (input.pipeline !== undefined) properties.pipeline = input.pipeline;
+      const res = await api<{ id?: string }>(
+        'PATCH',
+        `/crm/v3/objects/deals/${encodeURIComponent(input.dealId)}`,
+        { properties },
+      );
+      if (!res.ok) return res;
+      return mcpOk({ dealId: res.value.id ?? input.dealId, dealStage: input.dealStage });
+    });
+  }
+
+  async logActivity(input: LogActivityInput): Promise<McpResult<LogActivityOutput>> {
+    if (!input.objectId) return mcpError('INVALID_ARGUMENT', 'logActivity requires objectId');
+    if (!input.body || input.body.trim().length === 0) {
+      return mcpError('INVALID_ARGUMENT', 'logActivity requires a non-empty body');
+    }
+    const ts = input.timestamp ?? new Date().toISOString();
+    const { path, properties, assocType } = activitySpec(input, ts);
+    return this.withApi(async (api) => {
+      const body = {
+        properties,
+        associations: [
+          {
+            to: { id: input.objectId },
+            types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: assocType }],
+          },
+        ],
+      };
+      const res = await api<{ id?: string }>('POST', path, body);
+      if (!res.ok) return res;
+      if (!res.value.id) return mcpError('MALFORMED_RESPONSE', 'HubSpot activity.create returned no id');
+      return mcpOk({ activityId: res.value.id, activityType: input.activityType });
+    });
+  }
+
+  async createTask(input: CreateTaskInput): Promise<McpResult<CreateTaskOutput>> {
+    if (!input.title || input.title.trim().length === 0) {
+      return mcpError('INVALID_ARGUMENT', 'createTask requires a title');
+    }
+    const properties: Record<string, string> = {
+      hs_task_subject: input.title,
+      hs_task_status: 'NOT_STARTED',
+      hs_timestamp: input.dueDate ?? new Date().toISOString(),
+    };
+    if (input.body !== undefined) properties.hs_task_body = input.body;
+    if (input.ownerId !== undefined) properties.hubspot_owner_id = input.ownerId;
+    return this.withApi(async (api) => {
+      const body: Record<string, unknown> = { properties };
+      if (input.associatedObjectId && input.associatedObjectType) {
+        body.associations = [
+          {
+            to: { id: input.associatedObjectId },
+            types: [
+              {
+                associationCategory: 'HUBSPOT_DEFINED',
+                associationTypeId: taskAssociationTypeId(input.associatedObjectType),
+              },
+            ],
+          },
+        ];
+      }
+      const res = await api<{ id?: string }>('POST', '/crm/v3/objects/tasks', body);
+      if (!res.ok) return res;
+      if (!res.value.id) return mcpError('MALFORMED_RESPONSE', 'HubSpot task.create returned no id');
+      return mcpOk({ taskId: res.value.id });
+    });
+  }
+
+  async sendEmailTemplate(
+    input: SendEmailTemplateInput,
+  ): Promise<McpResult<SendEmailTemplateOutput>> {
+    if (!input.emailId) return mcpError('INVALID_ARGUMENT', 'sendEmailTemplate requires emailId');
+    if (!input.recipientEmail) {
+      return mcpError('INVALID_ARGUMENT', 'sendEmailTemplate requires recipientEmail');
+    }
+    return this.withApi(async (api) => {
+      const body = {
+        emailId: Number.isNaN(Number(input.emailId)) ? input.emailId : Number(input.emailId),
+        message: { to: input.recipientEmail },
+        customProperties: input.customProperties ?? {},
+      };
+      const res = await api<{ statusId?: string }>(
+        'POST',
+        '/marketing/v3/transactional/single-email/send',
+        body,
+      );
+      if (!res.ok) return res;
+      if (!res.value.statusId) {
+        return mcpError('MALFORMED_RESPONSE', 'HubSpot single-email/send returned no statusId');
+      }
+      return mcpOk({ statusId: res.value.statusId });
+    });
+  }
+
+  async sendSequenceEnrollment(
+    input: SendSequenceEnrollmentInput,
+  ): Promise<McpResult<SendSequenceEnrollmentOutput>> {
+    if (!input.sequenceId) {
+      return mcpError('INVALID_ARGUMENT', 'sendSequenceEnrollment requires sequenceId');
+    }
+    if (!input.contactId) {
+      return mcpError('INVALID_ARGUMENT', 'sendSequenceEnrollment requires contactId');
+    }
+    return this.withApi(async (api) => {
+      const body = {
+        sequenceId: input.sequenceId,
+        contactId: input.contactId,
+        senderEmail: input.senderEmail,
+      };
+      const res = await api<{ enrollmentId?: string; id?: string }>(
+        'POST',
+        '/automation/v4/sequences/enrollments',
+        body,
+      );
+      if (!res.ok) return res;
+      const id = res.value.enrollmentId ?? res.value.id;
+      if (!id) return mcpError('MALFORMED_RESPONSE', 'HubSpot sequence enrollment returned no id');
+      return mcpOk({ enrollmentId: id });
+    });
+  }
+
   // ── internals ───────────────────────────────────────────────────────
 
   private async withApi<T>(
@@ -426,6 +600,66 @@ function noteAssociationTypeId(objectType: 'contacts' | 'deals' | 'companies'): 
     case 'companies':
       return 190;
   }
+}
+
+/** HUBSPOT_DEFINED association type ids for tasks → object. */
+function taskAssociationTypeId(objectType: 'contacts' | 'deals' | 'companies'): number {
+  switch (objectType) {
+    case 'contacts':
+      return 204;
+    case 'deals':
+      return 216;
+    case 'companies':
+      return 192;
+  }
+}
+
+/**
+ * Map a logged activity to its HubSpot engagement object endpoint, the
+ * minimal property set that object requires, and the activity→object
+ * association type id. Notes/calls/emails/meetings are distinct CRM objects.
+ */
+function activitySpec(
+  input: import('./actions').LogActivityInput,
+  timestamp: string,
+): { path: string; properties: Record<string, string>; assocType: number } {
+  switch (input.activityType) {
+    case 'CALL':
+      return {
+        path: '/crm/v3/objects/calls',
+        properties: { hs_call_body: input.body, hs_timestamp: timestamp },
+        assocType: callAssoc(input.objectType),
+      };
+    case 'EMAIL':
+      return {
+        path: '/crm/v3/objects/emails',
+        properties: { hs_email_text: input.body, hs_timestamp: timestamp },
+        assocType: emailAssoc(input.objectType),
+      };
+    case 'MEETING':
+      return {
+        path: '/crm/v3/objects/meetings',
+        properties: { hs_meeting_body: input.body, hs_timestamp: timestamp },
+        assocType: meetingAssoc(input.objectType),
+      };
+    case 'NOTE':
+    default:
+      return {
+        path: '/crm/v3/objects/notes',
+        properties: { hs_note_body: input.body, hs_timestamp: timestamp },
+        assocType: noteAssociationTypeId(input.objectType),
+      };
+  }
+}
+
+function callAssoc(o: 'contacts' | 'deals' | 'companies'): number {
+  return o === 'contacts' ? 194 : o === 'deals' ? 206 : 182;
+}
+function emailAssoc(o: 'contacts' | 'deals' | 'companies'): number {
+  return o === 'contacts' ? 198 : o === 'deals' ? 210 : 186;
+}
+function meetingAssoc(o: 'contacts' | 'deals' | 'companies'): number {
+  return o === 'contacts' ? 200 : o === 'deals' ? 212 : 188;
 }
 
 function clampLimit(value: number | undefined): number {

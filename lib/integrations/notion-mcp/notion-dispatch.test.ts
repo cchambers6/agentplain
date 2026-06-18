@@ -20,9 +20,9 @@ function client() {
 }
 
 describe('notion-mcp dispatch', () => {
-  it('tools/list exposes the seven Notion tools, all namespaced', async () => {
+  it('tools/list exposes the eight Notion tools, all namespaced', async () => {
     const tools = await client().listTools();
-    assert.equal(tools.length, 7);
+    assert.equal(tools.length, 8);
     assert.ok(tools.every((t) => t.name.startsWith('notion.')));
   });
 

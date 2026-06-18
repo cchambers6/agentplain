@@ -8,6 +8,14 @@
 
 import { mcpError, mcpOk, type McpResult } from '@/lib/integrations/mcp-core';
 import type {
+  CreateLeadInput,
+  CreateLeadOutput,
+  ScheduleActionPlanInput,
+  ScheduleActionPlanOutput,
+  SendTextTemplateInput,
+  SendTextTemplateOutput,
+} from './actions';
+import type {
   AddTagInput,
   AddTagOutput,
   CreateNoteInput,
@@ -47,7 +55,10 @@ export interface RecordedFubCall {
     | 'listPipelines'
     | 'getPipelineStage'
     | 'listUsers'
-    | 'listLeadLists';
+    | 'listLeadLists'
+    | 'createLead'
+    | 'sendTextTemplate'
+    | 'scheduleActionPlan';
   input: unknown;
 }
 
@@ -60,6 +71,9 @@ export class RecordingFollowUpBossMcpServer implements FollowUpBossMcpServer {
   private readonly users: FubUserSummary[];
   private readonly leadLists: FubLeadListSummary[];
   private nextNoteId = 1000;
+  private nextLeadId = 5000;
+  private nextMessageId = 7000;
+  private nextActionPlanPersonId = 9000;
 
   constructor(args: {
     workspaceId: string;
@@ -153,5 +167,32 @@ export class RecordingFollowUpBossMcpServer implements FollowUpBossMcpServer {
     this.calls.push({ tool: 'listLeadLists', input });
     const limit = input.limit ?? 25;
     return mcpOk({ lists: this.leadLists.slice(0, limit) });
+  }
+
+  async createLead(
+    input: CreateLeadInput,
+  ): Promise<McpResult<CreateLeadOutput>> {
+    this.calls.push({ tool: 'createLead', input });
+    return mcpOk({ leadId: `lead-${this.nextLeadId++}` });
+  }
+
+  async sendTextTemplate(
+    input: SendTextTemplateInput,
+  ): Promise<McpResult<SendTextTemplateOutput>> {
+    this.calls.push({ tool: 'sendTextTemplate', input });
+    if (!this.leads.has(input.personId)) {
+      return mcpError('NOT_FOUND', `No lead ${input.personId}`);
+    }
+    return mcpOk({ messageId: `msg-${this.nextMessageId++}` });
+  }
+
+  async scheduleActionPlan(
+    input: ScheduleActionPlanInput,
+  ): Promise<McpResult<ScheduleActionPlanOutput>> {
+    this.calls.push({ tool: 'scheduleActionPlan', input });
+    if (!this.leads.has(input.personId)) {
+      return mcpError('NOT_FOUND', `No lead ${input.personId}`);
+    }
+    return mcpOk({ actionPlanPersonId: `app-${this.nextActionPlanPersonId++}` });
   }
 }

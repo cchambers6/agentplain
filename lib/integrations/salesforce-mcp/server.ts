@@ -19,8 +19,16 @@ import { mcpError, mcpOk, type McpResult } from '@/lib/integrations/mcp-core';
 import { SALESFORCE_API_VERSION } from '@/lib/integrations/salesforce/oauth';
 import { resolveSalesforceCredential, type ResolvedSalesforce } from './auth';
 import type {
+  CreateOpportunityInput,
+  CreateOpportunityOutput,
   CreateTaskInput,
   CreateTaskOutput,
+  LogCallInput,
+  LogCallOutput,
+  SendEmailTemplateInput,
+  SendEmailTemplateOutput,
+  UpdateRecordInput,
+  UpdateRecordOutput,
   GetAccountInput,
   GetAccountOutput,
   GetLeadInput,
@@ -151,6 +159,89 @@ export class ProdSalesforceMcpServer implements SalesforceMcpServer {
       const res = await ctx.api<{ id?: string; success?: boolean }>('POST', '/sobjects/Task', body);
       if (!res.ok) return res;
       if (!res.value.id) return mcpError('MALFORMED_RESPONSE', 'Salesforce Task create returned no id');
+      return mcpOk({ taskId: res.value.id });
+    });
+  }
+
+  // ── Write-action-depth mutations ──────────────────────────────────────
+
+  async createOpportunity(input: CreateOpportunityInput): Promise<McpResult<CreateOpportunityOutput>> {
+    if (!input.name || input.name.trim().length === 0) {
+      return mcpError('INVALID_ARGUMENT', 'createOpportunity requires a non-empty name');
+    }
+    if (!input.stageName) return mcpError('INVALID_ARGUMENT', 'createOpportunity requires stageName');
+    if (!input.closeDate) return mcpError('INVALID_ARGUMENT', 'createOpportunity requires closeDate');
+    const body: Record<string, unknown> = {
+      Name: input.name,
+      StageName: input.stageName,
+      CloseDate: input.closeDate,
+    };
+    if (typeof input.amount === 'number') body.Amount = input.amount;
+    if (input.accountId) body.AccountId = input.accountId;
+    return this.withApi(async (ctx) => {
+      const res = await ctx.api<{ id?: string; success?: boolean }>('POST', '/sobjects/Opportunity', body);
+      if (!res.ok) return res;
+      if (!res.value.id) return mcpError('MALFORMED_RESPONSE', 'Salesforce Opportunity create returned no id');
+      return mcpOk({ opportunityId: res.value.id });
+    });
+  }
+
+  async updateRecord(input: UpdateRecordInput): Promise<McpResult<UpdateRecordOutput>> {
+    if (!input.sobjectType) return mcpError('INVALID_ARGUMENT', 'updateRecord requires sobjectType');
+    if (!input.recordId) return mcpError('INVALID_ARGUMENT', 'updateRecord requires recordId');
+    if (!input.fields || Object.keys(input.fields).length === 0) {
+      return mcpError('INVALID_ARGUMENT', 'updateRecord requires at least one field');
+    }
+    const path = `/sobjects/${encodeURIComponent(input.sobjectType)}/${encodeURIComponent(input.recordId)}`;
+    return this.withApi(async (ctx) => {
+      // Salesforce PATCH to update an sObject returns 204 No Content on success.
+      const res = await ctx.api<Record<string, never>>('PATCH', path, input.fields);
+      if (!res.ok) return res;
+      return mcpOk({ recordId: input.recordId });
+    });
+  }
+
+  async sendEmailTemplate(input: SendEmailTemplateInput): Promise<McpResult<SendEmailTemplateOutput>> {
+    if (!input.recipientEmail) return mcpError('INVALID_ARGUMENT', 'sendEmailTemplate requires recipientEmail');
+    if (!input.templateId) return mcpError('INVALID_ARGUMENT', 'sendEmailTemplate requires templateId');
+    const body: Record<string, unknown> = {
+      inputs: [
+        {
+          emailAddresses: input.recipientEmail,
+          templateId: input.templateId,
+          ...(input.targetObjectId ? { targetObjectId: input.targetObjectId } : {}),
+        },
+      ],
+    };
+    return this.withApi(async (ctx) => {
+      const res = await ctx.api<Array<{ outputValues?: { statusId?: string }; isSuccess?: boolean }>>(
+        'POST',
+        '/actions/standard/emailSimple',
+        body,
+      );
+      if (!res.ok) return res;
+      const statusId = Array.isArray(res.value) ? res.value[0]?.outputValues?.statusId : undefined;
+      return mcpOk({ statusId, queued: true });
+    });
+  }
+
+  async logCall(input: LogCallInput): Promise<McpResult<LogCallOutput>> {
+    if (!input.subject || input.subject.trim().length === 0) {
+      return mcpError('INVALID_ARGUMENT', 'logCall requires a non-empty subject');
+    }
+    const body: Record<string, unknown> = {
+      Subject: input.subject,
+      TaskSubtype: 'Call',
+      Type: 'Call',
+      Status: 'Completed',
+    };
+    if (input.description) body.Description = input.description;
+    if (input.whoId) body.WhoId = input.whoId;
+    if (input.whatId) body.WhatId = input.whatId;
+    return this.withApi(async (ctx) => {
+      const res = await ctx.api<{ id?: string; success?: boolean }>('POST', '/sobjects/Task', body);
+      if (!res.ok) return res;
+      if (!res.value.id) return mcpError('MALFORMED_RESPONSE', 'Salesforce Task (Call) create returned no id');
       return mcpOk({ taskId: res.value.id });
     });
   }

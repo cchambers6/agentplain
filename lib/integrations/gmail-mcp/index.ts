@@ -11,8 +11,13 @@
  * No call site outside this file branches on impl name.
  */
 
+import {
+  buildConnectorApprovalDeps,
+  type ConnectorApprovalDeps,
+} from '@/lib/integrations/approval';
 import { ProdGmailMcpServer } from './server';
 import { TestGmailMcpServer, type TestGmailSeed } from './test-server';
+import { withGmailApproval } from './with-approval';
 import type { GmailMcpServer } from './types';
 
 export interface GmailMcpFactoryArgs {
@@ -21,20 +26,30 @@ export interface GmailMcpFactoryArgs {
   preferTestImpl?: boolean;
   /** Optional seed for the test impl. Ignored by prod. */
   testSeed?: TestGmailSeed;
+  /**
+   * Connector approval gate + audit sink. Defaults to the env-switched deps
+   * (`buildConnectorApprovalDeps()`); tests inject an in-memory gate so they
+   * can seed grants deterministically.
+   */
+  deps?: ConnectorApprovalDeps;
 }
 
+/**
+ * Build the Gmail MCP server. Every mutating method (draftMessage,
+ * labelMessage, composeFromTemplate, scheduleSend, archive) is approval-gated
+ * at this seam — an ungated server can't be obtained. OUTBOUND sends never
+ * fire without a recorded approval (`project_no_outbound_architecture.md`).
+ */
 export function buildGmailMcpServer(args: GmailMcpFactoryArgs): GmailMcpServer {
   const useTest =
     args.preferTestImpl === true ||
     process.env.TEST_GMAIL_MCP === 'true' ||
     process.env.INTEGRATIONS_PROVIDER === 'test';
-  if (useTest) {
-    return new TestGmailMcpServer({
-      workspaceId: args.workspaceId,
-      seed: args.testSeed,
-    });
-  }
-  return new ProdGmailMcpServer({ workspaceId: args.workspaceId });
+  const deps = args.deps ?? buildConnectorApprovalDeps();
+  const inner = useTest
+    ? new TestGmailMcpServer({ workspaceId: args.workspaceId, seed: args.testSeed })
+    : new ProdGmailMcpServer({ workspaceId: args.workspaceId });
+  return withGmailApproval(inner, deps);
 }
 
 export type { GmailMcpServer } from './types';

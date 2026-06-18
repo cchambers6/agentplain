@@ -171,3 +171,45 @@ PR: `feat(memory): RLS isolation + tiering + customer-hosted storage option`
   the **memory access audit log** are additive and on by default in the data
   model; the cold-tier sweep is opt-in (no cron wired yet — pinned entries
   never leave hot, and no COLD entries exist until you run the sweep).
+---
+
+## Data minimization (PR: `feat/data-minimization-ephemeral-pass-through-2026-06-18`)
+
+- [ ] **Sign off on per-tier default chat retention.** The build ships a
+  conservative, data-minimizing default and tier-capped extension (in
+  `lib/plaino/chat-retention.ts`): **default = 2 days for all tiers**; customer
+  may opt up to a ceiling of **Regular 30 / Partner 90 / Max 365 days**. The
+  plan floated "Solo: 1 day? Partner: 7? Max: customer choice?" — confirm the
+  defaults + ceilings, or adjust the one constant block. (The default is
+  deliberately short to honor "we don't hoard your conversations"; ceilings are
+  generous so power users can opt in.)
+
+- [ ] **Counsel review of the data-minimization commitment language.** The new
+  customer-facing copy ("we read your data in-flight and store none of it",
+  "exactly what we store", the connect-time disclosure) must be **deliverable,
+  not aspirational**. It is true as built (connector record bodies are never
+  persisted; the indexed-documents opt-in is the disclosed exception), but
+  counsel should bless the phrasing before it anchors a marketing claim.
+  Surfaces: `app/(product)/app/workspace/[id]/settings/data/storage/page.tsx`,
+  `components/integrations/ConnectStorageDisclosure.tsx`,
+  `docs/architecture/data-storage-inventory-2026-06-18.md`.
+
+- [ ] **Decide: intermediate-processing / connector cache → Redis or
+  in-memory?** The ephemeral pass-through ships an **in-memory** short-TTL
+  cache (`InMemoryEphemeralCache`, ≤30 min, lost on container restart) behind a
+  swap seam (`IEphemeralCache`). Moving to **Upstash Redis** (~$10/mo) would
+  let the cache survive restarts and be shared across instances — at the cost
+  of holding connector data in a (still short-lived, still off-DB) external
+  store. In-memory is the more data-minimal default; Redis is the
+  performance/scale choice. Pick one.
+
+- [ ] **Approval-content redaction window.** Decided approval items keep their
+  draft content for **7 days** after the decision, then the content (not the
+  record) is redacted. Confirm 7 days is the right balance between "let the
+  customer review recent decisions" and "don't be a long-term content store."
+
+- [ ] **Lead-conversation retention (`PlainoConversation`, MARKETING mode).**
+  Anonymous marketing-widget conversations are out of scope for the workspace
+  chat-retention cron (no workspaceId). Decide a retention policy for
+  pre-conversion lead conversations (sales/marketing may want them) — tracked
+  as a follow-up, not implemented here.

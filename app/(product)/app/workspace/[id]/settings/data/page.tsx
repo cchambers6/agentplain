@@ -81,6 +81,8 @@ export default async function DataControlsPage({
 
       {flash ? <FlashBanner kind={flash} /> : null}
 
+      <WhatWeStoreSection workspaceId={workspaceId} />
+
       <ExportSection workspaceId={workspaceId} />
 
       <ClosureSection
@@ -91,6 +93,35 @@ export default async function DataControlsPage({
         graceDays={graceDays}
       />
     </div>
+  );
+}
+
+// ─── What we store ──────────────────────────────────────────────────────────
+
+function WhatWeStoreSection({ workspaceId }: { workspaceId: string }) {
+  return (
+    <section>
+      <ApEyebrow className="mb-3">what we store</ApEyebrow>
+      <ApPaperCard
+        title="See exactly what we hold about you — live, row by row."
+        footer={
+          <Link
+            href={`/app/workspace/${workspaceId}/settings/data/storage`}
+            className="inline-flex items-center justify-center gap-2 rounded-none border border-ink bg-ink px-6 py-3 font-sans text-sm font-medium text-paper transition hover:bg-ink-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+          >
+            view what we store
+          </Link>
+        }
+      >
+        <p className="text-[14px] leading-relaxed text-ink-soft">
+          agentplain is a service layer, not a data warehouse. The storage page
+          shows every category of data we keep for this workspace — with live
+          counts — grouped by why we keep it, plus your chat-retention setting
+          and proof that the data inside your connected systems is read
+          in-flight and never stored. Clear any category with one tap.
+        </p>
+      </ApPaperCard>
+    </section>
   );
 }
 

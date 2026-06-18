@@ -1918,6 +1918,14 @@ model WorkspacePreference {
   /// any workspace that opted out. Per-workspace switch (the report is a
   /// workspace-level ROI summary, not a per-user setting).
   weeklyReportEnabled Boolean   @default(true)
+  /// Data-minimization: customer-controlled chat-retention window in DAYS,
+  /// workspace-wide. NULL = the session-scoped default
+  /// (`DEFAULT_RETENTION_DAYS` in `lib/plaino/chat-retention.ts`). The owner
+  /// raises this on /settings/data/storage to have Plaino keep more context;
+  /// it is opt-in (we never extend retention on the customer's behalf) and
+  /// clamped to the workspace's per-tier ceiling. A per-thread override
+  /// (ChatThread.retentionDays) takes precedence over this value.
+  chatRetentionDays   Int?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -2156,6 +2164,14 @@ model ChatThread {
   /// Display title for the thread. Defaults to "talk with Plaino" in
   /// v1; v2 may auto-summarize from the first exchange.
   title       String        @default("talk with Plaino")
+  /// Data-minimization: per-thread chat retention override in DAYS. NULL =
+  /// inherit the workspace setting (WorkspacePreference.chatRetentionDays),
+  /// which itself falls back to the session-scoped default. The daily
+  /// conversation-cleanup cron deletes a thread (cascading its messages)
+  /// once `updatedAt` is older than the resolved window. Clamped to the
+  /// workspace's tier ceiling at resolution time — see
+  /// `lib/plaino/chat-retention.ts`.
+  retentionDays Int?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)

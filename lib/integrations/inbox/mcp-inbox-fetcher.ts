@@ -26,6 +26,7 @@ import {
   type ParsedMessage,
   type SkillResult,
 } from '@/lib/skills/types';
+import { passThroughFetch } from '@/lib/integrations/ephemeral-pass-through';
 import type { InboxFetchArgs, InboxSnapshotFetcher } from './types';
 
 export type InboxProvider = 'GOOGLE' | 'M365';
@@ -67,9 +68,19 @@ export class McpInboxFetcher implements InboxSnapshotFetcher {
       );
     }
     const max = clampMax(args.maxResults);
-    return this.provider === 'GOOGLE'
-      ? this.fetchGmail(max, args.query)
-      : this.fetchOutlook(max, args.query);
+    // Pass-through: read the inbox in-flight, return it, store NOTHING. The
+    // wrapper records a `storage.ephemeral_fetch` breadcrumb ("read N items,
+    // did not store") so the pass-through is visible on the storage surface.
+    // No cacheKey → no caching here; the chief-of-staff / lead-triage crons
+    // each want a fresh read, and a stale inbox is worse than a second fetch.
+    return passThroughFetch(
+      { workspaceId: this.workspaceId, provider: this.provider, resource: 'inbox' },
+      () =>
+        this.provider === 'GOOGLE'
+          ? this.fetchGmail(max, args.query)
+          : this.fetchOutlook(max, args.query),
+      { countOf: (r) => (r.ok ? r.value.length : 0) },
+    );
   }
 
   private async fetchGmail(

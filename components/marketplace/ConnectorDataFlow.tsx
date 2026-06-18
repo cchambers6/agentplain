@@ -7,8 +7,9 @@ import {
 /**
  * The per-connector data-flow disclosure rendered on the integration detail
  * page (`/app/workspace/[id]/integrations/[integrationId]`). Shows, at connect
- * time, exactly what flows where, what we store, and what we don't — so the
- * "we process, we don't hoard" stance is concrete at the moment of consent.
+ * time, exactly what flows where, what we store (the encrypted token + what
+ * Plaino learns), and what we don't (copies of the records he reads) — so the
+ * two-bucket stance is concrete at the moment of consent.
  *
  * Pure presentational Server Component. Brand tokens only.
  */
@@ -83,8 +84,8 @@ export function ConnectorDataFlow({ entry }: { entry: MarketplaceEntry }) {
       ) : null}
 
       <p className="mt-4 text-[12px] leading-relaxed text-mute">
-        {UNIVERSAL_STORED_LINE} It&rsquo;s encrypted at rest and walled off to
-        your workspace alone.
+        {UNIVERSAL_STORED_LINE} Everything we keep is encrypted at rest and
+        walled off to your workspace alone.
       </p>
     </section>
   );

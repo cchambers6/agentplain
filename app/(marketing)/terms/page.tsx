@@ -92,13 +92,15 @@ export default function TermsPage() {
           privacy policy).
         </p>
         <p>
-          <strong>Data minimization.</strong> We commit to processing your
-          data, not hoarding it. We retain only what is needed to deliver the
-          service — the drafts in your queue, the audit log, the documents you
-          connect, a sealed copy of your connection tokens, and your account
-          and settings — encrypted at rest and isolated to your workspace by
-          row-level security. We do not retain a standing mirror of your
-          connected systems; the fleet reads what a task needs on demand. A
+          <strong>What we store, and what stays in your tools.</strong> To act
+          as a partner that improves over time, we store Plaino&apos;s working
+          memory of your business — your preferences, voice, learned patterns,
+          chat history, approved drafts, ongoing per-relationship context, the
+          documents you connect, and a sealed copy of your connection tokens —
+          encrypted and isolated to your workspace, for the life of your
+          account. We do NOT store copies of the raw records the fleet reads
+          through your connections (your CRM records, emails, files); it reads
+          what a task needs in-flight and leaves them in your own tools. A
           plain-language breakdown is on our{" "}
           <Link className="underline text-clay" href="/data">
             data page
@@ -108,10 +110,12 @@ export default function TermsPage() {
         <p>
           <strong>Your rights.</strong> At any time, from inside the product or
           by emailing us, you may: (1) export a full copy of everything we hold
-          for your workspace; (2) revoke any connection, after which the fleet
-          stops reading that source on its next run; (3) close your workspace,
-          which triggers a 7-day soft-delete window and then a hard deletion of
-          every customer-data row from our primary database; and (4) request
+          for your workspace, including Plaino&apos;s working memory of your
+          business; (2) revoke any connection, after which the fleet stops
+          reading that source on its next run; (3) close your workspace, which
+          triggers a 7-day soft-delete window and then a hard deletion of
+          everything we hold for you — Plaino&apos;s memory, your documents, your
+          drafts, and your history — from our primary database; and (4) request
           any broader deletion or data-subject action that the in-product
           controls don&apos;t cover. Encrypted backups roll off within 30 days.
           Firms with a confidentiality or regulatory obligation can request a{" "}

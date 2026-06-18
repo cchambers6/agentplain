@@ -13,7 +13,7 @@ import {
 export const metadata: Metadata = {
   title: "Your data",
   description:
-    "Your data stays yours. agentplain processes what a task needs and hands you a draft — we don't hoard your inbox, CRM, or files. Exactly what we store, why, and how to take it back or delete it.",
+    "Your data is yours. Plaino keeps a working memory of how your business runs so he gets better over time — but your raw data from connected tools stays in those tools. Exactly what we store, what stays in your tools, and how to export or delete it.",
   alternates: alternatesFor("/data"),
 };
 
@@ -36,10 +36,11 @@ export default function DataPage() {
             Your data stays yours.
           </h1>
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft md:text-xl">
-            {DATA_STANCE_TAGLINE} The fleet reads what a task needs, does the
-            work, and hands you a draft — it doesn&rsquo;t copy your business
-            onto our servers and keep it. Here&rsquo;s exactly what that means,
-            in plain language.
+            {DATA_STANCE_TAGLINE} Plaino keeps a working memory of how your
+            business runs — so he gets better the longer you work together. But
+            your raw data from connected tools stays in those tools: he reads it
+            in-flight when he&rsquo;s working and never copies it onto our
+            servers. Two buckets, in plain language.
           </p>
           <div className="mt-8 flex flex-wrap gap-4 text-[13px]">
             <Link href="/privacy" className="text-ink underline underline-offset-2">
@@ -71,10 +72,10 @@ export default function DataPage() {
         </div>
       </Section>
 
-      {/* What we store — the honest core. */}
+      {/* BUCKET 1 — Plaino's working memory. The feature, not an apology. */}
       <Section
-        title="What we store — and why"
-        intro="We don't say &ldquo;we store nothing&rdquo; — that wouldn't be true, and a vendor that claimed it would be hiding something. We store specific things for specific reasons, and here is every one of them. All of it is encrypted at rest and walled off to your workspace alone."
+        title="Bucket 1 — what we store, so Plaino gets better"
+        intro="This is Plaino's working memory of your business — the part that makes him a partner who improves instead of a tool that forgets every morning. We keep it for the life of your account, encrypted and walled off to your workspace alone. It's all yours: export it anytime, hard-deleted when you close your account."
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule">
           {WHAT_WE_STORE.map((item) => (
@@ -93,10 +94,10 @@ export default function DataPage() {
         </div>
       </Section>
 
-      {/* What we don't store. */}
+      {/* BUCKET 2 — your raw data stays in your tools. */}
       <Section
-        title="What we don't store"
-        intro="The flip side. These are the things a do-it-yourself stack scatters across five tools, or a data-hungry vendor would quietly keep. We don't."
+        title="Bucket 2 — what we don't store, because it stays in your tools"
+        intro="Your raw business data lives in the systems you already use. Plaino reads what a task needs in-flight and leaves it there — he learns the patterns from working with your tools, he doesn't hoard the records."
       >
         <ul className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2">
           {WHAT_WE_DONT_STORE.map((line) => (
@@ -116,7 +117,7 @@ export default function DataPage() {
       {/* How it flows. */}
       <Section
         title="How your data flows"
-        intro="Every connector follows the same shape: your system in, a draft out, your queue in the middle. The data passes through the fleet in flight; what stays behind is the draft and the audit log — not a copy of your source system."
+        intro="Every connector follows the same shape: your system in, a draft out, your queue in the middle. Plaino reads your records in-flight and leaves them in your tool; what stays with us is the draft, the connection token, and what he learned about how you work — not a copy of your source records."
       >
         <ol className="flex flex-col gap-2 md:flex-row md:items-stretch">
           {[
@@ -143,11 +144,12 @@ export default function DataPage() {
         <p className="mt-6 max-w-3xl text-[14px] leading-relaxed text-ink-soft">
           When you connect a tool, the connect screen shows you the exact
           version of this for that connector — what flows where, what we store,
-          and what we don&rsquo;t — before you grant anything. The one place the
-          fleet keeps a copy on purpose is documents: when you point it at a
-          folder of your own playbooks, those files are ingested (encrypted,
-          workspace-private) so drafts sound like you. Everything else is read
-          on demand.
+          and what we don&rsquo;t — before you grant anything. The deliberate
+          exception is documents: when you point Plaino at a folder of your own
+          playbooks, those files become part of his memory (encrypted,
+          workspace-private) so drafts sound like you and cite your own
+          material. Your live records — emails, deals, ledgers — are read in the
+          moment and stay in your tools.
         </p>
       </Section>
 
@@ -175,8 +177,9 @@ export default function DataPage() {
         <p>
           CPAs, law firms, and anyone with a confidentiality or privilege
           obligation can request a Data Processing Agreement (DPA) that puts
-          these commitments — minimization, no-training, breach notification,
-          deletion on request — into a signed contract.
+          these commitments — what we store and what stays in your tools,
+          no-training, breach notification, deletion on request — into a signed
+          contract.
         </p>
         <p className="text-[15px]">
           <Link href="/dpa" className="text-ink underline underline-offset-2">

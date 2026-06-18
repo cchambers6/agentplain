@@ -18,7 +18,7 @@ export const insurance: VerticalContent = {
   tier: "regular",
   missionSubject: "insurance brokers and agencies",
   dataNote:
-    "Your book holds policyholder PII and coverage details that have to stay confidential. The fleet reads what a renewal or service task needs, drafts the work, and writes it back to your systems; it never pulls a standing copy of your book of business onto our servers. What we retain is the drafts, the audit log, and the documents you connect, encrypted and scoped to your agency alone. We don't train on policyholder data, pool it across agencies, or sell it — and nothing reaches a client without your review.",
+    "Your book holds policyholder PII and coverage details that have to stay confidential — and they stay in your AMS and your files. Plaino reads what a renewal or service request needs while he's working and never pulls a standing copy of your book of business onto our servers. Nothing reaches a client without your review.",
 
   directAnswer:
     "agentplain for insurance is a managed AI service partnership for independent P&C agencies. A service team installs a fleet that generates certificates of insurance, coordinates renewals, drafts claims-status outreach, reconciles commissions, and tracks carrier appetite — working inside Outlook, OneDrive, and DocuSign. The producer reviews every customer-facing draft before it leaves the agency; the fleet drafts and proposes but never sends on its own.",

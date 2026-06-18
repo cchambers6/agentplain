@@ -1,33 +1,42 @@
 /**
  * lib/marketing/data-commitments.ts
  *
- * SINGLE SOURCE OF TRUTH for the data-minimization commitment, reused across
- * every customer-facing surface that reinforces it: the /data page, the home
- * trust pillar, the /about "how we treat your data" section, and the
- * structured-data builders. Pure data — no React — so server code can import
- * it without dragging JSX into its bundle (same pattern as `faq-items.ts`).
+ * SINGLE SOURCE OF TRUTH for agentplain's data stance, reused across every
+ * customer-facing surface: the /data page, the home trust pillar, the /about
+ * "how we treat your data" section, and the structured-data builders. Pure
+ * data — no React — so server code can import it without dragging JSX in.
  *
- * TRUTH-WAVE DISCIPLINE (load-bearing). Every line here is grounded in what
- * the product ACTUALLY does today, cross-checked against the architecture
- * already in production and described on /privacy + /security + /terms:
- *   - read / read-and-draft OAuth scopes only; never send-on-behalf
- *     (`lib/integrations/marketplace.ts` — no entry requests a send scope)
- *   - AES-256-GCM encryption at rest + per-workspace row-level security
- *     (privacy "Encryption and isolation"; security "Encryption at rest")
- *   - no foundation-model training, no cross-customer pooling, no resale
- *     (privacy "How we use it"; terms "Your data + our use of it")
- *   - export + workspace-closure hard-purge after a grace window
- *     (`/app/workspace/[id]/settings/data` — ExportSection + ClosureSection)
+ * THE STANCE IS A DUAL COMMITMENT, expressed as TWO BUCKETS (ratified by Conner
+ * 2026-06-18). It is NOT "we minimize / we don't store much / data passes
+ * through". Plaino's persistent working memory of the customer's business is
+ * the product — a service partner that FORGOT the business every day would be
+ * useless. So:
  *
- * We deliberately do NOT claim "zero data stored". We store specific things
- * for specific reasons and we name every one of them (see `WHAT_WE_STORE`).
- * If a future architecture change adds a guarantee (e.g. chat auto-expiry),
- * add it here once it ships — not before.
+ *   BUCKET 1 — WHAT WE STORE (so Plaino is a real partner that gets better):
+ *     Plaino's working memory — chat history, your preferences/voice/brand, the
+ *     patterns he's learned about how your business runs, your approved drafts,
+ *     ongoing per-client/case/property context, the documents you connect as a
+ *     knowledge source, plus a sealed copy of your connection tokens and your
+ *     account settings. Kept for the LIFE OF YOUR ACCOUNT. Owned by you,
+ *     exportable anytime, HARD-DELETED when you close your account.
+ *
+ *   BUCKET 2 — WHAT WE DON'T STORE (your raw business data stays in your tools):
+ *     Copies of your CRM records, emails, and files; your customers'/clients'/
+ *     tenants' raw PII. Plaino reads these IN-FLIGHT when he's working and
+ *     leaves them where they live — HubSpot, Gmail, your drive.
+ *
+ * BANNED framings (false, and they'd make Plaino useless): "we don't store
+ * anything", "your data flows through, nothing kept", "Plaino forgets after
+ * each session", "pass-through, nothing retained".
  *
  * Vendor rule (`feedback_customer_vocab_not_engineer.md` +
- * `project_sbm_wrapper_positioning_2026_06_06.md`): the underlying model
- * vendor is NEVER named on these customer surfaces. "Plaino" / "the fleet"
- * is the actor. The vendor is named only on /privacy (the subprocessor list).
+ * `project_sbm_wrapper_positioning_2026_06_06.md`): the underlying model vendor
+ * is NEVER named on these customer surfaces. "Plaino" is the actor. The vendor
+ * is named only on /privacy (the subprocessor list).
+ *
+ * Grounded in production architecture (AES-256-GCM at rest, per-workspace RLS,
+ * read/draft OAuth scopes, no-training tier, knowledge substrate for connected
+ * docs, append-only preference + handoff logs, export route + closure cascade).
  */
 
 export interface DataCommitment {
@@ -40,87 +49,91 @@ export interface DataCommitment {
 }
 
 /**
- * The five commitments that make up the stance. The home pillar renders the
- * first four as a compact grid (no-outbound has its own full section on the
- * homepage); the /data page renders all five.
+ * The commitments that make up the dual stance. The home pillar renders the
+ * first four; the /data page renders all five.
  */
 export const DATA_COMMITMENTS: DataCommitment[] = [
   {
-    key: "process-not-hoard",
-    title: "We process your data. We don't hoard it.",
-    body: "Plaino reads what a task needs through read-only and read-and-draft access, does the work, and hands you a draft. We don't pull a standing copy of your inbox, your CRM, or your drive onto our servers and keep it.",
+    key: "plaino-remembers",
+    title: "Plaino remembers how your business works — and gets better at it.",
+    body: "He keeps a working memory of your preferences, your voice, the patterns of how your business runs, and your history with each client. That's what makes a service partner improve over time instead of starting cold every morning.",
   },
   {
-    key: "minimum-named",
-    title: "We store the minimum to do the work — and we name every piece.",
-    body: "What we keep: the drafts in your queue, the audit log of what the fleet did, the documents you choose to connect, a sealed copy of your connection token, and your account and settings. All of it encrypted and walled off to your workspace alone.",
+    key: "raw-data-stays",
+    title: "Your raw data stays in your tools.",
+    body: "We don't keep copies of your CRM records, your emails, or your files. Plaino reads them in-flight while he's working and leaves them where they live — in HubSpot, Gmail, your drive. He learns the patterns; he doesn't hoard the records.",
+  },
+  {
+    key: "yours-to-keep",
+    title: "Everything Plaino has learned about you is yours.",
+    body: "His working memory of your business is your property. Export all of it anytime, and it's hard-deleted when you close your account — memory, history, and all.",
   },
   {
     key: "no-train-no-sell",
     title: "We never train on your data, pool it, or sell it.",
-    body: "Your inbox, client list, transaction records, and drafts are never used to train a foundation model — ours or anyone's. We don't pool data across customers and we don't resell it. agentplain has no training infrastructure.",
+    body: "What Plaino learns tunes your workspace alone. Your business never trains a foundation model — ours or anyone's — never mixes with another customer's, and is never sold. agentplain has no training infrastructure.",
   },
   {
     key: "nothing-leaves",
     title: "Nothing leaves without you.",
-    body: "The fleet drafts and proposes; you send from your own email, calendar, and CRM. We never request a send-on-your-behalf scope, so a draft can't go out until your name is on it.",
-  },
-  {
-    key: "yours-to-take",
-    title: "It's yours — take it or delete it anytime.",
-    body: "Export a full copy of everything we hold for you with one click. Close the workspace and we purge every piece of your data after a short grace window. You don't have to ask, and you don't have to wait.",
+    body: "Plaino drafts and proposes; you send from your own email, calendar, and CRM. We never request a send-on-your-behalf scope, so nothing goes out until your name is on it.",
   },
 ];
 
 export interface StoredItem {
   /** What we keep. */
   what: string;
-  /** Why we keep it — the legitimate operational reason. */
+  /** Why we keep it — the partner-makes-this-better reason. */
   why: string;
 }
 
 /**
- * Exactly what we store, and why. This is the honest core of the page — the
- * antidote to a vague "we don't store anything" claim that wouldn't be true.
- * Every row maps to a real table/field described on /privacy + /security.
+ * BUCKET 1 — what we store, and why. This is the heart of the partnership:
+ * Plaino's working memory. Every row maps to a real table/field (chat history,
+ * preference log, knowledge substrate, approval rows, per-thread context,
+ * encrypted tokens, account config).
  */
 export const WHAT_WE_STORE: StoredItem[] = [
   {
-    what: "The drafts in your approval queue",
-    why: "So you can review, edit, and send them from your own tools. They're your work product — your IP, your record.",
+    what: "Plaino's chat history with you",
+    why: "Kept for the life of your account, so he has continuity and context and never makes you re-explain your business.",
   },
   {
-    what: "An audit log of what the fleet did",
-    why: "An append-only handoff log so every read, draft, and decision is traceable. No agent or admin can rewrite it.",
+    what: "Your preferences, voice, and brand",
+    why: "How you sound, how you work, what you care about — so every draft reads like you wrote it.",
   },
   {
-    what: "The documents you choose to connect",
-    why: "When you point the fleet at a folder of playbooks or past work, we ingest those files — encrypted, workspace-private — so drafts sound like you and cite your own material.",
+    what: "The patterns Plaino has learned",
+    why: "The way your business actually runs, refined every time you correct a draft. This is the part that compounds — a partner that gets better the longer you work together.",
   },
   {
-    what: "A sealed copy of your connection token",
-    why: "Encrypted at rest, so the fleet can keep reading the tools you connected without making you log in on every run. Tokens never leave our infrastructure and are omitted from your export.",
+    what: "Your approved drafts",
+    why: "So he knows your style and reuses what worked instead of guessing again.",
   },
   {
-    what: "Your account and settings",
-    why: "Your name, business email, billing details, the vertical you picked, and your tone, hours, and skill choices — the configuration that makes the fleet work the way your firm does.",
+    what: "Ongoing context per client, case, or property",
+    why: "The thread of each relationship, so he picks up where you left off rather than starting from zero.",
   },
   {
-    what: "Your learned preferences",
-    why: "An append-only log of the edits you make to drafts, so the work gets more like you over time. This tunes your workspace only — it never touches a base model.",
+    what: "The documents you connect as a knowledge source",
+    why: "When you point Plaino at a folder of playbooks or past work, those files are ingested into his private, encrypted memory so he can write in your voice and cite your own material.",
+  },
+  {
+    what: "A sealed, encrypted copy of your connection tokens, and your account settings",
+    why: "So Plaino can keep reading the tools you connected without making you log in every run — and so your workspace is configured the way your firm works.",
   },
 ];
 
 /**
- * What we deliberately do NOT keep. Each line is the inverse of a thing a DIY
- * stack or a data-hungry vendor would hold.
+ * BUCKET 2 — what we DON'T store. Your raw business data lives in your tools;
+ * Plaino reads it in-flight and leaves it there.
  */
 export const WHAT_WE_DONT_STORE: string[] = [
-  "A standing mirror of your inbox — the fleet reads mail on demand and never imports or copies your mailbox.",
-  "A copy of your CRM, accounting ledger, or message history — the fleet reads what a task needs, drafts, and writes the decision back to your system.",
-  "Files you didn't point us at — only the documents you explicitly connect as a knowledge source are ever ingested.",
+  "Copies of your HubSpot deals, Gmail messages, or CRM records — Plaino reads them in-flight while he's working and leaves them in your tools.",
+  "Your customers', clients', or tenants' raw files and PII — those stay in the systems you already use; we don't mirror them onto our servers.",
+  "A standing copy of anything Plaino fetches through a connection — he learns the patterns from working with your tools, he doesn't keep the source records.",
   "Your card number — your payment processor holds the payment method; we hold a customer ID and the last four digits.",
-  "Anything used to train a model — your data builds nothing but your own drafts.",
+  "Anything used to train a model — your business tunes only your own workspace.",
 ];
 
 export interface DataRight {
@@ -130,21 +143,21 @@ export interface DataRight {
 
 /**
  * The customer's enumerated rights — all backed by in-product affordances
- * (export route, closure cascade, per-connector disconnect) plus an email
- * path for anything broader.
+ * (export route, closure cascade, per-connector disconnect) plus an email path
+ * for anything broader. Note the closure cascade deletes Plaino's full memory.
  */
 export const DATA_RIGHTS: DataRight[] = [
   {
     title: "Export everything, anytime",
-    body: "One click in Account → Your data downloads a full JSON copy of everything we hold for your workspace — documents, drafts, the handoff log, your preferences, and your billing history.",
+    body: "One click in Account → Your data downloads a full JSON copy of everything we hold — Plaino's memory of your business, your documents, your drafts, the handoff log, your preferences, and your billing history.",
   },
   {
-    title: "Delete everything",
-    body: "Close the workspace and we purge every customer-data row after a short grace window. After the window, the deletion is irreversible; only your invoice history and a minimal who-closed-it audit line remain, for tax and compliance.",
+    title: "Hard-deleted when you cancel",
+    body: "Close the workspace and we purge everything — Plaino's chat history, his learned patterns, your documents and drafts — after a short grace window. After the window it's irreversible; only your invoice history and a minimal who-closed-it audit line remain, for tax and compliance.",
   },
   {
     title: "Revoke any connection",
-    body: "Disconnect any tool in one tap, or revoke the grant from the provider's own dashboard. The fleet stops reading that source on the next run.",
+    body: "Disconnect any tool in one tap, or revoke the grant from the provider's own dashboard. Plaino stops reading that source on his next run.",
   },
   {
     title: "Ask for anything broader",
@@ -153,8 +166,7 @@ export const DATA_RIGHTS: DataRight[] = [
 ];
 
 /**
- * The positioning one-liner for the stance. Used as the /data hero subhead and
- * available for reuse. Kept here so the phrasing has one home and can't drift.
+ * The positioning one-liner for the stance — the dual commitment. Used as the
+ * /data hero subhead and available for reuse so the phrasing has one home.
  */
-export const DATA_STANCE_TAGLINE =
-  "Your data stays yours. We process it; we don't hoard it.";
+export const DATA_STANCE_TAGLINE = "Your data is yours. Plaino is your partner.";

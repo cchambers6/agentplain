@@ -108,15 +108,15 @@ export const FAQ_ITEMS: FAQItem[] = [
   },
   {
     q: "Do you store my customer data?",
-    a: "Some of it, named and encrypted — not all of it. We keep the drafts in your approval queue, an append-only audit log of what the fleet did, the documents you choose to connect as a knowledge source, a sealed copy of your connection token, and your account and settings. We do NOT keep a standing mirror of your inbox, CRM, or accounting ledger — the fleet reads what a task needs on demand and writes the result back to your own system. Everything we hold is encrypted at rest with AES-256-GCM and isolated to your workspace by row-level security. The full breakdown of what we store and why is on our data page.",
+    a: "Two answers, because there are two kinds of data. (1) Plaino's working memory of YOUR business — your preferences, your voice, the patterns he's learned, your chat history, your approved drafts, the documents you connect — we keep that for the life of your account, encrypted and isolated to your workspace, so he gets better the longer you work together. It's yours to export anytime and hard-deleted when you cancel. (2) Your CUSTOMERS' raw data — the emails, CRM records, and files in your connected tools — we do NOT copy. Plaino reads what a task needs in-flight and leaves it in HubSpot, Gmail, your drive. The full breakdown of both buckets is on our data page.",
   },
   {
     q: "Do you train AI on my data?",
-    a: "No. Your inbox, client list, transaction records, and drafts are never used to train a foundation model — ours or anyone's. agentplain has no training infrastructure. The only thing your data tunes is your own workspace: an append-only log of the edits you make to drafts, so the work gets more like you over time. What the model providers do with API content is governed by their own terms, on a no-training tier; our privacy policy names them and links to their data-usage policies.",
+    a: "No. Your inbox, client list, transaction records, and drafts are never used to train a foundation model — ours or anyone's. agentplain has no training infrastructure. Plaino does learn from working with you — your voice, your corrections, the patterns of your business — but that's a private memory scoped to your workspace alone; it never touches a base model and never mixes with another customer's. What the model providers do with API content is governed by their own terms, on a no-training tier; our privacy policy names them and links to their data-usage policies.",
   },
   {
     q: "Can I delete everything?",
-    a: "Yes, anytime, yourself. Export a full JSON copy of everything we hold from Account → Your data, then close the workspace — we purge every customer-data row after a short grace window, and after the window it's irreversible. Only your invoice history and a minimal who-closed-it audit line remain, for tax and compliance. For any deletion request broader than the in-product controls, email hello@agentplain.com and we'll handle it in writing.",
+    a: "Yes, anytime, yourself. Export a full JSON copy of everything we hold — including Plaino's memory of your business — from Account → Your data, then close the workspace. We purge everything (his chat history, his learned patterns, your documents and drafts) after a short grace window, and after the window it's irreversible. Only your invoice history and a minimal who-closed-it audit line remain, for tax and compliance. For any deletion request broader than the in-product controls, email hello@agentplain.com.",
   },
   {
     q: "What happens if I cancel?",

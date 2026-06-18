@@ -27,10 +27,13 @@ export function VerticalDataNote({
           {note}
         </p>
         <p className="mt-5 max-w-3xl text-[15px] leading-relaxed text-ink-soft">
-          The fleet reads what a task needs, drafts the work, and keeps only the
-          drafts, the audit log, and the files you choose to connect — encrypted
-          and walled off to your workspace. We never train on your data, pool
-          it, or sell it.{" "}
+          Your clients&rsquo; records stay in your tools — Plaino reads them
+          in-flight while he&rsquo;s working and never copies them onto our
+          servers. What he keeps is his memory of how your practice runs — your
+          preferences, your voice, the patterns he&rsquo;s learned — so he gets
+          better the longer you work together. That memory is yours: export it
+          anytime, and it&rsquo;s hard-deleted when you close your account. We
+          never train on your data, pool it across firms, or sell it.{" "}
           <Link href="/data" className="text-ink underline underline-offset-2">
             See exactly what we store and why →
           </Link>

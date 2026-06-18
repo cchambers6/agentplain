@@ -124,7 +124,7 @@ export default async function SettingsPage({ params }: PageProps) {
       href: `/app/workspace/${workspaceId}/settings/data`,
       label: "your data",
       description:
-        "Export a full copy of everything we hold for this workspace, or close the workspace and we purge it after a grace window. We process your data; we don't hoard it.",
+        "Export everything we hold — including Plaino's memory of your business — or close the workspace and we purge it after a grace window. We keep his memory; we don't keep copies of your raw tool data.",
     },
     {
       href: `/app/workspace/${workspaceId}/settings/voice`,
@@ -177,10 +177,10 @@ export default async function SettingsPage({ params }: PageProps) {
           Export everything, or close the workspace and we purge it.
         </p>
         <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-mute">
-          Your data flows through Plaino; he doesn&rsquo;t keep a copy of your
-          accounts. What we hold is the drafts, the audit log, the documents you
-          connect, and a sealed token — encrypted and yours to take or delete
-          anytime. Open your data controls →
+          What we keep is Plaino&rsquo;s memory of how your business works — your
+          voice, preferences, and learned patterns — yours to export or delete
+          anytime. What we don&rsquo;t keep is copies of your CRM records,
+          emails, or files; those stay in your tools. Open your data controls →
         </p>
       </Link>
 

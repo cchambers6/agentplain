@@ -52,7 +52,7 @@ export default function CompareHubPage() {
         <div className="container-wide py-16 md:py-20">
           <p className="eyebrow mb-3">One difference cuts across all four</p>
           <h2 className="max-w-3xl font-display text-2xl leading-snug text-ink md:text-3xl">
-            Your data ends up in one place, not scattered across five.
+            A partner who remembers — without copying your raw data.
           </h2>
           <div className="mt-8 grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
             <div className="bg-paper p-7 md:p-8">
@@ -60,11 +60,11 @@ export default function CompareHubPage() {
                 Do it yourself
               </p>
               <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
-                Wiring your own agents, a generic chatbot, or a stack of point
-                tools means your client data is copied into each one — five
-                vendors&apos; servers, five privacy policies, five training
-                stances to read. You&apos;re the only one tracking where it all
-                lives.
+                A generic chatbot starts cold every session — it doesn&apos;t
+                remember how your business works, so it never gets better. And
+                wiring your own stack copies your client data into every tool:
+                five vendors&apos; servers, five privacy policies. You&apos;re
+                the only one tracking where it all lives.
               </p>
             </div>
             <div className="flex items-start gap-3 bg-paper p-7 md:p-8">
@@ -72,13 +72,13 @@ export default function CompareHubPage() {
                 ✓
               </span>
               <p className="text-[15px] leading-relaxed text-ink">
-                With agentplain, the fleet reads what a task needs and hands you
-                a draft — we don&apos;t hoard a copy of your inbox, CRM, or
-                files. One partner, one named set of things we store, encrypted
-                and yours to export or delete anytime. We never train on it,
-                pool it, or sell it.{" "}
+                Plaino keeps a working memory of how your business runs, so he
+                gets better the longer you work together — and it&apos;s yours to
+                export or delete anytime. Your raw records stay in your tools; he
+                reads them in-flight and never keeps a copy. One partner, two
+                clear buckets, and we never train on it, pool it, or sell it.{" "}
                 <Link href="/data" className="text-ink underline underline-offset-2">
-                  See what we store →
+                  See both buckets →
                 </Link>
               </p>
             </div>

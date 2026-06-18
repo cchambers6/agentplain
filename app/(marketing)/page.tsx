@@ -588,18 +588,18 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* DATA-MINIMIZATION TRUST PILLAR — a positioning pillar, not a footnote.
-          The no-outbound discipline is its own section above ("Nothing leaves
-          without your name on it"); this complements it on the storage side:
-          we process, we don't hoard. Cards come from the single source of truth
-          in `lib/marketing/data-commitments.ts` (grounded in the same
-          architecture /privacy + /security describe). We render the first four
-          commitments (the fifth, "take it or delete it", gets the deep link to
-          /data). Vendor-neutral per the customer-surface rule. */}
+      {/* DATA TRUST PILLAR — the two-bucket dual commitment (ratified by Conner
+          2026-06-18): (1) Plaino keeps a persistent working memory of the
+          business — a FEATURE that makes him improve — and (2) the customer's
+          raw tool data stays in their tools, read in-flight, never copied.
+          NOT a "we minimize / we don't hoard" message — that would imply Plaino
+          forgets. Cards come from the single source of truth in
+          `lib/marketing/data-commitments.ts`. We render the first four
+          commitments; /data has both buckets in full. Vendor-neutral. */}
       <Section
         eyebrow="Your data"
-        title="Your data stays yours. We process it; we don't hoard it."
-        intro="A do-it-yourself AI stack scatters your client data across five tools. agentplain reads what a task needs, does the work, and hands you a draft — without copying your inbox, your CRM, or your files onto our servers to keep. Here's the commitment in four lines."
+        title="Your data is yours. Plaino is your partner."
+        intro="Two commitments at once. Plaino keeps a working memory of how your business runs — your voice, your preferences, the patterns he's learned — so he gets better the longer you work together. And your raw data from connected tools stays in those tools: he reads it in-flight when he's working and never copies it onto our servers."
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2">
           {DATA_COMMITMENTS.slice(0, 4).map((c) => (
@@ -614,11 +614,12 @@ export default function HomePage() {
           ))}
         </div>
         <p className="mt-8 max-w-prose text-[13px] leading-relaxed text-mute">
-          We don&apos;t claim &ldquo;zero data stored&rdquo; — that wouldn&apos;t
-          be true. We store specific things for specific reasons and name every
-          one.{" "}
+          What we store is Plaino&apos;s memory of your business — yours to
+          export anytime, hard-deleted when you cancel. What we don&apos;t store
+          is a copy of your CRM records, emails, or files; those stay in your
+          tools.{" "}
           <Link href="/data" className="text-ink underline underline-offset-2">
-            See exactly what we store, why, and how to take it back →
+            See both buckets in full →
           </Link>
         </p>
       </Section>

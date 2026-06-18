@@ -33,19 +33,24 @@ learning model, will not pool it across customers, and will not sell or share it
 except with the subprocessors listed in Annex B as needed to operate the
 service.
 
-## 2. Data minimization
+## 2. What is stored, and what stays in the Controller's tools
 
-2.1 The Processor retains only the data necessary to deliver the service:
-(a) drafts queued for the Controller's review; (b) an append-only audit
-(handoff) log of actions taken; (c) documents the Controller chooses to connect
-as a knowledge source; (d) an encrypted copy of OAuth/connection tokens;
-(e) the Controller's account and configuration; and (f) an append-only log of
-the Controller's edits to drafts.
+2.1 **What the Processor stores.** To provide the service as a partner that
+improves over time, the Processor stores the Controller's working-memory data:
+drafts queued for review; an append-only audit (handoff) log; the Controller's
+preferences, voice, and the patterns the service learns from the Controller's
+corrections; chat history; ongoing per-relationship context; documents the
+Controller connects as a knowledge source; an encrypted copy of OAuth/connection
+tokens; and account configuration. This is retained for the life of the account,
+encrypted at rest and isolated to the Controller's workspace, exported on demand,
+and hard-deleted on account closure (per §7).
 
-2.2 The Processor does **not** retain a standing copy or mirror of the
-Controller's connected systems (mailbox, CRM, accounting ledger, message
-history). The service reads what a task requires on demand and writes results
-back to the Controller's own systems.
+2.2 **What stays in the Controller's tools.** The Processor does **not** store
+copies of the raw records it reads through the Controller's connections
+(mailbox, CRM, accounting ledger, message history, and files not connected as a
+knowledge source). The service reads what a task requires in-flight and writes
+results back to the Controller's own systems, leaving the source records where
+they live.
 
 ## 3. Security measures
 

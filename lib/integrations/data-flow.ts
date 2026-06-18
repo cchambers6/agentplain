@@ -4,17 +4,21 @@
  * Per-connector data-flow disclosure — the "when you connect X, here's what
  * flows where" one-pager surfaced on every integration detail page (and as a
  * compact line on the marketplace tile). Keyed by the connector's category so
- * one truthful disclosure covers every connector of a kind, with a `note` for
- * the one category (Documents) where the fleet keeps a copy on purpose.
+ * one truthful disclosure covers every connector of a kind.
  *
- * TRUTH-WAVE: grounded in the actual scopes + behavior declared in
- * `marketplace.ts` and the no-outbound architecture. The universal line every
- * connector shows — "we store just your encrypted token, the drafts in your
- * queue, and the audit log" — is the floor; `stores` / `doesNotStore` add the
- * category-specific detail. Documents is the honest exception: connected files
- * ARE ingested (encrypted, workspace-scoped) so the fleet can cite them.
+ * TWO-BUCKET MODEL (ratified by Conner 2026-06-18 — see
+ * `lib/marketing/data-commitments.ts`):
+ *   - WE STORE: a sealed, encrypted copy of your connection token; the drafts
+ *     Plaino writes; and what Plaino LEARNS about how you work (patterns, voice,
+ *     context — kept for the life of your account).
+ *   - WE DON'T STORE: copies of the records Plaino fetches through the
+ *     connection. He reads them in-flight while working and leaves them in your
+ *     tool. (Exception, stated positively: documents you deliberately connect
+ *     as a knowledge source ARE ingested into Plaino's private, encrypted
+ *     memory so he can cite them.)
  *
- * Vendor-neutral: "Plaino" / "the fleet" is the actor; no model vendor named.
+ * BANNED: "pass-through, nothing kept" / "we don't store anything". Plaino's
+ * memory is a feature, not a leak. Vendor-neutral: "Plaino" is the actor.
  */
 
 import type { MarketplaceEntry } from "./marketplace";
@@ -22,134 +26,120 @@ import type { MarketplaceEntry } from "./marketplace";
 export interface ConnectorDataFlow {
   /** The four-stop journey: source → Plaino (in-flight) → output → destination. */
   flow: string[];
-  /** What we keep when you connect this kind of tool, and (implicitly) why. */
+  /** What we keep when you connect this kind of tool. */
   stores: string[];
-  /** What we deliberately do NOT keep. */
+  /** What we deliberately do NOT keep (the raw records Plaino reads). */
   doesNotStore: string[];
-  /** Optional caveat for the one category where we keep a copy on purpose. */
+  /** Optional positive note (e.g. the knowledge-source exception). */
   note?: string;
 }
 
 /** Shown on every connector, regardless of category — the storage floor. */
 export const UNIVERSAL_STORED_LINE =
-  "Across every connector we store the same three things: a sealed, encrypted copy of your connection token, the drafts the fleet writes for your review, and the audit log of what it did.";
+  "Across every connector, what stays with us is your encrypted token, the drafts Plaino writes, and what he learns about how you work — kept for the life of your account, owned by you, and hard-deleted when you close it. The records he reads aren't copied; he reads them in-flight and leaves them in your tool.";
+
+/** The "what Plaino learns" line is shared — his memory is the same feature
+ *  regardless of which tool feeds it. */
+const LEARNS_LINE =
+  "What Plaino learns about how you work — your patterns, voice, and context (kept for the life of your account)";
+const TOKEN_LINE = "A sealed, encrypted copy of your connection token";
 
 const BY_CATEGORY: Record<MarketplaceEntry["category"], ConnectorDataFlow> = {
   Email: {
     flow: [
       "Your mailbox",
-      "Plaino reads the threads a task needs",
+      "Plaino reads the threads a task needs, in-flight",
       "Plaino drafts a reply",
       "Your approvals queue — you send from your own account",
     ],
-    stores: [
-      "A sealed, encrypted copy of your connection token",
-      "The drafts Plaino writes for your review",
-      "The audit log of what it read and drafted",
-    ],
+    stores: [TOKEN_LINE, "The drafts Plaino writes for your review", LEARNS_LINE],
     doesNotStore: [
-      "A copy or mirror of your mailbox — existing mail is never imported",
+      "Copies of your emails — Plaino reads the threads a task needs and leaves them in your mailbox",
       "Send access — we never request a send-on-your-behalf scope",
     ],
   },
   Calendar: {
     flow: [
       "Your calendar",
-      "Plaino checks your stated hours and what's already booked",
+      "Plaino checks your hours and what's already booked, in-flight",
       "Plaino proposes times",
       "Your approvals queue — you confirm from your own calendar",
     ],
-    stores: [
-      "A sealed, encrypted copy of your connection token",
-      "The time proposals Plaino drafts",
-      "The audit log",
-    ],
+    stores: [TOKEN_LINE, "The time proposals Plaino drafts", LEARNS_LINE],
     doesNotStore: [
-      "A mirror of your calendar — Plaino reads your availability on demand",
+      "A copy of your calendar — Plaino checks your availability in the moment and leaves it where it lives",
     ],
   },
   CRM: {
     flow: [
       "Your CRM",
-      "Plaino reads the contacts and deals a task touches",
+      "Plaino reads the contacts and deals a task touches, in-flight",
       "Plaino drafts the update and writes a triage note back",
       "Your approvals queue — you send from your own email",
     ],
     stores: [
-      "A sealed, encrypted copy of your connection token",
+      TOKEN_LINE,
       "The drafts and triage notes Plaino writes",
-      "The audit log",
+      LEARNS_LINE,
     ],
     doesNotStore: [
-      "A standing copy of your CRM database — Plaino reads per task, not in bulk",
+      "Copies of your contacts, deals, or records — Plaino reads what a task needs and leaves them in your CRM",
     ],
   },
   Accounting: {
     flow: [
       "Your accounting tool",
-      "Plaino reads the records a task needs (read-only)",
+      "Plaino reads the records a task needs (read-only), in-flight",
       "Plaino drafts the reconciliation, chase, or report",
       "Your approvals queue — you send or post from your own system",
     ],
-    stores: [
-      "A sealed, encrypted copy of your connection token",
-      "The drafts and flags Plaino produces",
-      "The audit log",
-    ],
+    stores: [TOKEN_LINE, "The drafts and flags Plaino produces", LEARNS_LINE],
     doesNotStore: [
-      "A copy of your ledger or rent roll — Plaino reads what a task needs",
+      "A copy of your ledger or rent roll — Plaino reads what a task needs and leaves it in your books",
       "Any write access to your money — we never initiate a journal entry or transfer",
     ],
   },
   Documents: {
     flow: [
       "The folders or files you point us at",
-      "Plaino ingests them into your private, encrypted knowledge base",
+      "Plaino ingests them into his private, encrypted memory",
       "Plaino drafts work that cites your own documents",
       "Your approvals queue — new files land back where you keep them",
     ],
     stores: [
-      "A sealed, encrypted copy of your connection token",
+      TOKEN_LINE,
       "An encrypted, workspace-private copy of the documents you connect as a knowledge source",
       "The drafts Plaino writes",
-      "The audit log",
+      LEARNS_LINE,
     ],
     doesNotStore: [
       "Anything you didn't point us at — files outside the folders you connect are never ingested",
       "Sharing access — Plaino files new versions where you keep them; sharing waits for you",
     ],
-    note: "Documents are the one place the fleet keeps a copy on purpose: the files you choose to connect are ingested so drafts sound like you and cite your own playbooks. That copy is encrypted at rest and scoped to your workspace alone — and it disappears when you disconnect or close the workspace.",
+    note: "Documents are the deliberate exception: the files you choose to connect become part of Plaino's memory so drafts sound like you and cite your own playbooks. That copy is encrypted, scoped to your workspace alone, and hard-deleted when you disconnect or close the workspace. Everything else in your drive stays put.",
   },
   Messaging: {
     flow: [
       "The channels you point us at",
-      "Plaino reads them and surfaces what needs you",
+      "Plaino reads them and surfaces what needs you, in-flight",
       "Plaino drafts any reply",
       "Your approvals queue — anything posted waits for your say-so",
     ],
-    stores: [
-      "A sealed, encrypted copy of your connection token",
-      "The drafts Plaino writes",
-      "The audit log",
-    ],
+    stores: [TOKEN_LINE, "The drafts Plaino writes", LEARNS_LINE],
     doesNotStore: [
-      "A mirror of your message history — Plaino reads the channels you choose, on demand",
+      "A copy of your message history — Plaino reads the channels you choose, in the moment",
     ],
   },
   Payments: {
     flow: [
       "Your payments tool",
-      "Plaino reads the transactions and disputes a task needs",
+      "Plaino reads the transactions and disputes a task needs, in-flight",
       "Plaino surfaces them alongside your books and inbox",
       "Your approvals queue",
     ],
-    stores: [
-      "A sealed, encrypted copy of your connection token",
-      "The summaries and drafts Plaino produces",
-      "The audit log",
-    ],
+    stores: [TOKEN_LINE, "The summaries and drafts Plaino produces", LEARNS_LINE],
     doesNotStore: [
-      "A copy of your transaction history — Plaino reads what a task needs",
+      "A copy of your transaction history — Plaino reads what a task needs and leaves it in your tool",
       "Card numbers — your payment processor holds the payment method",
     ],
   },
@@ -160,11 +150,7 @@ const BY_CATEGORY: Record<MarketplaceEntry["category"], ConnectorDataFlow> = {
       "Plaino hands you the draft",
       "You review and publish",
     ],
-    stores: [
-      "A sealed, encrypted copy of your connection token",
-      "The drafts Plaino produces",
-      "The audit log",
-    ],
+    stores: [TOKEN_LINE, "The drafts Plaino produces", LEARNS_LINE],
     doesNotStore: [
       "A copy of your full asset library — Plaino works from the templates you connect",
     ],
@@ -172,17 +158,13 @@ const BY_CATEGORY: Record<MarketplaceEntry["category"], ConnectorDataFlow> = {
   Spreadsheets: {
     flow: [
       "The workbooks you connect",
-      "Plaino reads the rows a task needs",
+      "Plaino reads the rows a task needs, in-flight",
       "Plaino appends new rows when the work is done",
       "Your workbook — never overwriting cells you keep by hand",
     ],
-    stores: [
-      "A sealed, encrypted copy of your connection token",
-      "The drafts and computed rows Plaino produces",
-      "The audit log",
-    ],
+    stores: [TOKEN_LINE, "The drafts and computed rows Plaino produces", LEARNS_LINE],
     doesNotStore: [
-      "A copy of your workbooks — Plaino reads what a task needs and only appends, never overwrites",
+      "A copy of your workbooks — Plaino reads what a task needs, appends, and leaves the rest untouched",
     ],
   },
 };

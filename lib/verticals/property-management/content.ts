@@ -18,7 +18,7 @@ export const propertyManagement: VerticalContent = {
   tier: "regular",
   missionSubject: "property managers and management companies",
   dataNote:
-    "Your rent roll is full of tenant PII — names, balances, payment histories, lease terms. The fleet reads the delinquencies a chase task needs, drafts the tone-matched notice, and writes it back; it never keeps a standing mirror of your rent roll or tenant records. What we retain is the drafts, the audit log, and the documents you connect, encrypted and scoped to your workspace alone. We don't train on tenant data, pool it across managers, or sell it — and every chase waits for your approval before it sends.",
+    "Your rent roll is full of tenant PII — names, balances, payment histories, lease terms — and it stays in your property-management system. Plaino reads the delinquencies a chase needs while he's working, drafts the tone-matched notice, and never keeps a copy of your rent roll or tenant records. Every chase waits for your approval before it sends.",
 
   directAnswer:
     "agentplain for property management is a managed AI service partnership for single-family property managers running roughly 50–500 doors. A service team installs a fleet that triages tenant inbound, routes maintenance tickets, chases rent, runs lease-renewal cadences, and produces owner reports — working inside Outlook, Gmail, and QuickBooks Online. The manager approves every customer-facing draft; the fleet drafts and proposes but never sends on its own.",

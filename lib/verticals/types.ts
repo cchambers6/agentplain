@@ -433,8 +433,11 @@ export interface VerticalContent {
    * confidentiality angle. A vertical with nothing vertical-specific to say
    * renders nothing rather than generic filler — per
    * `feedback_no_guesses_no_estimates.md` (a truthful entry beats a vague one).
-   * Every note must stay within what the data-minimization stance actually
-   * delivers (see `lib/marketing/data-commitments.ts`).
+   * Every note must stay within what the two-bucket data stance actually
+   * delivers (see `lib/marketing/data-commitments.ts`): the vertical's clients'
+   * RAW records stay in the customer's tools (the confidentiality win), while
+   * Plaino's memory of how the practice runs persists as a feature. Do NOT
+   * claim "nothing stored" or imply Plaino forgets.
    */
   dataNote?: string;
 }

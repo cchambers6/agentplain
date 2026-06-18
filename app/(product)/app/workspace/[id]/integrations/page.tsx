@@ -145,10 +145,10 @@ export default async function WorkspaceIntegrationsPage({
         on it.
       </p>
       <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-mute">
-        Data flow is pass-through: Plaino reads what a task needs and drafts —
-        we don&rsquo;t hoard a copy of your accounts. Open any connector to see
-        exactly what flows where, what we store (just your encrypted token, the
-        drafts, and the audit log), and what we don&rsquo;t.
+        Plaino reads your records in-flight and never keeps a copy — they stay
+        in your tools. What he keeps is your encrypted connection and what he
+        learns about how you work. Open any connector to see exactly what flows
+        where, what we store, and what we don&rsquo;t.
       </p>
 
       <InlineFlash flash={flash} tiles={tiles} />

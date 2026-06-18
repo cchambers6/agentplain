@@ -87,24 +87,28 @@ export default function PrivacyPage() {
         </Body>
       </Section>
 
-      <Section title="Data minimization">
+      <Section title="What we store, and what stays in your tools">
         <Body>
           <p>
-            Our governing principle is to process your data, not hoard it. The
-            fleet reads what a task needs through read-only and read-and-draft
-            access, does the work, and writes the result back to your own
-            systems. We do not pull a standing mirror of your inbox, CRM, or
-            file store onto our infrastructure.
+            <strong>What we store.</strong> Plaino keeps a working memory of how
+            your business runs — your preferences, your voice, the patterns he
+            learns from your corrections, your chat history, your approved
+            drafts, ongoing per-relationship context, and the documents you
+            choose to connect as a knowledge source. We retain this, encrypted
+            and isolated to your workspace, for the life of your account, so the
+            service improves over time. It is yours — exportable at any time and
+            hard-deleted when you close your account. We also store a sealed copy
+            of your connection tokens and your account configuration.
           </p>
           <p>
-            What we retain is deliberately small and named: the drafts in your
-            approval queue, the append-only handoff log, the documents you
-            choose to connect as a knowledge source, a sealed copy of your
-            connection tokens, your account and configuration, and an
-            append-only log of your draft edits (so the work tunes to your
-            voice). We retain this only to deliver the service to you, and only
-            for as long as your workspace is open. A plain-language breakdown of
-            exactly what we store and why lives on our{" "}
+            <strong>What stays in your tools.</strong> We do not store copies of
+            the raw records Plaino reads through your connections. The fleet
+            reads what a task needs from your inbox, CRM, file store, or
+            accounting tool in-flight, writes the result back to your own
+            systems, and leaves the source records where they live. Plaino
+            learns the patterns from working with your tools; he does not mirror
+            their contents onto our infrastructure. A plain-language breakdown of
+            both — what we keep and what stays in your tools — lives on our{" "}
             <Link className="underline text-clay" href="/data">
               data page
             </Link>

@@ -21,25 +21,28 @@ and legal surfaces` (branch `feat/data-minimization-positioning-2026-06-18`).
   marginal cost is counsel's one-time review, not per-signature), and reserve
   *bespoke* terms for Custom engagements. This makes "your data stays yours" a
   true, universal promise rather than an upsell.
-- [ ] **Pick the marketing tagline for the data-minimization stance.** Used as
-  the `/data` hero subhead and reusable site-wide (lives in
-  `lib/marketing/data-commitments.ts → DATA_STANCE_TAGLINE`). Options:
-  1. **"Your data stays yours. We process it; we don't hoard it."** *(currently
-     wired — recommended: it's plain, it's a promise, and it's literally true.)*
-  2. "Plaino works on your data. He doesn't keep it."
-  3. "We do the work — not a copy of your business."
-  4. "Read what's needed. Keep what's yours. Train on nothing."
+- [ ] **Pick the marketing tagline for the data stance.** Used as the `/data`
+  hero subhead and reusable site-wide (lives in
+  `lib/marketing/data-commitments.ts → DATA_STANCE_TAGLINE`). The dual-commitment
+  direction is locked (Conner, 2026-06-18). Options:
+  1. **"Your data is yours. Plaino is your partner."** *(currently wired —
+     recommended: captures both buckets in one line.)*
+  2. "Plaino remembers how you work. Your raw data stays in your tools."
+  3. "A partner who remembers — without copying your data."
 
-### Truth-wave note carried out of this wave
-- The original brief suggested a Plaino-chat reminder ("this conversation
-  auto-deletes in 23 hours unless you save it"). **That claim is false on the
-  current architecture** — workspace chat is persisted (the closure cascade in
-  `lib/customer-data` deletes `chat` only on workspace close, not on a timer).
-  I did **not** ship that copy. If the parallel data-minimization *architecture*
-  session adds a chat TTL, wire the reminder then — and add the guarantee to
-  `lib/marketing/data-commitments.ts` so the page picks it up.
-- Per-connector disclosures and the `/data` "what we store" list are written to
-  match what the product does **today**. If the architecture session tightens
-  retention (e.g. ingested-document TTL, ephemeral task buffers), update
-  `lib/marketing/data-commitments.ts` and `lib/integrations/data-flow.ts` — both
-  are single-source so the copy follows the truth automatically.
+### Positioning ratified this wave (two-bucket model, Conner 2026-06-18)
+- **Plaino's working memory of the customer's business persists for the life of
+  the account** (chat history, preferences, voice, learned patterns, approved
+  drafts, ongoing per-relationship context). This is a FEATURE — a service
+  partner that forgot the business every day would be useless. It is hard-deleted
+  on account closure. All copy now leads with this; the earlier
+  "minimize / process-don't-hoard / nothing kept" framing was **removed** as
+  false.
+- **We do NOT keep copies of the customer's raw tool data** (CRM records, emails,
+  files, end-client PII). Plaino reads them in-flight and leaves them in the
+  customer's tools. This is the confidentiality pitch for CPA/Law/PM — their
+  clients' data never lands on our servers.
+- Both buckets are single-sourced in `lib/marketing/data-commitments.ts` and
+  `lib/integrations/data-flow.ts`, so if retention rules change, the copy follows
+  automatically. **Do NOT reintroduce any "auto-deletes after N hours" /
+  "nothing stored" claim** — it contradicts the ratified persistence model.

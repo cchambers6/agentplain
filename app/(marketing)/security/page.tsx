@@ -57,22 +57,22 @@ export default function SecurityPage() {
         </p>
       </Section>
 
-      <Section title="Data minimization — what we store, and what we don't">
+      <Section title="What we store, and what stays in your tools">
         <p>
-          Encryption protects the data we hold; minimization limits how much
-          that is. The fleet reads what a task needs through read-only and
-          read-and-draft scopes, does the work, and writes the result back to
-          your own systems. We do not pull a standing mirror of your inbox,
-          CRM, or file store onto our infrastructure.
+          Plaino keeps a working memory of how your business runs — your
+          preferences, your voice, the patterns he learns, your chat history,
+          your approved drafts, ongoing per-relationship context, and the
+          documents you connect as a knowledge source. We hold this encrypted at
+          rest and scoped to your workspace for the life of your account, so the
+          service improves over time. It is exportable anytime and hard-deleted
+          when you close your account.
         </p>
         <p>
-          What we keep is named and small: the drafts in your approval queue,
-          the append-only handoff log, the documents you connect as a knowledge
-          source, a sealed copy of your connection tokens, your account and
-          settings, and an append-only log of your draft edits. We do not keep a
-          copy of your mailbox, your CRM database, your accounting ledger, or any
-          file you didn&apos;t point us at. The plain-language breakdown — every
-          item, with the reason — lives on our{" "}
+          We do not keep copies of the raw records Plaino reads through your
+          connections — your mailbox, your CRM database, your accounting ledger,
+          or any file you didn&apos;t point us at. The fleet reads what a task
+          needs in-flight and leaves those records in the tools you already use.
+          The plain-language breakdown of both buckets lives on our{" "}
           <Link className="underline text-clay" href="/data">
             data page
           </Link>

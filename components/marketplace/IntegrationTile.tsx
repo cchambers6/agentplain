@@ -59,8 +59,8 @@ export function IntegrationTile({
       </p>
       {!isComingSoon && (
         <p className="mt-2 flex-1 font-mono text-[10px] leading-relaxed tracking-eyebrow uppercase text-mute">
-          Pass-through · we store your encrypted token + drafts, not a copy of
-          your account
+          Plaino reads in-flight · we keep your encrypted token + what he
+          learns, not copies of your records
         </p>
       )}
       {isComingSoon && <span className="flex-1" />}

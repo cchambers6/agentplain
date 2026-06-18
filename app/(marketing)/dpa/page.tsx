@@ -6,7 +6,7 @@ import { PlainoScene } from "@/components/ui/ap";
 export const metadata: Metadata = {
   title: "Data Processing Agreement",
   description:
-    "Firms with a confidentiality, privilege, or regulatory obligation can request a Data Processing Agreement (DPA) that puts agentplain's data-minimization commitments into a signed contract.",
+    "Firms with a confidentiality, privilege, or regulatory obligation can request a Data Processing Agreement (DPA) that puts agentplain's data commitments — what we store, what stays in your tools, no training, deletion on request — into a signed contract.",
   alternates: alternatesFor("/dpa"),
 };
 
@@ -30,8 +30,8 @@ export default function DpaPage() {
             If your firm carries a confidentiality, privilege, or regulatory
             obligation — CPAs, law firms, RIAs, anyone handling sensitive client
             data — you can request a Data Processing Agreement that puts our
-            data-minimization commitments into a signed, binding document for
-            your counsel to review.
+            data commitments into a signed, binding document for your counsel
+            to review.
           </p>
         </div>
       </section>
@@ -55,10 +55,12 @@ export default function DpaPage() {
             your data processor, acting only on your documented instructions.
           </li>
           <li>
-            <strong>Purpose limitation + minimization.</strong> We process your
-            data only to deliver the service to you, and we keep the minimum
-            described on the data page — drafts, the audit log, the documents
-            you connect, a sealed token, and your account settings.
+            <strong>Purpose limitation.</strong> We process your data only to
+            deliver the service to you. We store Plaino&rsquo;s working memory of
+            your business (preferences, voice, learned patterns, history,
+            connected documents) for the life of your account, and we do not keep
+            copies of the raw records he reads through your connections — those
+            stay in your tools.
           </li>
           <li>
             <strong>No training, no pooling, no resale.</strong> Your data is

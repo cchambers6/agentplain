@@ -122,3 +122,52 @@ a few product decisions before public exposure or enforcement.
 - [ ] Wire `SuspensionEffect` → Resend (owner emails) + Conner notification, and
       add the high-risk roll-up (`surfaceHighRiskPatterns`) to the operator
       dashboard.
+## Item B — Memory architecture for scale + customer-hosted memory
+
+PR: `feat(memory): RLS isolation + tiering + customer-hosted storage option`
+
+- [ ] **Cold-tier storage backend.** The object-store seam ships with three
+      adapters (in-memory, Vercel Blob, S3-compatible) but neither
+      `@vercel/blob` nor `@aws-sdk/client-s3` is in `package.json` yet — the
+      adapters lazy-load and return `NOT_CONFIGURED` until a dep is added.
+      **Decide:** Vercel Blob (already in our stack, simplest) vs. S3
+      (cheaper at 10K-customer scale, more setup). Whichever you pick, add the
+      dep + lock and the managed path activates with no code change.
+- [ ] **BYO-storage pricing.** Customer-hosted storage is the hardest
+      data-residency + control story we can offer. **Decide:** bundle it into
+      Partner/Max, or sell it as a separate add-on? (The data page copy
+      currently says "Partner and Max plans" — change if that's wrong.)
+- [ ] **Data-residency option set.** Shipped enum: `us-east` (default),
+      `us-west`, `eu-west`, `ap-southeast`. **Sign off** on the set —
+      specifically whether `eu-west` is needed for EU customers now. NOTE: the
+      managed (Vercel Blob) path groups objects by a region-scoped key prefix
+      but does NOT yet pin physical region; hard residency is honored on the
+      BYO path (customer's own regional bucket). Pinning the managed path to a
+      per-region blob store is the operational follow-up if we sell a hard
+      US/EU commitment on the managed tier.
+- [ ] **Customer-managed encryption keys (KMS).** Shipped postures: `NONE`,
+      `AWS_KMS`, `GCP_KMS`, `BYO` (raw key we envelope-encrypt with). BYO KMS
+      adds operational complexity (key rotation, lost-key recovery is the
+      customer's problem, support load). **Decide:** offer KMS only on Max?
+- [ ] **pgvector partitioning — schedule a maintenance window.** The
+      partitioning migration is written and reviewed at
+      `prisma/manual/20260617_partition_embedding_by_workspace.sql` but is
+      deliberately NOT auto-applied: it rewrites the `Embedding` table (HASH-16
+      by workspaceId) and requires a companion one-line app change (the upsert
+      natural key goes from `(sourceType, sourceId)` to
+      `(sourceType, sourceId, workspaceId)` in `lib/knowledge/pgvector-store.ts`).
+      **Decide:** schedule the window + ship the two together. Until then the
+      existing per-workspace btree index on `Embedding` carries us.
+
+### What landed without needing your sign-off (FYI)
+- **RLS gap closed (security).** Six customer-scoped tables shipped with a
+  `workspaceId` column but NO row-level security: `DisciplineHead`,
+  `SkillRun`, `SkillScheduleWindow`, `Team`, `WorkspaceLifecycleEvent`,
+  `WorkspacePauseConfig`. As the table-owner role (Neon's `neondb_owner`) we
+  were reading every tenant's teams / skill-run history / pause config. The
+  migration enables + FORCEs RLS + workspace-isolation policies on all six. A
+  CI invariant now fails if any future `workspaceId` model ships without RLS.
+- **Memory tiering** (hot ≤7d / warm 7–90d / cold 90d+ → object storage) and
+  the **memory access audit log** are additive and on by default in the data
+  model; the cold-tier sweep is opt-in (no cron wired yet — pinned entries
+  never leave hot, and no COLD entries exist until you run the sweep).

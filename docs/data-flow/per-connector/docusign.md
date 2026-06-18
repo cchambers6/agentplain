@@ -5,8 +5,9 @@
 ## What we store
 - Your DocuSign OAuth tokens, **encrypted at rest** (`IntegrationCredential`).
 - The approval-gate record for each send/void (`WorkApprovalQueueItem` of kind
-  `DOCUSIGN_ENVELOPE_SEND` / `_VOID`). The draft envelope details persist only
-  until you decide, then are redacted 7 days after the decision.
+  `DOCUSIGN_ENVELOPE_SEND` / `_VOID`). The draft envelope details are Plaino's
+  own output (not a copy of your signed docs); kept so he learns your patterns,
+  deleted on account close.
 - Pass-through breadcrumbs (`storage.ephemeral_fetch`).
 
 ## What we do NOT store
@@ -20,4 +21,5 @@ bound, 24h-TTL approval. On approval the action executes against **your**
 DocuSign; the canonical record is in DocuSign.
 
 ## On disconnect
-Token deleted. Decided approval rows redact on the normal 7-day schedule.
+Token deleted. Approval records are kept (Plaino's learning record) until
+account close.

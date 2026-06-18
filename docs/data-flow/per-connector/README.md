@@ -11,13 +11,18 @@ the shape is the same:
                   ┌─────────────────────────────────────────┐
    your token     │  agentplain (in-flight, in memory only)  │
   (encrypted,  ───▶  fetch → process → draft → return        │──▶ your approval queue
-   the ONLY      │  (nothing persisted to our DB)            │     (draft text; redacted
-   thing we keep)└─────────────────────────────────────────┘      7 days after decision)
-                                   │
-                                   ▼
+   the ONLY      │  (raw connector data NOT persisted)       │     (Plaino's draft — kept
+   connector     └─────────────────────────────────────────┘      so he learns your style;
+   secret we keep)               │                                 deleted on account close)
+                                  ▼
                     canonical copy stays in YOUR system
                     (Gmail, HubSpot, QuickBooks, …)
 ```
+
+**Plaino remembers HOW your business works** (your voice, preferences, the
+drafts you approve/edit) — kept for the life of your account so he gets better,
+exportable any time, deleted when you close. **He keeps no copies of your raw
+connector data** — that lives in your tools.
 
 ## The three patterns
 
@@ -27,7 +32,7 @@ Every connector falls into one of three data-flow patterns:
 |---|---|---|
 | **Pass-through read** | Nothing. We read records in-flight, process, and discard. | Gmail, Outlook, HubSpot, Salesforce, Follow Up Boss, QuickBooks, Slack/Teams (read), Calendar |
 | **Indexed store (opt-in)** | The text + a private vector index of documents **you explicitly ask us to index**. Deleted on disconnect. | Google Drive, Notion, OneDrive/SharePoint files |
-| **Write-back action** | Nothing of the source. The action's draft lives in your approval queue until you decide; redacted 7 days after. | DocuSign (send/void), Gmail/Outlook (draft), CRM note writes |
+| **Write-back action** | Nothing of the source's raw data. Plaino's draft lives in your approval queue and is kept (so he learns your style); deleted on account close. | DocuSign (send/void), Gmail/Outlook (draft), CRM note writes |
 
 ## What we ALWAYS store, for every connector
 

@@ -245,6 +245,10 @@ export interface TearDownWorkspaceDataResult {
   counselRedlinesDeleted: number;
   lifecycleEventsDeleted: number;
   preferenceFeedbackDeleted: number;
+  // Account-close hard-deletes the customer's audit log too (Conner,
+  // 2026-06-18): "your data is yours; we delete on cancel." Billing rows
+  // (Subscription / WorkspaceInvoice) are preserved separately for tax.
+  auditLogsDeleted: number;
 }
 
 /**
@@ -270,11 +274,14 @@ export interface TearDownWorkspaceDataResult {
  *      (name, email, needs) belonging to a person who is closing their
  *      workspace.
  *
- * Workspace + Membership themselves stay put — the row is preserved
- * (with no tenant data) so the audit trail (`AuditLog.workspaceId`) and
- * the workspace's billing history (`Subscription`, `BillingEvent`)
- * remain queryable. A future hard-delete would need to coordinate with
- * the billing reconciliation pass and is out of scope here.
+ * Workspace + Membership rows themselves stay put (with no tenant data) so
+ * the workspace's billing history (`Subscription`, `WorkspaceInvoice`,
+ * `BillingEvent`) remains queryable for tax/compliance. Everything else the
+ * customer owns — including their own `AuditLog` activity trail — is
+ * hard-deleted (Conner, 2026-06-18: "your data is yours; we delete on
+ * cancel"). A future full hard-delete of the Workspace/Membership/billing
+ * shell would need to coordinate with billing reconciliation and is out of
+ * scope here.
  */
 export async function tearDownWorkspaceData(
   args: TearDownWorkspaceDataArgs,
@@ -375,6 +382,13 @@ export async function tearDownWorkspaceData(
     const preferenceFeedbackDeleted = (
       await tx.preferenceFeedback.deleteMany({ where: { workspaceId } })
     ).count;
+    // Audit log — the customer's own activity trail. Hard-deleted on close so
+    // nothing of theirs lingers. Billing rows (Subscription / WorkspaceInvoice
+    // / BillingEvent) are intentionally NOT deleted here — they are the tax
+    // record and survive closure, as disclosed on the closure screen.
+    const auditLogsDeleted = (
+      await tx.auditLog.deleteMany({ where: { workspaceId } })
+    ).count;
 
     return {
       workApprovalsDeleted,
@@ -400,6 +414,7 @@ export async function tearDownWorkspaceData(
       counselRedlinesDeleted,
       lifecycleEventsDeleted,
       preferenceFeedbackDeleted,
+      auditLogsDeleted,
     };
   };
 

@@ -20,7 +20,8 @@
 2. A skill fetches the relevant messages in-flight (`McpInboxFetcher` →
    `passThroughFetch`), processes them in memory.
 3. It drafts a reply into your **approval queue** (`WorkApprovalQueueItem`).
-   The draft text persists only until you decide, then is redacted after 7 days.
+   The draft (Plaino's output, not a copy of your mailbox) is kept so he learns
+   your style; deleted when you close the account.
 4. On approval, the draft is created in **your** Gmail (`gmail.compose`); we do
    not keep a copy — your Sent folder is canonical.
 

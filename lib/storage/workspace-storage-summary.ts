@@ -20,11 +20,7 @@ import {
   type DataCategoryClassification,
 } from './data-categories';
 import { STORAGE_EPHEMERAL_FETCH_ACTION } from './audit';
-import {
-  DEFAULT_RETENTION_DAYS,
-  maxRetentionDaysForTier,
-  resolveChatRetentionDays,
-} from '../plaino/chat-retention';
+import { resolveChatRetentionDays } from '../plaino/chat-retention';
 
 export interface CategoryTableCount {
   table: string;
@@ -43,15 +39,12 @@ export interface CategoryStorageSummary {
 }
 
 export interface RetentionSummary {
-  tier: string | null;
-  /** Session-scoped default applied when the customer hasn't opted in. */
-  defaultDays: number;
-  /** The workspace-wide customer override, if set. */
+  /** The workspace-wide customer opt-in window, if set. null = lifetime
+   *  (the default — Plaino keeps chat for the life of the account). */
   customerOverrideDays: number | null;
-  /** The effective window today (override or default, tier-clamped). */
-  effectiveDays: number;
-  /** The per-tier ceiling the customer can opt up to. */
-  tierMaxDays: number;
+  /** The effective window: null = kept for the account lifetime; a finite
+   *  number = the customer opted into auto-purge after that many days. */
+  effectiveDays: number | null;
 }
 
 export interface WorkspaceStorageSummary {
@@ -235,17 +228,12 @@ export async function buildWorkspaceStorageSummary(
         },
       );
 
-      const tier = subscription?.tier ?? null;
       const customerOverrideDays = preference?.chatRetentionDays ?? null;
       const retention: RetentionSummary = {
-        tier,
-        defaultDays: DEFAULT_RETENTION_DAYS,
         customerOverrideDays,
         effectiveDays: resolveChatRetentionDays({
-          tier,
           workspaceOverrideDays: customerOverrideDays,
         }),
-        tierMaxDays: maxRetentionDaysForTier(tier),
       };
 
       return { categories, retention, ephemeralFetchCount };

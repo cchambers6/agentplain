@@ -114,11 +114,12 @@ function WhatWeStoreSection({ workspaceId }: { workspaceId: string }) {
         }
       >
         <p className="text-[14px] leading-relaxed text-ink-soft">
-          agentplain is a service layer, not a data warehouse. The storage page
-          shows every category of data we keep for this workspace — with live
-          counts — grouped by why we keep it, plus your chat-retention setting
-          and proof that the data inside your connected systems is read
-          in-flight and never stored. Clear any category with one tap.
+          Plaino remembers how your business works — your voice, preferences,
+          conversations, and the drafts you approve. That&rsquo;s kept for the
+          life of your account so he keeps getting better; it&rsquo;s yours,
+          exportable any time, and deleted when you close. The raw data inside
+          your connected tools is read in-flight and never copied. This page
+          shows both, live, with row counts — and lets you clear anything.
         </p>
       </ApPaperCard>
     </section>
@@ -246,10 +247,10 @@ function ClosureSection({
           <p className="mt-2 text-[13px] leading-relaxed text-mute">
             After the purge runs, every workspace-scoped row we hold —
             documents, drafts, handoffs, integrations, preferences,
-            webhooks, chat, schedules, briefings, memory — is removed. The
-            action is irreversible after the grace window ends. Your billing
-            rows and a minimal audit trail (who closed the workspace and
-            when) are kept for tax and compliance.
+            webhooks, chat, schedules, briefings, memory, and your audit
+            log — is removed. The action is irreversible after the grace
+            window ends. Only your billing rows (subscription + invoices) are
+            kept, for tax and compliance.
           </p>
 
           <form action={cancelClosureAction} className="mt-6">
@@ -294,9 +295,9 @@ function ClosureSection({
             irreversible.
           </li>
           <li>
-            Your billing rows (subscription + invoices) and a minimal audit
-            trail — who closed the workspace and when — stay so your tax and
-            compliance history is queryable. Cancel billing separately in the
+            Only your billing rows (subscription + invoices) stay, so your tax
+            and compliance history is queryable — everything else, including
+            your audit log, is hard-deleted. Cancel billing separately in the
             billing settings if you haven&rsquo;t already.
           </li>
         </ul>

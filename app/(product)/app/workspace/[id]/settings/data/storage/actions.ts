@@ -16,10 +16,10 @@ function formStr(form: FormData, key: string): string {
 }
 
 /**
- * Save the workspace-wide chat-retention window. "default" clears the
- * override (back to the session-scoped default); a number sets + clamps it to
- * the tier ceiling. Opt-in by definition — the customer is choosing to keep
- * more (or less) than the default.
+ * Save the workspace-wide chat-retention setting. "lifetime" (the default /
+ * recommended) clears any window so Plaino keeps chat for the life of the
+ * account; a number is an opt-in auto-purge window. Opt-in by definition —
+ * we never shorten retention on the customer's behalf.
  */
 export async function saveChatRetentionAction(form: FormData): Promise<void> {
   const workspaceId = formStr(form, "workspaceId");
@@ -28,18 +28,12 @@ export async function saveChatRetentionAction(form: FormData): Promise<void> {
   const ctx = { userId: member.userId, workspaceId, isOperator: false };
 
   let value: number | null;
-  if (raw === "default" || raw === "") {
-    value = null;
+  if (raw === "lifetime" || raw === "" || raw === "default") {
+    value = null; // keep for the account lifetime
   } else {
-    const sub = await withRls(ctx, (tx) =>
-      tx.subscription.findUnique({
-        where: { workspaceId },
-        select: { tier: true },
-      }),
-    );
     const requested = Number.parseInt(raw, 10);
     if (Number.isNaN(requested)) return;
-    value = validateRetentionChoice({ requestedDays: requested, tier: sub?.tier ?? null }).days;
+    value = validateRetentionChoice({ requestedDays: requested }).days;
   }
 
   await withRls(ctx, async (tx) => {

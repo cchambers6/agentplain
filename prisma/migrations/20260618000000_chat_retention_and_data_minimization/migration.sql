@@ -1,22 +1,21 @@
 -- feat(data-minimization) — chat retention controls.
 -- (feat/data-minimization-ephemeral-pass-through-2026-06-18)
 --
--- Two nullable INTEGER columns drive the chat-retention policy in
--- lib/plaino/chat-retention.ts:
+-- Two nullable INTEGER columns drive the OPT-IN chat auto-purge in
+-- lib/plaino/chat-retention.ts. Chat is kept for the LIFE OF THE ACCOUNT by
+-- default; these let a privacy-conscious customer opt into auto-purge:
 --
---   WorkspacePreference.chatRetentionDays — workspace-wide, customer-set
---     opt-in retention window in days. NULL = the session-scoped default
---     (2 days). The owner raises it on /settings/data/storage, clamped to
---     the workspace's per-tier ceiling.
+--   WorkspacePreference.chatRetentionDays — workspace-wide opt-in auto-purge
+--     window in days. NULL = keep for the account lifetime (the default).
 --
---   ChatThread.retentionDays — per-thread override (e.g. a pinned reference
---     thread). NULL = inherit the workspace setting. Also tier-clamped.
+--   ChatThread.retentionDays — per-thread override. NULL = inherit the
+--     workspace setting (which itself defaults to lifetime).
 --
 -- Both nullable with NO default, so the backfill is a no-op: every existing
--- thread/workspace keeps NULL and therefore inherits the session-scoped
--- default. The daily conversation-cleanup cron reads these to decide which
--- threads have aged out. Plain Prisma-modeled columns (not raw-SQL indexes),
--- so they create no schema-drift-baseline entry.
+-- thread/workspace keeps NULL and is therefore kept for the account lifetime
+-- (never auto-deleted). The daily conversation-cleanup cron only deletes
+-- threads where the customer set a finite window. Plain Prisma-modeled columns
+-- (not raw-SQL indexes), so they create no schema-drift-baseline entry.
 
 -- AlterTable
 ALTER TABLE "ChatThread" ADD COLUMN "retentionDays" INTEGER;

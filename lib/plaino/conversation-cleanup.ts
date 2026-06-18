@@ -1,12 +1,13 @@
 /**
  * lib/plaino/conversation-cleanup.ts
  *
- * The sweep behind the chat-retention commitment. For each active workspace
- * it resolves the effective retention window (tier ceiling + customer
- * opt-in + per-thread override — see `chat-retention.ts`) and deletes chat
- * threads whose last activity has aged past it. Deleting a `ChatThread`
- * cascades its `ChatMessage` rows (FK `onDelete: Cascade`); memory entries
- * Plaino extracted survive (their source-message FK is `SetNull`).
+ * The sweep behind the OPT-IN chat auto-purge. Chat is kept for the account
+ * lifetime by default; this sweep only deletes threads for workspaces (or
+ * individual threads) where the customer explicitly opted into a finite
+ * retention window (see `chat-retention.ts`). With the default window
+ * (null = lifetime) it deletes nothing. Deleting a `ChatThread` cascades its
+ * `ChatMessage` rows (FK `onDelete: Cascade`); memory entries Plaino extracted
+ * survive (their source-message FK is `SetNull`).
  *
  * Per `feedback_cold_start_safe_agents`: holds no in-memory state — every
  * run re-reads the windows from the DB. Per `feedback_runner_portability`:
@@ -94,15 +95,14 @@ export async function cleanupWorkspaceConversations(
   opts: { client?: Prisma.TransactionClient } = {},
 ): Promise<WorkspaceCleanupResult> {
   const run = async (tx: Prisma.TransactionClient): Promise<WorkspaceCleanupResult> => {
-    const subscription = await tx.subscription.findUnique({
-      where: { workspaceId },
-      select: { tier: true },
-    });
     const preference = await tx.workspacePreference.findUnique({
       where: { workspaceId },
       select: { chatRetentionDays: true },
     });
 
+    // Fast path: no workspace-wide opt-in AND no per-thread overrides → nothing
+    // can be expired (everything is lifetime). The findMany still runs to catch
+    // per-thread overrides, but the common case resolves to an empty delete.
     const threads = await tx.chatThread.findMany({
       where: { workspaceId },
       select: { id: true, updatedAt: true, retentionDays: true },
@@ -111,7 +111,6 @@ export async function cleanupWorkspaceConversations(
     const expiredIds: string[] = [];
     for (const t of threads) {
       const effectiveRetentionDays = resolveChatRetentionDays({
-        tier: subscription?.tier ?? null,
         workspaceOverrideDays: preference?.chatRetentionDays ?? null,
         threadOverrideDays: t.retentionDays ?? null,
       });

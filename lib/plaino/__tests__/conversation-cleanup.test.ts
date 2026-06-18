@@ -33,16 +33,12 @@ describe('runConversationCleanup', () => {
 
 describe('cleanupWorkspaceConversations', () => {
   function fakeTx(opts: {
-    tier: string | null;
     overrideDays: number | null;
     threads: Array<{ id: string; updatedAt: Date; retentionDays: number | null }>;
     messageCount: number;
   }) {
     const deletedIds: string[] = [];
     const tx = {
-      subscription: {
-        findUnique: async () => (opts.tier ? { tier: opts.tier } : null),
-      },
       workspacePreference: {
         findUnique: async () =>
           opts.overrideDays === null ? null : { chatRetentionDays: opts.overrideDays },
@@ -61,34 +57,13 @@ describe('cleanupWorkspaceConversations', () => {
     return { tx, deletedIds };
   }
 
-  it('deletes only threads past the resolved window', async () => {
+  it('keeps everything under the default lifetime window (no opt-in)', async () => {
     const now = new Date('2026-06-18T00:00:00Z');
     const { tx, deletedIds } = fakeTx({
-      tier: 'regular',
-      overrideDays: null, // default = 2 days
+      overrideDays: null, // default = lifetime
       threads: [
-        { id: 'old', updatedAt: new Date('2026-06-10T00:00:00Z'), retentionDays: null },
-        { id: 'fresh', updatedAt: new Date('2026-06-17T18:00:00Z'), retentionDays: null },
-      ],
-      messageCount: 7,
-    });
-
-    const r = await cleanupWorkspaceConversations(WS, now, {
-      client: tx as unknown as FakeTxClient,
-    });
-    assert.equal(r.threadsDeleted, 1);
-    assert.equal(r.messagesDeleted, 7);
-    assert.deepEqual(deletedIds, ['old']);
-  });
-
-  it('honors a per-thread retention override that keeps an otherwise-old thread', async () => {
-    const now = new Date('2026-06-18T00:00:00Z');
-    const { tx, deletedIds } = fakeTx({
-      tier: 'max',
-      overrideDays: null,
-      threads: [
-        // 8 days old but pinned to 30-day retention → survives
-        { id: 'pinned', updatedAt: new Date('2026-06-10T00:00:00Z'), retentionDays: 30 },
+        // years old — still kept, because lifetime is the default
+        { id: 'ancient', updatedAt: new Date('2020-01-01T00:00:00Z'), retentionDays: null },
       ],
       messageCount: 0,
     });
@@ -97,5 +72,42 @@ describe('cleanupWorkspaceConversations', () => {
     });
     assert.equal(r.threadsDeleted, 0);
     assert.deepEqual(deletedIds, []);
+  });
+
+  it('purges only expired threads once the customer opts into a window', async () => {
+    const now = new Date('2026-06-18T00:00:00Z');
+    const { tx, deletedIds } = fakeTx({
+      overrideDays: 7, // customer opted into a 7-day auto-purge
+      threads: [
+        { id: 'old', updatedAt: new Date('2026-06-08T00:00:00Z'), retentionDays: null },
+        { id: 'fresh', updatedAt: new Date('2026-06-17T18:00:00Z'), retentionDays: null },
+      ],
+      messageCount: 4,
+    });
+    const r = await cleanupWorkspaceConversations(WS, now, {
+      client: tx as unknown as FakeTxClient,
+    });
+    assert.equal(r.threadsDeleted, 1);
+    assert.equal(r.messagesDeleted, 4);
+    assert.deepEqual(deletedIds, ['old']);
+  });
+
+  it('honors a longer per-thread window under a workspace auto-purge', async () => {
+    const now = new Date('2026-06-18T00:00:00Z');
+    const { tx, deletedIds } = fakeTx({
+      overrideDays: 7, // workspace purges after 7 days...
+      threads: [
+        // ...but this thread opted into 90 days and is only 10 days old → kept
+        { id: 'kept', updatedAt: new Date('2026-06-08T00:00:00Z'), retentionDays: 90 },
+        // inherits the workspace 7-day window and is 10 days old → purged
+        { id: 'inherited', updatedAt: new Date('2026-06-08T00:00:00Z'), retentionDays: null },
+      ],
+      messageCount: 2,
+    });
+    const r = await cleanupWorkspaceConversations(WS, now, {
+      client: tx as unknown as FakeTxClient,
+    });
+    assert.equal(r.threadsDeleted, 1);
+    assert.deepEqual(deletedIds, ['inherited']);
   });
 });

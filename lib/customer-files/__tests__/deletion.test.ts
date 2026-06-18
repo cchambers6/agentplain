@@ -324,6 +324,7 @@ class FakeTeardownPrismaClient {
   counselRedlines: FakeRow[] = [];
   lifecycleEvents: FakeRow[] = [];
   preferenceFeedbacks: FakeRow[] = [];
+  auditLogs: FakeRow[] = [];
 
   async $transaction<T>(cb: (tx: FakeTeardownPrismaClient) => Promise<T>): Promise<T> {
     return cb(this);
@@ -351,6 +352,7 @@ class FakeTeardownPrismaClient {
   counselRedline = makeDeleteMany(this, 'counselRedlines');
   workspaceLifecycleEvent = makeDeleteMany(this, 'lifecycleEvents');
   preferenceFeedback = makeDeleteMany(this, 'preferenceFeedbacks');
+  auditLog = makeDeleteMany(this, 'auditLogs');
   inquiry = {
     deleteMany: async (args: { where: { convertedWorkspaceId: string } }) => {
       const before = this.inquiries.length;
@@ -440,6 +442,7 @@ describe('tearDownWorkspaceData', () => {
       prisma.counselRedlines.push({ id: `cr-${target}`, workspaceId: target });
       prisma.lifecycleEvents.push({ id: `le-${target}`, workspaceId: target });
       prisma.preferenceFeedbacks.push({ id: `pf-${target}`, workspaceId: target });
+      prisma.auditLogs.push({ id: `al-${target}`, workspaceId: target });
     }
     prisma.inquiries.push({ id: 'iq-a', convertedWorkspaceId: WORKSPACE_A });
     prisma.inquiries.push({ id: 'iq-b', convertedWorkspaceId: WORKSPACE_B });
@@ -479,6 +482,10 @@ describe('tearDownWorkspaceData', () => {
     assert.equal(result.counselRedlinesDeleted, 1);
     assert.equal(result.lifecycleEventsDeleted, 1);
     assert.equal(result.preferenceFeedbackDeleted, 1);
+    // Account-close hard-deletes the customer's audit log too.
+    assert.equal(result.auditLogsDeleted, 1);
+    assert.equal(prisma.auditLogs.length, 1);
+    assert.equal(prisma.auditLogs[0].workspaceId, WORKSPACE_B);
 
     // B rows still present across the board.
     assert.equal(prisma.webhookEvents.length, 1);

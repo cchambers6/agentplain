@@ -1,45 +1,34 @@
 /**
  * lib/storage/data-categories.ts
  *
- * The single source of truth for the data-minimization commitment.
+ * The single source of truth for what agentplain stores about a customer.
  *
- * agentplain is a SERVICE LAYER, not a data warehouse. The commitment we
- * make to a customer — "here is EXACTLY what we store about you, and
- * nothing else" — is only credible if one registry drives every surface
- * that states it: the storage-inventory audit doc, the customer-visible
- * `/settings/data/storage` page, the connection-time disclosure, and the
- * tests that keep all three honest. That registry is this file.
+ * agentplain is a SERVICE LAYER. The deal is: **Plaino remembers HOW your
+ * business works — he does NOT keep copies of your raw data.** What he learns
+ * about you (your voice, your preferences, your contacts, your conversations,
+ * the drafts you approve and edit) is kept for the **lifetime of your account**
+ * so he gets better as a partner — exportable any time, and hard-deleted when
+ * you close the account. The raw data inside your connected tools (emails,
+ * deals, records) is read in-flight and **never copied** into our database.
  *
- * Each `DataCategory` classifies a slice of customer-scoped storage:
+ * Three classifications drive the customer-visible surface:
  *
- *   • necessary  — we MUST persist this for the product to function at all
- *                  (auth tokens, workspace metadata, billing relationship,
- *                  the approval queue's pending decisions). Deleting it
- *                  breaks the service.
- *   • retention  — persisted only inside a customer-controlled retention
- *                  window, then auto-deleted (Plaino chat history).
- *   • audit      — a durable record kept for the customer's own audit trail
- *                  (what we did, when) — but the CONTENT it references is
- *                  redacted once the work completes (the approval queue's
- *                  decided items).
- *   • opt-in     — persisted ONLY if the customer explicitly turns it on
- *                  (extended chat retention, learned voice/preferences).
- *   • ephemeral  — NOT a stored category at all; listed so the surface can
- *                  state plainly "we fetch this in-flight and never store
- *                  it" (Gmail/CRM connector data).
+ *   • partner-memory — what Plaino has learned about your business. Kept while
+ *                      your account is active, exportable any time, hard-
+ *                      deleted on account close. THIS IS THE POINT of a service
+ *                      partner: it compounds over time.
+ *   • necessary      — infrastructure to run your account (auth, the encrypted
+ *                      connector tokens, billing, support). Also yours; also
+ *                      deleted on close (billing rows excepted, for tax).
+ *   • ephemeral      — NOT stored. Read in-flight and discarded (your connected
+ *                      tools' raw data). Listed so we can say so plainly.
  *
- * The `tables` array names the Prisma models that hold each category's
- * rows. `lib/storage/workspace-storage-summary.ts` reads live counts for
- * exactly these models; a test asserts that every customer-scoped model in
- * the schema is accounted for here (no silent un-disclosed storage).
+ * The `tables` array names the Prisma models each category holds. A test
+ * asserts every customer-scoped model is accounted for here (no silent,
+ * undisclosed storage).
  */
 
-export type DataCategoryClassification =
-  | 'necessary'
-  | 'retention'
-  | 'audit'
-  | 'opt-in'
-  | 'ephemeral';
+export type DataCategoryClassification = 'necessary' | 'partner-memory' | 'ephemeral';
 
 export interface DataCategory {
   /** Stable id used in surface routing + audit actions. */
@@ -52,87 +41,37 @@ export interface DataCategory {
   /** Prisma model names whose rows fall under this category. Empty for the
    *  ephemeral category (nothing is stored). */
   tables: readonly string[];
-  /** Whether the customer can delete this category from the storage surface
-   *  without closing the whole workspace. Necessary categories (tokens,
-   *  billing) are not independently deletable — disconnecting/closing is the
-   *  path. */
+  /** Whether the customer can clear this category from the storage surface
+   *  without closing the whole workspace. (Everything is deleted on close
+   *  regardless.) */
   customerDeletable: boolean;
   /** Longer disclosure shown in the expanded card / audit doc. */
   detail: string;
 }
 
 /**
- * The canonical commitment. Order is the order the storage surface renders.
+ * The canonical commitment. Order is the order the storage surface renders:
+ * partner-memory first (the headline — what Plaino learned), then the
+ * pass-through, then the necessary infrastructure.
  */
 export const DATA_CATEGORIES: readonly DataCategory[] = [
   {
-    id: 'auth-workspace',
-    label: 'Auth & workspace',
-    classification: 'necessary',
-    summary:
-      'Your workspace settings, team roster, and the encrypted connector tokens we need to do the work.',
-    tables: [
-      'Workspace',
-      'Membership',
-      'Team',
-      'TeamMembership',
-      'OnboardingState',
-      'IntegrationCredential',
-      'WebhookSubscription',
-      'WebhookEvent',
-      'IntegrationHealthCheck',
-    ],
-    customerDeletable: false,
-    detail:
-      'Workspace metadata (name, slug, vertical, tier, preferences), the team members we route work to, and OAuth/API credentials for the systems you connected. Tokens are encrypted at rest (AES-256-GCM) and are the ONLY copy of a connector secret we keep — we never store the data those tokens reach. Removed when you disconnect a connector or close the workspace.',
-  },
-  {
-    id: 'billing',
-    label: 'Billing',
-    classification: 'necessary',
-    summary:
-      'The Stripe relationship and invoice history that lets us bill you correctly.',
-    tables: ['Subscription', 'WorkspaceInvoice', 'BillingEvent', 'LlmUsageRecord'],
-    customerDeletable: false,
-    detail:
-      'Your subscription state (tier, seats, status) keyed to a Stripe customer id, plus invoice records and per-workspace usage accounting. Retained after workspace closure for tax and compliance — this is the one slice that survives a close, by design and disclosed up front.',
-  },
-  {
-    id: 'approvals',
-    label: 'Approvals & work record',
-    classification: 'audit',
-    summary:
-      'The log of what your fleet did and the decisions you made — content redacted once the work completes.',
-    tables: [
-      'WorkApprovalQueueItem',
-      'HandoffLogEntry',
-      'SkillRun',
-      'ComplianceFlag',
-      'CounselRedline',
-      'RetryableAction',
-      'AuditLog',
-    ],
-    customerDeletable: true,
-    detail:
-      'Each item your fleet drafts waits here for your approval; pending items must persist (a decision needs something to decide on). Once an item is decided and the work has run, the DRAFT CONTENT and any customer data it referenced is redacted after 7 days — we keep the structural record (what kind of work, when, who decided) for your audit trail, not the body text. The handoff + skill-run logs and the audit trail are append-only structural records.',
-  },
-  {
     id: 'conversations',
-    label: 'Conversations with Plaino',
-    classification: 'retention',
+    label: 'Your conversations with Plaino',
+    classification: 'partner-memory',
     summary:
-      'Your chat history with Plaino — kept only for your retention window, then deleted.',
+      'Your full chat history with Plaino — kept for the life of your account so he has continuity.',
     tables: ['ChatThread', 'ChatMessage', 'PlainoConversation'],
     customerDeletable: true,
     detail:
-      'Chat turns are encrypted at rest and kept for a short, customer-controlled retention window (see your retention setting), then auto-deleted by a daily sweep. Default windows are short by design; you can extend them if you want Plaino to keep more context — that extension is your explicit choice.',
+      "Chat turns are encrypted at rest and kept for as long as your account is active — Plaino would be a poor partner if he forgot every conversation. Exportable any time; hard-deleted when you close the account. If you'd rather we auto-purge older chats, you can opt into a retention window (it's off by default — lifetime is the default).",
   },
   {
     id: 'preferences-memory',
-    label: 'Preferences & learned voice',
-    classification: 'opt-in',
+    label: 'What Plaino has learned about your business',
+    classification: 'partner-memory',
     summary:
-      "What you've told us about how you like the work done, and what Plaino has learned about your voice.",
+      'Your voice, your preferences, your workflow rhythms, and what Plaino has picked up over time.',
     tables: [
       'WorkspacePreference',
       'PreferenceSignal',
@@ -149,7 +88,80 @@ export const DATA_CATEGORIES: readonly DataCategory[] = [
     ],
     customerDeletable: true,
     detail:
-      'Your stated preferences (tone, categorization notes, schedule windows), the corrections you leave on drafts, and the memory entries Plaino extracts so it sounds like you across sessions. Encrypted where it can carry PII. This is the slice that makes Plaino better over time — clear it any time to reset what we have learned.',
+      'Your stated preferences (tone, categorization rules, schedule windows), the corrections you leave on drafts, and the memory entries Plaino extracts — your brand voice, key contacts, recurring clients, deadline patterns, business rhythms. Encrypted where it can carry PII. This is what makes Plaino smarter about YOUR business over time. Kept for the account lifetime, exportable, deleted on close — and you can clear it any time to reset what he has learned.',
+  },
+  {
+    id: 'approvals',
+    label: 'Your drafts & work record',
+    classification: 'partner-memory',
+    summary:
+      'The drafts Plaino made, what you approved or edited, and the record of work done — kept so he learns your style.',
+    tables: [
+      'WorkApprovalQueueItem',
+      'HandoffLogEntry',
+      'SkillRun',
+      'ComplianceFlag',
+      'CounselRedline',
+      'RetryableAction',
+      'AuditLog',
+    ],
+    customerDeletable: true,
+    detail:
+      'Each item Plaino drafts, the decision you made on it, and what you edited — kept so Plaino learns what you like and how you change things. Plus the handoff/skill-run record of work done and the audit trail of what happened in your workspace. The drafts reference your data but are Plaino\'s own output, not bulk copies of your tools. Kept for the account lifetime, exportable, hard-deleted on close.',
+  },
+  {
+    id: 'knowledge',
+    label: 'Documents you asked Plaino to learn',
+    classification: 'partner-memory',
+    summary:
+      'Documents you explicitly pointed us at, indexed so Plaino can ground his work in them.',
+    tables: ['KnowledgeDocument', 'Embedding'],
+    customerDeletable: true,
+    detail:
+      'When you connect a document source (Drive, Notion) and ask us to index it, we store the chunked text + a private vector index scoped to your workspace, so Plaino can search it. This is the only connector data we persist, and only because you asked us to make it part of what Plaino knows. Disconnecting the source deletes its documents; closing the account deletes all of it.',
+  },
+  {
+    id: 'connector-data',
+    label: "What we don't keep (your connected tools)",
+    classification: 'ephemeral',
+    summary:
+      'Raw data in Gmail, your CRM, your books — Plaino reads it in-flight and keeps NO copy.',
+    tables: [],
+    customerDeletable: false,
+    detail:
+      "The emails, deals, contacts, calendar events, and records inside the systems you connect are NEVER copied into our database. When Plaino needs them he fetches them with your token, processes them in memory, drafts a result for your approval, and discards the source. The canonical copy stays in your tools, where it belongs — we are a pass-through, not a mirror. (The one exception is documents you explicitly ask us to index — see 'Documents you asked Plaino to learn'.)",
+  },
+  {
+    id: 'auth-workspace',
+    label: 'Account & connections',
+    classification: 'necessary',
+    summary:
+      'Your workspace settings, team roster, and the encrypted connector tokens we need to do the work.',
+    tables: [
+      'Workspace',
+      'Membership',
+      'Team',
+      'TeamMembership',
+      'OnboardingState',
+      'IntegrationCredential',
+      'WebhookSubscription',
+      'WebhookEvent',
+      'IntegrationHealthCheck',
+    ],
+    customerDeletable: false,
+    detail:
+      'Workspace metadata (name, slug, vertical, tier), the team members we route work to, and the OAuth/API credentials for the systems you connected. Tokens are encrypted at rest (AES-256-GCM) and are the ONLY connector secret we keep — we never store the data those tokens reach. Removed when you disconnect a connector or close the account.',
+  },
+  {
+    id: 'billing',
+    label: 'Billing',
+    classification: 'necessary',
+    summary:
+      'The Stripe relationship and invoice history that lets us bill you correctly.',
+    tables: ['Subscription', 'WorkspaceInvoice', 'BillingEvent', 'LlmUsageRecord'],
+    customerDeletable: false,
+    detail:
+      'Your subscription state (tier, seats, status) keyed to a Stripe customer id, plus invoice records and per-workspace usage accounting. Retained after account closure for tax and compliance — this is the one slice that survives a close, disclosed up front.',
   },
   {
     id: 'support',
@@ -159,29 +171,7 @@ export const DATA_CATEGORIES: readonly DataCategory[] = [
     tables: ['SupportRequest', 'SupportTicket', 'SupportTicketMessage'],
     customerDeletable: true,
     detail:
-      'In-app support requests and ticket threads with your service team. Kept so an open issue has continuity; deletable once resolved.',
-  },
-  {
-    id: 'knowledge',
-    label: 'Ingested documents',
-    classification: 'opt-in',
-    summary:
-      'Documents you explicitly pointed us at, indexed so Plaino can ground its work in them.',
-    tables: ['KnowledgeDocument', 'Embedding'],
-    customerDeletable: true,
-    detail:
-      'When you connect a document source (Drive, Notion) and ask us to index it, we store the chunked text + a vector index scoped to your workspace. Disconnecting the source deletes its documents; this is the only connector data we persist, and only because you asked us to make it searchable.',
-  },
-  {
-    id: 'connector-data',
-    label: 'Connector data (Gmail, CRM, etc.)',
-    classification: 'ephemeral',
-    summary:
-      'We do NOT store this. Plaino reads it in-flight, does the work, and returns a result.',
-    tables: [],
-    customerDeletable: false,
-    detail:
-      "The emails, deals, contacts, calendar events, and records inside the systems you connect are NEVER copied into our database. When Plaino needs them it fetches them with your token, processes them in memory, drafts a result for your approval, and discards the source. The canonical copy stays in your system — we are a pass-through, not a mirror. (The one exception is documents you explicitly ask us to index — see 'Ingested documents'.)",
+      'In-app support requests and ticket threads with your service team. Kept so an open issue has continuity; deletable once resolved, and removed on account close.',
   },
 ];
 
@@ -193,9 +183,16 @@ export function getDataCategory(id: string): DataCategory | undefined {
   return CATEGORY_BY_ID.get(id);
 }
 
-/** Categories the customer can independently delete from the storage surface. */
+/** Categories the customer can independently clear from the storage surface. */
 export function customerDeletableCategories(): DataCategory[] {
   return DATA_CATEGORIES.filter((c) => c.customerDeletable);
+}
+
+/** Categories grouped under a classification, in surface order. */
+export function categoriesByClassification(
+  classification: DataCategoryClassification,
+): DataCategory[] {
+  return DATA_CATEGORIES.filter((c) => c.classification === classification);
 }
 
 /** Every distinct Prisma model named across all stored categories. The

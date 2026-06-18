@@ -175,41 +175,48 @@ PR: `feat(memory): RLS isolation + tiering + customer-hosted storage option`
 
 ## Data minimization (PR: `feat/data-minimization-ephemeral-pass-through-2026-06-18`)
 
-- [ ] **Sign off on per-tier default chat retention.** The build ships a
-  conservative, data-minimizing default and tier-capped extension (in
-  `lib/plaino/chat-retention.ts`): **default = 2 days for all tiers**; customer
-  may opt up to a ceiling of **Regular 30 / Partner 90 / Max 365 days**. The
-  plan floated "Solo: 1 day? Partner: 7? Max: customer choice?" — confirm the
-  defaults + ceilings, or adjust the one constant block. (The default is
-  deliberately short to honor "we don't hoard your conversations"; ceilings are
-  generous so power users can opt in.)
+**Positioning (as built):** *Plaino remembers HOW your business works. He
+doesn't keep copies of your raw data — that lives in your tools. He keeps what
+he's learned about you, so he's a real partner that gets better.* Plaino-memory
+(chat, learned patterns, preferences, approved/edited drafts) is kept for the
+account lifetime, exportable any time, hard-deleted on close. Connector data is
+pass-through, never stored.
 
-- [ ] **Counsel review of the data-minimization commitment language.** The new
-  customer-facing copy ("we read your data in-flight and store none of it",
-  "exactly what we store", the connect-time disclosure) must be **deliverable,
-  not aspirational**. It is true as built (connector record bodies are never
-  persisted; the indexed-documents opt-in is the disclosed exception), but
-  counsel should bless the phrasing before it anchors a marketing claim.
-  Surfaces: `app/(product)/app/workspace/[id]/settings/data/storage/page.tsx`,
+- [ ] **Counsel review of the data-minimization commitment + the ToS/Privacy
+  language.** The commitment to land in ToS/Privacy: *"your data is yours; we
+  delete it when you cancel; connector data is pass-through and never copied;
+  we keep what Plaino learns so he gets better — all owned by you, exportable
+  any time."* It is true as built, but counsel should bless the exact phrasing
+  before it anchors a legal/marketing claim. Note: the canonical ToS/Privacy
+  source lives on the IP-protection branch (PR #296) — this PR did **not** edit
+  the legal pages directly; it captured the language here + in the storage
+  inventory doc for counsel to fold in. Surfaces to align:
+  `app/(product)/app/workspace/[id]/settings/data/storage/page.tsx`,
   `components/integrations/ConnectStorageDisclosure.tsx`,
   `docs/architecture/data-storage-inventory-2026-06-18.md`.
 
-- [ ] **Decide: intermediate-processing / connector cache → Redis or
-  in-memory?** The ephemeral pass-through ships an **in-memory** short-TTL
-  cache (`InMemoryEphemeralCache`, ≤30 min, lost on container restart) behind a
-  swap seam (`IEphemeralCache`). Moving to **Upstash Redis** (~$10/mo) would
-  let the cache survive restarts and be shared across instances — at the cost
-  of holding connector data in a (still short-lived, still off-DB) external
-  store. In-memory is the more data-minimal default; Redis is the
-  performance/scale choice. Pick one.
+- [ ] **Confirm account-close hard-deletes the audit log.** Per your direction,
+  `tearDownWorkspaceData` now deletes the customer's `AuditLog` on close (only
+  billing rows survive, for tax). Confirm this is what you want — some privacy
+  regimes (GDPR/CCPA) expect a *minimal* deletion-event record to be retained
+  to prove the deletion happened. If counsel wants that, we'd keep a single
+  "workspace closed + purged at <time>" stub instead of deleting the whole log.
 
-- [ ] **Approval-content redaction window.** Decided approval items keep their
-  draft content for **7 days** after the decision, then the content (not the
-  record) is redacted. Confirm 7 days is the right balance between "let the
-  customer review recent decisions" and "don't be a long-term content store."
+- [ ] **Decide: connector cache → Redis or in-memory?** The ephemeral
+  pass-through ships an **in-memory** short-TTL cache (`InMemoryEphemeralCache`,
+  ≤30 min, lost on container restart) behind a swap seam (`IEphemeralCache`).
+  Upstash Redis (~$10/mo) would let it survive restarts + be shared across
+  instances, at the cost of holding connector data in a (still short-lived,
+  still off-DB) external store. In-memory is the more data-minimal default.
+
+- [ ] **(Optional) Default chat auto-purge for any tier?** Default is now
+  **lifetime** for all tiers (correct — a partner shouldn't forget). The opt-in
+  finite auto-purge window is available to privacy-conscious customers. If you
+  ever want a tier (or vertical with strict retention rules, e.g. law) to
+  *default* to a finite window, that's a one-line change in
+  `lib/plaino/chat-retention.ts` — flag it and we'll wire it.
 
 - [ ] **Lead-conversation retention (`PlainoConversation`, MARKETING mode).**
-  Anonymous marketing-widget conversations are out of scope for the workspace
-  chat-retention cron (no workspaceId). Decide a retention policy for
-  pre-conversion lead conversations (sales/marketing may want them) — tracked
-  as a follow-up, not implemented here.
+  Anonymous marketing-widget conversations have no workspace and aren't covered
+  by the account-lifetime model. Decide a retention policy for pre-conversion
+  lead conversations (sales/marketing may want them) — tracked as a follow-up.

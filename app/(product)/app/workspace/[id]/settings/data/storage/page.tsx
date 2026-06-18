@@ -7,16 +7,19 @@ import {
 } from "@/components/ui/ap";
 import { requireWorkspaceMember } from "@/lib/auth";
 import { buildWorkspaceStorageSummary } from "@/lib/storage/workspace-storage-summary";
+import type { CategoryStorageSummary } from "@/lib/storage/workspace-storage-summary";
 import { readStorageAuditTrail } from "@/lib/storage/audit";
-import { DEFAULT_RETENTION_DAYS } from "@/lib/plaino/chat-retention";
 import type { DataCategoryClassification } from "@/lib/storage/data-categories";
 import { purgeCategoryAction, saveChatRetentionAction } from "./actions";
 
-// Customer-visible "exactly what we store about you" surface. Renders the
-// LIVE per-category row counts for THIS workspace, the chat-retention window
-// in effect, proof of the pass-through (reads that stored nothing), and a
-// per-category one-tap delete. The data-minimization commitment, made
-// inspectable — not just asserted in copy.
+// Customer-visible "exactly what we store about you" surface. Two clear
+// stories, the way Conner framed it:
+//   1. "What Plaino has learned about your business" — kept for the life of
+//      your account so he gets better; exportable; deleted on close.
+//   2. "What we don't keep" — your connected tools' raw data, read in-flight
+//      and never copied.
+// Plus the account essentials (auth, billing, support) and a live, row-by-row
+// count so the commitment is inspectable, not just asserted.
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -25,10 +28,8 @@ interface PageProps {
 export const dynamic = "force-dynamic";
 
 const CLASSIFICATION_LABEL: Record<DataCategoryClassification, string> = {
-  necessary: "necessary",
-  retention: "your retention setting",
-  audit: "audit record",
-  "opt-in": "your choice",
+  "partner-memory": "kept while active · yours · deleted on close",
+  necessary: "needed to run your account",
   ephemeral: "never stored",
 };
 
@@ -42,23 +43,32 @@ export default async function StorageSurfacePage({ params }: PageProps) {
     readStorageAuditTrail(ctx, workspaceId, { limit: 25 }),
   ]);
 
-  const retentionOptions = [1, 2, 7, 14, 30, 60, 90, 180, 365].filter(
-    (d) => d <= summary.retention.tierMaxDays,
+  const partnerMemory = summary.categories.filter(
+    (c) => c.classification === "partner-memory",
   );
+  const ephemeral = summary.categories.filter(
+    (c) => c.classification === "ephemeral",
+  );
+  const necessary = summary.categories.filter(
+    (c) => c.classification === "necessary",
+  );
+
+  const autoPurgeOptions = [30, 90, 180, 365];
 
   return (
     <div className="space-y-12">
       <header>
         <ApEyebrow className="mb-3">what we store</ApEyebrow>
         <h1 className="font-display text-3xl text-ink">
-          Exactly what we hold about you. Nothing else.
+          Plaino remembers how your business works. He doesn&rsquo;t keep copies
+          of your raw data.
         </h1>
         <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
-          agentplain is a service layer, not a data warehouse. This page is the
-          live, row-by-row truth of what is in our database for this workspace
-          — grouped by why we keep it. The data inside the systems you connect
-          (your inbox, your CRM) never lands here; we read it in-flight and
-          give it back.
+          He keeps what he&rsquo;s learned about you — so he&rsquo;s a real
+          partner that gets better over time. That lives here, it&rsquo;s yours,
+          you can export it any time, and it&rsquo;s deleted when you close the
+          account. The raw data inside your connected tools is read in-flight
+          and never copied. This page is the live, row-by-row truth of both.
         </p>
         <p className="mt-3 max-w-2xl text-[13px] leading-relaxed text-mute">
           <Link
@@ -73,38 +83,29 @@ export default async function StorageSurfacePage({ params }: PageProps) {
             download
             className="underline-offset-2 hover:underline"
           >
-            download a full copy (JSON)
+            export everything (JSON)
           </a>
         </p>
       </header>
 
-      {/* Pass-through proof */}
-      <section>
-        <ApEyebrow className="mb-3">connector data — pass-through</ApEyebrow>
-        <ApPaperCard title="We read your connected systems in-flight and store none of it.">
-          <p className="text-[14px] leading-relaxed text-ink-soft">
-            When Plaino needs an email, a deal, or a contact, it fetches it with
-            your token, does the work in memory, drafts a result for your
-            approval, and discards the source. The canonical copy stays in your
-            system.
+      {/* 1 — What Plaino has learned (the headline) */}
+      <section className="space-y-6">
+        <div>
+          <ApEyebrow>what Plaino has learned about your business</ApEyebrow>
+          <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-mute">
+            Kept for the life of your account so Plaino keeps getting better.
+            Yours to export any time; hard-deleted when you close the account.
           </p>
-          <p className="mt-3 font-mono text-[12px] uppercase tracking-eyebrow text-clay">
-            {summary.ephemeralFetchCount} pass-through{" "}
-            {summary.ephemeralFetchCount === 1 ? "read" : "reads"} logged — 0 stored
-          </p>
-        </ApPaperCard>
-      </section>
+        </div>
 
-      {/* Chat retention control */}
-      <section>
-        <ApEyebrow className="mb-3">conversation retention</ApEyebrow>
+        {/* Retention control lives with conversations */}
         <ApPaperCard title="How long Plaino keeps your chat history.">
           <p className="text-[14px] leading-relaxed text-ink-soft">
-            By default we keep your conversations with Plaino for{" "}
-            <strong>{DEFAULT_RETENTION_DAYS} days</strong>, then a daily sweep
-            deletes them. You can keep more if you want Plaino to hold longer
-            context — your call, up to {summary.retention.tierMaxDays} days on
-            your plan.
+            By default Plaino keeps your conversations for the{" "}
+            <strong>life of your account</strong> — forgetting them would make
+            him a worse partner. If you&rsquo;d rather we auto-purge older chats,
+            you can opt into a window below. (Your learned preferences and memory
+            are unaffected — only the raw chat threads.)
           </p>
           <form
             action={saveChatRetentionAction}
@@ -113,23 +114,23 @@ export default async function StorageSurfacePage({ params }: PageProps) {
             <input type="hidden" name="workspaceId" value={workspaceId} />
             <label className="flex flex-col gap-1">
               <span className="font-mono text-[11px] uppercase tracking-eyebrow text-mute">
-                retention window
+                chat retention
               </span>
               <select
                 name="retentionDays"
                 defaultValue={
                   summary.retention.customerOverrideDays === null
-                    ? "default"
+                    ? "lifetime"
                     : String(summary.retention.customerOverrideDays)
                 }
                 className="rounded-none border border-ink bg-paper px-3 py-2 font-sans text-sm text-ink"
               >
-                <option value="default">
-                  default ({DEFAULT_RETENTION_DAYS} days)
+                <option value="lifetime">
+                  keep for the life of my account (recommended)
                 </option>
-                {retentionOptions.map((d) => (
+                {autoPurgeOptions.map((d) => (
                   <option key={d} value={String(d)}>
-                    {d} {d === 1 ? "day" : "days"}
+                    auto-purge after {d} days
                   </option>
                 ))}
               </select>
@@ -142,57 +143,46 @@ export default async function StorageSurfacePage({ params }: PageProps) {
             </button>
           </form>
           <p className="mt-3 text-[12px] leading-relaxed text-mute">
-            In effect now: <strong>{summary.retention.effectiveDays} days</strong>
-            {summary.retention.customerOverrideDays === null
-              ? " (default)"
-              : " (your setting)"}
+            In effect now:{" "}
+            <strong>
+              {summary.retention.effectiveDays === null
+                ? "kept for the life of your account"
+                : `auto-purge after ${summary.retention.effectiveDays} days`}
+            </strong>
             .
           </p>
         </ApPaperCard>
+
+        {partnerMemory.map((cat) => (
+          <CategoryCard key={cat.id} cat={cat} workspaceId={workspaceId} />
+        ))}
       </section>
 
-      {/* Per-category live inventory */}
+      {/* 2 — What we don't keep (pass-through) */}
       <section className="space-y-6">
-        <ApEyebrow>your stored data, by category</ApEyebrow>
-        {summary.categories.map((cat) => (
-          <ApPaperCard
-            key={cat.id}
-            title={cat.label}
-            footer={
-              cat.classification !== "ephemeral" && cat.customerDeletable ? (
-                <DeleteCategoryForm
-                  workspaceId={workspaceId}
-                  categoryId={cat.id}
-                  label={cat.label}
-                />
-              ) : undefined
-            }
-          >
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="font-mono text-[10px] uppercase tracking-eyebrow text-clay">
-                {CLASSIFICATION_LABEL[cat.classification]}
-              </span>
-              {cat.classification !== "ephemeral" ? (
-                <span className="font-mono text-[11px] text-mute">
-                  {cat.totalRows} {cat.totalRows === 1 ? "row" : "rows"}
-                </span>
-              ) : null}
-            </div>
+        <ApEyebrow>what we don&rsquo;t keep</ApEyebrow>
+        {ephemeral.map((cat) => (
+          <ApPaperCard key={cat.id} title={cat.label}>
+            <span className="font-mono text-[10px] uppercase tracking-eyebrow text-clay">
+              {CLASSIFICATION_LABEL[cat.classification]}
+            </span>
             <p className="mt-3 text-[14px] leading-relaxed text-ink-soft">
               {cat.detail}
             </p>
-            {cat.classification !== "ephemeral" && cat.tables.length > 0 ? (
-              <ApHairlineList className="mt-4">
-                {cat.tables.map((t) => (
-                  <ApHairlineRow key={t.table} right={String(t.count)}>
-                    <span className="font-mono text-[11px] text-mute">
-                      {t.table}
-                    </span>
-                  </ApHairlineRow>
-                ))}
-              </ApHairlineList>
-            ) : null}
+            <p className="mt-3 font-mono text-[12px] uppercase tracking-eyebrow text-clay">
+              {summary.ephemeralFetchCount} pass-through{" "}
+              {summary.ephemeralFetchCount === 1 ? "read" : "reads"} logged — 0
+              stored
+            </p>
           </ApPaperCard>
+        ))}
+      </section>
+
+      {/* 3 — Account essentials */}
+      <section className="space-y-6">
+        <ApEyebrow>needed to run your account</ApEyebrow>
+        {necessary.map((cat) => (
+          <CategoryCard key={cat.id} cat={cat} workspaceId={workspaceId} />
         ))}
       </section>
 
@@ -231,6 +221,48 @@ export default async function StorageSurfacePage({ params }: PageProps) {
   );
 }
 
+function CategoryCard({
+  cat,
+  workspaceId,
+}: {
+  cat: CategoryStorageSummary;
+  workspaceId: string;
+}) {
+  return (
+    <ApPaperCard
+      title={cat.label}
+      footer={
+        cat.customerDeletable ? (
+          <DeleteCategoryForm
+            workspaceId={workspaceId}
+            categoryId={cat.id}
+            label={cat.label}
+          />
+        ) : undefined
+      }
+    >
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="font-mono text-[10px] uppercase tracking-eyebrow text-clay">
+          {CLASSIFICATION_LABEL[cat.classification]}
+        </span>
+        <span className="font-mono text-[11px] text-mute">
+          {cat.totalRows} {cat.totalRows === 1 ? "row" : "rows"}
+        </span>
+      </div>
+      <p className="mt-3 text-[14px] leading-relaxed text-ink-soft">{cat.detail}</p>
+      {cat.tables.length > 0 ? (
+        <ApHairlineList className="mt-4">
+          {cat.tables.map((t) => (
+            <ApHairlineRow key={t.table} right={String(t.count)}>
+              <span className="font-mono text-[11px] text-mute">{t.table}</span>
+            </ApHairlineRow>
+          ))}
+        </ApHairlineList>
+      ) : null}
+    </ApPaperCard>
+  );
+}
+
 function DeleteCategoryForm({
   workspaceId,
   categoryId,
@@ -246,7 +278,7 @@ function DeleteCategoryForm({
       <input type="hidden" name="category" value={categoryId} />
       <label className="flex flex-col gap-1">
         <span className="font-mono text-[10px] uppercase tracking-eyebrow text-mute">
-          type &ldquo;delete&rdquo; to clear {label.toLowerCase()}
+          type &ldquo;delete&rdquo; to clear this
         </span>
         <input
           name="confirm"
@@ -259,7 +291,7 @@ function DeleteCategoryForm({
         type="submit"
         className="inline-flex items-center justify-center rounded-none border border-clay px-5 py-2 font-sans text-sm font-medium text-clay transition hover:bg-clay hover:text-paper"
       >
-        delete this category
+        clear {label.toLowerCase()}
       </button>
     </form>
   );

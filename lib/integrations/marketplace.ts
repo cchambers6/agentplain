@@ -22,6 +22,7 @@
  */
 
 import type { DisciplineId } from '@/lib/disciplines';
+import type { IntegrationSourcing } from './sourcing';
 
 export type MarketplaceStatus = 'available' | 'coming-soon' | 'beta';
 
@@ -139,6 +140,14 @@ export interface MarketplaceEntry {
    *  assuming a connector was decorative). Slack/Notion are tagged
    *  `'non-critical'` because they notify/mirror rather than own the record. */
   criticality?: IntegrationCriticality;
+  /** Which side of the BYO / we-bring split this connection sits on.
+   *  EVERY marketplace tile is `'byo'` by nature — a tile is, definitionally,
+   *  a customer account we plug into (the customer pays their own vendor).
+   *  Omitted = `'byo'`. We never tag a marketplace entry `'we-bring'`; the
+   *  we-bring services live in their own registry at `lib/integrations/wb/`.
+   *  The classifier in `connection-catalog.ts` warns if this invariant breaks.
+   *  See `lib/integrations/sourcing.ts`. */
+  sourcing?: IntegrationSourcing;
 }
 
 export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
@@ -716,6 +725,17 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
  */
 export function listIntegrations(): readonly MarketplaceEntry[] {
   return MARKETPLACE_ENTRIES;
+}
+
+/**
+ * The BYO / we-bring sourcing of a marketplace entry. Every marketplace tile
+ * is Customer-Brought (`'byo'`) by nature — the customer authorizes their own
+ * account and pays their own vendor. Omitted on the entry = `'byo'`. The
+ * connection-catalog classifier flags any entry that declares `'we-bring'`,
+ * which would be a misclassification (we-bring services are not tiles).
+ */
+export function entrySourcing(entry: MarketplaceEntry): IntegrationSourcing {
+  return entry.sourcing ?? 'byo';
 }
 
 /**

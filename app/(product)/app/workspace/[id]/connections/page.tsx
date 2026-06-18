@@ -10,7 +10,12 @@ import {
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
 import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
-import { listIntegrations, entryAppliesToVertical } from "@/lib/integrations/marketplace";
+import {
+  listIntegrations,
+  entryAppliesToVertical,
+  entrySourcing,
+} from "@/lib/integrations/marketplace";
+import { listWeBringServices } from "@/lib/integrations/wb";
 import { recommendedConnectorsFor } from "@/lib/integrations/recommendations";
 import { listDisciplines } from "@/lib/disciplines";
 import { getVerticalContent } from "@/lib/verticals";
@@ -58,10 +63,16 @@ export default async function ConnectionsPage({ params }: PageProps) {
     : null;
   // How many tools Plaino *could* read from for this business — the honest
   // denominator behind "X of Y connected".
-  const availableCount = listIntegrations().filter((entry) =>
+  const verticalEntries = listIntegrations().filter((entry) =>
     verticalSlug ? entryAppliesToVertical(entry, verticalSlug) : true,
-  ).length;
+  );
+  const availableCount = verticalEntries.length;
   const areaCount = listDisciplines().length;
+  // The BYO / we-bring split, for the "who pays for what" door.
+  const youBringCount = verticalEntries.filter(
+    (entry) => entrySourcing(entry) === "byo",
+  ).length;
+  const weBringCount = listWeBringServices().length;
 
   // Vertical-aware "connect this first" guidance, led by the connector that
   // unlocks this business's killer workflow. The owner shouldn't have to
@@ -127,6 +138,35 @@ export default async function ConnectionsPage({ params }: PageProps) {
             value={String(areaCount)}
           />
         </ApHeritageGrid>
+      </section>
+
+      <section className="mt-10">
+        <ApEyebrow className="mb-3">who pays for what</ApEyebrow>
+        <div className="border border-rule bg-paper p-5">
+          <p className="max-w-2xl text-[13px] leading-relaxed text-ink-soft">
+            <strong className="text-ink">{youBringCount} tools you bring</strong>{" "}
+            — your own accounts, your own vendor bills. And{" "}
+            <strong className="text-ink">{weBringCount} services we bring</strong>{" "}
+            — run on our accounts, most included in your plan, a few passed
+            through at our cost. Here is the honest split.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <ApHeritageButton
+              variant="secondary"
+              withArrow
+              href={`${base}/connections/sourcing`}
+            >
+              see what you bring vs what we bring
+            </ApHeritageButton>
+            <ApHeritageButton
+              variant="secondary"
+              withArrow
+              href={`${base}/usage/connections`}
+            >
+              connection costs
+            </ApHeritageButton>
+          </div>
+        </div>
       </section>
 
       <section className="mt-10">

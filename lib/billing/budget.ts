@@ -173,6 +173,56 @@ export function withBudgetCapUsd(
   return base;
 }
 
+// ── Daily cap (the spike guard) ────────────────────────────────────────────
+//
+// The monthly cap above is the slow ceiling — it catches a workspace whose
+// steady-state spend outruns its plan. A DAILY cap is the fast circuit
+// breaker: it catches a single bad day (a runaway loop, a mis-configured
+// integration replaying a 50k-message inbox, an abuse spike) BEFORE it burns
+// a month of margin in an afternoon. At 100→10k customers the daily cap is the
+// difference between "one workspace had a weird day" and "the prod key drained
+// overnight." Both caps share the exact same `deriveBudgetStatus` math; the
+// gate blocks on whichever is stricter (see `persistBudgetGate`).
+//
+// Stored under its own settings key so the two caps are configured (and
+// cleared) independently. A workspace can have a daily cap, a monthly cap,
+// both, or neither — `NO_CAP` on a dimension means that dimension never
+// throttles, exactly like the monthly behavior callers already rely on.
+export const DAILY_BUDGET_SETTINGS_KEY = 'tokenBudgetUsdDaily';
+
+/** Read a configured DAILY cap (whole USD) off a workspace's `settings` JSON.
+ *  Mirrors `resolveBudgetCapUsd` against `DAILY_BUDGET_SETTINGS_KEY`. */
+export function resolveDailyBudgetCapUsd(
+  settings: unknown,
+  fallbackUsd: number | null = null,
+): number | null {
+  if (settings && typeof settings === 'object') {
+    const raw = (settings as Record<string, unknown>)[DAILY_BUDGET_SETTINGS_KEY];
+    if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) {
+      return raw;
+    }
+  }
+  return fallbackUsd;
+}
+
+/** Merge a new DAILY cap into a settings JSON blob without dropping other
+ *  keys. `null` clears it. Mirror of `withBudgetCapUsd`. */
+export function withDailyBudgetCapUsd(
+  settings: unknown,
+  capUsd: number | null,
+): Record<string, unknown> {
+  const base: Record<string, unknown> =
+    settings && typeof settings === 'object'
+      ? { ...(settings as Record<string, unknown>) }
+      : {};
+  if (capUsd !== null && Number.isFinite(capUsd) && capUsd > 0) {
+    base[DAILY_BUDGET_SETTINGS_KEY] = Math.round(capUsd);
+  } else {
+    delete base[DAILY_BUDGET_SETTINGS_KEY];
+  }
+  return base;
+}
+
 export interface GetWorkspaceBudgetArgs {
   workspaceId: string;
   /** Inclusive lower bound for the billing period; null → last 30 days
@@ -290,6 +340,67 @@ export async function getWorkspaceBudgetSnapshot(
   });
 }
 
+/** Both budget dimensions for one workspace, resolved in a SINGLE usage
+ *  report (the `today` window feeds the daily status, the `period` window
+ *  feeds the monthly status — same report, no extra round-trips beyond what
+ *  the monthly snapshot already paid). `null` when the workspace doesn't
+ *  exist. Note: on the `daily` status, the `capUsdMonthly` field carries the
+ *  DAILY cap — the derivation is dimension-agnostic, the field name reflects
+ *  the original monthly-only shape it shares. */
+export interface WorkspaceDualBudget {
+  monthly: WorkspaceBudgetStatus;
+  daily: WorkspaceBudgetStatus;
+}
+
+export async function getWorkspaceDualBudgetSnapshot(
+  tx: Prisma.TransactionClient,
+  args: { workspaceId: string; periodStart?: Date | null; now?: Date },
+): Promise<WorkspaceDualBudget | null> {
+  const workspace = await tx.workspace.findUnique({
+    where: { id: args.workspaceId },
+    select: { settings: true },
+  });
+  if (!workspace) return null;
+  const report = await getWorkspaceUsageReport(tx, {
+    workspaceId: args.workspaceId,
+    periodStart: args.periodStart ?? null,
+    now: args.now,
+  });
+  const tokensOf = (s: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheCreationTokens: number;
+    cacheReadTokens: number;
+  }): number =>
+    s.inputTokens + s.outputTokens + s.cacheCreationTokens + s.cacheReadTokens;
+  const monthly = deriveBudgetStatus({
+    workspaceId: args.workspaceId,
+    consumedMicroCents: report.period.costMicroCents,
+    capUsdMonthly: resolveBudgetCapUsd(workspace.settings, null),
+    tokensThisPeriod: tokensOf(report.period),
+  });
+  const daily = deriveBudgetStatus({
+    workspaceId: args.workspaceId,
+    consumedMicroCents: report.today.costMicroCents,
+    capUsdMonthly: resolveDailyBudgetCapUsd(workspace.settings, null),
+    tokensThisPeriod: tokensOf(report.today),
+  });
+  return { monthly, daily };
+}
+
+/** Pick the controlling (stricter) of two budget statuses. OVER beats WARN
+ *  beats OK/NO_CAP. Ties resolve to the first arg (monthly), so a workspace
+ *  with both dimensions OVER reports the monthly numbers — the one a human
+ *  recognizes as "the plan." Pure + exported for unit tests. */
+export function controllingBudgetStatus(
+  a: WorkspaceBudgetStatus,
+  b: WorkspaceBudgetStatus,
+): WorkspaceBudgetStatus {
+  const rank = (s: BudgetState): number =>
+    s === 'OVER' ? 3 : s === 'WARN' ? 2 : 1; // NO_CAP/OK both 1
+  return rank(b.state) > rank(a.state) ? b : a;
+}
+
 /**
  * Statuses for every workspace (or a given subset), each derived through the
  * SAME `deriveBudgetStatus`. Two queries total (workspaces + one grouped
@@ -351,7 +462,7 @@ const ALLOW_SKIP: BudgetGateDecision = {
 };
 
 interface CacheEntry {
-  status: WorkspaceBudgetStatus;
+  dual: WorkspaceDualBudget;
   expiresAtMs: number;
 }
 
@@ -373,40 +484,48 @@ export function __resetBudgetCacheForTests(): void {
 
 async function statusForGate(
   workspaceId: string,
-): Promise<WorkspaceBudgetStatus | null> {
+): Promise<WorkspaceDualBudget | null> {
   const ttl = cacheTtlMs();
   const nowMs = Date.now();
   const cached = statusCache.get(workspaceId);
-  if (cached && cached.expiresAtMs > nowMs) return cached.status;
+  if (cached && cached.expiresAtMs > nowMs) return cached.dual;
   // System context: the gate runs mid-LLM-call under an arbitrary RLS
   // context (or none). withSystemContext bypasses RLS the same way the
   // usage recorder's writer path does.
-  const status = await withSystemContext((tx) =>
-    getWorkspaceBudgetSnapshot(tx, { workspaceId }),
+  const dual = await withSystemContext((tx) =>
+    getWorkspaceDualBudgetSnapshot(tx, { workspaceId }),
   );
-  if (status && ttl > 0) {
-    statusCache.set(workspaceId, { status, expiresAtMs: nowMs + ttl });
+  if (dual && ttl > 0) {
+    statusCache.set(workspaceId, { dual, expiresAtMs: nowMs + ttl });
   }
-  return status;
+  return dual;
 }
 
 /** Production gate, wired into the default provider by `lib/llm/index.ts`.
- *  Skips (ALLOW) when the call is not workspace-tagged. Blocks ONLY on an
- *  explicit-cap `OVER`. FAILS OPEN on any error — budget accounting must
- *  never take down a customer-facing LLM call (same principle as the usage
- *  recorder swallowing write failures). */
+ *  Skips (ALLOW) when the call is not workspace-tagged. Evaluates BOTH the
+ *  daily and the monthly cap and acts on whichever is stricter — a call is
+ *  blocked the moment EITHER dimension hits `OVER`, so a one-day spike trips
+ *  the daily breaker without waiting for the slow monthly ceiling. FAILS OPEN
+ *  on any error — budget accounting must never take down a customer-facing
+ *  LLM call (same principle as the usage recorder swallowing write failures). */
 export const persistBudgetGate: BudgetGate = async (meta) => {
   const workspaceId = meta?.workspaceId;
   if (!workspaceId || !UUID_RE.test(workspaceId)) return ALLOW_SKIP;
   try {
-    const status = await statusForGate(workspaceId);
-    if (!status) return ALLOW_SKIP;
+    const dual = await statusForGate(workspaceId);
+    if (!dual) return ALLOW_SKIP;
+    // The controlling dimension is the stricter of (daily, monthly). We block
+    // on its state, and surface ITS numbers to the operator log so the reason
+    // for the throttle ("daily spike" vs "monthly ceiling") is legible.
+    const status = controllingBudgetStatus(dual.monthly, dual.daily);
+    const dimension = status === dual.daily ? 'daily' : 'monthly';
     const outcome = budgetGateOutcome(status.state);
     if (outcome !== 'ALLOW') {
       const line = {
         workspace_id: workspaceId,
         skill: meta?.skill ?? null,
         source_surface: meta?.sourceSurface ?? null,
+        dimension,
         state: status.state,
         consumed_usd: Math.round(status.consumedUsd * 100) / 100,
         cap_usd: status.capUsdMonthly,

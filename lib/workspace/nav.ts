@@ -50,6 +50,8 @@ export const WORKSPACE_TABS: readonly WorkspaceTab[] = [
   {
     href: "/settings",
     label: "Account",
-    match: ["/support"],
+    // Usage/spend transparency lives next to billing (both "manage my
+    // account"), so the Account tab stays lit on the usage dashboard.
+    match: ["/support", "/usage"],
   },
 ] as const;

@@ -8,6 +8,8 @@ import {
   ApRootedEmptyState,
   PlainoStatus,
 } from "@/components/ui/ap";
+import { DemoModePanel } from "@/components/workspace/DemoModePanel";
+import type { WorkflowStory } from "@/lib/workflows/runtime";
 
 // Broker-owner workspace overview — the daily report-back from the fleet.
 // Per design language §4.3 + Wave-B brief:
@@ -63,6 +65,10 @@ export interface OverviewViewProps {
    *  vertical isn't resolved. */
   verticalPublicHref: string | null;
   activePause: OverviewActivePause | null;
+  /** When set, the workspace is in DEMO MODE: lead the overview with the
+   *  visible killer-workflow runtime running on synthetic data (instead of an
+   *  empty "nothing's come in yet" void). Null = real work present, no demo. */
+  demoStory?: WorkflowStory | null;
 }
 
 /** Map DB enum tokens to customer-facing tier names. */
@@ -92,6 +98,7 @@ export function OverviewView({
   verticalIntegrationsWindow,
   verticalPublicHref,
   activePause,
+  demoStory = null,
 }: OverviewViewProps) {
   const headline = buildHeadline({
     pendingApprovals,
@@ -216,6 +223,15 @@ export function OverviewView({
         ) : null}
       </header>
 
+      {demoStory ? (
+        <DemoModePanel
+          story={demoStory}
+          workspaceId={workspaceId}
+          partner={partner}
+          variant="today"
+        />
+      ) : null}
+
       <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-8">
           <TodaysWork
@@ -223,6 +239,7 @@ export function OverviewView({
             workspaceId={workspaceId}
             onboardingComplete={onboardingComplete}
             partner={partner}
+            demoActive={demoStory != null}
           />
           <TodaysBriefing briefing={briefing} partner={partner} />
         </div>
@@ -302,11 +319,15 @@ function TodaysWork({
   workspaceId,
   onboardingComplete,
   partner,
+  demoActive = false,
 }: {
   handoffs: OverviewHandoff[];
   workspaceId: string;
   onboardingComplete: boolean;
   partner: string;
+  /** When the live demo runtime is already showing above, suppress the
+   *  static LoopPreview sample so the page doesn't show two sample blocks. */
+  demoActive?: boolean;
 }) {
   return (
     <section>
@@ -366,7 +387,7 @@ function TodaysWork({
               </div>
             }
           />
-          <LoopPreview />
+          {demoActive ? null : <LoopPreview />}
         </>
       ) : (
         <ApHairlineList>

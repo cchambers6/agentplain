@@ -27,8 +27,12 @@ export default function TermsPage() {
             The agreement between us.
           </h1>
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft md:text-xl">
-            Last updated: June 2, 2026. By using agentplain you agree to these
-            terms. Plain language, no surprises. Questions:{" "}
+            Last updated: June 17, 2026. By using agentplain you agree to these
+            terms and to our{" "}
+            <Link className="underline text-clay" href="/aup">
+              acceptable use policy
+            </Link>
+            . Plain language, no surprises. Questions:{" "}
             <a className="underline text-clay" href="mailto:hello@agentplain.com">
               hello@agentplain.com
             </a>
@@ -78,24 +82,82 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="Your data + our use of it">
+      <Section title="Your data is yours">
         <p>
-          You retain ownership of every input you provide and every output the
-          fleet drafts on your behalf. Our use of your data is scoped to
-          delivering the service to you and is described in our{" "}
+          You own every input you provide and every output the fleet drafts on
+          your behalf — including your clients&rsquo; information that flows
+          through your connected systems. We hold it to deliver the service; we
+          do not acquire any ownership of it. You can export a full copy or
+          delete all of it at any time from the{" "}
+          <span className="font-medium">Your data</span> page inside your
+          workspace.
+        </p>
+        <p>
+          <strong>No training, no feedback loop.</strong> We do not train,
+          fine-tune, or improve any model on your data. We do not feed your
+          chats with Plaino or the records your connectors expose into any
+          training pipeline, our own or a provider&rsquo;s. Our AI model
+          provider&rsquo;s commercial API does not train on inputs or outputs by
+          default. We do not pool data across customers and do not resell or
+          share your data, except with the named subprocessors needed to operate
+          the service (listed in our{" "}
           <Link className="underline text-clay" href="/privacy">
             privacy policy
           </Link>
-          . We do not train models on your data, do not pool data across
-          customers, and do not resell or share your data with third parties
-          except as needed to operate the service (named subprocessors in the
-          privacy policy).
+          ).
         </p>
         <p>
-          You can export your workspace and close your account at any time
-          from inside the product. Closure triggers a 7-day soft-delete
-          window; after that, your data is hard-deleted from our primary
-          database. Encrypted backups roll off within 30 days.
+          <strong>Data residency.</strong> Your workspace data is stored in a
+          managed Postgres database in the United States, encrypted at rest
+          (AES-256-GCM) and in transit. We will not move your data to another
+          region, or change this commitment, without notifying you first. We do
+          not currently offer EU data residency or self-hosting; we will not
+          claim either until we can actually deliver it.
+        </p>
+        <p>
+          You can export your workspace and close your account at any time from
+          inside the product. Closure triggers a 7-day soft-delete window;
+          after that, your data is hard-deleted from our primary database.
+          Encrypted backups roll off within 30 days.
+        </p>
+      </Section>
+
+      <Section title="Our intellectual property">
+        <p>
+          The agentplain platform — its codebase, the vertical playbook logic,
+          the system prompts and skill definitions, the curated knowledge
+          corpora, the insight library, the orchestration runtime, and the
+          Plaino persona and brand — is our intellectual property and the
+          product of substantial investment. Your subscription grants you the
+          right to <em>use</em> the service, not the right to copy how it works.
+        </p>
+        <p>You agree not to:</p>
+        <ul className="ml-5 list-disc space-y-2">
+          <li>
+            reverse-engineer, decompile, or attempt to derive our system
+            prompts, skill definitions, model weights, or internal
+            architecture;
+          </li>
+          <li>
+            use automated prompts or any other means to extract Plaino&rsquo;s
+            internal logic, instructions, or orchestration behaviour through the
+            chat interface;
+          </li>
+          <li>
+            recreate agentplain&rsquo;s orchestration model, or copy our vertical
+            knowledge curation, inside a competing product or service; or
+          </li>
+          <li>
+            scrape or bulk-harvest our marketplace, knowledge corpora, or
+            product copy.
+          </li>
+        </ul>
+        <p>
+          These restrictions are detailed in our{" "}
+          <Link className="underline text-clay" href="/aup">
+            acceptable use policy
+          </Link>
+          , which forms part of these terms.
         </p>
       </Section>
 
@@ -133,14 +195,44 @@ export default function TermsPage() {
           You agree not to use agentplain to send unsolicited commercial
           communications in violation of CAN-SPAM, TCPA, GDPR, or any other
           applicable law; to misrepresent yourself or your firm to recipients
-          of drafts; or to attempt to extract another customer's data via the
-          knowledge substrate or workspace.
+          of drafts; or to attempt to extract another customer&rsquo;s data via
+          the knowledge substrate or workspace. Our full{" "}
+          <Link className="underline text-clay" href="/aup">
+            acceptable use policy
+          </Link>{" "}
+          lists the prohibited uses in detail and forms part of these terms.
+        </p>
+        <p>
+          <strong>Rate limits.</strong> Your account operates within
+          per-account rate limits on requests, chat volume, connector reads, and
+          model usage. They are sized for genuine business use; engineering
+          traffic to find or exceed them is a violation.
         </p>
         <p>
           You agree to maintain your own licensure, insurance, and regulatory
           posture in your vertical and to keep the workspace configuration
           (default hours, compliance gates, escalation rules) accurate to the
           way your firm actually operates.
+        </p>
+      </Section>
+
+      <Section title="Suspension + termination for violations">
+        <p>
+          We monitor access patterns for abuse and policy violations. When our
+          systems detect a likely violation of these terms or the acceptable use
+          policy, we may <strong>soft-suspend</strong> the account — the
+          workspace drops to read-only — and email the account owner with the
+          reason and a review window during which you can appeal. Your data
+          stays intact and exportable throughout.
+        </p>
+        <p>
+          If a violation is confirmed, we may suspend or terminate the account.
+          Even then, your data is preserved per the retention terms above and
+          remains exportable on request. We aim to be proportionate — an
+          accidental first trip of a rule gets a notice, not a ban — but
+          deliberate or repeated abuse (prompt extraction, scraping, capacity
+          reselling, trial farming, reverse engineering) may result in immediate
+          termination.
         </p>
       </Section>
 

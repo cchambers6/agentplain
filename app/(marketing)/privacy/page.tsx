@@ -28,7 +28,7 @@ export default function PrivacyPage() {
             What we collect, why, and how we protect it.
           </h1>
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft md:text-xl">
-            Last updated: June 2, 2026. This policy describes how agentplain
+            Last updated: June 17, 2026. This policy describes how agentplain
             ("we", "us") handles data from customers and their connected
             systems. Plain language, no surprises. If anything here is unclear,
             email{" "}
@@ -83,6 +83,36 @@ export default function PrivacyPage() {
             append-only feedback log in your workspace). We do not train any
             base model on your data, do not share your data with any AI model
             provider's training pipeline, and do not pool data across customers.
+          </p>
+        </Body>
+      </Section>
+
+      <Section title="No training, and how we monitor for abuse">
+        <Body>
+          <p>
+            <strong>We never use your data to train models.</strong> Your chats
+            with Plaino and the records your connectors expose are used to do
+            your work and nothing else. We do not fine-tune or improve any model
+            on them, and we do not feed them into a training feedback loop — our
+            own or a provider's. Our model provider does not train on inputs or
+            outputs of its commercial API by default (it is named in the
+            subprocessor list below).
+          </p>
+          <p>
+            The only identifier we attach to a model request is a one-way
+            scrambled hash of your workspace id. It lets the provider isolate a
+            single abusive workspace if necessary, and it reveals nothing about
+            who you are — never your name, email, or business name.
+          </p>
+          <p>
+            Separately, we keep an internal access-pattern log — which workspace
+            ran a chat or read from a connector, and when — strictly for
+            security and abuse review (see our{" "}
+            <a className="underline text-clay" href="/aup">
+              acceptable use policy
+            </a>
+            ). That log records coarse metadata, never the contents of your
+            chats or records, and it is never used for training.
           </p>
         </Body>
       </Section>
@@ -172,6 +202,60 @@ export default function PrivacyPage() {
               hello@agentplain.com
             </a>{" "}
             and we'll handle it in writing.
+          </p>
+        </Body>
+      </Section>
+
+      <Section title="GDPR and CCPA rights">
+        <Body>
+          <p>
+            Depending on where you and your clients are located, you may have
+            statutory rights over personal information we process. We honor
+            these regardless of jurisdiction:
+          </p>
+          <ul className="ml-5 list-disc space-y-2">
+            <li>
+              <strong>Access + portability.</strong> Get a copy of the data we
+              hold for you — one tap on the <span className="font-medium">Your
+              data</span> page produces a full structured export.
+            </li>
+            <li>
+              <strong>Deletion / erasure.</strong> Delete all of your data.
+              Closing your workspace triggers a clean cascade purge after a
+              short grace window.
+            </li>
+            <li>
+              <strong>Rectification.</strong> Correct inaccurate information —
+              edit it in the product, or ask us in writing.
+            </li>
+            <li>
+              <strong>Restriction + objection.</strong> Ask us to pause or limit
+              processing, including pausing the fleet entirely from your
+              settings.
+            </li>
+            <li>
+              <strong>No sale of personal information.</strong> We do not sell
+              your or your clients' personal information, and we do not share it
+              for cross-context behavioral advertising — there is nothing to opt
+              out of, because we never do it.
+            </li>
+            <li>
+              <strong>No automated decisions with legal effect.</strong> The
+              fleet drafts and proposes; you review and decide. We do not make
+              automated decisions about your clients that produce legal or
+              similarly significant effects.
+            </li>
+          </ul>
+          <p>
+            For data we process on your behalf, you are the data
+            controller and we are your processor; we act on your documented
+            instructions. To exercise any right, or to request a data-processing
+            addendum, email{" "}
+            <a className="underline text-clay" href="mailto:hello@agentplain.com">
+              hello@agentplain.com
+            </a>
+            . We do not charge for reasonable requests and respond within the
+            timeframes the applicable law requires.
           </p>
         </Body>
       </Section>

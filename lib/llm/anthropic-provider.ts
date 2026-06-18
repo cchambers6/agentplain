@@ -27,8 +27,25 @@
  * breakpoint and reads `cache_creation_input_tokens` +
  * `cache_read_input_tokens` from the response usage. The
  * `cache_control` SDK shape never leaks past this file.
+ *
+ * No-training commitment (the privacy promise made on /privacy + /terms):
+ *   - We do NOT fine-tune any model on customer data, and we do not feed
+ *     customer chat or connector data into a training feedback loop.
+ *   - agentplain runs on Anthropic's commercial API, which does not train
+ *     models on API inputs or outputs by default.
+ *   - The only identifier we attach to a request is `metadata.user_id`, set
+ *     to a PRIVACY-PRESERVING, one-way hash of the workspace id (see
+ *     `privacyPreservingUserId`). It is NOT the customer's name, email,
+ *     business name, or workspace id in the clear. Anthropic uses
+ *     `metadata.user_id` solely for abuse/misuse detection on their side; it
+ *     is never used for training. We send it so a single compromised
+ *     workspace can be isolated upstream without exposing who the customer is.
+ *   - No other request field carries customer-identifying metadata to the
+ *     provider. The `LlmRequestMeta.skill`/`verticalSlug`/`correlationId`
+ *     telemetry stays local (read by `LoggingLlmProvider`) and is never sent.
  */
 
+import { createHash } from 'node:crypto';
 import Anthropic, { APIError } from '@anthropic-ai/sdk';
 import {
   LlmCompletion,
@@ -54,6 +71,28 @@ export interface AnthropicProviderConfig {
 
 const DEFAULT_MODEL = 'claude-sonnet-4-5';
 const DEFAULT_MAX_TOKENS = 2048;
+
+/**
+ * Fixed, non-secret namespace so the emitted `user_id` is unmistakably a
+ * derived hash and not a raw identifier. Changing it only rotates the opaque
+ * id space; it carries no security weight (the hash is one-way regardless).
+ */
+const USER_ID_NAMESPACE = 'agentplain.workspace.v1';
+
+/**
+ * Derive the privacy-preserving `metadata.user_id` from a workspace id. Returns
+ * a stable, one-way SHA-256 hex digest — stable so Anthropic can correlate
+ * abuse within one workspace, one-way so it never reveals which customer it is.
+ * Returns null when there is no workspace context (no id to attach).
+ */
+export function privacyPreservingUserId(
+  workspaceId: string | undefined | null,
+): string | null {
+  if (!workspaceId) return null;
+  return createHash('sha256')
+    .update(`${USER_ID_NAMESPACE}:${workspaceId}`)
+    .digest('hex');
+}
 
 type SdkSystemBlock = { type: 'text'; text: string; cache_control?: { type: 'ephemeral' } };
 type SdkMessageBlock = { type: 'text'; text: string; cache_control?: { type: 'ephemeral' } };
@@ -104,13 +143,20 @@ export class AnthropicProvider implements LlmProvider {
       content: toSdkMessageContent(m.content),
     }));
     try {
-      // `meta` is a telemetry passthrough — strip before hitting the SDK.
+      // `meta` is a LOCAL telemetry passthrough (skill name, vertical,
+      // correlation id) — it is read by `LoggingLlmProvider` and never sent to
+      // Anthropic. The single exception is a privacy-preserving `user_id`
+      // derived from the workspace id: a one-way hash, never customer PII,
+      // attached only for Anthropic-side abuse detection (not training). See
+      // the no-training commitment in this file's header.
+      const userId = privacyPreservingUserId(request.meta?.workspaceId);
       const res = await this.client.messages.create({
         model,
         max_tokens: maxTokens,
         temperature,
         system,
         messages,
+        ...(userId ? { metadata: { user_id: userId } } : {}),
       });
       const text = extractText(res);
       const usage = res.usage ? toLlmUsage(res.usage) : null;

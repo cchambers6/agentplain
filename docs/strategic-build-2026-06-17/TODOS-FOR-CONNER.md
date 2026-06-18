@@ -77,3 +77,48 @@ adapter. TaxDome and Karbon already shipped in a prior wave and are NOT in this 
   FUB) so hourly polling drops to a daily reconciliation backstop.
 - Calibrate the §2 workload model against real `LlmUsageRecord` aggregates once
   the prod key is unpaused (~2 weeks of data).
+## Item E — IP protection + customer data rights
+
+PR: `feat(ip): ToS + AUP + abuse detection + customer-data-rights surface`
+
+These are **policy documents and abuse-handling logic** — they need counsel and
+a few product decisions before public exposure or enforcement.
+
+- [ ] **Counsel review of ToS + AUP + Privacy Policy before public exposure —
+      load-bearing.** All three pages (`/terms`, `/aup`, `/privacy`) carry new
+      IP-protection and data-ownership language. None of it is counsel-reviewed.
+      Markdown source of record: `docs/legal/tos-2026-06-17.md` (sections flagged
+      `[COUNSEL]`).
+- [ ] **Sign off on the no-training commitment.** We state plainly, in code and
+      on `/privacy` + `/terms`, that we never train on customer data and that
+      Anthropic's commercial API doesn't either by default. Verify this against
+      Anthropic's *current* product terms (paid API does not train by default —
+      confirm no org-level setting or DPA clause changes that) before relying on
+      it publicly.
+- [ ] **Decide the soft-suspend → hard-suspend escalation timeline.** The code
+      (`lib/abuse/suspend.ts`) ships a 24-hour review-window default and an
+      explicit `reviewWindowExpired()` gate, but does **not** auto-escalate to a
+      hard suspend on timeout — that requires your sign-off on the timeline first.
+      Until then, hard-suspend only happens via explicit operator confirmation /
+      rejected appeal.
+- [ ] **Sign off on the data-export format.** The export is structured JSON
+      today (live endpoint `app/api/workspaces/[id]/export`). The build brief
+      asked for a zip. Decide: keep JSON, or wrap as a zip (e.g. zip of
+      per-table JSON + generated artifacts)? The `/data-rights` page currently
+      labels the button "download everything (JSON)" honestly.
+- [ ] **Counsel review of data-residency commitments.** `/terms` §1.2 and
+      `/data-rights` state US-region managed Postgres, encrypted at rest, and
+      explicitly **do not** promise EU residency or self-hosting. Confirm the
+      US-region claim matches the actual Neon/Vercel production configuration
+      before publishing — and keep the no-EU-residency line until infra exists.
+
+### Integration follow-ups (not blocking the PR, but needed to make enforcement live)
+
+- [ ] Wire `lib/abuse/scanChatMessage` into the Plaino chat route and
+      `logChatAccess` into the same path (access-audit sink → `AuditLog`).
+- [ ] Wire `logConnectorRead` into the connector dispatch layer.
+- [ ] Back `SuspensionStore` with `Workspace.settings.abuse` (no migration) and
+      enforce read-only via `lib/billing/workspace-paused-gate.ts`.
+- [ ] Wire `SuspensionEffect` → Resend (owner emails) + Conner notification, and
+      add the high-risk roll-up (`surfaceHighRiskPatterns`) to the operator
+      dashboard.

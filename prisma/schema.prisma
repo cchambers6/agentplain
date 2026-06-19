@@ -1541,6 +1541,32 @@ model KnowledgeDocument {
   /// Optional vertical slug for VERTICAL / COMPLIANCE rows that scope to
   /// one of the ten locked verticals. Matches `lib/verticals/<slug>/`.
   verticalSlug String?
+  /// Optional jurisdiction code for state/federal-scoped rule corpora
+  /// (e.g. "GA" for Georgia statute/regulation, "US" for federal). NULL
+  /// for jurisdiction-agnostic rows (skills, customer facts, generic
+  /// vertical patterns). Retrieval treats NULL as "always eligible" so
+  /// federal + jurisdiction-agnostic rows surface alongside state-specific
+  /// matches — see `lib/knowledge/pgvector-store.ts#search`.
+  jurisdiction String?
+  /// Stable ingestion natural key for corpus-managed rows
+  /// (`scripts/corpus-ingest/`). One source chunk → one stable sourceKey
+  /// (e.g. "ga-re-broker-license-requirements#0"). Mirrors the
+  /// Embedding (sourceType, sourceId) natural key on the document side so
+  /// the refresh cron can diff + supersede by source. NULL for ad-hoc /
+  /// customer-ingested docs that key off the document id instead.
+  sourceKey    String?
+  /// SHA-256 of the normalized body at last ingest. The refresh cron
+  /// (`scripts/corpus-refresh.ts`) compares the freshly-fetched hash
+  /// against this to decide re-embed (changed) vs. lastSeen bump
+  /// (unchanged) — so a weekly sweep over unchanged statute costs zero
+  /// embedding calls.
+  contentHash  String?
+  /// When this row was last confirmed present at its upstream source by
+  /// the refresh cron. NULL for rows never touched by a refresh pass.
+  lastSeenAt   DateTime?
+  /// Set when a refresh pass finds the row's source content gone or
+  /// replaced — the row is retained for audit but treated as stale.
+  supersededAt DateTime?
   metadata     Json        @default("{}")
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
@@ -1549,6 +1575,8 @@ model KnowledgeDocument {
 
   @@index([contextKind, workspaceId])
   @@index([contextKind, verticalSlug])
+  @@index([contextKind, jurisdiction])
+  @@index([sourceKey])
 }
 
 // One embedding row per (sourceType, sourceId). The vector column is a

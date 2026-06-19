@@ -299,10 +299,29 @@ function degradedResponseExtras(
   return { expandLeadCapture: outcome.degraded };
 }
 
+/**
+ * Workspace jurisdiction scope for knowledge retrieval. V1 is Georgia-only
+ * (per the GA-first product scope), plus "US" so federal rule corpora
+ * (IRS, etc.) surface alongside Georgia statute. NULL-jurisdiction rows
+ * (skills, customer facts, generic vertical patterns) are always eligible
+ * regardless — the store's jurisdiction filter is additive, never
+ * narrowing. TODO(jurisdiction): read the workspace's actual state once a
+ * Workspace.state column exists, instead of defaulting to GA.
+ */
+const WORKSPACE_JURISDICTIONS = ["GA", "US"];
+
 async function searchKnowledge(
   ctx: { userId: string; workspaceId: string; isOperator: boolean },
   query: string,
-): Promise<Array<{ title: string; body: string; sourceUrl: string | null }>> {
+): Promise<
+  Array<{
+    title: string;
+    body: string;
+    sourceUrl: string | null;
+    citation: string | null;
+    jurisdiction: string | null;
+  }>
+> {
   if (query.trim().length === 0) return [];
   try {
     const store = getKnowledgeStore(ctx);
@@ -310,12 +329,16 @@ async function searchKnowledge(
       query,
       k: 5,
       contextKinds: ["SKILL", "CUSTOMER", "VERTICAL", "COMPLIANCE"],
+      jurisdictions: WORKSPACE_JURISDICTIONS,
     });
     if (!result.ok) return [];
     return result.value.map((hit) => ({
       title: hit.title,
       body: hit.body,
       sourceUrl: hit.sourceUrl,
+      citation:
+        typeof hit.metadata?.citation === "string" ? (hit.metadata.citation as string) : null,
+      jurisdiction: hit.jurisdiction,
     }));
   } catch {
     // A substrate miss must not break the chat — Plaino just answers

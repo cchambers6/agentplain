@@ -24,6 +24,7 @@ import {
   KnowledgeSearchInput,
   KnowledgeUpsertInput,
   KnowledgeUpsertResult,
+  MarkSupersededExceptInput,
   knowledgeError,
   knowledgeOk,
 } from './types';
@@ -36,6 +37,11 @@ interface StoredDoc {
   body: string;
   sourceUrl: string | null;
   verticalSlug: string | null;
+  jurisdiction: string | null;
+  sourceKey: string | null;
+  contentHash: string | null;
+  lastSeenAt: Date | null;
+  supersededAt: Date | null;
   metadata: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
@@ -89,6 +95,36 @@ export class TestKnowledgeStore implements IKnowledgeStore {
     if (!validation.ok) return validation;
 
     const sourceType = input.sourceType ?? 'knowledge_document';
+    const explicitSourceId = !!(input.sourceId && input.sourceId.length > 0);
+    const jurisdiction = input.jurisdiction ?? null;
+    const sourceKey = input.sourceKey ?? null;
+    const contentHash = input.contentHash ?? null;
+    const now = new Date();
+    const lastSeenAt = input.lastSeenAt ?? now;
+
+    // Unchanged-content fast path — mirrors the pgvector store. When the
+    // caller passes a contentHash matching the stored doc, skip the embedder
+    // and only bump lastSeenAt + clear supersededAt.
+    if (contentHash && explicitSourceId) {
+      const existingId = this.bySource.get(`${sourceType}:${input.sourceId as string}`);
+      const existing = existingId ? this.embeddings.get(existingId) : null;
+      const existingDoc = existing?.documentId ? this.docs.get(existing.documentId) : null;
+      if (existing && existingDoc && existingDoc.contentHash === contentHash) {
+        existingDoc.lastSeenAt = lastSeenAt;
+        existingDoc.supersededAt = null;
+        existingDoc.jurisdiction = jurisdiction;
+        existingDoc.sourceKey = sourceKey;
+        existingDoc.updatedAt = now;
+        return knowledgeOk({
+          id: existing.id,
+          documentId: existing.documentId,
+          model: this.embedder.model,
+          created: false,
+          unchanged: true,
+        });
+      }
+    }
+
     const documentId = randomUUID();
     const sourceId = input.sourceId ?? documentId;
 
@@ -105,7 +141,6 @@ export class TestKnowledgeStore implements IKnowledgeStore {
       );
     }
 
-    const now = new Date();
     const doc: StoredDoc = {
       id: documentId,
       contextKind: input.contextKind,
@@ -114,6 +149,11 @@ export class TestKnowledgeStore implements IKnowledgeStore {
       body: input.body,
       sourceUrl: input.sourceUrl ?? null,
       verticalSlug: input.verticalSlug ?? null,
+      jurisdiction,
+      sourceKey,
+      contentHash,
+      lastSeenAt,
+      supersededAt: null,
       metadata: input.metadata ?? {},
       createdAt: now,
       updatedAt: now,
@@ -173,6 +213,7 @@ export class TestKnowledgeStore implements IKnowledgeStore {
       documentId,
       model: this.embedder.model,
       created,
+      unchanged: false,
     });
   }
 
@@ -188,6 +229,8 @@ export class TestKnowledgeStore implements IKnowledgeStore {
       );
     }
     const wanted = input.contextKinds && input.contextKinds.length > 0 ? new Set(input.contextKinds) : null;
+    const jurisdictions =
+      input.jurisdictions && input.jurisdictions.length > 0 ? new Set(input.jurisdictions) : null;
     const hits: KnowledgeSearchHit[] = [];
     for (const e of this.embeddings.values()) {
       if (!visible(e.workspaceId, this.context)) continue;
@@ -196,6 +239,12 @@ export class TestKnowledgeStore implements IKnowledgeStore {
       if (input.verticalSlug != null) {
         if (!doc) continue;
         if (doc.verticalSlug !== input.verticalSlug) continue;
+      }
+      if (jurisdictions != null) {
+        // NULL jurisdiction is always eligible (soft layering); non-null must
+        // be in the requested set.
+        const j = doc?.jurisdiction ?? null;
+        if (j != null && !jurisdictions.has(j)) continue;
       }
       const distance = cosineDistance(q, e.vector);
       const similarity = 1 - distance;
@@ -208,6 +257,7 @@ export class TestKnowledgeStore implements IKnowledgeStore {
         body: doc?.body ?? '',
         sourceUrl: doc?.sourceUrl ?? null,
         verticalSlug: doc?.verticalSlug ?? null,
+        jurisdiction: doc?.jurisdiction ?? null,
         metadata: { ...(doc?.metadata ?? {}), ...e.metadata },
         distance,
         similarity,
@@ -284,6 +334,31 @@ export class TestKnowledgeStore implements IKnowledgeStore {
       'INVALID_ARGUMENT',
       'KnowledgeStore.delete requires one of: embeddingId, documentId, byWorkspaceAndSource, byWorkspaceAndTombstone, allWorkspaceCustomerDocs.',
     );
+  }
+
+  async markSupersededExcept(
+    input: MarkSupersededExceptInput,
+  ): Promise<KnowledgeResult<{ superseded: number }>> {
+    if (input.liveSourceIds.length === 0) {
+      return knowledgeError(
+        'INVALID_ARGUMENT',
+        'markSupersededExcept refuses an empty liveSourceIds set (would tombstone the whole sourceType).',
+      );
+    }
+    const at = input.at ?? new Date();
+    const live = new Set(input.liveSourceIds);
+    let superseded = 0;
+    for (const e of this.embeddings.values()) {
+      if (e.sourceType !== input.sourceType) continue;
+      if (live.has(e.sourceId)) continue;
+      const doc = e.documentId ? this.docs.get(e.documentId) : null;
+      if (doc && doc.supersededAt == null) {
+        doc.supersededAt = at;
+        doc.updatedAt = at;
+        superseded += 1;
+      }
+    }
+    return knowledgeOk({ superseded });
   }
 
   private dropDocs(docIds: Set<string>): number {

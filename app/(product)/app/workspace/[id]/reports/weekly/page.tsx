@@ -12,6 +12,8 @@ import {
   computeWeeklyReportData,
   type WeeklyReportData,
 } from "@/lib/reports/weekly-report-data";
+import { getMemberPerformance } from "@/lib/team/performance";
+import { MemberPerformance } from "@/components/team/MemberPerformance";
 import { setWeeklyReportEnabledAction } from "./actions";
 
 interface PageProps {
@@ -100,6 +102,10 @@ export default async function WeeklyReportPage({ params }: PageProps) {
 
   const enabled = pref?.weeklyReportEnabled ?? true;
 
+  // Per-member KPIs — only meaningful once the workspace has a team, so the
+  // section is hidden for the solo-owner case (one row = just the owner).
+  const memberPerf = await getMemberPerformance(ctx, workspaceId, 7);
+
   return (
     <div>
       <div className="flex items-center gap-3">
@@ -151,6 +157,13 @@ export default async function WeeklyReportPage({ params }: PageProps) {
         <ApEyebrow className="mb-3">this week so far</ApEyebrow>
         <ReportCard data={currentWeek} partner={partner} live />
       </section>
+
+      {/* Per-member KPIs — only when there's a team to compare. */}
+      {memberPerf.length > 1 ? (
+        <section className="mt-10">
+          <MemberPerformance rows={memberPerf} windowDays={7} />
+        </section>
+      ) : null}
 
       {/* Completed weeks. */}
       <section className="mt-10">

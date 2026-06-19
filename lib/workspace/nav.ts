@@ -40,7 +40,7 @@ export const WORKSPACE_TABS: readonly WorkspaceTab[] = [
   {
     href: "/connections",
     label: "Connections",
-    match: ["/integrations", "/marketplace", "/agents", "/disciplines"],
+    match: ["/integrations", "/marketplace", "/agents", "/disciplines", "/team"],
   },
   {
     href: "/reports",

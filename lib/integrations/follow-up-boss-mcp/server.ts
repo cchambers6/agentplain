@@ -23,6 +23,14 @@ import {
   type ResolvedFollowUpBoss,
 } from './auth';
 import type {
+  CreateLeadInput,
+  CreateLeadOutput,
+  ScheduleActionPlanInput,
+  ScheduleActionPlanOutput,
+  SendTextTemplateInput,
+  SendTextTemplateOutput,
+} from './actions';
+import type {
   AddTagInput,
   AddTagOutput,
   CreateNoteInput,
@@ -223,6 +231,96 @@ export class ProdFollowUpBossMcpServer implements FollowUpBossMcpServer {
     });
   }
 
+  // ── Write-action-depth mutations ──────────────────────────────────────
+
+  async createLead(
+    input: CreateLeadInput,
+  ): Promise<McpResult<CreateLeadOutput>> {
+    const firstName = input.firstName ?? deriveFirstName(input.name);
+    const lastName = input.lastName ?? deriveLastName(input.name);
+    if (!firstName && !lastName && !input.name) {
+      return mcpError(
+        'INVALID_ARGUMENT',
+        'createLead requires a name or firstName/lastName',
+      );
+    }
+    return this.withApi(async (api) => {
+      const body: Record<string, unknown> = {};
+      if (firstName) body.firstName = firstName;
+      if (lastName) body.lastName = lastName;
+      if (input.email) body.emails = [{ value: input.email }];
+      if (input.phone) body.phones = [{ value: input.phone }];
+      if (input.source) body.source = input.source;
+      const res = await api<RawPerson>('POST', '/people', body);
+      if (!res.ok) return res;
+      if (res.value.id === undefined || res.value.id === null) {
+        return mcpError('MALFORMED_RESPONSE', 'FUB people.create returned no id');
+      }
+      return mcpOk({ leadId: String(res.value.id) });
+    });
+  }
+
+  async sendTextTemplate(
+    input: SendTextTemplateInput,
+  ): Promise<McpResult<SendTextTemplateOutput>> {
+    if (!input.personId) {
+      return mcpError('INVALID_ARGUMENT', 'sendTextTemplate requires personId');
+    }
+    if (!input.templateId) {
+      return mcpError(
+        'INVALID_ARGUMENT',
+        'sendTextTemplate requires templateId',
+      );
+    }
+    return this.withApi(async (api) => {
+      const body: Record<string, unknown> = {
+        personId: Number(input.personId),
+        templateId: Number(input.templateId),
+      };
+      if (input.message) body.message = input.message;
+      const res = await api<RawTextMessage>('POST', '/textMessages', body);
+      if (!res.ok) return res;
+      if (res.value.id === undefined || res.value.id === null) {
+        return mcpError(
+          'MALFORMED_RESPONSE',
+          'FUB textMessages.create returned no id',
+        );
+      }
+      return mcpOk({ messageId: String(res.value.id) });
+    });
+  }
+
+  async scheduleActionPlan(
+    input: ScheduleActionPlanInput,
+  ): Promise<McpResult<ScheduleActionPlanOutput>> {
+    if (!input.personId) {
+      return mcpError(
+        'INVALID_ARGUMENT',
+        'scheduleActionPlan requires personId',
+      );
+    }
+    if (!input.actionPlanId) {
+      return mcpError(
+        'INVALID_ARGUMENT',
+        'scheduleActionPlan requires actionPlanId',
+      );
+    }
+    return this.withApi(async (api) => {
+      const res = await api<RawActionPlanPerson>('POST', '/actionPlansPeople', {
+        personId: Number(input.personId),
+        actionPlanId: Number(input.actionPlanId),
+      });
+      if (!res.ok) return res;
+      if (res.value.id === undefined || res.value.id === null) {
+        return mcpError(
+          'MALFORMED_RESPONSE',
+          'FUB actionPlansPeople.create returned no id',
+        );
+      }
+      return mcpOk({ actionPlanPersonId: String(res.value.id) });
+    });
+  }
+
   // ── internals ───────────────────────────────────────────────────────
 
   private async withApi<T>(
@@ -329,6 +427,30 @@ interface RawListPeopleResponse {
 
 interface RawNote {
   id?: number;
+}
+
+interface RawTextMessage {
+  id?: number | string;
+}
+
+interface RawActionPlanPerson {
+  id?: number | string;
+}
+
+/** Split a full name on the first space — first token = firstName, rest =
+ *  lastName. Used only when explicit firstName/lastName were not supplied. */
+function deriveFirstName(name: string | undefined): string | undefined {
+  if (!name) return undefined;
+  const trimmed = name.trim();
+  if (trimmed.length === 0) return undefined;
+  return trimmed.split(/\s+/)[0];
+}
+
+function deriveLastName(name: string | undefined): string | undefined {
+  if (!name) return undefined;
+  const parts = name.trim().split(/\s+/);
+  if (parts.length <= 1) return undefined;
+  return parts.slice(1).join(' ');
 }
 
 interface RawPipeline {

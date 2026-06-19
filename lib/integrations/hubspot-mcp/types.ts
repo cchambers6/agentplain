@@ -100,6 +100,8 @@ export interface UpdateContactInput {
      *  here. */
     notes_last_contacted: string;
   }>;
+  /** Approval token once the operator has approved this exact update. */
+  pendingApprovalId?: string;
 }
 export interface UpdateContactOutput {
   contactId: string;
@@ -130,6 +132,8 @@ export interface UpdateDealInput {
     closedate: string;
     pipeline: string;
   }>;
+  /** Approval token once the operator has approved this exact update. */
+  pendingApprovalId?: string;
 }
 export interface UpdateDealOutput {
   dealId: string;
@@ -154,10 +158,29 @@ export interface CreateNoteInput {
   objectType: 'contacts' | 'deals' | 'companies';
   objectId: string;
   body: string;
+  /** Approval token once the operator has approved this exact note. */
+  pendingApprovalId?: string;
 }
 export interface CreateNoteOutput {
   noteId: string;
 }
+
+// New write-action I/O types live in ./actions (the gate-facing source of
+// truth); re-exported here so the server interface can reference them.
+import type {
+  CreateDealInput,
+  CreateDealOutput,
+  UpdateDealStageInput,
+  UpdateDealStageOutput,
+  LogActivityInput,
+  LogActivityOutput,
+  CreateTaskInput,
+  CreateTaskOutput,
+  SendEmailTemplateInput,
+  SendEmailTemplateOutput,
+  SendSequenceEnrollmentInput,
+  SendSequenceEnrollmentOutput,
+} from './actions';
 
 // ── Server interface ──────────────────────────────────────────────────
 
@@ -174,4 +197,14 @@ export interface HubspotMcpServer {
   listCompanies(input: ListCompaniesInput): Promise<McpResult<ListCompaniesOutput>>;
   getCompany(input: GetCompanyInput): Promise<McpResult<GetCompanyOutput>>;
   createNote(input: CreateNoteInput): Promise<McpResult<CreateNoteOutput>>;
+
+  // ── Write-action-depth mutations (all approval-gated at the factory) ──
+  createDeal(input: CreateDealInput): Promise<McpResult<CreateDealOutput>>;
+  updateDealStage(input: UpdateDealStageInput): Promise<McpResult<UpdateDealStageOutput>>;
+  logActivity(input: LogActivityInput): Promise<McpResult<LogActivityOutput>>;
+  createTask(input: CreateTaskInput): Promise<McpResult<CreateTaskOutput>>;
+  sendEmailTemplate(input: SendEmailTemplateInput): Promise<McpResult<SendEmailTemplateOutput>>;
+  sendSequenceEnrollment(
+    input: SendSequenceEnrollmentInput,
+  ): Promise<McpResult<SendSequenceEnrollmentOutput>>;
 }

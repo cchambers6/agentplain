@@ -30,6 +30,16 @@ import {
   type ListDelinquentLeasesInput,
   type ListDelinquentLeasesOutput,
 } from './types';
+import type {
+  CreateWorkOrderInput,
+  CreateWorkOrderOutput,
+  ChargeLateFeeInput,
+  ChargeLateFeeOutput,
+  PostNoticeInput,
+  PostNoticeOutput,
+  SendTenantMsgInput,
+  SendTenantMsgOutput,
+} from './actions';
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
@@ -97,6 +107,68 @@ export class ProdBuildiumMcpServer implements BuildiumMcpServer {
       errorCode: res.error.code,
       message: res.error.message,
     };
+  }
+
+  // ── Write actions (gating lives in with-approval.ts; these are raw REST) ──
+
+  async createWorkOrder(
+    input: CreateWorkOrderInput,
+  ): Promise<McpResult<CreateWorkOrderOutput>> {
+    return this.withApi(async (api) => {
+      const res = await api<RawId>('POST', '/workorders', {
+        PropertyId: Number(input.propertyId),
+        UnitId: input.unitId !== undefined ? Number(input.unitId) : undefined,
+        Title: input.title,
+        Description: input.description,
+        Priority: input.priority ?? 'Normal',
+      });
+      if (!res.ok) return res;
+      return mcpOk({ workOrderId: idString(res.value) });
+    });
+  }
+
+  async chargeLateFee(
+    input: ChargeLateFeeInput,
+  ): Promise<McpResult<ChargeLateFeeOutput>> {
+    return this.withApi(async (api) => {
+      const res = await api<RawId>(
+        'POST',
+        `/leases/${encodeURIComponent(input.leaseId)}/transactions`,
+        {
+          Amount: input.amount,
+          TransactionType: 'Charge',
+          Memo: input.memo ?? undefined,
+        },
+      );
+      if (!res.ok) return res;
+      return mcpOk({ transactionId: idString(res.value) });
+    });
+  }
+
+  async postNotice(input: PostNoticeInput): Promise<McpResult<PostNoticeOutput>> {
+    return this.withApi(async (api) => {
+      const res = await api<RawId>(
+        'POST',
+        `/leases/${encodeURIComponent(input.leaseId)}/notes`,
+        { Subject: input.subject, Body: input.body },
+      );
+      if (!res.ok) return res;
+      return mcpOk({ noticeId: idString(res.value) });
+    });
+  }
+
+  async sendTenantMsg(
+    input: SendTenantMsgInput,
+  ): Promise<McpResult<SendTenantMsgOutput>> {
+    return this.withApi(async (api) => {
+      const res = await api<RawId>(
+        'POST',
+        `/residents/${encodeURIComponent(input.tenantId)}/messages`,
+        { Subject: input.subject, Body: input.body },
+      );
+      if (!res.ok) return res;
+      return mcpOk({ messageId: idString(res.value) });
+    });
   }
 
   // ── internals ───────────────────────────────────────────────────────────
@@ -189,6 +261,15 @@ interface RawLease {
 }
 interface RawLedgerBalance {
   TotalBalance?: number;
+}
+/** Buildium write endpoints echo the created resource carrying its `Id`. */
+interface RawId {
+  Id?: number | string;
+}
+
+/** Stringify the `Id` Buildium returns on a created resource. */
+function idString(raw: RawId): string {
+  return String(raw.Id ?? '');
 }
 
 function numOr0(v: number | undefined): number {

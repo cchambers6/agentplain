@@ -12,10 +12,11 @@
  * in `./server.ts`. Skill code, route handlers, and cron functions speak
  * the `GoogleCalendarMcpServer` interface only.
  *
- * Per `project_no_outbound_architecture.md`: the tool surface is READ
- * ONLY. There is no `events.insert` / `events.update` / `events.delete`
- * tool. The scheduler proposes slots; the customer's calendar performs
- * the booking out of their own UI after operator approval.
+ * Per `project_no_outbound_architecture.md`: the mutating tools
+ * (`book_meeting`, `reschedule_meeting`) are approval-GATED at the factory
+ * seam (`./with-approval.ts`) — neither reaches Google's `events.insert` /
+ * `events.patch` without a recorded operator approval. `listEvents` and
+ * `find_availability` (free/busy) are READS and pass through ungated.
  *
  * Per `feedback_runner_portability.md` + two-implementation rule:
  * `ProdGoogleCalendarMcpServer` (Google-backed) lands in `./server.ts`;
@@ -25,6 +26,15 @@
  * Per `feedback_cold_start_safe_agents.md`: every method re-resolves the
  * underlying credential. No decrypted access token lives on the instance.
  */
+
+import type {
+  BookMeetingInput,
+  BookMeetingOutput,
+  RescheduleMeetingInput,
+  RescheduleMeetingOutput,
+  FindAvailabilityInput,
+  FindAvailabilityOutput,
+} from './actions';
 
 // ── Result + error shapes (mirror gmail-mcp) ────────────────────────────
 
@@ -133,6 +143,9 @@ export interface ReadResourceOutput {
 
 export const GOOGLE_CALENDAR_TOOL_NAMES = [
   'calendar.events.list',
+  'calendar.events.book',
+  'calendar.events.reschedule',
+  'calendar.freebusy.query',
 ] as const;
 
 export type GoogleCalendarToolName =
@@ -152,6 +165,30 @@ export interface GoogleCalendarMcpServer {
   listEvents(
     input: ListEventsInput,
   ): Promise<GoogleCalendarMcpResult<ListEventsOutput>>;
+
+  /**
+   * Free/busy query — a READ. Returns busy intervals across the queried
+   * calendars. Ungated: it reveals no event detail and mutates nothing.
+   */
+  findAvailability(
+    input: FindAvailabilityInput,
+  ): Promise<GoogleCalendarMcpResult<FindAvailabilityOutput>>;
+
+  /**
+   * Create a calendar event (and invite attendees). MUTATION — approval-GATED
+   * at the factory seam; never reaches Google without a recorded grant.
+   */
+  bookMeeting(
+    input: BookMeetingInput,
+  ): Promise<GoogleCalendarMcpResult<BookMeetingOutput>>;
+
+  /**
+   * Move an existing event's start/end. MUTATION — approval-GATED at the
+   * factory seam; never reaches Google without a recorded grant.
+   */
+  rescheduleMeeting(
+    input: RescheduleMeetingInput,
+  ): Promise<GoogleCalendarMcpResult<RescheduleMeetingOutput>>;
 
   // ── Resources ────────────────────────────────────────────────────────
 

@@ -21,6 +21,16 @@
  */
 
 import type { McpResult } from '@/lib/integrations/mcp-core';
+import type {
+  CreateWorkOrderInput,
+  CreateWorkOrderOutput,
+  ChargeLateFeeInput,
+  ChargeLateFeeOutput,
+  PostNoticeInput,
+  PostNoticeOutput,
+  SendTenantMsgInput,
+  SendTenantMsgOutput,
+} from './actions';
 
 /** A normalized Buildium lease with the fields rent-collection needs. */
 export interface BuildiumLeaseSummary {
@@ -90,6 +100,22 @@ export interface BuildiumMcpServer {
    *  and reports reachability + latency. Used by the fleet-health cron
    *  (Pillar 6) and the customer "Test connection" button. */
   healthCheck(): Promise<BuildiumHealth>;
+
+  // ── Write actions (ALL approval-gated at the factory seam) ───────────────
+  /** Open a maintenance work order on a property/unit. Approval-gated. */
+  createWorkOrder(
+    input: CreateWorkOrderInput,
+  ): Promise<McpResult<CreateWorkOrderOutput>>;
+  /** Post a late-fee charge to a lease ledger. OUTBOUND (money). Approval-gated. */
+  chargeLateFee(
+    input: ChargeLateFeeInput,
+  ): Promise<McpResult<ChargeLateFeeOutput>>;
+  /** Post a notice against a lease. Approval-gated. */
+  postNotice(input: PostNoticeInput): Promise<McpResult<PostNoticeOutput>>;
+  /** Send a message to a tenant. OUTBOUND. Approval-gated. */
+  sendTenantMsg(
+    input: SendTenantMsgInput,
+  ): Promise<McpResult<SendTenantMsgOutput>>;
 }
 
 export const BUILDIUM_API_BASE = 'https://api.buildium.com/v1';

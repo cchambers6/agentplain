@@ -1,0 +1,14 @@
+-- Connector write-action approval gate. Adds the single generic approval kind
+-- the connector-agnostic gate writes (lib/integrations/approval/
+-- with-approval.ts) for EVERY mutating connector action across HubSpot,
+-- Salesforce, Notion, Follow Up Boss, Sierra, Buildium, QuickBooks, Gmail, and
+-- Calendar. Per project_no_outbound_architecture.md, none fires from an
+-- autonomous agent run — a PENDING row lands here, the operator approves on
+-- /approvals, and only the next attempt carrying that approval id reaches the
+-- external API. Always human-decided; never auto-approved.
+--
+-- One kind (not one-per-action) keeps the enum stable as connectors gain
+-- actions; the connector + action + payload live on the row, refId carries the
+-- action fingerprint. Additive enum value only — representable in
+-- schema.prisma, so no schema-drift-baseline entry is needed.
+ALTER TYPE "WorkApprovalKind" ADD VALUE IF NOT EXISTS 'CONNECTOR_WRITE_ACTION';

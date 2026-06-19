@@ -36,6 +36,12 @@ import {
   type RecordPaymentInput,
   type RecordPaymentOutput,
 } from './types';
+import {
+  type CreateCustomerInput,
+  type CreateCustomerOutput,
+  type SendInvoiceInput,
+  type SendInvoiceOutput,
+} from './actions';
 
 const FIXTURE_INVOICES: InvoiceSummary[] = [
   {
@@ -206,5 +212,15 @@ export class TestQuickbooksMcpServer implements QuickbooksMcpServer {
     const estimate = FIXTURE_ESTIMATES.find((e) => e.id === input.estimateId);
     if (!estimate) return mcpError('NOT_FOUND', `No estimate ${input.estimateId}`);
     return mcpOk({ estimate });
+  }
+
+  async sendInvoice(input: SendInvoiceInput): Promise<McpResult<SendInvoiceOutput>> {
+    if (!input.invoiceId) return mcpError('INVALID_ARGUMENT', 'sendInvoice requires invoiceId');
+    return mcpOk({ invoiceId: input.invoiceId, status: 'sent' });
+  }
+
+  async createCustomer(input: CreateCustomerInput): Promise<McpResult<CreateCustomerOutput>> {
+    if (!input.displayName) return mcpError('INVALID_ARGUMENT', 'createCustomer requires displayName');
+    return mcpOk({ customerId: 'cust-777' });
   }
 }

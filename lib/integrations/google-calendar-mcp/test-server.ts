@@ -22,18 +22,36 @@ import {
   calendarError,
   calendarOk,
 } from './types';
+import type {
+  BookMeetingInput,
+  BookMeetingOutput,
+  RescheduleMeetingInput,
+  RescheduleMeetingOutput,
+  FindAvailabilityInput,
+  FindAvailabilityOutput,
+} from './actions';
 
 export interface TestGoogleCalendarSeed {
   events?: CalendarEventDto[];
+  /** Busy intervals returned by `findAvailability`. */
+  busy?: { start: string; end: string }[];
   /** When set, every tool call returns this error. Used by tests that
    *  exercise the MCP-down path. */
   forcedError?: { code: import('./types').GoogleCalendarMcpErrorCode; message: string };
+}
+
+/** One recorded mutating call, for test assertions. */
+export interface RecordedCalendarWrite {
+  method: 'bookMeeting' | 'rescheduleMeeting';
+  input: BookMeetingInput | RescheduleMeetingInput;
 }
 
 export class TestGoogleCalendarMcpServer implements GoogleCalendarMcpServer {
   readonly name = 'google-calendar-test' as const;
   readonly workspaceId: string;
   private readonly seed: TestGoogleCalendarSeed;
+  /** Mutations the recording server "executed" (post-gate). */
+  readonly writes: RecordedCalendarWrite[] = [];
 
   constructor(args: { workspaceId: string; seed?: TestGoogleCalendarSeed }) {
     this.workspaceId = args.workspaceId;
@@ -63,6 +81,53 @@ export class TestGoogleCalendarMcpServer implements GoogleCalendarMcpServer {
       return endMs > fromMs && startMs < toMs;
     });
     return calendarOk({ events });
+  }
+
+  async findAvailability(
+    input: FindAvailabilityInput,
+  ): Promise<GoogleCalendarMcpResult<FindAvailabilityOutput>> {
+    if (this.seed.forcedError) {
+      return calendarError(this.seed.forcedError.code, this.seed.forcedError.message);
+    }
+    const timeMin = new Date(input.timeMin);
+    const timeMax = new Date(input.timeMax);
+    if (Number.isNaN(timeMin.getTime()) || Number.isNaN(timeMax.getTime())) {
+      return calendarError(
+        'INVALID_ARGUMENT',
+        'findAvailability requires ISO 8601 timeMin + timeMax',
+      );
+    }
+    if (timeMax.getTime() <= timeMin.getTime()) {
+      return calendarError(
+        'INVALID_ARGUMENT',
+        'findAvailability requires timeMax strictly after timeMin',
+      );
+    }
+    return calendarOk({ busy: this.seed.busy ?? [] });
+  }
+
+  async bookMeeting(
+    input: BookMeetingInput,
+  ): Promise<GoogleCalendarMcpResult<BookMeetingOutput>> {
+    if (this.seed.forcedError) {
+      return calendarError(this.seed.forcedError.code, this.seed.forcedError.message);
+    }
+    this.writes.push({ method: 'bookMeeting', input });
+    const eventId = `evt-${this.writes.length}`;
+    return calendarOk({
+      eventId,
+      htmlLink: `https://calendar.google.com/event?eid=${eventId}`,
+    });
+  }
+
+  async rescheduleMeeting(
+    input: RescheduleMeetingInput,
+  ): Promise<GoogleCalendarMcpResult<RescheduleMeetingOutput>> {
+    if (this.seed.forcedError) {
+      return calendarError(this.seed.forcedError.code, this.seed.forcedError.message);
+    }
+    this.writes.push({ method: 'rescheduleMeeting', input });
+    return calendarOk({ eventId: input.eventId });
   }
 
   async listResources(): Promise<

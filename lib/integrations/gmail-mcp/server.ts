@@ -27,6 +27,10 @@ import { google, type gmail_v1 } from 'googleapis';
 import { resolveCredential } from './auth';
 import type { DecryptedCredential } from '@/lib/integrations/types';
 import {
+  type ArchiveInput,
+  type ArchiveOutput,
+  type ComposeFromTemplateInput,
+  type ComposeFromTemplateOutput,
   type DraftMessageInput,
   type DraftMessageOutput,
   type FullMessage,
@@ -45,6 +49,8 @@ import {
   type ReadResourceInput,
   type ReadResourceOutput,
   type ResourceDescriptor,
+  type ScheduleSendInput,
+  type ScheduleSendOutput,
   type SearchThreadsInput,
   type SearchThreadsOutput,
   gmailError,
@@ -287,6 +293,114 @@ export class ProdGmailMcpServer implements GmailMcpServer {
     });
   }
 
+  // ── Write-action-depth mutations ───────────────────────────────────────
+  //
+  // These reach `users.messages.send` — genuinely OUTBOUND. Per
+  // `project_no_outbound_architecture.md` an ungated send is the worst
+  // failure mode we have, which is EXACTLY why every one of these methods is
+  // wrapped by `withGmailApproval` at the factory seam (`./index.ts`): the
+  // SDK call below is never reached without a recorded operator approval.
+  // Calling these methods on the bare `ProdGmailMcpServer` (un-decorated) is
+  // a programming error — the factory is the only supported constructor.
+
+  async composeFromTemplate(
+    input: ComposeFromTemplateInput,
+  ): Promise<GmailMcpResult<ComposeFromTemplateOutput>> {
+    if (!input.to || input.to.length === 0) {
+      return gmailError('INVALID_ARGUMENT', 'composeFromTemplate requires at least one recipient');
+    }
+    if (!input.templateId) {
+      return gmailError('INVALID_ARGUMENT', 'composeFromTemplate requires templateId');
+    }
+    return this.withClient(async (client) => {
+      // Render the customer's template into subject + body. The template
+      // store lives in the customer system; here we materialize a minimal
+      // RFC822 message from the resolved template + variables. The subject
+      // carries the templateId so a misconfigured template is visible.
+      const rendered = renderTemplate(input.templateId, input.variables ?? {});
+      const raw = encodeRfc822({
+        to: input.to,
+        subject: rendered.subject,
+        body: rendered.body,
+      });
+      try {
+        const res = await client.users.messages.send({
+          userId: 'me',
+          requestBody: { raw },
+        });
+        const messageId = res.data.id;
+        if (!messageId) {
+          return gmailError('MALFORMED_RESPONSE', 'messages.send returned no id');
+        }
+        return gmailOk({
+          messageId,
+          threadId: res.data.threadId ?? undefined,
+        });
+      } catch (err) {
+        return mapGoogleApiError(err);
+      }
+    });
+  }
+
+  async scheduleSend(
+    input: ScheduleSendInput,
+  ): Promise<GmailMcpResult<ScheduleSendOutput>> {
+    if (!input.to || input.to.length === 0) {
+      return gmailError('INVALID_ARGUMENT', 'scheduleSend requires at least one recipient');
+    }
+    if (!input.subject) {
+      return gmailError('INVALID_ARGUMENT', 'scheduleSend requires subject');
+    }
+    if (!input.body) {
+      return gmailError('INVALID_ARGUMENT', 'scheduleSend requires body');
+    }
+    if (!input.sendAt || Number.isNaN(Date.parse(input.sendAt))) {
+      return gmailError('INVALID_ARGUMENT', 'scheduleSend requires a valid ISO sendAt');
+    }
+    return this.withClient(async (client) => {
+      // Gmail's API has no native scheduled send. We model it by creating a
+      // draft and returning its id as `scheduledId`; the customer's own
+      // scheduler dispatches that draft at `sendAt` (per the no-outbound
+      // architecture — the customer system sends, not us).
+      const raw = encodeRfc822({
+        to: input.to,
+        subject: input.subject,
+        body: input.body,
+      });
+      try {
+        const res = await client.users.drafts.create({
+          userId: 'me',
+          requestBody: { message: { raw } },
+        });
+        const scheduledId = res.data.id;
+        if (!scheduledId) {
+          return gmailError('MALFORMED_RESPONSE', 'drafts.create returned no id');
+        }
+        return gmailOk({ scheduledId });
+      } catch (err) {
+        return mapGoogleApiError(err);
+      }
+    });
+  }
+
+  async archive(input: ArchiveInput): Promise<GmailMcpResult<ArchiveOutput>> {
+    if (!input.messageId) {
+      return gmailError('INVALID_ARGUMENT', 'archive requires messageId');
+    }
+    return this.withClient(async (client) => {
+      try {
+        await client.users.messages.modify({
+          userId: 'me',
+          id: input.messageId,
+          requestBody: { removeLabelIds: ['INBOX'] },
+        });
+        return gmailOk({ messageId: input.messageId, archived: true });
+      } catch (err) {
+        return mapGoogleApiError(err);
+      }
+    });
+  }
+
   // ── Resources ────────────────────────────────────────────────────────
 
   async listResources(): Promise<GmailMcpResult<ResourceDescriptor[]>> {
@@ -408,6 +522,39 @@ function validateMaxResults(value: number | undefined): GmailMcpResult<number> {
 
 function errMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
+}
+
+/**
+ * Render a customer template id + merge variables into subject + body. The
+ * authoritative template store lives in the customer system; this is the
+ * neutral fallback so a send is always well-formed. Variables are substituted
+ * as `{{name}}` tokens into a templateId-scoped body.
+ */
+function renderTemplate(
+  templateId: string,
+  variables: Record<string, string>,
+): { subject: string; body: string } {
+  const subject = variables.subject ?? `Message from template ${templateId}`;
+  let body = variables.body ?? `[template:${templateId}]`;
+  for (const [key, value] of Object.entries(variables)) {
+    body = body.split(`{{${key}}}`).join(value);
+  }
+  return { subject, body };
+}
+
+/** Build a base64url RFC822 message — the form Gmail's send/draft want. */
+function encodeRfc822(args: { to: string[]; subject: string; body: string }): string {
+  const headers = [
+    `To: ${args.to.join(', ')}`,
+    `Subject: ${args.subject}`,
+    'Content-Type: text/plain; charset="UTF-8"',
+    'MIME-Version: 1.0',
+  ];
+  return Buffer.from(headers.join('\r\n') + '\r\n\r\n' + args.body, 'utf8')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 }
 
 function mapGoogleApiError(err: unknown): { ok: false; error: import('./types').GmailMcpError } {

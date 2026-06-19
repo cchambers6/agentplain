@@ -21,6 +21,14 @@
  */
 
 import type { McpResult } from '@/lib/integrations/mcp-core';
+import type {
+  CreateLeadInput,
+  CreateLeadOutput,
+  ScheduleActionPlanInput,
+  ScheduleActionPlanOutput,
+  SendTextTemplateInput,
+  SendTextTemplateOutput,
+} from './actions';
 
 // ── DTOs the MCP returns ──────────────────────────────────────────────
 
@@ -105,6 +113,8 @@ export interface CreateNoteInput {
   /** Whether the note is visible to all FUB users on the account
    *  (default true) or pinned as private. */
   isPrivate?: boolean;
+  /** Approval token once the operator has approved this exact note. */
+  pendingApprovalId?: string;
 }
 export interface CreateNoteOutput {
   noteId: string;
@@ -114,6 +124,8 @@ export interface AddTagInput {
   leadId: string;
   /** Tag name(s) to add. FUB upserts by name. */
   tags: string[];
+  /** Approval token once the operator has approved this exact tag set. */
+  pendingApprovalId?: string;
 }
 export interface AddTagOutput {
   applied: string[];
@@ -175,4 +187,17 @@ export interface FollowUpBossMcpServer {
   listLeadLists(
     input: ListLeadListsInput,
   ): Promise<McpResult<ListLeadListsOutput>>;
+
+  // ── Write-action-depth mutations (approval-gated at the factory seam) ──
+
+  /** Create a new lead (person) in FUB. Gated. */
+  createLead(input: CreateLeadInput): Promise<McpResult<CreateLeadOutput>>;
+  /** Send a templated SMS to a lead. OUTBOUND — gated. */
+  sendTextTemplate(
+    input: SendTextTemplateInput,
+  ): Promise<McpResult<SendTextTemplateOutput>>;
+  /** Apply / assign an action plan to a person. Gated. */
+  scheduleActionPlan(
+    input: ScheduleActionPlanInput,
+  ): Promise<McpResult<ScheduleActionPlanOutput>>;
 }

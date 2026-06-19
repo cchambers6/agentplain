@@ -20,6 +20,10 @@
  */
 
 import {
+  type ArchiveInput,
+  type ArchiveOutput,
+  type ComposeFromTemplateInput,
+  type ComposeFromTemplateOutput,
   type DraftMessageInput,
   type DraftMessageOutput,
   type FullMessage,
@@ -37,6 +41,8 @@ import {
   type ReadResourceInput,
   type ReadResourceOutput,
   type ResourceDescriptor,
+  type ScheduleSendInput,
+  type ScheduleSendOutput,
   type SearchThreadsInput,
   type SearchThreadsOutput,
   type ThreadSummary,
@@ -211,6 +217,65 @@ export class TestGmailMcpServer implements GmailMcpServer {
   async listLabels(): Promise<GmailMcpResult<ListLabelsOutput>> {
     this.calls.push({ method: 'listLabels', args: null });
     return gmailOk({ labels: Array.from(this.labels.values()) });
+  }
+
+  // ── Write-action-depth mutations (canned success) ──────────────────────
+  //
+  // The recording impl never reaches an external API; it records the call
+  // and returns a deterministic id. The approval gate is exercised by the
+  // decorator that wraps this server at the factory seam.
+
+  private sentCounter = 0;
+  private scheduledCounter = 0;
+
+  async composeFromTemplate(
+    input: ComposeFromTemplateInput,
+  ): Promise<GmailMcpResult<ComposeFromTemplateOutput>> {
+    this.calls.push({ method: 'composeFromTemplate', args: input });
+    if (!input.to || input.to.length === 0) {
+      return gmailError('INVALID_ARGUMENT', 'composeFromTemplate requires at least one recipient');
+    }
+    if (!input.templateId) {
+      return gmailError('INVALID_ARGUMENT', 'composeFromTemplate requires templateId');
+    }
+    this.sentCounter += 1;
+    return gmailOk({
+      messageId: `test-sent-${this.sentCounter}`,
+      threadId: `test-thread-sent-${this.sentCounter}`,
+    });
+  }
+
+  async scheduleSend(
+    input: ScheduleSendInput,
+  ): Promise<GmailMcpResult<ScheduleSendOutput>> {
+    this.calls.push({ method: 'scheduleSend', args: input });
+    if (!input.to || input.to.length === 0) {
+      return gmailError('INVALID_ARGUMENT', 'scheduleSend requires at least one recipient');
+    }
+    if (!input.subject) {
+      return gmailError('INVALID_ARGUMENT', 'scheduleSend requires subject');
+    }
+    if (!input.body) {
+      return gmailError('INVALID_ARGUMENT', 'scheduleSend requires body');
+    }
+    if (!input.sendAt || Number.isNaN(Date.parse(input.sendAt))) {
+      return gmailError('INVALID_ARGUMENT', 'scheduleSend requires a valid ISO sendAt');
+    }
+    this.scheduledCounter += 1;
+    return gmailOk({ scheduledId: `test-scheduled-${this.scheduledCounter}` });
+  }
+
+  async archive(input: ArchiveInput): Promise<GmailMcpResult<ArchiveOutput>> {
+    this.calls.push({ method: 'archive', args: input });
+    if (!input.messageId) {
+      return gmailError('INVALID_ARGUMENT', 'archive requires messageId');
+    }
+    const m = this.messages.get(input.messageId);
+    if (m) {
+      const next = m.labels.filter((l) => l !== 'INBOX');
+      this.messages.set(m.id, { ...m, labels: next });
+    }
+    return gmailOk({ messageId: input.messageId, archived: true });
   }
 
   async listResources(): Promise<GmailMcpResult<ResourceDescriptor[]>> {

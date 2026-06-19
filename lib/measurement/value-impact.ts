@@ -115,6 +115,9 @@ export const MINUTES_SAVED_BY_KIND: Record<WorkApprovalKind, number> = {
   // ledger is never inflated by a gated-but-unexecuted action.
   DOCUSIGN_SEND_ENVELOPE: 0,
   DOCUSIGN_VOID_ENVELOPE: 0,
+  // Connector write actions are safety GATES too (same reasoning as DocuSign):
+  // many PENDING rows may never be approved. Scored at 0.
+  CONNECTOR_WRITE_ACTION: 0,
 };
 
 // ── Per-kind labor-rate table (USD/hour) ─────────────────────────────────────
@@ -161,6 +164,8 @@ export const LABOR_RATE_USD_PER_HOUR_BY_KIND: Record<WorkApprovalKind, number> =
     // DocuSign send/void — legal-document actions; rate is moot (0 minutes).
     DOCUSIGN_SEND_ENVELOPE: 75,
     DOCUSIGN_VOID_ENVELOPE: 75,
+    // Connector writes span disciplines; rate is moot (0 minutes scored).
+    CONNECTOR_WRITE_ACTION: 55,
   };
 
 // ── Public types ──────────────────────────────────────────────────────────────

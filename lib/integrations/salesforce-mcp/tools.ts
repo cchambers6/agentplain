@@ -6,9 +6,10 @@
  * (`app/api/integrations/salesforce-mcp/[workspaceId]/route.ts`) and the smoke
  * test via `lib/integrations/mcp-core/dispatch.ts`.
  *
- * Per `project_no_outbound_architecture.md`: the only write tool is
- * `create_task` — an INTERNAL task on the customer's own org. No tool here
- * sends mail, SMS, or anything customer-facing.
+ * Per `project_no_outbound_architecture.md`: every mutating tool is
+ * approval-gated at the factory seam. `send_email_template` is genuinely
+ * OUTBOUND; the rest annotate the customer's own org. None fire without a
+ * recorded human approval.
  */
 
 import { z } from 'zod';
@@ -47,6 +48,40 @@ const createTaskSchema = z.object({
   description: z.string().optional(),
   status: z.string().optional(),
   priority: z.string().optional(),
+  pendingApprovalId: z.string().optional(),
+});
+
+// ── Write-action-depth schemas (all approval-gated) ────────────────────────
+
+const createOpportunitySchema = z.object({
+  name: z.string().min(1),
+  stageName: z.string().min(1),
+  closeDate: z.string().min(1),
+  amount: z.number().optional(),
+  accountId: z.string().optional(),
+  pendingApprovalId: z.string().optional(),
+});
+
+const updateRecordSchema = z.object({
+  sobjectType: z.string().min(1),
+  recordId: z.string().min(1),
+  fields: z.record(z.string(), z.string()),
+  pendingApprovalId: z.string().optional(),
+});
+
+const sendEmailTemplateSchema = z.object({
+  recipientEmail: z.string().min(1),
+  templateId: z.string().min(1),
+  targetObjectId: z.string().optional(),
+  pendingApprovalId: z.string().optional(),
+});
+
+const logCallSchema = z.object({
+  subject: z.string().min(1),
+  description: z.string().optional(),
+  whoId: z.string().optional(),
+  whatId: z.string().optional(),
+  pendingApprovalId: z.string().optional(),
 });
 
 export const SALESFORCE_TOOLS: ReadonlyArray<ToolRegistration<SalesforceMcpServer>> = [
@@ -96,8 +131,37 @@ export const SALESFORCE_TOOLS: ReadonlyArray<ToolRegistration<SalesforceMcpServe
   {
     name: `${SALESFORCE_NAMESPACE}.create_task`,
     description:
-      'Create an internal task (subject required; whatId/whoId relate it to a record). Internal CRM annotation — does not send anything outbound.',
+      'Create an internal task (subject required; whatId/whoId relate it to a record). Internal CRM annotation. Approval-gated.',
     schema: createTaskSchema,
     invoke: (s, a) => s.createTask(createTaskSchema.parse(a)),
+  },
+  // ── Write-action-depth tools (approval-gated mutations) ──────────────────
+  {
+    name: `${SALESFORCE_NAMESPACE}.create_opportunity`,
+    description:
+      'Create a new Opportunity (name + stageName + closeDate required; amount/accountId optional). Approval-gated.',
+    schema: createOpportunitySchema,
+    invoke: (s, a) => s.createOpportunity(createOpportunitySchema.parse(a)),
+  },
+  {
+    name: `${SALESFORCE_NAMESPACE}.update_record`,
+    description:
+      'Update fields on an arbitrary sObject (sobjectType + recordId + fields). Approval-gated.',
+    schema: updateRecordSchema,
+    invoke: (s, a) => s.updateRecord(updateRecordSchema.parse(a)),
+  },
+  {
+    name: `${SALESFORCE_NAMESPACE}.send_email_template`,
+    description:
+      'Send a Salesforce template email to a recipient (recipientEmail + templateId; targetObjectId optional). OUTBOUND — approval-gated.',
+    schema: sendEmailTemplateSchema,
+    invoke: (s, a) => s.sendEmailTemplate(sendEmailTemplateSchema.parse(a)),
+  },
+  {
+    name: `${SALESFORCE_NAMESPACE}.log_call`,
+    description:
+      'Log a completed call as a Task of Type Call (subject required; whoId/whatId relate it to a record). Approval-gated.',
+    schema: logCallSchema,
+    invoke: (s, a) => s.logCall(logCallSchema.parse(a)),
   },
 ];

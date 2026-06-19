@@ -28,11 +28,36 @@ const createNoteSchema = z.object({
   leadId: z.string().min(1),
   body: z.string().min(1),
   isPrivate: z.boolean().optional(),
+  pendingApprovalId: z.string().min(1).optional(),
 });
 
 const addTagSchema = z.object({
   leadId: z.string().min(1),
   tags: z.array(z.string().min(1)).min(1),
+  pendingApprovalId: z.string().min(1).optional(),
+});
+
+const createLeadSchema = z.object({
+  name: z.string().min(1).optional(),
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
+  email: z.string().min(1).optional(),
+  phone: z.string().min(1).optional(),
+  source: z.string().min(1).optional(),
+  pendingApprovalId: z.string().min(1).optional(),
+});
+
+const sendTextTemplateSchema = z.object({
+  personId: z.string().min(1),
+  templateId: z.string().min(1),
+  message: z.string().min(1).optional(),
+  pendingApprovalId: z.string().min(1).optional(),
+});
+
+const scheduleActionPlanSchema = z.object({
+  personId: z.string().min(1),
+  actionPlanId: z.string().min(1),
+  pendingApprovalId: z.string().min(1).optional(),
 });
 
 const listPipelinesSchema = z.object({
@@ -104,5 +129,26 @@ export const FOLLOW_UP_BOSS_TOOLS: ReadonlyArray<ToolRegistration<FollowUpBossMc
     description: 'List FUB lead-lists (drip-campaign equivalents). limit is 1..100 (default 25).',
     schema: listLeadListsSchema,
     invoke: (s, a) => s.listLeadLists(listLeadListsSchema.parse(a)),
+  },
+  {
+    name: `${FOLLOW_UP_BOSS_NAMESPACE}.create_lead`,
+    description:
+      'Create a new lead (person) in FUB. Provide name or firstName/lastName, plus optional email/phone/source. Approval-gated.',
+    schema: createLeadSchema,
+    invoke: (s, a) => s.createLead(createLeadSchema.parse(a)),
+  },
+  {
+    name: `${FOLLOW_UP_BOSS_NAMESPACE}.send_text_template`,
+    description:
+      'Send a templated SMS to a lead (personId + templateId, optional message). OUTBOUND — approval-gated.',
+    schema: sendTextTemplateSchema,
+    invoke: (s, a) => s.sendTextTemplate(sendTextTemplateSchema.parse(a)),
+  },
+  {
+    name: `${FOLLOW_UP_BOSS_NAMESPACE}.schedule_action_plan`,
+    description:
+      'Apply / assign an action plan to a person (personId + actionPlanId). Approval-gated.',
+    schema: scheduleActionPlanSchema,
+    invoke: (s, a) => s.scheduleActionPlan(scheduleActionPlanSchema.parse(a)),
   },
 ];

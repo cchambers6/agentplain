@@ -21,6 +21,27 @@ import assert from 'node:assert/strict';
 import { buildBuildiumMcpServer, isBuildiumLive, TestBuildiumMcpServer } from './index';
 import type { BuildiumMcpServer, ListDelinquentLeasesInput, ListDelinquentLeasesOutput } from './types';
 import { mcpError, mcpOk, type McpResult } from '@/lib/integrations/mcp-core';
+
+/**
+ * The write-action methods are not exercised by these read-path / skill tests,
+ * but the `BuildiumMcpServer` interface now requires them. Spread this into the
+ * inline honesty-seam stubs so they satisfy the interface without each stub
+ * re-declaring four unused mutations.
+ */
+const NOOP_WRITES = {
+  async createWorkOrder() {
+    return mcpError('NOT_IMPLEMENTED', 'stub') as McpResult<never>;
+  },
+  async chargeLateFee() {
+    return mcpError('NOT_IMPLEMENTED', 'stub') as McpResult<never>;
+  },
+  async postNotice() {
+    return mcpError('NOT_IMPLEMENTED', 'stub') as McpResult<never>;
+  },
+  async sendTenantMsg() {
+    return mcpError('NOT_IMPLEMENTED', 'stub') as McpResult<never>;
+  },
+};
 import {
   BuildiumRentRollLookup,
   runSkill,
@@ -154,6 +175,7 @@ describe('rent-collection skill — honesty seam (Buildium not connected)', () =
       async healthCheck() {
         return { ok: false as const, latencyMs: 0, lastChecked: NOW.toISOString(), errorCode: 'CREDENTIAL_NOT_FOUND' };
       },
+      ...NOOP_WRITES,
     };
     const lookup = new BuildiumRentRollLookup({ workspaceId: WORKSPACE_ID, mcp: stub });
     const res = await lookup.fetchDelinquentUnits({ workspaceId: WORKSPACE_ID });
@@ -185,6 +207,7 @@ describe('rent-collection skill — honesty seam (Buildium not connected)', () =
       async healthCheck() {
         return { ok: true as const, latencyMs: 0, lastChecked: NOW.toISOString() };
       },
+      ...NOOP_WRITES,
     };
     const lookup = new BuildiumRentRollLookup({ workspaceId: WORKSPACE_ID, mcp: stub });
     const res = await lookup.fetchDelinquentUnits({ workspaceId: WORKSPACE_ID });

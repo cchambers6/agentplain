@@ -64,6 +64,7 @@ const draftMessageArgsSchema = z.object({
   body: z.string().min(1),
   threadId: z.string().optional(),
   inReplyToMessageId: z.string().optional(),
+  pendingApprovalId: z.string().optional(),
 });
 
 const labelMessageArgsSchema = z
@@ -71,6 +72,7 @@ const labelMessageArgsSchema = z
     messageId: z.string().min(1),
     addLabelIds: z.array(z.string()).optional(),
     removeLabelIds: z.array(z.string()).optional(),
+    pendingApprovalId: z.string().optional(),
   })
   .refine(
     (v) =>
@@ -78,6 +80,26 @@ const labelMessageArgsSchema = z
       (v.removeLabelIds && v.removeLabelIds.length > 0),
     { message: 'labelMessage requires at least one of addLabelIds / removeLabelIds' },
   );
+
+const composeFromTemplateArgsSchema = z.object({
+  to: z.array(z.string().min(1)).min(1),
+  templateId: z.string().min(1),
+  variables: z.record(z.string(), z.string()).optional(),
+  pendingApprovalId: z.string().optional(),
+});
+
+const scheduleSendArgsSchema = z.object({
+  to: z.array(z.string().min(1)).min(1),
+  subject: z.string().min(1),
+  body: z.string().min(1),
+  sendAt: z.string().min(1),
+  pendingApprovalId: z.string().optional(),
+});
+
+const archiveArgsSchema = z.object({
+  messageId: z.string().min(1),
+  pendingApprovalId: z.string().optional(),
+});
 
 const readResourceArgsSchema = z.object({ uri: z.string().min(1) });
 
@@ -137,6 +159,27 @@ const TOOLS: ToolRegistration[] = [
     description: 'Enumerate Gmail labels (system + user-defined).',
     schema: z.object({}).optional(),
     invoke: (server) => server.listLabels(),
+  },
+  {
+    shortName: 'gmail.compose_from_template',
+    description:
+      'Compose and SEND an email from a template. OUTBOUND — approval-gated; never sends without a recorded operator approval.',
+    schema: composeFromTemplateArgsSchema,
+    invoke: (server, args) =>
+      server.composeFromTemplate(composeFromTemplateArgsSchema.parse(args)),
+  },
+  {
+    shortName: 'gmail.schedule_send',
+    description:
+      'Schedule an email to send at a future time. OUTBOUND — approval-gated; creates a draft the customer scheduler dispatches at sendAt.',
+    schema: scheduleSendArgsSchema,
+    invoke: (server, args) => server.scheduleSend(scheduleSendArgsSchema.parse(args)),
+  },
+  {
+    shortName: 'gmail.archive',
+    description: 'Archive a message (remove the INBOX label). Approval-gated.',
+    schema: archiveArgsSchema,
+    invoke: (server, args) => server.archive(archiveArgsSchema.parse(args)),
   },
 ];
 

@@ -8,15 +8,29 @@
  * from here only.
  */
 
+import {
+  buildConnectorApprovalDeps,
+  type ConnectorApprovalDeps,
+} from '@/lib/integrations/approval';
 import { ProdHubspotMcpServer } from './server';
 import { RecordingHubspotMcpServer } from './test-server';
+import { withHubspotApproval } from './with-approval';
 import type { HubspotMcpServer } from './types';
 
-export function buildHubspotMcpServer(args: { workspaceId: string }): HubspotMcpServer {
+/**
+ * Build the HubSpot MCP server. Every mutating method is approval-gated at this
+ * seam — an ungated server can't be obtained. Tests inject `deps` carrying an
+ * in-memory gate + audit sink so they can seed grants deterministically.
+ */
+export function buildHubspotMcpServer(args: {
+  workspaceId: string;
+  deps?: ConnectorApprovalDeps;
+}): HubspotMcpServer {
+  const deps = args.deps ?? buildConnectorApprovalDeps();
   if (process.env.INTEGRATIONS_PROVIDER === 'test') {
-    return new RecordingHubspotMcpServer(args);
+    return withHubspotApproval(new RecordingHubspotMcpServer(args), deps);
   }
-  return new ProdHubspotMcpServer(args);
+  return withHubspotApproval(new ProdHubspotMcpServer(args), deps);
 }
 
 export { HUBSPOT_TOOLS, HUBSPOT_NAMESPACE } from './tools';

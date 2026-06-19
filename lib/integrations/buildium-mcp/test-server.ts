@@ -11,7 +11,7 @@
  * draft + escalation paths are all exercised against real-shaped data.
  */
 
-import { mcpOk, type McpResult } from '@/lib/integrations/mcp-core';
+import { mcpError, mcpOk, type McpResult } from '@/lib/integrations/mcp-core';
 import {
   type BuildiumHealth,
   type BuildiumLeaseSummary,
@@ -19,6 +19,22 @@ import {
   type ListDelinquentLeasesInput,
   type ListDelinquentLeasesOutput,
 } from './types';
+import type {
+  CreateWorkOrderInput,
+  CreateWorkOrderOutput,
+  ChargeLateFeeInput,
+  ChargeLateFeeOutput,
+  PostNoticeInput,
+  PostNoticeOutput,
+  SendTenantMsgInput,
+  SendTenantMsgOutput,
+} from './actions';
+
+/** One recorded write-side call captured by the fixture server for assertions. */
+export interface RecordedBuildiumCall {
+  tool: 'createWorkOrder' | 'chargeLateFee' | 'postNotice' | 'sendTenantMsg';
+  input: unknown;
+}
 
 /** As-of date the fixtures are authored against (keeps daysPastDue stable). */
 const FIXTURE_AS_OF = new Date('2026-06-07T12:00:00Z');
@@ -78,6 +94,9 @@ const FIXTURE_LEASES: BuildiumLeaseSummary[] = [
 export class TestBuildiumMcpServer implements BuildiumMcpServer {
   readonly name = 'buildium-test' as const;
   readonly workspaceId: string;
+  /** Write-side calls captured for test assertions (canned success). */
+  readonly calls: RecordedBuildiumCall[] = [];
+  private nextId = 8000;
 
   constructor(args: { workspaceId: string }) {
     this.workspaceId = args.workspaceId;
@@ -95,5 +114,37 @@ export class TestBuildiumMcpServer implements BuildiumMcpServer {
     // Fixtures are always reachable — the probe reports healthy with a small
     // deterministic latency so dev/tests exercise the green path.
     return { ok: true, latencyMs: 1, lastChecked: new Date().toISOString() };
+  }
+
+  // ── Write actions (recorded; canned success) ─────────────────────────────
+
+  async createWorkOrder(
+    input: CreateWorkOrderInput,
+  ): Promise<McpResult<CreateWorkOrderOutput>> {
+    this.calls.push({ tool: 'createWorkOrder', input });
+    if (!input.title) return mcpError('INVALID_ARGUMENT', 'createWorkOrder requires a title');
+    return mcpOk({ workOrderId: `wo-${this.nextId++}` });
+  }
+
+  async chargeLateFee(
+    input: ChargeLateFeeInput,
+  ): Promise<McpResult<ChargeLateFeeOutput>> {
+    this.calls.push({ tool: 'chargeLateFee', input });
+    if (!(input.amount > 0)) return mcpError('INVALID_ARGUMENT', 'chargeLateFee requires a positive amount');
+    return mcpOk({ transactionId: `txn-${this.nextId++}` });
+  }
+
+  async postNotice(input: PostNoticeInput): Promise<McpResult<PostNoticeOutput>> {
+    this.calls.push({ tool: 'postNotice', input });
+    if (!input.subject) return mcpError('INVALID_ARGUMENT', 'postNotice requires a subject');
+    return mcpOk({ noticeId: `notice-${this.nextId++}` });
+  }
+
+  async sendTenantMsg(
+    input: SendTenantMsgInput,
+  ): Promise<McpResult<SendTenantMsgOutput>> {
+    this.calls.push({ tool: 'sendTenantMsg', input });
+    if (!input.tenantId) return mcpError('INVALID_ARGUMENT', 'sendTenantMsg requires a tenantId');
+    return mcpOk({ messageId: `msg-${this.nextId++}` });
   }
 }

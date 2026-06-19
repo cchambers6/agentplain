@@ -30,6 +30,20 @@ import type {
   UpdateDealInput,
   UpdateDealOutput,
 } from './types';
+import type {
+  CreateDealInput,
+  CreateDealOutput,
+  UpdateDealStageInput,
+  UpdateDealStageOutput,
+  LogActivityInput,
+  LogActivityOutput,
+  CreateTaskInput,
+  CreateTaskOutput,
+  SendEmailTemplateInput,
+  SendEmailTemplateOutput,
+  SendSequenceEnrollmentInput,
+  SendSequenceEnrollmentOutput,
+} from './actions';
 
 export interface TestHubspotSeed {
   contacts?: HubspotContactSummary[];
@@ -47,7 +61,13 @@ export interface RecordedHubspotCall {
     | 'updateDeal'
     | 'listCompanies'
     | 'getCompany'
-    | 'createNote';
+    | 'createNote'
+    | 'createDeal'
+    | 'updateDealStage'
+    | 'logActivity'
+    | 'createTask'
+    | 'sendEmailTemplate'
+    | 'sendSequenceEnrollment';
   input: unknown;
 }
 
@@ -155,5 +175,68 @@ export class RecordingHubspotMcpServer implements HubspotMcpServer {
       return mcpError('NOT_FOUND', `No ${input.objectType} ${input.objectId}`);
     }
     return mcpOk({ noteId: `note-${this.nextNoteId++}` });
+  }
+
+  // ── Write-action-depth mutations (recorded; canned success) ───────────
+
+  async createDeal(input: CreateDealInput): Promise<McpResult<CreateDealOutput>> {
+    this.calls.push({ tool: 'createDeal', input });
+    if (!input.dealName) return mcpError('INVALID_ARGUMENT', 'createDeal requires dealName');
+    const id = `deal-${this.nextNoteId++}`;
+    this.deals.set(id, {
+      id,
+      name: input.dealName,
+      amount: input.amount !== undefined ? Number(input.amount) : null,
+      pipeline: input.pipeline ?? null,
+      dealStage: input.dealStage ?? null,
+      closeDate: input.closeDate ?? null,
+      createdAt: null,
+      updatedAt: null,
+    });
+    return mcpOk({ dealId: id });
+  }
+
+  async updateDealStage(
+    input: UpdateDealStageInput,
+  ): Promise<McpResult<UpdateDealStageOutput>> {
+    this.calls.push({ tool: 'updateDealStage', input });
+    const d = this.deals.get(input.dealId);
+    if (!d) return mcpError('NOT_FOUND', `No deal ${input.dealId}`);
+    this.deals.set(input.dealId, {
+      ...d,
+      dealStage: input.dealStage,
+      pipeline: input.pipeline ?? d.pipeline,
+    });
+    return mcpOk({ dealId: input.dealId, dealStage: input.dealStage });
+  }
+
+  async logActivity(input: LogActivityInput): Promise<McpResult<LogActivityOutput>> {
+    this.calls.push({ tool: 'logActivity', input });
+    if (!input.body) return mcpError('INVALID_ARGUMENT', 'logActivity requires a body');
+    return mcpOk({ activityId: `activity-${this.nextNoteId++}`, activityType: input.activityType });
+  }
+
+  async createTask(input: CreateTaskInput): Promise<McpResult<CreateTaskOutput>> {
+    this.calls.push({ tool: 'createTask', input });
+    if (!input.title) return mcpError('INVALID_ARGUMENT', 'createTask requires a title');
+    return mcpOk({ taskId: `task-${this.nextNoteId++}` });
+  }
+
+  async sendEmailTemplate(
+    input: SendEmailTemplateInput,
+  ): Promise<McpResult<SendEmailTemplateOutput>> {
+    this.calls.push({ tool: 'sendEmailTemplate', input });
+    if (!input.emailId) return mcpError('INVALID_ARGUMENT', 'sendEmailTemplate requires emailId');
+    return mcpOk({ statusId: `status-${this.nextNoteId++}` });
+  }
+
+  async sendSequenceEnrollment(
+    input: SendSequenceEnrollmentInput,
+  ): Promise<McpResult<SendSequenceEnrollmentOutput>> {
+    this.calls.push({ tool: 'sendSequenceEnrollment', input });
+    if (!input.sequenceId) {
+      return mcpError('INVALID_ARGUMENT', 'sendSequenceEnrollment requires sequenceId');
+    }
+    return mcpOk({ enrollmentId: `enrollment-${this.nextNoteId++}` });
   }
 }

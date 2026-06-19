@@ -42,9 +42,10 @@ function client(server?: HubspotMcpServer) {
 }
 
 describe('hubspot-mcp dispatch', () => {
-  it('tools/list exposes the nine HubSpot tools, all namespaced', async () => {
+  it('tools/list exposes all HubSpot tools, all namespaced', async () => {
     const tools = await client().listTools();
-    assert.equal(tools.length, 9);
+    // 9 original (list/get/update + createNote) + 6 write-action-depth tools.
+    assert.equal(tools.length, 15);
     assert.ok(tools.every((t) => t.name.startsWith('hubspot.')));
   });
 

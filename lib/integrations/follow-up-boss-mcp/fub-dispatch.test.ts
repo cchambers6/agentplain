@@ -41,9 +41,9 @@ function client() {
 }
 
 describe('follow-up-boss-mcp dispatch', () => {
-  it('tools/list exposes the eight FUB tools, all namespaced', async () => {
+  it('tools/list exposes the eleven FUB tools, all namespaced', async () => {
     const tools = await client().listTools();
-    assert.equal(tools.length, 8);
+    assert.equal(tools.length, 11);
     assert.ok(tools.every((t) => t.name.startsWith('follow-up-boss.')));
   });
 

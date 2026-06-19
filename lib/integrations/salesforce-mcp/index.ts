@@ -8,15 +8,29 @@
  * from here only.
  */
 
+import {
+  buildConnectorApprovalDeps,
+  type ConnectorApprovalDeps,
+} from '@/lib/integrations/approval';
 import { ProdSalesforceMcpServer } from './server';
 import { RecordingSalesforceMcpServer } from './test-server';
+import { withSalesforceApproval } from './with-approval';
 import type { SalesforceMcpServer } from './types';
 
-export function buildSalesforceMcpServer(args: { workspaceId: string }): SalesforceMcpServer {
+/**
+ * Build the Salesforce MCP server. Every mutating method is approval-gated at
+ * this seam — an ungated server can't be obtained. Tests inject `deps` carrying
+ * an in-memory gate + audit sink so they can seed grants deterministically.
+ */
+export function buildSalesforceMcpServer(args: {
+  workspaceId: string;
+  deps?: ConnectorApprovalDeps;
+}): SalesforceMcpServer {
+  const deps = args.deps ?? buildConnectorApprovalDeps();
   if (process.env.INTEGRATIONS_PROVIDER === 'test') {
-    return new RecordingSalesforceMcpServer(args);
+    return withSalesforceApproval(new RecordingSalesforceMcpServer(args), deps);
   }
-  return new ProdSalesforceMcpServer(args);
+  return withSalesforceApproval(new ProdSalesforceMcpServer(args), deps);
 }
 
 export { SALESFORCE_TOOLS, SALESFORCE_NAMESPACE } from './tools';
@@ -47,4 +61,12 @@ export type {
   ListContactsOutput,
   CreateTaskInput,
   CreateTaskOutput,
+  CreateOpportunityInput,
+  CreateOpportunityOutput,
+  UpdateRecordInput,
+  UpdateRecordOutput,
+  SendEmailTemplateInput,
+  SendEmailTemplateOutput,
+  LogCallInput,
+  LogCallOutput,
 } from './types';

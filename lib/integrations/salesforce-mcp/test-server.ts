@@ -7,8 +7,16 @@
 
 import { mcpError, mcpOk, type McpResult } from '@/lib/integrations/mcp-core';
 import type {
+  CreateOpportunityInput,
+  CreateOpportunityOutput,
   CreateTaskInput,
   CreateTaskOutput,
+  LogCallInput,
+  LogCallOutput,
+  SendEmailTemplateInput,
+  SendEmailTemplateOutput,
+  UpdateRecordInput,
+  UpdateRecordOutput,
   GetAccountInput,
   GetAccountOutput,
   GetLeadInput,
@@ -46,7 +54,11 @@ export interface RecordedSalesforceCall {
     | 'listAccounts'
     | 'getAccount'
     | 'listContacts'
-    | 'createTask';
+    | 'createTask'
+    | 'createOpportunity'
+    | 'updateRecord'
+    | 'sendEmailTemplate'
+    | 'logCall';
   input: unknown;
 }
 
@@ -59,6 +71,8 @@ export class RecordingSalesforceMcpServer implements SalesforceMcpServer {
   private readonly accounts: Map<string, SalesforceAccountSummary>;
   private readonly contacts: Map<string, SalesforceContactSummary>;
   private nextTaskId = 8000;
+  private nextOppId = 9000;
+  private nextEmailId = 7000;
 
   constructor(args: { workspaceId: string; seed?: TestSalesforceSeed }) {
     this.workspaceId = args.workspaceId;
@@ -138,6 +152,43 @@ export class RecordingSalesforceMcpServer implements SalesforceMcpServer {
       if (!inOpps && !inAccts) {
         return mcpError('NOT_FOUND', `No Opportunity or Account with id ${input.whatId}`);
       }
+    }
+    return mcpOk({ taskId: `task-${this.nextTaskId++}` });
+  }
+
+  // ── Write-action-depth mutations (record + canned success) ────────────
+
+  async createOpportunity(input: CreateOpportunityInput): Promise<McpResult<CreateOpportunityOutput>> {
+    this.calls.push({ tool: 'createOpportunity', input });
+    if (!input.name || input.name.trim().length === 0) {
+      return mcpError('INVALID_ARGUMENT', 'createOpportunity requires a non-empty name');
+    }
+    if (!input.stageName) return mcpError('INVALID_ARGUMENT', 'createOpportunity requires stageName');
+    if (!input.closeDate) return mcpError('INVALID_ARGUMENT', 'createOpportunity requires closeDate');
+    return mcpOk({ opportunityId: `opp-${this.nextOppId++}` });
+  }
+
+  async updateRecord(input: UpdateRecordInput): Promise<McpResult<UpdateRecordOutput>> {
+    this.calls.push({ tool: 'updateRecord', input });
+    if (!input.sobjectType) return mcpError('INVALID_ARGUMENT', 'updateRecord requires sobjectType');
+    if (!input.recordId) return mcpError('INVALID_ARGUMENT', 'updateRecord requires recordId');
+    if (!input.fields || Object.keys(input.fields).length === 0) {
+      return mcpError('INVALID_ARGUMENT', 'updateRecord requires at least one field');
+    }
+    return mcpOk({ recordId: input.recordId });
+  }
+
+  async sendEmailTemplate(input: SendEmailTemplateInput): Promise<McpResult<SendEmailTemplateOutput>> {
+    this.calls.push({ tool: 'sendEmailTemplate', input });
+    if (!input.recipientEmail) return mcpError('INVALID_ARGUMENT', 'sendEmailTemplate requires recipientEmail');
+    if (!input.templateId) return mcpError('INVALID_ARGUMENT', 'sendEmailTemplate requires templateId');
+    return mcpOk({ statusId: `email-${this.nextEmailId++}`, queued: true });
+  }
+
+  async logCall(input: LogCallInput): Promise<McpResult<LogCallOutput>> {
+    this.calls.push({ tool: 'logCall', input });
+    if (!input.subject || input.subject.trim().length === 0) {
+      return mcpError('INVALID_ARGUMENT', 'logCall requires a non-empty subject');
     }
     return mcpOk({ taskId: `task-${this.nextTaskId++}` });
   }

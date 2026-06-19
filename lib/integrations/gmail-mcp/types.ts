@@ -27,6 +27,15 @@
  * runs against Conner's real inbox in PR-C's acceptance test.
  */
 
+import type {
+  ComposeFromTemplateInput,
+  ComposeFromTemplateOutput,
+  ScheduleSendInput,
+  ScheduleSendOutput,
+  ArchiveInput,
+  ArchiveOutput,
+} from './actions';
+
 // ── Result shape — mirrors lib/integrations/types.ts.IntegrationResult ──
 
 export type GmailMcpErrorCode =
@@ -168,6 +177,10 @@ export interface DraftMessageInput {
   /** Optional Message-ID to set as In-Reply-To / References. Pulled
    *  through to RFC822 headers so the customer's reply threads. */
   inReplyToMessageId?: string;
+  /** Approval token once the operator has approved this exact draft.
+   *  `draftMessage` is a MUTATION (writes to the Drafts folder) and is
+   *  gated at the factory seam — see `./with-approval.ts`. */
+  pendingApprovalId?: string;
 }
 
 export interface DraftMessageOutput {
@@ -184,6 +197,10 @@ export interface LabelMessageInput {
   addLabelIds?: string[];
   /** Label ids to remove. */
   removeLabelIds?: string[];
+  /** Approval token once the operator has approved this exact label change.
+   *  `labelMessage` is a MUTATION (users.messages.modify) and is gated at
+   *  the factory seam — see `./with-approval.ts`. */
+  pendingApprovalId?: string;
 }
 
 export interface LabelMessageOutput {
@@ -225,6 +242,20 @@ export interface ReadResourceOutput {
   text: string;
 }
 
+// ── Write-action I/O types (defined alongside descriptors in ./actions) ──
+//
+// Re-exported here so the `GmailMcpServer` interface can name them without a
+// circular import: `./actions` imports the gate types only, not this file.
+
+export type {
+  ComposeFromTemplateInput,
+  ComposeFromTemplateOutput,
+  ScheduleSendInput,
+  ScheduleSendOutput,
+  ArchiveInput,
+  ArchiveOutput,
+} from './actions';
+
 // ── Tool name discriminant ─────────────────────────────────────────────
 
 export const GMAIL_TOOL_NAMES = [
@@ -234,6 +265,9 @@ export const GMAIL_TOOL_NAMES = [
   'gmail.draft_message',
   'gmail.label_message',
   'gmail.list_labels',
+  'gmail.compose_from_template',
+  'gmail.schedule_send',
+  'gmail.archive',
 ] as const;
 
 export type GmailToolName = (typeof GMAIL_TOOL_NAMES)[number];
@@ -265,6 +299,16 @@ export interface GmailMcpServer {
   draftMessage(input: DraftMessageInput): Promise<GmailMcpResult<DraftMessageOutput>>;
   labelMessage(input: LabelMessageInput): Promise<GmailMcpResult<LabelMessageOutput>>;
   listLabels(): Promise<GmailMcpResult<ListLabelsOutput>>;
+
+  // ── Write-action-depth mutations (all gated; discipline 'general') ──────
+  //
+  // Per `project_no_outbound_architecture.md`, composeFromTemplate +
+  // scheduleSend are OUTBOUND — they only run behind a recorded approval.
+  composeFromTemplate(
+    input: ComposeFromTemplateInput,
+  ): Promise<GmailMcpResult<ComposeFromTemplateOutput>>;
+  scheduleSend(input: ScheduleSendInput): Promise<GmailMcpResult<ScheduleSendOutput>>;
+  archive(input: ArchiveInput): Promise<GmailMcpResult<ArchiveOutput>>;
 
   // ── Resources (MCP-protocol resource surface) ────────────────────────
 

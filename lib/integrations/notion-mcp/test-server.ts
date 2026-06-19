@@ -7,6 +7,8 @@
 
 import { mcpError, mcpOk, type McpResult } from '@/lib/integrations/mcp-core';
 import type {
+  AddCommentInput,
+  AddCommentOutput,
   CreatePageInput,
   CreatePageOutput,
   GetPageInput,
@@ -45,6 +47,7 @@ export interface RecordedNotionCall {
     | 'queryDatabase'
     | 'createPage'
     | 'updatePage'
+    | 'addComment'
     | 'searchWorkspace';
   input: unknown;
 }
@@ -56,6 +59,7 @@ export class RecordingNotionMcpServer implements NotionMcpServer {
   private readonly pages: Map<string, SeededPage>;
   private readonly databases: Map<string, NotionDatabaseSummary>;
   private nextPageId = 5000;
+  private nextCommentId = 9000;
 
   constructor(args: { workspaceId: string; seed?: TestNotionSeed }) {
     this.workspaceId = args.workspaceId;
@@ -147,6 +151,15 @@ export class RecordingNotionMcpServer implements NotionMcpServer {
     }
     this.pages.set(input.pageId, p);
     return mcpOk({ pageId: input.pageId });
+  }
+
+  async addComment(input: AddCommentInput): Promise<McpResult<AddCommentOutput>> {
+    this.calls.push({ tool: 'addComment', input });
+    if (!input.pageId) return mcpError('INVALID_ARGUMENT', 'addComment requires pageId');
+    if (!input.body || input.body.trim().length === 0) {
+      return mcpError('INVALID_ARGUMENT', 'addComment requires body');
+    }
+    return mcpOk({ commentId: `comment-${this.nextCommentId++}` });
   }
 
   async searchWorkspace(input: SearchWorkspaceInput): Promise<McpResult<SearchWorkspaceOutput>> {

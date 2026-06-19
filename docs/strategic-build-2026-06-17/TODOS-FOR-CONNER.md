@@ -171,3 +171,52 @@ PR: `feat(memory): RLS isolation + tiering + customer-hosted storage option`
   the **memory access audit log** are additive and on by default in the data
   model; the cold-tier sweep is opt-in (no cron wired yet — pinned entries
   never leave hot, and no COLD entries exist until you run the sweep).
+---
+
+## Data minimization (PR: `feat/data-minimization-ephemeral-pass-through-2026-06-18`)
+
+**Positioning (as built):** *Plaino remembers HOW your business works. He
+doesn't keep copies of your raw data — that lives in your tools. He keeps what
+he's learned about you, so he's a real partner that gets better.* Plaino-memory
+(chat, learned patterns, preferences, approved/edited drafts) is kept for the
+account lifetime, exportable any time, hard-deleted on close. Connector data is
+pass-through, never stored.
+
+- [ ] **Counsel review of the data-minimization commitment + the ToS/Privacy
+  language.** The commitment to land in ToS/Privacy: *"your data is yours; we
+  delete it when you cancel; connector data is pass-through and never copied;
+  we keep what Plaino learns so he gets better — all owned by you, exportable
+  any time."* It is true as built, but counsel should bless the exact phrasing
+  before it anchors a legal/marketing claim. Note: the canonical ToS/Privacy
+  source lives on the IP-protection branch (PR #296) — this PR did **not** edit
+  the legal pages directly; it captured the language here + in the storage
+  inventory doc for counsel to fold in. Surfaces to align:
+  `app/(product)/app/workspace/[id]/settings/data/storage/page.tsx`,
+  `components/integrations/ConnectStorageDisclosure.tsx`,
+  `docs/architecture/data-storage-inventory-2026-06-18.md`.
+
+- [ ] **Confirm account-close hard-deletes the audit log.** Per your direction,
+  `tearDownWorkspaceData` now deletes the customer's `AuditLog` on close (only
+  billing rows survive, for tax). Confirm this is what you want — some privacy
+  regimes (GDPR/CCPA) expect a *minimal* deletion-event record to be retained
+  to prove the deletion happened. If counsel wants that, we'd keep a single
+  "workspace closed + purged at <time>" stub instead of deleting the whole log.
+
+- [ ] **Decide: connector cache → Redis or in-memory?** The ephemeral
+  pass-through ships an **in-memory** short-TTL cache (`InMemoryEphemeralCache`,
+  ≤30 min, lost on container restart) behind a swap seam (`IEphemeralCache`).
+  Upstash Redis (~$10/mo) would let it survive restarts + be shared across
+  instances, at the cost of holding connector data in a (still short-lived,
+  still off-DB) external store. In-memory is the more data-minimal default.
+
+- [ ] **(Optional) Default chat auto-purge for any tier?** Default is now
+  **lifetime** for all tiers (correct — a partner shouldn't forget). The opt-in
+  finite auto-purge window is available to privacy-conscious customers. If you
+  ever want a tier (or vertical with strict retention rules, e.g. law) to
+  *default* to a finite window, that's a one-line change in
+  `lib/plaino/chat-retention.ts` — flag it and we'll wire it.
+
+- [ ] **Lead-conversation retention (`PlainoConversation`, MARKETING mode).**
+  Anonymous marketing-widget conversations have no workspace and aren't covered
+  by the account-lifetime model. Decide a retention policy for pre-conversion
+  lead conversations (sales/marketing may want them) — tracked as a follow-up.

@@ -14,6 +14,7 @@ import {
 } from "@/lib/integrations/marketplace";
 import { isIntegrationConfigured } from "@/lib/integrations/config-status";
 import { summarizeRetryQueueForProvider } from "@/lib/integrations/retry-queue";
+import { ConnectStorageDisclosure } from "@/components/integrations/ConnectStorageDisclosure";
 import { DisconnectButton } from "./DisconnectButton";
 import { TestConnectionButton } from "./TestConnectionButton";
 import { ApiKeyConnectForm } from "./ApiKeyConnectForm";
@@ -207,6 +208,12 @@ export default async function IntegrationSettingsPage({
               </ApHeritageButton>
             }
           />
+        </div>
+      )}
+
+      {!isComingSoon && !isConnected && isConfigured && (
+        <div className="mt-8">
+          <ConnectStorageDisclosure entry={entry} />
         </div>
       )}
 

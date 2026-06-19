@@ -81,6 +81,8 @@ export default async function DataControlsPage({
 
       {flash ? <FlashBanner kind={flash} /> : null}
 
+      <WhatWeStoreSection workspaceId={workspaceId} />
+
       <ExportSection workspaceId={workspaceId} />
 
       <ClosureSection
@@ -91,6 +93,36 @@ export default async function DataControlsPage({
         graceDays={graceDays}
       />
     </div>
+  );
+}
+
+// ─── What we store ──────────────────────────────────────────────────────────
+
+function WhatWeStoreSection({ workspaceId }: { workspaceId: string }) {
+  return (
+    <section>
+      <ApEyebrow className="mb-3">what we store</ApEyebrow>
+      <ApPaperCard
+        title="See exactly what we hold about you — live, row by row."
+        footer={
+          <Link
+            href={`/app/workspace/${workspaceId}/settings/data/storage`}
+            className="inline-flex items-center justify-center gap-2 rounded-none border border-ink bg-ink px-6 py-3 font-sans text-sm font-medium text-paper transition hover:bg-ink-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+          >
+            view what we store
+          </Link>
+        }
+      >
+        <p className="text-[14px] leading-relaxed text-ink-soft">
+          Plaino remembers how your business works — your voice, preferences,
+          conversations, and the drafts you approve. That&rsquo;s kept for the
+          life of your account so he keeps getting better; it&rsquo;s yours,
+          exportable any time, and deleted when you close. The raw data inside
+          your connected tools is read in-flight and never copied. This page
+          shows both, live, with row counts — and lets you clear anything.
+        </p>
+      </ApPaperCard>
+    </section>
   );
 }
 
@@ -215,10 +247,10 @@ function ClosureSection({
           <p className="mt-2 text-[13px] leading-relaxed text-mute">
             After the purge runs, every workspace-scoped row we hold —
             documents, drafts, handoffs, integrations, preferences,
-            webhooks, chat, schedules, briefings, memory — is removed. The
-            action is irreversible after the grace window ends. Your billing
-            rows and a minimal audit trail (who closed the workspace and
-            when) are kept for tax and compliance.
+            webhooks, chat, schedules, briefings, memory, and your audit
+            log — is removed. The action is irreversible after the grace
+            window ends. Only your billing rows (subscription + invoices) are
+            kept, for tax and compliance.
           </p>
 
           <form action={cancelClosureAction} className="mt-6">
@@ -263,9 +295,9 @@ function ClosureSection({
             irreversible.
           </li>
           <li>
-            Your billing rows (subscription + invoices) and a minimal audit
-            trail — who closed the workspace and when — stay so your tax and
-            compliance history is queryable. Cancel billing separately in the
+            Only your billing rows (subscription + invoices) stay, so your tax
+            and compliance history is queryable — everything else, including
+            your audit log, is hard-deleted. Cancel billing separately in the
             billing settings if you haven&rsquo;t already.
           </li>
         </ul>

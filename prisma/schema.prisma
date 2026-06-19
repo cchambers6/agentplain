@@ -1918,6 +1918,13 @@ model WorkspacePreference {
   /// any workspace that opted out. Per-workspace switch (the report is a
   /// workspace-level ROI summary, not a per-user setting).
   weeklyReportEnabled Boolean   @default(true)
+  /// Customer-controlled chat-retention window in DAYS, workspace-wide.
+  /// NULL = KEEP FOR ACCOUNT LIFETIME (the default — Plaino keeps chat so he
+  /// stays a good partner). A finite value is an OPT-IN auto-purge window the
+  /// owner sets on /settings/data/storage; we never shorten retention on the
+  /// customer's behalf. A per-thread override (ChatThread.retentionDays) takes
+  /// precedence. See `lib/plaino/chat-retention.ts`.
+  chatRetentionDays   Int?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -2156,6 +2163,14 @@ model ChatThread {
   /// Display title for the thread. Defaults to "talk with Plaino" in
   /// v1; v2 may auto-summarize from the first exchange.
   title       String        @default("talk with Plaino")
+  /// Per-thread chat retention override in DAYS. NULL = inherit the workspace
+  /// setting (WorkspacePreference.chatRetentionDays), which itself defaults to
+  /// KEEP-FOR-ACCOUNT-LIFETIME. A finite value is an opt-in auto-purge window:
+  /// the conversation-cleanup cron deletes the thread (cascading its messages)
+  /// once `updatedAt` is older than it. Default (null everywhere) = never
+  /// auto-deleted; chat lives for the life of the account. See
+  /// `lib/plaino/chat-retention.ts`.
+  retentionDays Int?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)

@@ -131,6 +131,11 @@ export default function Footer() {
               </Link>
             </li>
             <li>
+              <Link href="/aup" className="text-ink hover:text-clay">
+                Acceptable use
+              </Link>
+            </li>
+            <li>
               <Link href="/security" className="text-ink hover:text-clay">
                 Security
               </Link>

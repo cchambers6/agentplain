@@ -121,8 +121,14 @@ export default async function SettingsPage({ params }: PageProps) {
       description: "Every handoff your fleet has executed.",
     },
     {
+      href: `/app/workspace/${workspaceId}/data-rights`,
+      label: "your data & rights",
+      description:
+        "What's yours, what we never do with it (no training, ever), and where it lives. Export everything or delete it, any time.",
+    },
+    {
       href: `/app/workspace/${workspaceId}/settings/data`,
-      label: "your data",
+      label: "export & close",
       description:
         "Export a copy of everything in this workspace, or close the workspace.",
     },

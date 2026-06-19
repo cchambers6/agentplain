@@ -4,6 +4,8 @@ import { withRls } from "@/lib/db";
 import { getBriefingsProvider } from "@/lib/notion";
 import { servicePartnerForWorkspace } from "@/lib/onboarding/service-partner";
 import { getVerticalContent } from "@/lib/verticals";
+import { isDemoMode } from "@/lib/demo/demo-mode";
+import { killerWorkflowStoryFor } from "@/lib/workflows/verticals";
 import { OverviewView } from "./overview-view";
 
 interface PageProps {
@@ -84,6 +86,17 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
   });
   const briefing = briefings[0] ?? null;
 
+  // Demo mode: a brand-new workspace with no real work yet leads the overview
+  // with its vertical's killer workflow running on synthetic data — so the
+  // first impression is Plaino visibly working, not an empty queue. Steps
+  // aside the moment real drafts or handoffs land. Deterministic + LLM-free.
+  const demoStory = isDemoMode({
+    pendingApprovals,
+    recentHandoffsCount: recentHandoffs.length,
+  })
+    ? killerWorkflowStoryFor(workspace?.vertical ?? null)
+    : null;
+
   return (
     <OverviewView
       workspaceId={workspaceId}
@@ -102,6 +115,7 @@ export default async function WorkspaceOverviewPage({ params }: PageProps) {
       }
       verticalPublicHref={verticalSlug ? `/${verticalSlug}` : null}
       activePause={activePause}
+      demoStory={demoStory}
     />
   );
 }

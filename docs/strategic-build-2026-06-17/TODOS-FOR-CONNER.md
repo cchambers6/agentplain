@@ -273,3 +273,42 @@ Salesforce, Notion, Follow Up Boss, Sierra, and Buildium remain in the wave-1
 marketplace-smoke `DEFERRED` set — each now has its own `write-actions.test.ts` +
 dispatch test, but a full marketplace value-loop fixture (read→write→audit against a
 seeded workspace) is a follow-up wave.
+
+---
+## Visible killer-workflow runtime + 5 vertical synthetic-data demos
+
+Shipped: `feat(demo): visible killer-workflow runtime + 5 vertical synthetic-data demos`
+(branch `feat/killer-workflow-runtime-2026-06-17`).
+
+What it does: a brand-new trial workspace with nothing connected and an empty
+queue now leads its **Today** view (and the standalone `/demo` page) with its
+vertical's killer workflow **visibly running** on obviously-synthetic data —
+step by step (catch → enrich → draft → schedule → log), with a saved-time
+counter ticking ("Plaino drafted 3 first touches · saved 27 minutes today").
+Deterministic and LLM-free, so it proves value even while the model key is
+paused. Steps aside the moment real drafts/handoffs land.
+
+### Decisions / actions needed
+
+1. **Review + merge the PR.** This is the trial→paid conversion surface. No
+   migration, no new dependency, no LLM call — additive and reversible.
+
+2. **Real-data runs still need the paused `ANTHROPIC_API_KEY` restored.** The
+   *demo* does NOT depend on it (it runs on synthetic data, deterministically).
+   But once a customer connects a tool, the same workflow running on *their*
+   work is fleet/LLM-driven — that path is dark until the key is un-paused.
+   The demo's "make it real" CTA promises this; the promise is honest only
+   when the key is live.
+
+3. **Confirm the conversion bet (informational, not blocking).** Demo mode
+   leads the Today view whenever a workspace has zero pending approvals and
+   zero recent handoffs — i.e. brand-new or quiet workspaces. If you'd rather
+   gate it to trial-only or first-session-only, that's a one-line predicate
+   change in `lib/demo/demo-mode.ts`.
+
+4. **Saved-time numbers are calibrated, not measured.** Every figure on screen
+   is `sum(per-action minutes × item count)` from a defensible table in
+   `lib/workflows/runtime.ts` (drafted email = 10 min, lead enrichment = 5 min,
+   doc request = 3 min, …), labeled "an estimate on sample data" wherever it
+   renders. If you want different anchor values, they live in one `ACTION_MINUTES`
+   map.

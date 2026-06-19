@@ -312,3 +312,29 @@ paused. Steps aside the moment real drafts/handoffs land.
    doc request = 3 min, …), labeled "an estimate on sample data" wherever it
    renders. If you want different anchor values, they live in one `ACTION_MINUTES`
    map.
+
+---
+
+## Voice integration layer (Twilio) — `feat(voice): Twilio integration layer + per-vertical voice playbooks`
+
+The entire voice layer is built and ships behind env-gated readiness checks: every
+surface degrades gracefully (the settings panel shows "your phone line isn't live
+yet"; the numbers route returns a clean 503) until the accounts below exist. The
+moment the env vars are set, it's plug-and-play.
+
+**Accounts & credentials**
+- [ ] **Twilio account** — add `TWILIO_ACCOUNT_SID` + `TWILIO_AUTH_TOKEN` to Vercel env (Production). The auth token also signs/validates inbound webhooks.
+- [ ] **Buy a phone number** — first toll-free or local number (~$2/mo). Map it to a workspace via `VOICE_NUMBER_MAP` env (`{"+18005550100":{"workspaceId":"<ws-uuid>","verticalSlug":"cpa"}}`) until the `VoiceNumber` table lands.
+- [ ] **A2P 10DLC registration** — required for the SMS path (~10-day carrier approval). Not needed for voice-only, but register early.
+- [ ] **STIR/SHAKEN Voice Integrity** — register for attested caller-ID so outbound caller-ID isn't flagged as spam.
+- [ ] **Voice synthesis** — add `ELEVENLABS_API_KEY` (preferred) or `CARTESIA_API_KEY` to Vercel env.
+- [ ] **ConversationRelay host** — stand up the always-on WebSocket server (`lib/voice/conversation-relay/server.ts`) on Render/Fly/a small VM (Vercel can't hold a long-lived socket); set `VOICE_RELAY_WSS_URL` to its `wss://` URL and `VOICE_PUBLIC_BASE_URL` to the app's https origin.
+- [ ] **Transcript webhook secret** — set `VOICE_TRANSCRIPT_WEBHOOK_SECRET` (a long random string) and attach it as the bearer token when creating the Conversation Intelligence webhook action.
+
+**Compliance & policy**
+- [ ] **Call-retention policy + per-state consent language** — confirm the two-party-consent state list in `lib/voice/recording.ts` with counsel, and approve the spoken recording-disclosure copy. Recording stays OFF for every workspace until the owner approves the `VOICE_RECORDING_CONSENT` card on /approvals.
+
+**Deploy note**
+- [ ] The production deploy (`npm run build` → `prisma migrate deploy`) applies migration `20260618000000_voice_recording_and_action_item_kinds` (two additive `WorkApprovalKind` enum values: `VOICE_CALL_ACTION_ITEM`, `VOICE_RECORDING_CONSENT`). Purely additive — no existing data changes.
+
+**Once live, install the SDK on the relay host:** `npm install twilio ws` (both are lazy-imported via non-literal specifiers, so the app builds and the unit tests pass without them today).

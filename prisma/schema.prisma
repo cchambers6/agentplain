@@ -256,6 +256,18 @@ enum WorkApprovalKind {
   // next attempt carrying that approval id reaches the external API. Never
   // auto-approved. See lib/integrations/approval/with-approval.ts.
   CONNECTOR_WRITE_ACTION
+  // Voice integration layer (feat/voice-twilio-integration-2026-06-17).
+  //   VOICE_CALL_ACTION_ITEM — a follow-up extracted from a completed inbound
+  //                            call by lib/voice/transcript-actions.ts. Draft-
+  //                            only, reviewed on /approvals (customer-success).
+  //   VOICE_RECORDING_CONSENT — the workspace owner's explicit opt-in to record
+  //                             + retain calls, gated by lib/voice/recording.ts.
+  //                             Fingerprint-bound to the retention policy with a
+  //                             TTL, mirroring the mutating-connector approval
+  //                             seam (operations). Recording stays OFF until
+  //                             APPROVED; never auto-approved.
+  VOICE_CALL_ACTION_ITEM
+  VOICE_RECORDING_CONSENT
 }
 
 enum WorkApprovalStatus {

@@ -512,6 +512,31 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     disciplines: ['sales-enablement', 'customer-success'],
     verticalRelevance: ['real-estate'],
   },
+  // Phone & Voice — Plaino answers your phone, takes a message, and turns
+  // each call into a reviewable follow-up. The full integration layer (webhook
+  // receivers, ConversationRelay bridge, per-vertical playbooks, transcript →
+  // approvals pipeline) is BUILT; it is `coming-soon` only because it needs a
+  // Twilio account + a voice-synthesis key to go live (see
+  // docs/strategic-build-2026-06-17/TODOS-FOR-CONNER.md). It does NOT use the
+  // /api/integrations/<slug>-mcp dispatch path — it answers at
+  // /api/voice/twilio/* — so the available⇒MCP-route coverage gate does not
+  // apply; it stays `coming-soon` until provisioned. Horizontal: every vertical
+  // has a playbook (general receptionist is the fallback).
+  {
+    id: 'voice',
+    name: 'Phone & Voice',
+    category: 'Messaging',
+    description:
+      'Plaino answers your phone after hours, takes a clear message, and drafts a follow-up you approve. Going live once phone service is connected.',
+    mcpEndpointTemplate: '/api/voice/twilio/incoming',
+    scopes: ['voice.inbound', 'voice.transcribe', 'voice.record-with-consent'],
+    oauthConfigKey: 'TWILIO_VOICE',
+    status: 'coming-soon',
+    providerKey: null,
+    disciplines: ['customer-success', 'operations'],
+    verticalRelevance: 'all',
+    connectMode: 'api-key',
+  },
   // ── Wave-4 realty CRMs ──────────────────────────────────────────────
   // Sierra Interactive — public REST API with bearer-token auth. Fully
   // wired end-to-end via the MCP server at `lib/integrations/sierra-mcp/`.

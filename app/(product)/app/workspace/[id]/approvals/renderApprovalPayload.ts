@@ -137,6 +137,9 @@ const KIND_LABEL: Record<WorkApprovalKind, string> = {
   // Voice integration layer — inbound call follow-ups + recording opt-in.
   VOICE_CALL_ACTION_ITEM: "call follow-up",
   VOICE_RECORDING_CONSENT: "call recording consent",
+  // Client-portal outgoing message — a reply Plaino drafted to your end client,
+  // held until you approve it.
+  PORTAL_CLIENT_MESSAGE: "message to your client",
 };
 
 export function renderApprovalPayload(
@@ -205,6 +208,8 @@ export function renderApprovalPayload(
       return renderVoiceCallActionItem(p);
     case "VOICE_RECORDING_CONSENT":
       return renderVoiceRecordingConsent(p);
+    case "PORTAL_CLIENT_MESSAGE":
+      return renderPortalClientMessage(p);
     default: {
       const _exhaustive: never = kind;
       // Runtime safety: if a new enum value reaches production before the
@@ -1236,6 +1241,29 @@ function renderConnectorWriteAction(p: Record<string, unknown>): RenderedApprova
     title: `${prettyAction} in ${prettyConnector}`,
     body: lines,
     metaLine: "awaiting your approval",
+  };
+}
+
+/**
+ * PORTAL_CLIENT_MESSAGE — a reply Plaino drafted to the owner's END client in
+ * the branded client portal (app/portal/[customerSlug]). Like the DocuSign
+ * kinds, this gates a MUTATING outbound action: the message becomes visible to
+ * the client only once the owner approves. The card shows the recipient + the
+ * full drafted body (editable) so the decision is fully informed. Reject and
+ * the client never sees it.
+ */
+function renderPortalClientMessage(p: Record<string, unknown>): RenderedApproval {
+  const recipient = pickString(p, ["toClientEmail"]);
+  const body = pickString(p, ["body"]) ?? "";
+  return {
+    kindLabel: KIND_LABEL.PORTAL_CLIENT_MESSAGE,
+    recipientLine: recipient ? `To your client: ${recipient}` : undefined,
+    body: [
+      "Awaiting your approval — your client sees this reply only after you approve it. Nothing has been sent.",
+      ...(body ? splitParagraphs(body) : ["No draft body was attached."]),
+    ],
+    metaLine: "awaiting your approval",
+    editableBody: body || undefined,
   };
 }
 

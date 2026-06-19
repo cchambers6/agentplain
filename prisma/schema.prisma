@@ -268,6 +268,16 @@ enum WorkApprovalKind {
   //                             APPROVED; never auto-approved.
   VOICE_CALL_ACTION_ITEM
   VOICE_RECORDING_CONSENT
+  // Client-portal outgoing message. Like the DocuSign kinds above (and unlike
+  // every draft-only kind), this gates a MUTATING outbound action: a message
+  // Plaino wants to send to the SMB owner's END client through the branded
+  // client portal (app/portal/[customerSlug]). Per
+  // project_no_outbound_architecture.md, Plaino never speaks to a customer's
+  // client without the owner's approval. The portal owner-approval gate
+  // (lib/portal/with-owner-approval.ts) persists a PENDING row here; the owner
+  // approves on /approvals; only an APPROVED row makes the message visible to
+  // the end client. Always human-decided; never auto-approved.
+  PORTAL_CLIENT_MESSAGE
 }
 
 enum WorkApprovalStatus {
@@ -922,6 +932,10 @@ model Workspace {
   storageConfig            WorkspaceStorageConfig?
   /// Memory-scale: append-only access log for this workspace's memory.
   memoryAuditEntries       MemoryAuditLog[]
+  /// Client portal (app/portal/[customerSlug]) — at most one branded portal
+  /// per workspace through which the SMB owner gives THEIR end clients
+  /// status, doc upload, and gated Plaino chat. See PortalConfig.
+  portalConfig             PortalConfig?
 
   @@index([slug])
   @@index([vertical])
@@ -2843,4 +2857,280 @@ model SkillRun {
   /// so workspace-filtered feed queries still use it. Matches the
   /// (timestamp DESC, workspaceId) shape the build plan calls for.
   @@index([firedAt(sort: Desc), workspaceId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Client portal (app/portal/[customerSlug])
+//
+// Expands agentplain from "service partner the OWNER talks to" → "service
+// partner that interacts directly with the owner's END clients, on the owner's
+// brand." A PortalConfig is the per-workspace public portal: a slug, brand
+// tokens (name/color/logo), and an enabled flag. End clients (PortalClient) are
+// lightweight email-identities — NO User row, NO Membership, NO password. They
+// reach the portal through a magic-link invite (PortalInvite) that mints a
+// short-lived session (PortalSession). They see status timelines on their
+// matter (PortalCase + PortalCaseEvent), upload documents (PortalDocument,
+// virus-scanned before anyone downloads), and chat with Plaino (PortalThread +
+// PortalMessage). Every message Plaino SENDS to a client is owner-gated through
+// the WorkApprovalQueueItem queue (kind PORTAL_CLIENT_MESSAGE) — a PLAINO
+// message is only ever visible to the client once its linked approval row is
+// APPROVED. See lib/portal/*.
+//
+// These tables are NOT under the workspace RLS policies (an end client has no
+// Postgres app.user_id / app.workspace_id GUC). Access is mediated entirely in
+// the application layer: every query is scoped by portalConfigId and, for
+// client-owned rows, by a verified PortalSession. Server code reaches them via
+// withSystemContext (operator identity).
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum PortalCaseStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_ON_CLIENT
+  BLOCKED
+  CLOSED
+}
+
+/// Who put a row of content into the portal. CLIENT = the end client;
+/// OWNER = the SMB owner (or their staff); PLAINO = the agent.
+enum PortalActor {
+  CLIENT
+  OWNER
+  PLAINO
+}
+
+/// Delivery state of a PortalMessage. CLIENT messages are DELIVERED on write.
+/// A PLAINO message is PENDING_APPROVAL until the owner approves the linked
+/// WorkApprovalQueueItem; REJECTED if the owner declines. The authoritative
+/// visibility gate at read time is the linked approval row's status — this
+/// column is a denormalized convenience for display + sweeps, never the sole
+/// gate (see lib/portal/chat.ts#visibleMessages).
+enum PortalMessageDelivery {
+  DELIVERED
+  PENDING_APPROVAL
+  REJECTED
+}
+
+/// Virus-scan posture of an uploaded document. Fail-closed: a freshly uploaded
+/// file is PENDING and is NEVER downloadable until a scanner marks it CLEAN.
+/// INFECTED quarantines it; ERROR means the scan could not complete (also not
+/// downloadable). See lib/portal/virus-scan.ts.
+enum PortalScanStatus {
+  PENDING
+  CLEAN
+  INFECTED
+  ERROR
+}
+
+/// Per-workspace branded client portal. At most one per workspace.
+model PortalConfig {
+  id           String   @id @default(uuid()) @db.Uuid
+  workspaceId  String   @unique @db.Uuid
+  /// Public slug for /portal/[customerSlug]. Defaults to the workspace slug at
+  /// creation but kept independent so a portal URL can differ from the internal
+  /// workspace slug without a rename cascade.
+  slug         String   @unique
+  /// Brand name shown to end clients (the owner's business name, not
+  /// "agentplain"). Pulled into the portal shell header.
+  brandName    String
+  /// Hex accent color for the portal shell. Defaults to agentplain clay so an
+  /// un-themed portal still renders on-brand.
+  brandColor   String   @default("#B65D3A")
+  /// Optional logo URL (Vercel Blob or an external https URL the owner pasted).
+  brandLogoUrl String?
+  /// Portal is dark until the owner explicitly turns it on. A disabled or
+  /// missing config renders a 404 — no client ever lands on a half-built portal.
+  enabled      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workspace Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  clients   PortalClient[]
+  cases     PortalCase[]
+  invites   PortalInvite[]
+  sessions  PortalSession[]
+  threads   PortalThread[]
+  messages  PortalMessage[]
+  documents PortalDocument[]
+
+  @@index([slug])
+}
+
+/// An end client of the SMB owner (a buyer, a legal client, a tax client, a
+/// homeowner). Lightweight email identity — no account, no password.
+model PortalClient {
+  id             String   @id @default(uuid()) @db.Uuid
+  portalConfigId String   @db.Uuid
+  /// Citext so invites are case-insensitive on email. Unique per portal.
+  email          String   @db.Citext
+  name           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  portalConfig PortalConfig    @relation(fields: [portalConfigId], references: [id], onDelete: Cascade)
+  cases        PortalCase[]
+  invites      PortalInvite[]
+  sessions     PortalSession[]
+  threads      PortalThread[]
+  documents    PortalDocument[]
+
+  @@unique([portalConfigId, email])
+  @@index([portalConfigId])
+}
+
+/// The trackable thing the end client follows: a legal matter, a tax-prep job,
+/// a maintenance ticket, a real-estate transaction. Owner-authored.
+model PortalCase {
+  id             String           @id @default(uuid()) @db.Uuid
+  portalConfigId String           @db.Uuid
+  /// Nullable so a portal can show a case before it's linked to a specific
+  /// client identity (e.g. created from an internal record before the invite).
+  clientId       String?          @db.Uuid
+  /// Human-facing reference the owner uses ("CASE-2026-014", "Tax-2025"),
+  /// unique within the portal.
+  reference      String
+  title          String
+  status         PortalCaseStatus @default(OPEN)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  portalConfig PortalConfig      @relation(fields: [portalConfigId], references: [id], onDelete: Cascade)
+  client       PortalClient?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  events       PortalCaseEvent[]
+  documents    PortalDocument[]
+  threads      PortalThread[]
+
+  @@unique([portalConfigId, reference])
+  @@index([portalConfigId, status])
+  @@index([clientId])
+}
+
+/// One entry on a case's status timeline. Owner- or Plaino-authored; always
+/// client-visible (the owner publishes these deliberately), so no encryption
+/// — keep PII out of the label/detail by convention.
+model PortalCaseEvent {
+  id         String      @id @default(uuid()) @db.Uuid
+  caseId     String      @db.Uuid
+  label      String
+  detail     String?
+  actor      PortalActor @default(OWNER)
+  occurredAt DateTime    @default(now())
+  createdAt  DateTime    @default(now())
+
+  case PortalCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId, occurredAt])
+}
+
+/// A magic-link invitation. Only the sha256 hash of the raw token is stored, so
+/// a DB leak never yields a live portal link. Single-use (consumedAt) + TTL.
+model PortalInvite {
+  id             String    @id @default(uuid()) @db.Uuid
+  portalConfigId String    @db.Uuid
+  clientId       String    @db.Uuid
+  /// sha256(rawToken). The raw token only ever exists in the emailed URL.
+  tokenHash      String    @unique
+  email          String    @db.Citext
+  expiresAt      DateTime
+  consumedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  portalConfig PortalConfig @relation(fields: [portalConfigId], references: [id], onDelete: Cascade)
+  client       PortalClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([portalConfigId])
+  @@index([clientId])
+}
+
+/// A live end-client session. Replaces the iron-session/User mechanism for end
+/// clients: the cookie carries only the raw token; the server stores the hash.
+/// Short-lived + revocable. No User row is ever created for an end client.
+model PortalSession {
+  id             String    @id @default(uuid()) @db.Uuid
+  portalConfigId String    @db.Uuid
+  clientId       String    @db.Uuid
+  tokenHash      String    @unique
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  lastSeenAt     DateTime  @default(now())
+
+  portalConfig PortalConfig @relation(fields: [portalConfigId], references: [id], onDelete: Cascade)
+  client       PortalClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([portalConfigId])
+}
+
+/// A chat thread between one end client and Plaino, optionally about a case.
+model PortalThread {
+  id             String   @id @default(uuid()) @db.Uuid
+  portalConfigId String   @db.Uuid
+  clientId       String   @db.Uuid
+  caseId         String?  @db.Uuid
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  portalConfig PortalConfig    @relation(fields: [portalConfigId], references: [id], onDelete: Cascade)
+  client       PortalClient    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  case         PortalCase?     @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  messages     PortalMessage[]
+
+  @@index([portalConfigId, clientId])
+  @@index([clientId, updatedAt])
+}
+
+/// One message in a portal thread. `body` is AES-256-GCM v1 ciphertext at rest
+/// (same codec as ChatMessage.body). A PLAINO message is gated: it carries an
+/// approvalItemId and is only visible to the client when that WorkApprovalQueueItem
+/// is APPROVED. CLIENT messages are delivered immediately.
+model PortalMessage {
+  id             String                @id @default(uuid()) @db.Uuid
+  threadId       String                @db.Uuid
+  portalConfigId String                @db.Uuid
+  sender         PortalActor
+  /// AES-256-GCM v1 ciphertext (lib/security/encryption). Plaintext never lands.
+  body           String
+  deliveryStatus PortalMessageDelivery @default(DELIVERED)
+  /// For PLAINO messages: the WorkApprovalQueueItem this send is gated behind.
+  /// Visibility is decided by that row's live status, not deliveryStatus alone.
+  approvalItemId String?               @db.Uuid
+  metadata       Json?
+  createdAt      DateTime              @default(now())
+  deliveredAt    DateTime?
+
+  thread       PortalThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  portalConfig PortalConfig @relation(fields: [portalConfigId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@index([approvalItemId])
+}
+
+/// A document an end client (or the owner) uploaded through the portal. The
+/// blob lives in Vercel Blob; we store the URL + scan posture. Fail-closed:
+/// scanStatus starts PENDING and the file is never offered for download until a
+/// scanner marks it CLEAN.
+model PortalDocument {
+  id             String           @id @default(uuid()) @db.Uuid
+  portalConfigId String           @db.Uuid
+  clientId       String?          @db.Uuid
+  caseId         String?          @db.Uuid
+  filename       String
+  contentType    String
+  sizeBytes      Int
+  /// Vercel Blob URL (or a ref URL when the blob adapter is the no-op default).
+  blobUrl        String
+  scanStatus     PortalScanStatus @default(PENDING)
+  scanDetail     String?
+  uploadedBy     PortalActor      @default(CLIENT)
+  createdAt      DateTime         @default(now())
+  scannedAt      DateTime?
+
+  portalConfig PortalConfig  @relation(fields: [portalConfigId], references: [id], onDelete: Cascade)
+  case         PortalCase?   @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  client       PortalClient? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([portalConfigId, scanStatus])
+  @@index([caseId])
+  @@index([clientId])
 }

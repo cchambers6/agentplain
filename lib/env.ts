@@ -481,4 +481,50 @@ export const env = {
     ),
   tavilyApiKey: () => optional("TAVILY_API_KEY"),
   brightDataApiKey: () => optional("BRIGHTDATA_API_KEY"),
+
+  // ── Client portal (app/portal/[customerSlug]) ───────────────────────────
+  // The branded, per-customer portal through which an SMB owner gives THEIR
+  // end clients status, doc upload, and owner-gated Plaino chat. See
+  // lib/portal/*.
+  //
+  // Cookie carrying the end-client portal session (raw token; the hash lives
+  // in PortalSession). Distinct from the owner SESSION_COOKIE_NAME so an end
+  // client and an owner can hold sessions in the same browser without
+  // collision.
+  portalCookieName: () => optional("PORTAL_COOKIE_NAME") ?? "agentplain_portal",
+  /** End-client session lifetime in days. Clamped to [1, 90]. Default 30. */
+  portalSessionTtlDays: (): number => clampDays(optional("PORTAL_SESSION_TTL_DAYS"), 30, 1, 90),
+  /** Magic-link invite lifetime in days. Clamped to [1, 30]. Default 7. */
+  portalInviteTtlDays: (): number => clampDays(optional("PORTAL_INVITE_TTL_DAYS"), 7, 1, 30),
+  // Document storage adapter (feedback_runner_portability). `ref` (default)
+  // needs NO account — the upload route records the document metadata and a
+  // ref URL and marks the scan PENDING; nothing leaves agentplain. `blob`
+  // selects the Vercel Blob adapter, which requires BLOB_READ_WRITE_TOKEN and
+  // the optional `@vercel/blob` package installed. CONNER ACTION: to turn on
+  // real uploads, `npm i @vercel/blob`, set BLOB_READ_WRITE_TOKEN, and set
+  // PORTAL_STORAGE=blob.
+  portalStorageProvider: () =>
+    oneOf("PORTAL_STORAGE", ["ref", "blob"] as const, "ref"),
+  portalBlobToken: () => optional("BLOB_READ_WRITE_TOKEN"),
+  // Virus-scan adapter. Fail-closed: `noop` (default) NEVER marks a file CLEAN
+  // — every upload stays PENDING (not downloadable) until a real scanner runs.
+  // `clamav` POSTs the blob to a ClamAV REST endpoint (PORTAL_CLAMAV_URL).
+  // CONNER ACTION: stand up a ClamAV REST worker (self-hosted, free) and set
+  // PORTAL_CLAMAV_URL + PORTAL_VIRUS_SCAN=clamav.
+  portalVirusScanProvider: () =>
+    oneOf("PORTAL_VIRUS_SCAN", ["noop", "clamav"] as const, "noop"),
+  portalVirusScanUrl: () => optional("PORTAL_CLAMAV_URL"),
 };
+
+/** Parse a day-count env var, falling back + clamping to a safe range. */
+function clampDays(
+  raw: string | undefined,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  if (!raw) return fallback;
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(Math.max(n, min), max);
+}

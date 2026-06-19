@@ -124,6 +124,10 @@ export const MINUTES_SAVED_BY_KIND: Record<WorkApprovalKind, number> = {
   // Recording consent is a safety GATE, not a time-saving draft — scored 0
   // (mirrors the DocuSign gates) so the ledger is never inflated by an opt-in.
   VOICE_RECORDING_CONSENT: 0,
+  // The portal client-message gate also writes PENDING rows that may never be
+  // approved — scored at 0 so the value ledger is never inflated by a
+  // gated-but-unsent message.
+  PORTAL_CLIENT_MESSAGE: 0,
 };
 
 // ── Per-kind labor-rate table (USD/hour) ─────────────────────────────────────
@@ -176,6 +180,8 @@ export const LABOR_RATE_USD_PER_HOUR_BY_KIND: Record<WorkApprovalKind, number> =
     // consent gate's rate is moot (0 minutes) but the table must be total.
     VOICE_CALL_ACTION_ITEM: 45,
     VOICE_RECORDING_CONSENT: 45,
+    // Portal client message — customer comms; rate is moot (0 minutes).
+    PORTAL_CLIENT_MESSAGE: 45,
   };
 
 // ── Public types ──────────────────────────────────────────────────────────────

@@ -6,6 +6,12 @@ import { signOutAction } from "../../actions";
 import { WorkspaceNavLink } from "./WorkspaceNavLink";
 import { PasskeyEnrollNudge } from "./PasskeyEnrollNudge";
 import { isWorkspacePaused } from "@/lib/billing/workspace-paused-gate";
+import {
+  controllingBudgetStatus,
+  getWorkspaceDualBudgetSnapshot,
+  resolveBudgetCapUsd,
+  resolveDailyBudgetCapUsd,
+} from "@/lib/billing/budget";
 import { getUnhealthyIntegrations } from "@/lib/integrations/health-banner";
 import { checkDegradedMode } from "@/lib/plaino";
 import { PlainoRestingBanner } from "@/components/plaino/PlainoRestingBanner";
@@ -26,12 +32,34 @@ export default async function WorkspaceLayout({
   const member = await requireWorkspaceMember(id, ["BROKER_OWNER"]);
 
   const workspace = await withSystemContext((tx) =>
-    tx.workspace.findUnique({ where: { id }, select: { id: true, name: true, slug: true } }),
+    tx.workspace.findUnique({
+      where: { id },
+      select: { id: true, name: true, slug: true, settings: true },
+    }),
   );
   if (!workspace) {
     // Shouldn't happen — requireWorkspaceMember already redirects on miss.
     return null;
   }
+
+  // Budget dashboard alert. Only the cheap settings read runs on the common
+  // (no-cap) path; the usage-report aggregation only fires when a cap is
+  // actually configured, so an unbudgeted workspace pays nothing for this.
+  // When set and the controlling (stricter of daily/monthly) state is WARN or
+  // OVER, we surface a calm top-of-app banner — the customer-visible reason
+  // the budget gate is throttling (the auto-pause itself is structural, in
+  // BudgetEnforcingLlmProvider).
+  const hasBudgetCap =
+    resolveBudgetCapUsd(workspace.settings, null) !== null ||
+    resolveDailyBudgetCapUsd(workspace.settings, null) !== null;
+  const budget = hasBudgetCap
+    ? await withSystemContext((tx) =>
+        getWorkspaceDualBudgetSnapshot(tx, { workspaceId: id }),
+      ).catch(() => null)
+    : null;
+  const budgetState = budget
+    ? controllingBudgetStatus(budget.monthly, budget.daily).state
+    : null;
 
   // Wave-3 phase 5 — read subscription status once so every workspace
   // page surfaces a "Plaino is paused — update billing to resume" banner
@@ -176,6 +204,55 @@ export default async function WorkspaceLayout({
                     Settings · Billing
                   </Link>
                   {' '}to bring the fleet back online.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
+      {budgetState === "OVER" || budgetState === "WARN" ? (
+        <div className="container-wide mt-4">
+          <div
+            role="status"
+            aria-live="polite"
+            className={`border bg-paper p-4 text-[14px] text-ink ${
+              budgetState === "OVER" ? "border-flag" : "border-clay"
+            }`}
+          >
+            {budgetState === "OVER" ? (
+              <>
+                <p className="font-medium">
+                  Plaino paused new work — you&rsquo;ve reached your budget.
+                </p>
+                <p className="mt-2 text-ink-soft">
+                  Your fleet hit the budget set for {workspace.name}, so new
+                  drafts and agent work wait rather than running up a surprise.
+                  Nothing is lost — queued work resumes when the period resets
+                  or the budget is raised. See the detail in{" "}
+                  <Link
+                    href={`${base}/usage`}
+                    className="underline underline-offset-4 hover:text-ink"
+                  >
+                    Account · Usage
+                  </Link>
+                  .
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-medium">
+                  You&rsquo;re near your budget.
+                </p>
+                <p className="mt-2 text-ink-soft">
+                  Your fleet is using most of its budget for this period.
+                  Nothing changes today — review the breakdown in{" "}
+                  <Link
+                    href={`${base}/usage`}
+                    className="underline underline-offset-4 hover:text-ink"
+                  >
+                    Account · Usage
+                  </Link>
+                  .
                 </p>
               </>
             )}

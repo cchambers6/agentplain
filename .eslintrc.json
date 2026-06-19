@@ -6,6 +6,8 @@
     ".next/",
     "prisma/migrations/",
     "tests/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
     "apps/mobile/**"
   ],
   "rules": {

@@ -675,6 +675,76 @@ enum WorkspaceMemoryKind {
   REFERENCE
 }
 
+// ── Memory-scale layer (PR: RLS isolation + tiering + customer-hosted storage) ──
+//
+// Where a workspace's memory artifacts (cold-tier memory blobs, exported
+// archives, generated artifacts) physically live. AGENTPLAIN = our managed
+// Vercel Blob store. CUSTOMER = the customer's own S3-compatible bucket, with
+// credentials held encrypted in WorkspaceStorageConfig. The hot/warm tiers
+// always live in Postgres regardless; only the cold tier is offloaded to the
+// object store this enum selects. See lib/memory/byo-storage.ts.
+enum MemoryStorageProvider {
+  AGENTPLAIN
+  CUSTOMER
+}
+
+// Data-residency commitment for a workspace's at-rest storage. Drives which
+// region the cold-tier object store + DB read replica are pinned to. EU_WEST
+// exists for EU customers who need an in-region commitment; default is
+// US_EAST (matches our primary Neon + Vercel Blob region). See
+// lib/memory/byo-storage.ts#regionForWorkspace.
+enum DataRegion {
+  US_EAST
+  US_WEST
+  EU_WEST
+  AP_SOUTHEAST
+}
+
+// Memory tiering state for a single WorkspaceMemoryEntry. HOT = last 7d,
+// indexed in Postgres, body inline. WARM = 7–90d, still in Postgres but the
+// body may be compressed. COLD = 90d+, body offloaded to the object store
+// (archivedRef points at it) and the inline body cleared. Retrieval of a COLD
+// entry re-hydrates on demand. See lib/memory/tiering.ts.
+enum MemoryTier {
+  HOT
+  WARM
+  COLD
+}
+
+// Customer-managed encryption posture for the cold-tier object store. NONE =
+// rely on the object store's server-side encryption only. AWS_KMS / GCP_KMS =
+// the customer supplies a KMS key id we pass through on write. BYO = the
+// customer hands us a raw symmetric key we envelope-encrypt the object with
+// before it ever reaches their bucket. See lib/memory/byo-storage.ts.
+enum StorageKmsProvider {
+  NONE
+  AWS_KMS
+  GCP_KMS
+  BYO
+}
+
+// Actor that touched a memory record, for the audit log. SYSTEM = a cron /
+// dispatcher / sweep with no human in the loop. AGENT = an autonomous skill
+// run acting on the workspace's behalf. HUMAN = an operator or the customer
+// themselves via the UI.
+enum MemoryAuditActorType {
+  SYSTEM
+  AGENT
+  HUMAN
+}
+
+// What happened to a memory record. Every read AND write to customer memory
+// is logged so the data-residency + isolation guarantees are auditable.
+enum MemoryAuditAction {
+  READ
+  WRITE
+  ARCHIVE
+  RESTORE
+  EXPORT
+  DELETE
+  MIGRATE
+}
+
 model User {
   id                        String                       @id @default(uuid()) @db.Uuid
   email                     String                       @unique @db.Citext
@@ -735,6 +805,14 @@ model Workspace {
   stripeSubscriptionId     String?                      @unique
   tierPriceUsdMonthly      Int? // hundredths of a dollar; populated for manual invoicing
   settings                 Json                         @default("{}")
+  /// Memory-scale: where this workspace's cold-tier memory + archives live.
+  /// AGENTPLAIN (our Vercel Blob) by default; CUSTOMER routes cold reads/writes
+  /// to the bucket in `storageConfig`. Hot/warm tiers stay in Postgres either
+  /// way. See lib/memory/byo-storage.ts.
+  memoryStorage            MemoryStorageProvider        @default(AGENTPLAIN)
+  /// Data-residency commitment for at-rest storage. Default US_EAST. EU_WEST
+  /// is the in-region option for EU customers.
+  dataRegion               DataRegion                   @default(US_EAST)
   // Customer-initiated closure state. Flipped by
   // `lib/customer-data/closure.ts#initiateWorkspaceClosure` (BROKER_OWNER-
   // gated, typed-confirmation guarded). The hourly
@@ -818,6 +896,11 @@ model Workspace {
   /// Wave-4 (compliance rewrite-and-stage) — counsel red-lines feeding the
   /// learned-language rewrite loop. See CounselRedline.
   counselRedlines          CounselRedline[]
+  /// Memory-scale: customer-hosted storage config (1:1). NULL = managed
+  /// AGENTPLAIN storage; present + verified = BYO bucket.
+  storageConfig            WorkspaceStorageConfig?
+  /// Memory-scale: append-only access log for this workspace's memory.
+  memoryAuditEntries       MemoryAuditLog[]
 
   @@index([slug])
   @@index([vertical])
@@ -2156,6 +2239,17 @@ model WorkspaceMemoryEntry {
   /// Lets future eviction passes prefer "stale and unpinned" entries
   /// without reading the chat log.
   lastReadAt          DateTime?
+  /// Memory-scale tiering state. HOT (default) = inline + indexed; WARM =
+  /// aged 7–90d; COLD = aged 90d+, body offloaded to the object store and
+  /// `body` cleared to the empty-envelope sentinel. Pinned entries never
+  /// leave HOT. See lib/memory/tiering.ts.
+  tier                MemoryTier          @default(HOT)
+  /// Object-store pointer to the archived ciphertext when tier = COLD.
+  /// `lib/memory/byo-storage.ts` resolves it against the workspace's store.
+  /// NULL for HOT/WARM entries.
+  archivedRef         String?
+  /// UTC instant the entry was offloaded to cold storage. NULL until COLD.
+  archivedAt          DateTime?
   workspace           Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   sourceChatMessage   ChatMessage?        @relation("MemoryFromChatMessage", fields: [sourceChatMessageId], references: [id], onDelete: SetNull)
 
@@ -2165,6 +2259,92 @@ model WorkspaceMemoryEntry {
   /// a sort step.
   @@index([workspaceId, kind, pinned, createdAt])
   @@index([workspaceId, pinned, updatedAt])
+  /// Tiering sweep read — "find unpinned entries in this workspace whose
+  /// tier no longer matches their age." The sweep scans by (tier, updatedAt).
+  @@index([workspaceId, tier, pinned, updatedAt])
+}
+
+// ── Memory-scale: customer-hosted storage config ──────────────────────────
+//
+// One row per workspace that has opted into BYO storage (memoryStorage =
+// CUSTOMER). Credentials are NEVER stored in plaintext: accessKeyEncrypted,
+// secretKeyEncrypted, and kmsKeyRefEncrypted all carry the v1 AES-256-GCM
+// envelope (lib/security/encryption.ts), the same shape as
+// IntegrationCredential tokens and WorkspaceMemoryEntry.body. The bucket URL
+// and region are non-secret and stored as-is so the data page can render
+// "where your data lives" without a decrypt.
+//
+// RLS: workspace-isolated (read for members, write operator-only — credential
+// changes route through a server action under withSystemContext). FORCE RLS
+// like every other policied table.
+model WorkspaceStorageConfig {
+  id                  String             @id @default(uuid()) @db.Uuid
+  workspaceId         String             @unique @db.Uuid
+  /// Mirror of Workspace.memoryStorage at the time the config was written.
+  /// Kept here too so a stale managed→customer flip is auditable.
+  provider            MemoryStorageProvider @default(CUSTOMER)
+  /// S3-compatible endpoint base URL, e.g. https://s3.us-east-1.amazonaws.com
+  /// or a MinIO / R2 / Wasabi endpoint. Non-secret.
+  endpoint            String
+  /// Bucket name the cold-tier objects land in. Non-secret.
+  bucket              String
+  /// Region string the customer's provider expects (e.g. "us-east-1").
+  region              String
+  /// AES-256-GCM v1 envelope of the S3 access key id.
+  accessKeyEncrypted  String
+  /// AES-256-GCM v1 envelope of the S3 secret access key.
+  secretKeyEncrypted  String
+  /// Customer-managed encryption posture for objects we write to their bucket.
+  kmsProvider         StorageKmsProvider @default(NONE)
+  /// AES-256-GCM v1 envelope of the KMS key id / ARN / raw BYO key. NULL when
+  /// kmsProvider = NONE.
+  kmsKeyRefEncrypted  String?
+  /// Result of the last connectivity + round-trip probe (put/get/delete a
+  /// canary object). NULL until first verified. The migration script and the
+  /// data page both refuse to switch a workspace to CUSTOMER until this is set.
+  verifiedAt          DateTime?
+  /// Human-readable last error from a failed verify/probe, surfaced on the
+  /// data page. NULL when healthy.
+  lastError           String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  workspace           Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+// ── Memory-scale: memory access audit log ─────────────────────────────────
+//
+// Append-only. Every read and write to a workspace's memory records (the
+// WorkspaceMemoryEntry table and cold-store objects) writes one row: who
+// (actorType + actorId), what (recordType + recordId), when (createdAt), why
+// (intent + source). This is the evidence trail behind the data-residency and
+// isolation commitments — a customer (or auditor) can see exactly what touched
+// their memory and why. Writes go through lib/memory/audit.ts, never bare
+// prisma. RLS: workspace members read their own; system/operator writes.
+model MemoryAuditLog {
+  id          String               @id @default(uuid()) @db.Uuid
+  workspaceId String               @db.Uuid
+  actorType   MemoryAuditActorType
+  /// Free-form actor identifier: a userId (HUMAN), a skill/cron name (AGENT),
+  /// or a system component name (SYSTEM, e.g. "tiering-sweep"). NOT a FK so
+  /// the row survives user deletion and can name non-user actors.
+  actorId     String
+  action      MemoryAuditAction
+  /// The kind of record touched, e.g. "WorkspaceMemoryEntry" or "ColdObject".
+  recordType  String
+  /// Id of the touched record (memory entry id, or object ref for cold store).
+  recordId    String
+  /// Why the access happened — the calling intent, e.g. "dispatcher-prompt-
+  /// assembly", "customer-export", "cold-tier-sweep", "byo-migration".
+  intent      String
+  /// Where the access originated — surface/route/cron name for traceability.
+  source      String
+  createdAt   DateTime             @default(now())
+  workspace   Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, recordType, recordId])
 }
 
 /// Wave-4 — counsel-feedback redline loop for compliance rewrite-and-stage

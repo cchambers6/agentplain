@@ -38,6 +38,10 @@ describe("withWorkspace surface", () => {
         stripeSubscriptionId: null,
         tierPriceUsdMonthly: null,
         settings: {},
+        // Memory-scale fields added 2026-06-17. Default to managed storage
+        // in the primary US region (see prisma/schema.prisma).
+        memoryStorage: "AGENTPLAIN",
+        dataRegion: "US_EAST",
         // Closure state machine fields added 2026-05-27. Default ACTIVE
         // for any newly-created or existing workspace; the customer-
         // initiated CLOSING/CLOSED transitions live behind

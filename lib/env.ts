@@ -226,6 +226,50 @@ export const env = {
     return n;
   },
 
+  // ── Trial guarantee (time-savings → Day-7 walk-away) ────────────────────
+  //
+  // The guarantee turns the trial promise into a product feature: track
+  // minutes saved per action, evaluate at day 7, and offer a one-tap
+  // walk-away + refund when the fleet didn't clear the bar.
+  //
+  // GUARANTEE_BAR_HOURS — the hours-saved floor the fleet must clear by the
+  // evaluation day. Default 5 (PROPOSED, not yet ratified — see
+  // docs/strategic-build-2026-06-17/TODOS-FOR-CONNER.md). Customer-visible
+  // math depends on this; Conner signs off before launch.
+  guaranteeBarHours: (): number => {
+    const raw = optional("GUARANTEE_BAR_HOURS");
+    if (!raw) return 5;
+    const n = Number.parseFloat(raw);
+    if (!Number.isFinite(n) || n < 0) return 5;
+    return n;
+  },
+  // GUARANTEE_EVALUATION_DAYS — workspace age (days since signup) at which
+  // the Day-7 evaluation fires. Default 7 to match the standard trial.
+  guaranteeEvaluationDays: (): number => {
+    const raw = optional("GUARANTEE_EVALUATION_DAYS");
+    if (!raw) return 7;
+    const n = Number.parseInt(raw, 10);
+    if (!Number.isFinite(n) || n < 1) return 7;
+    return n;
+  },
+  // GUARANTEE_WALKAWAY_REFUND — kill-switch for the money movement on a
+  // walk-away accept. Default ON: the walk-away is customer-INITIATED (a
+  // one-tap, explicit choice), so honoring it with a refund is the whole
+  // point. Set to 'off' to pause refunds (data deletion + closure still
+  // happen; a human is paged to complete the refund manually). Refunds
+  // additionally require stripeBillingEnabled — dev/test never move money.
+  guaranteeWalkAwayRefundEnabled: (): boolean =>
+    (optional("GUARANTEE_WALKAWAY_REFUND") ?? "on").toLowerCase() !== "off",
+  // Per-workspace refund cap in USD for a walk-away. Above this the refund
+  // runs up to the cap and a human is paged for the remainder. Default $500.
+  guaranteeRefundCapUsd: (): number => {
+    const raw = optional("GUARANTEE_REFUND_CAP_USD");
+    if (!raw) return 500;
+    const n = Number.parseInt(raw, 10);
+    if (!Number.isFinite(n) || n < 0) return 500;
+    return n;
+  },
+
   // Operator allowlist (comma-separated emails)
   operatorEmailAllowlist: (): string[] => {
     const v = optional("OPERATOR_EMAIL_ALLOWLIST") ?? "";

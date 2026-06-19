@@ -47,6 +47,10 @@ import { isBillingSyncFrozen } from '@/lib/billing/sync-freshness';
 import type { OpsFlagStore } from '@/lib/ops/flag-store';
 import type { WorkApprovalKind } from '@prisma/client';
 import type { SkillRunRecord, SkillStepRecord, SkillRunOutcome } from './types';
+import {
+  guaranteeActionForOutcome,
+  recordSavedTime,
+} from '@/lib/guarantee/saved-time';
 
 /**
  * Fallback agent slug for runs the vertical roster does not claim — e.g.
@@ -156,13 +160,18 @@ export async function persistSkillRunArtifacts(
   if (args.client) {
     // Test / caller-supplied transaction path: stay pure — the push trigger
     // only fires on the production (committed) path so suites stay
-    // deterministic and offline.
-    return writeArtifacts(
+    // deterministic and offline. The saved-time credit DOES run here (on
+    // the supplied client) so unit tests can assert the counter ticks.
+    const clientResult = await writeArtifacts(
       args.client,
       args.workspaceId,
       args.record,
       args.boundedExecute,
     );
+    await recordRunSavedTime(args.workspaceId, args.record, {
+      client: args.client,
+    }).catch(() => undefined);
+    return clientResult;
   }
   const result = await withRls(ctx, (tx) =>
     writeArtifacts(tx, args.workspaceId, args.record, args.boundedExecute),
@@ -178,7 +187,39 @@ export async function persistSkillRunArtifacts(
       count: result.approvalsWritten,
     }).catch(() => 0);
   }
+  // Credit the trial-guarantee counter for the work this run delivered.
+  // Post-commit + best-effort: the time-savings ledger is a secondary,
+  // idempotent side effect (feedback_cold_start_safe_agents) — a failure
+  // here must never poison the primary artifact write. Idempotent via the
+  // (workspace, source, action) unique key, so a retried run is a no-op.
+  await recordRunSavedTime(args.workspaceId, args.record).catch(() => undefined);
   return result;
+}
+
+/**
+ * Trial-guarantee attribution. Translate a completed run into a saved-time
+ * credit and append it to the ledger that drives the workspace counter +
+ * the Day-7 walk-away evaluation. Idempotent: the source is the run's
+ * WebhookEvent, so re-processing the same event never double-counts.
+ *
+ * No-ops silently for runs that produced no owner-time saving (noise,
+ * vendor mail, transactional notices) — `guaranteeActionForOutcome`
+ * returns null and there's nothing honest to credit.
+ */
+async function recordRunSavedTime(
+  workspaceId: string,
+  record: SkillRunRecord,
+  opts?: { client?: Prisma.TransactionClient },
+): Promise<void> {
+  const actionType = guaranteeActionForOutcome(record.outcome);
+  if (!actionType) return;
+  await recordSavedTime({
+    workspaceId,
+    actionType,
+    verticalSlug: record.verticalSlug,
+    source: { table: 'WebhookEvent', id: record.webhookEventId },
+    client: opts?.client,
+  });
 }
 
 async function writeArtifacts(

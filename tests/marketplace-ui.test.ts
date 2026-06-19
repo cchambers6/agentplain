@@ -50,6 +50,10 @@ describe("marketplace catalog", () => {
     // connectors.
     // Wave-7 flips hubspot to available + appends salesforce and notion
     // as the three universal MCPs. All three use OAuth.
+    // Buildium (property-management, available, api-key) and the law
+    // practice-management connectors Clio + MyCase (coming-soon) landed in
+    // their own waves. The 2026-06-17 vertical-MCP scaffold wave adds
+    // AppFolio (property-management, coming-soon).
     assert.deepEqual(ids, [
       "gmail",
       "outlook",
@@ -64,6 +68,8 @@ describe("marketplace catalog", () => {
       "paypal",
       "taxdome",
       "karbon",
+      "buildium",
+      "appfolio",
       "canva",
       "follow-up-boss",
       "kvcore",
@@ -71,10 +77,12 @@ describe("marketplace catalog", () => {
       "boldtrail",
       "lofty",
       "real-geeks",
+      "clio",
+      "mycase",
       "salesforce",
       "notion",
     ]);
-    assert.equal(entries.length, 22, "marketplace surface size is the architectural contract");
+    assert.equal(entries.length, 26, "marketplace surface size is the architectural contract");
   });
 
   it("Gmail + the M365 integrations are available with the right provider keys", () => {
@@ -108,9 +116,22 @@ describe("marketplace catalog", () => {
     // agentplain has NOT yet completed — listed honestly to keep the
     // catalog from over-promising.
     // Wave-7 removes hubspot from coming-soon (it is now wired).
+    // The law connectors Clio + MyCase (partner/API-access pending) and the
+    // 2026-06-17 vertical-MCP scaffold AppFolio (PM partner-program pending,
+    // ~2-month review) ride along as honest coming-soon entries.
     assert.deepEqual(
       soon.map((e) => e.id),
-      ["paypal", "canva", "kvcore", "boldtrail", "lofty", "real-geeks"],
+      [
+        "paypal",
+        "appfolio",
+        "canva",
+        "kvcore",
+        "boldtrail",
+        "lofty",
+        "real-geeks",
+        "clio",
+        "mycase",
+      ],
     );
     for (const e of soon) {
       assert.equal(e.providerKey, null, `${e.id} has no DB rows yet`);
@@ -154,13 +175,18 @@ describe("marketplace catalog", () => {
 
   it("every entry exposes scope display + a /api/integrations/<slug>-mcp template", () => {
     // Wave-5 introduced API-key providers (TaxDome, Karbon) that do NOT
-    // request OAuth scopes — they authenticate with a static key from
-    // the firm's provider dashboard. Empty scopes are honest for those
-    // entries; the assertion narrows to "OAuth providers MUST declare
-    // scopes" rather than "every entry must declare scopes."
+    // request OAuth scopes — they authenticate with a static key from the
+    // firm's provider dashboard. Empty scopes are honest for those entries,
+    // so the assertion narrows to "OAuth connectors MUST declare scopes"
+    // rather than "every entry must declare scopes." An entry is an api-key
+    // connector when it tags `connectMode === 'api-key'` (Buildium, AppFolio,
+    // and the realty CRMs) OR when its provider is one of the wave-5 api-key
+    // CPA providers that predate the `connectMode` field (TaxDome, Karbon).
     const API_KEY_PROVIDERS = new Set<string | null>(["TAXDOME", "KARBON"]);
     for (const entry of listIntegrations()) {
-      if (!API_KEY_PROVIDERS.has(entry.providerKey)) {
+      const isApiKey =
+        entry.connectMode === "api-key" || API_KEY_PROVIDERS.has(entry.providerKey);
+      if (!isApiKey) {
         assert.ok(
           entry.scopes.length > 0,
           `${entry.id} declares at least one scope`,

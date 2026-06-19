@@ -338,3 +338,29 @@ moment the env vars are set, it's plug-and-play.
 - [ ] The production deploy (`npm run build` → `prisma migrate deploy`) applies migration `20260618000000_voice_recording_and_action_item_kinds` (two additive `WorkApprovalKind` enum values: `VOICE_CALL_ACTION_ITEM`, `VOICE_RECORDING_CONSENT`). Purely additive — no existing data changes.
 
 **Once live, install the SDK on the relay host:** `npm install twilio ws` (both are lazy-imported via non-literal specifiers, so the app builds and the unit tests pass without them today).
+
+---
+
+## Integrations: customer-brought vs we-bring split
+
+_From `feat(integrations): customer-brought vs we-bring split with cost attribution`._
+_Context: `docs/connections/byo-vs-we-bring.md`._
+
+- [ ] **Twilio billing model.** Pass-through is wired with a **flat 0% markup
+      (at cost)** as the default. Decide: pass-through **with a markup %** (and
+      what %), or a **flat-rate-per-channel** model instead. Code:
+      `DEFAULT_PASS_THROUGH_MARKUP` in `lib/integrations/wb/passthrough.ts` —
+      one constant + the `markupFraction` arg already plumb it through.
+- [ ] **Embedding cost model.** Currently **fully absorbed** with a high soft
+      fair-use cap (50M tokens/period). Decide: keep absorbed, or **meter it at
+      Max tier**? Code: `openai-embeddings` entry in
+      `lib/integrations/wb/registry.ts` (flip `costModel` / `fairUseCap`).
+- [ ] **BYO LLM option.** Should we offer "**bring your own Anthropic/OpenAI
+      key**" (hosted-by-them reasoning)? Decide: offer in **Max tier**, **Custom
+      only**, or not yet. Today it's documented as a power-user path but not
+      built. Same question applies to **BYO S3** for memory storage.
+- [ ] **Sign off on the categorization.** Review the full list in
+      `docs/connections/byo-vs-we-bring.md` (or run
+      `npx tsx scripts/classify-connections.ts`). Move anything you disagree
+      with: a connection's bucket is one field — `sourcing` on a marketplace
+      entry, or `costModel` on a we-bring registry entry.

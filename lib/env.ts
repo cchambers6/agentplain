@@ -4,6 +4,8 @@
 // Per feedback_no_prod_secrets_in_dev: callers must NOT default a missing
 // production-tier secret to a sentinel — they should fail loudly.
 
+import { TRIAL_PERIOD_DAYS } from "@/lib/billing/facts";
+
 export type AdapterMode<T extends string> = T;
 
 const optional = (key: string): string | undefined => {
@@ -153,9 +155,9 @@ export const env = {
   // so Conner can adjust without a deploy. Clamped to [0, 365].
   stripeTrialPeriodDays: (): number => {
     const raw = optional("STRIPE_TRIAL_PERIOD_DAYS");
-    if (!raw) return 7;
+    if (!raw) return TRIAL_PERIOD_DAYS;
     const n = Number.parseInt(raw, 10);
-    if (!Number.isFinite(n) || n < 0) return 7;
+    if (!Number.isFinite(n) || n < 0) return TRIAL_PERIOD_DAYS;
     return Math.min(n, 365);
   },
   // Card-at-signup default TRUE (ratified 2026-06-14). Signup routes

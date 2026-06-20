@@ -49,6 +49,18 @@ npm run brand-gate || {
   exit 1
 }
 
+# --- Layer 1.5: voice gate (de-AI-fication) ---
+# Companion to brand-gate. brand-gate owns HYPE (R4: supercharge, seamless, …);
+# voice-gate owns LLM-ESE — the mechanical tells of machine-written prose
+# (delve/tapestry vocabulary, "not just X — it's Y" antithesis, "Great question!"
+# chatbot openers, and em-dash spam). Baseline ratchet — only NEW tics fail.
+# Wired 2026-06-19. Catalog: docs/brand/voice-guidelines-2026-06-19.md §3.
+npm run voice-gate || {
+  echo "❌ Push blocked: voice-gate found new AI-tics in customer copy."
+  echo "   See docs/brand/voice-guidelines-2026-06-19.md §3, or allowlist an intentional usage in tools/brand/voice-gate-allow.json."
+  exit 1
+}
+
 # --- Layer 1.6: connector dispatch-coverage gate (fast, dependency-free) ---
 # Every marketplace connector marked status:"available" must have a live MCP
 # dispatch route at app/api/integrations/<slug>/[workspaceId]/route.ts. Wired

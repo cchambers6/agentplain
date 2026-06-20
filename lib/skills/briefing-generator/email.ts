@@ -74,9 +74,9 @@ function headlineFor(s: BriefingSummary): string {
     return `${s.pendingApprovals} ${pluralize('item', s.pendingApprovals)} waiting for your eye`;
   }
   if (s.approvalsInWindow > 0) {
-    return `${s.approvalsInWindow} ${pluralize('thing', s.approvalsInWindow)} moved through your fleet`;
+    return `${s.approvalsInWindow} ${pluralize('thing', s.approvalsInWindow)} Plaino moved along for you`;
   }
-  return 'A quiet morning — the fleet is still running its cadence';
+  return 'A quiet morning — Plaino kept watch and there is nothing waiting on you';
 }
 
 function pluralize(noun: string, n: number): string {

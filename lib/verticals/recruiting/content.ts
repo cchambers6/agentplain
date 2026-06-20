@@ -340,12 +340,12 @@ export const recruiting: VerticalContent = {
 
   valueLoopExample: {
     scenario:
-      "Tuesday morning: a senior backend role just opened at a client. Goal — five qualified candidates in pipeline by Friday.",
+      "Tuesday, 8:30am. A senior backend role lands on Priya's desk and the client wants five qualified candidates in the pipeline by Friday.",
     before:
-      "Source on LinkedIn Recruiter, qualify against the JD, draft individualized opening messages, log everything in Bullhorn, follow up the ones who reply. ~12 hours across the week.",
+      "Source on LinkedIn Recruiter, qualify each name against the JD, write an individualized opener, log everything in Bullhorn, then chase the ones who reply. About 12 hours stolen from the rest of her desk across the week.",
     after:
-      "The fleet drafted 12 substantiated openers (each citing a specific reason from the candidate's record) and queued them for the recruiter's review. Once your sourcing tools and ATS are connected, it will also source candidates against the JD, enrich them, and rank the top matches by stated-skill match + employer history.",
+      "The fleet drafted 12 substantiated openers — each one citing a specific reason from the candidate's record — and queued them for Priya's review. Once her sourcing tools and ATS are connected, it will also source against the JD, enrich the names, and rank the top matches by stated-skill match and employer history.",
     outcome:
-      "The recruiter reviews 12 drafts in 40 minutes, sends 9, and books 5 calls by Friday. The 12 hours becomes 90 minutes.",
+      "Priya reviews 12 drafts in 40 minutes, sends 9, and has 5 calls booked by Friday. The 12 hours becomes 90 minutes.",
   },
 };

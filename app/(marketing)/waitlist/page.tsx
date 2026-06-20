@@ -66,7 +66,7 @@ export default function WaitlistPage() {
                 >
                   Start a free trial
                 </Link>{" "}
-                — first month free, month-to-month, cancel anytime.
+                — 7-day free trial, month-to-month, cancel anytime.
               </p>
             </div>
           </div>

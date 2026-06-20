@@ -348,7 +348,7 @@ export default async function CustomPage({ searchParams }: PageProps) {
         tone="deep"
         eyebrow="Rooted in reality"
         title="Why we can build what we say we&rsquo;ll build."
-        intro="Four things we can point at today. Not magic, not pixie dust — real product, real operators, real outcomes."
+        intro="Four things you can check today. Not a pitch — working software, the people who run it, and the brokerage we run it on."
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule lg:grid-cols-2">
           {proof.map((p) => (
@@ -436,8 +436,8 @@ export default async function CustomPage({ searchParams }: PageProps) {
         <div className="container-wide py-24 md:py-28">
           <p className="eyebrow mb-6 text-paper/60">{tokens.tagline}</p>
           <p className="max-w-3xl font-display text-3xl leading-[1.15] md:text-5xl md:leading-[1.08]">
-            Real product, real operators, real outcomes — at the scope your
-            business actually needs.
+            Working software, run by real people, scoped to the work only your
+            business does.
           </p>
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-paper/75">
             If the form isn&apos;t the right channel, email a human directly

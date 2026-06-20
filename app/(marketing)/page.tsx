@@ -578,7 +578,7 @@ export default function HomePage() {
       <Section
         eyebrow="Rooted in reality"
         title="Here's what we mean by &lsquo;rooted in reality.&rsquo;"
-        intro="Four things we can point at today. Not magic, not pixie dust — real product, real operators, real outcomes. We don't claim 'built for X' without the per-vertical compliance corpus + JTBD tables; we don't claim 'integrates with X' without the value-loop demo. The bar is functional, not marketing."
+        intro="Four things we can point at today. Not a pitch — working software, the people who run it, and a brokerage we run it on. We don't claim 'built for X' without the per-vertical compliance corpus + JTBD tables; we don't claim 'integrates with X' without the value-loop demo. The bar is functional, not marketing."
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule lg:grid-cols-2">
           {proof.map((p) => (

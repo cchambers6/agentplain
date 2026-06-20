@@ -345,12 +345,12 @@ export const ria: VerticalContent = {
 
   valueLoopExample: {
     scenario:
-      "Q1 quarterly review cycle. 87 client portfolios to discuss, 87 prep packets to assemble.",
+      "Q1 review cycle opens. James has 87 client portfolios to talk through and 87 prep packets that don't exist yet.",
     before:
-      "Pull each client's positions in Wealthbox + custodian, run the planning model in eMoney, draft a one-page review summary with the highlights and risks, build the agenda, schedule the call. ~90 minutes per packet × 87 clients.",
+      "Pull each client's positions in Wealthbox and the custodian, run the planning model in eMoney, write a one-page summary with the highlights and the risks, build the agenda, schedule the call. About 90 minutes a packet, 87 times over.",
     after:
-      "The fleet pulled positions, ran the planning models, drafted 87 one-page review packets with portfolio drift highlighted, surfaced the 11 clients with planning-assumption changes worth raising, and queued the scheduling. Every claim cites the source record it was drafted from.",
+      "The fleet pulled positions, ran the planning models, drafted 87 one-page packets with portfolio drift already highlighted, flagged the 11 clients whose planning assumptions changed enough to raise, and queued the scheduling. Every figure cites the source record it came from.",
     outcome:
-      "The advisor reviews 87 drafts in two mornings instead of three weeks. Calls happen on schedule; the advisor walks in with prep, not catch-up.",
+      "James reviews 87 drafts across two mornings instead of three weeks. The calls happen on schedule, and he walks into each one with prep, not catch-up.",
   },
 };

@@ -184,7 +184,7 @@ export const insurance: VerticalContent = {
         {
           job: "Issue a COI request",
           when: "Inbound, all day",
-          today: "Look up the policy, navigate the carrier portal, merge the ACORD 25 by hand — ~30% of the CSR's day",
+          today: "Look up the policy, dig through the carrier portal, merge the ACORD 25 by hand — ~30% of the CSR's day",
           withAgentplain:
             "COI agent reads the request, drafts the certificate against the producer's policy reference, routes for one-click issue",
         },
@@ -319,12 +319,12 @@ export const insurance: VerticalContent = {
 
   valueLoopExample: {
     scenario:
-      "Renewal week. 47 commercial accounts hit their 60-day renewal window on Monday.",
+      "Monday, 8am. Dana opens the renewal board and 47 commercial accounts have all hit their 60-day window over the weekend.",
     before:
       "Manually pull each policy in EZLynx, rerate against current carrier appetites, flag the accounts most likely to non-renew or get hit with a premium hike, draft retention outreach for each. ~3 days of producer time.",
     after:
-      "Once the agency's EZLynx and comparative rater are connected, the fleet pulls all 47 policies, reranks the 9 highest non-renewal risks with a one-line reason each against current pricing, drafts retention notes in the agency's voice, and queues them for review; carrier-appetite mismatches are surfaced before the renewal deadline. Until the rater is connected, the fleet drafts the retention outreach from the producer's declarations and pricing inputs.",
+      "Once Dana's EZLynx and comparative rater are connected, the fleet pulls all 47 policies, reranks the 9 highest non-renewal risks with a one-line reason each against current pricing, drafts retention notes in the agency's voice, and queues them for review; carrier-appetite mismatches are surfaced before the renewal deadline. Until the rater is connected, the fleet drafts the retention outreach from her declarations and pricing inputs.",
     outcome:
-      "Three days of work compresses to one morning of review. The producer handles relationships; once the rater is connected, the fleet handles the rerating.",
+      "Three days of work becomes one morning of review. Dana handles the relationships; once the rater is connected, the fleet handles the rerating.",
   },
 };

@@ -14,6 +14,7 @@ export { ApHeritageButton } from "./ApHeritageButton";
 export type {
   ApHeritageButtonProps,
   ApHeritageButtonVariant,
+  ApHeritageButtonSize,
 } from "./ApHeritageButton";
 export { ApHeritageConfirm } from "./ApHeritageConfirm";
 export type { ApHeritageConfirmVariant } from "./ApHeritageConfirm";
@@ -28,7 +29,9 @@ export {
 export { ApMotif } from "./ApMotif";
 export type { ApMotifName } from "./ApMotif";
 export { ApPaperCard } from "./ApPaperCard";
-export type { ApPaperCardDensity } from "./ApPaperCard";
+export type { ApPaperCardDensity, ApPaperCardVariant } from "./ApPaperCard";
+export { ApPlainoLoader } from "./ApPlainoLoader";
+export { ApPullQuote } from "./ApPullQuote";
 export { ApPaperSheet } from "./ApPaperSheet";
 export { ApRootedEmptyState } from "./ApRootedEmptyState";
 export { ApRootedLoader } from "./ApRootedLoader";

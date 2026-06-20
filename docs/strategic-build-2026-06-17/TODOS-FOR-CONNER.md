@@ -625,3 +625,41 @@ PR #307 excludes colocated `*.test.ts(x)` from build lint + typecheck.
   already runs Actions). That decouples schema migration from the build lifecycle
   per Prisma's serverless guidance. Not done here because it requires adding a
   `DATABASE_URL_DIRECT` repo secret (your call).
+
+---
+
+## Item 10 — Brand voice de-AI-fication (guidelines + gate)
+
+Shipped in `feat(brand): voice guidelines + anti-pattern gate (de-AI-fication)`.
+New source of truth: `docs/brand/voice-guidelines-2026-06-19.md`. Enforced by
+`tools/brand/voice-gate.mjs` (ratchet, baseline = 31 existing violations frozen;
+only NEW tics fail the build). Audit: `docs/brand/voice-audit-2026-06-19.md`.
+
+- [ ] **Approve the anti-pattern catalog (§3).** The four banned families —
+      VA (LLM-ese vocab: delve, tapestry, realm, "navigate the landscape"…),
+      VB (the "not just X, it's Y" antithesis reflex), VC (sycophantic/chatbot
+      openers: "Great question!", "dive in", "rest assured"), VD (essay
+      scaffolding + launch-ese) — are now build-enforced on new copy. Confirm the
+      list, or strike/add words. Family E (hype) is left to the existing
+      `brand-gate.mjs` R4 to avoid double-counting — confirm that split is right.
+
+- [ ] **Sign off the per-persona voice attributes (§6) and the Plaino register.**
+      Founder voice = direct, plain, CAPS-for-emphasis (extracted verbatim from
+      your 2026-05-11 notes — see §7 attributions). Plaino = calm, grounded,
+      honest about limits, never gushes, never claims to be human. Product copy =
+      plain/concrete, punchy in titles, warm in flows. Confirm these are right, or
+      adjust the founder/Plaino characterization before it becomes canon.
+
+- [ ] **Confirm the em-dash spam threshold.** The gate flags 3+ em-dashes in one
+      line (one or two are fine — em-dashes are not banned, *spam* is). The audit
+      found this is the dominant residual AI tell (30 of 31 violations). If you
+      want it stricter (flag 2+) or looser (4+), say so and I'll re-baseline. The
+      worst offender today is `components/faq-items.ts` (6 lines, one with five
+      em-dashes) — a one-file rewrite clears most of the rendered-surface debt.
+
+### Follow-ups (codeable, not Conner-gated)
+- The 31 baseline violations are the de-AI-fication work-list (audit doc §P1/§P2).
+  Sibling/marketing sessions own the copy edits; re-baseline as waves land so the
+  count ratchets toward zero (same path `brand-gate.mjs` took to zero, #227–#234).
+- Once the catalog is approved, consider folding the §3 word-families that overlap
+  nobody else's gate into the same pre-commit pass brand-gate uses, for parity.

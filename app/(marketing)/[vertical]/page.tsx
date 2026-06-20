@@ -10,6 +10,7 @@ import {
 import VerticalHero from "@/components/vertical/VerticalHero";
 import VerticalDirectAnswer from "@/components/vertical/VerticalDirectAnswer";
 import ValueLoopExample from "@/components/vertical/ValueLoopExample";
+import VerticalHowItWorks from "@/components/vertical/VerticalHowItWorks";
 import JtbdTables from "@/components/vertical/JtbdTables";
 import RoiAnchor from "@/components/vertical/RoiAnchor";
 import ViolationAvoidance from "@/components/vertical/ViolationAvoidance";
@@ -112,6 +113,7 @@ export default function VerticalPage({
           verticalName={content.name}
         />
       ) : null}
+      <VerticalHowItWorks slug={content.slug} verticalName={content.name} />
       <JtbdTables tables={content.jtbdTables} />
       <RoiAnchor roi={content.roi} />
       <ViolationAvoidance paragraph={content.roi.violationAvoidance} />

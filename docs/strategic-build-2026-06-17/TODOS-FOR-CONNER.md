@@ -209,12 +209,14 @@ pass-through, never stored.
   instances, at the cost of holding connector data in a (still short-lived,
   still off-DB) external store. In-memory is the more data-minimal default.
 
-- [ ] **(Optional) Default chat auto-purge for any tier?** Default is now
-  **lifetime** for all tiers (correct — a partner shouldn't forget). The opt-in
-  finite auto-purge window is available to privacy-conscious customers. If you
-  ever want a tier (or vertical with strict retention rules, e.g. law) to
-  *default* to a finite window, that's a one-line change in
-  `lib/plaino/chat-retention.ts` — flag it and we'll wire it.
+- [x] **Chat retention default: account lifetime (ratified 2026-06-18).** Plaino
+  never forgets the business — conversation history is kept for the life of the
+  account and hard-deleted on cancel. No tier defaults to a finite window. Opt-in
+  auto-purge is available per-workspace (`WorkspacePreference.chatRetentionDays`)
+  or per-thread (`ChatThread.retentionDays`) for customers who explicitly request
+  it; a one-line change in `lib/plaino/chat-retention.ts` if you ever want a
+  vertical (e.g. law) to *default* finite. *(An early draft of PR #306 set default
+  = 2 days for all tiers; reversed per Conner before merge.)*
 
 - [ ] **Lead-conversation retention (`PlainoConversation`, MARKETING mode).**
   Anonymous marketing-widget conversations have no workspace and aren't covered

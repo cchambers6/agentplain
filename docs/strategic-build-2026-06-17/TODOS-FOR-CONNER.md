@@ -721,3 +721,27 @@ internal `/style` guide. Three decisions are yours:
       with the new `.img-heritage` treatment, which currently has no production
       photo to attach to) and/or bespoke hand-drawn vertical motifs. This is a
       spend decision — route through `CreatorBrief` (`lib/creative-handoff`) if yes.
+## De-AI-fication item 4 — distinctive per-vertical visual assets (2026-06-19)
+
+Replaced the generic / ultra-minimal placeholder imagery with a distinctive,
+on-brand, vertical-grounded visual system: rich hero scenes (Plaino *in
+context* — closing table, CPA desk, law lectern, PM truck, kitchen-table
+office), "how it works" illustrations, social share cards, and a per-vertical
+OG endpoint. All generated deterministically from
+`tools/brand/gen-vertical-scenes.mjs` (brand tokens only; regenerable).
+
+- [ ] **Sign off on the visual style direction.** The PR ships sample renders
+      (hero scenes + social cards + step illustrations) for the 5 priority
+      verticals (real-estate, cpa, law, property-management, general). Confirm
+      the heritage-illustration direction, then we extend the same generator to
+      the remaining 5 verticals.
+- [ ] **Sign up for Adobe Express / Canva** if we want templated photographic
+      variants. This wave used the project's own brand-token SVG generator (no
+      external account needed); Adobe/Canva (via the small-business plugin)
+      require an authenticated account to drive `adobe-design-from-template` /
+      `canva-creator`. TODO only if we want that route.
+- [ ] **Decide whether to commission professional photography** for the
+      Plaino-vertical-context moments. They are currently brand-illustrated
+      (vector Plaino in the heritage idiom), which is why the scene slots stay
+      flagged `isMotifScene` in `PlainoScene.tsx` — a real raster/photographed
+      scene can drop into the same `/scenes/` path later with one line changed.

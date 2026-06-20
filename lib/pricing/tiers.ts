@@ -25,6 +25,14 @@
 // survive Price archival/replacement.
 
 import type { SeatBand, WorkspaceVerticalTier } from "@prisma/client";
+// Trial / money-back facts live in the billing SSOT and are re-exported below
+// so existing `@/lib/pricing/tiers` importers keep working unchanged.
+import {
+  MONEY_BACK_GUARANTEE_DAYS,
+  TRIAL_PERIOD_DAYS,
+  TRIAL_PERIOD_DAYS_EXTENDED,
+  trialPeriodDaysForVertical,
+} from "@/lib/billing/facts";
 
 export type TierName = "regular" | "plus" | "max";
 
@@ -153,28 +161,17 @@ export function tierLadderBands(tier: TierName): TierLadderRow[] {
   }));
 }
 
-// Trial policy (ratified 2026-06-14):
-//   Default 7 days — card captured at signup via Stripe Checkout.
-//   CPA + Law verticals get 14 days (weekly-or-slower ops cadence; one
-//   full cycle needed to deliver value before billing starts).
-//   The old 30-day/no-card path (feedback_max_friction_reduction
-//   rule #5) was superseded by the CC-at-signup wave (checkout.ts).
-export const TRIAL_PERIOD_DAYS = 7;
-export const TRIAL_PERIOD_DAYS_EXTENDED = 14;
-
-// Verticals that receive the extended 14-day trial. Compared against the
-// vertical slug (e.g. "cpa", "law") returned by the signup form.
-const EXTENDED_TRIAL_VERTICAL_SLUGS = new Set<string>(["cpa", "law"]);
-
-export function trialPeriodDaysForVertical(verticalSlug: string): number {
-  return EXTENDED_TRIAL_VERTICAL_SLUGS.has(verticalSlug.toLowerCase())
-    ? TRIAL_PERIOD_DAYS_EXTENDED
-    : TRIAL_PERIOD_DAYS;
-}
-
-// 14-day money-back guarantee, independent of trial length. Runs from
-// first charge date; operator action required to process refund.
-export const MONEY_BACK_GUARANTEE_DAYS = 14;
+// Trial + money-back policy (ratified 2026-06-14) now lives in the billing
+// SSOT `@/lib/billing/facts`. Re-exported here so the many existing
+// `@/lib/pricing/tiers` importers keep resolving these names unchanged.
+//   Default 7 days; CPA + Law get 14. Card captured at signup via Stripe
+//   Checkout. 14-day money-back guarantee, independent of trial length.
+export {
+  MONEY_BACK_GUARANTEE_DAYS,
+  TRIAL_PERIOD_DAYS,
+  TRIAL_PERIOD_DAYS_EXTENDED,
+  trialPeriodDaysForVertical,
+};
 
 // Trial-end warning thresholds (days remaining). Cron at 06:00 ET emits
 // one in-app banner + one email per threshold per subscription.

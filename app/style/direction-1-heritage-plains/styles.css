@@ -1,0 +1,429 @@
+/* ============================================================================
+   Direction 1 — Heritage Plains Editorial
+   Scoped visual treatment. Everything lives under `.heritage` so it cannot
+   bleed into the live brand surfaces or the other four directions. This file is
+   imported only by app/style/direction-1-heritage-plains/page.tsx.
+
+   Type comes from the fonts already loaded in app/layout.tsx:
+     --font-display  Fraunces  (serif headlines — leaned heavier here)
+     --font-sans     Inter     (grotesque body)
+     --font-mono     JetBrains Mono (small-print / captions)
+   ============================================================================ */
+
+.heritage {
+  /* ---- palette (direction-local, additive, never touches brand tokens) ---- */
+  --h-forest: #1f3d2e;
+  --h-forest-deep: #16291f;
+  --h-clay: #b85540;
+  --h-clay-deep: #97402e;
+  --h-cream: #f5f0e6;
+  --h-paper-bright: #fbf8f1;
+  --h-ink: #1a1612;
+  --h-dust: #9c8b73;
+  --h-sage: #7a8b6f;
+  --h-wheat: #c8a24a;
+  --h-line: #d8cfba;
+  --h-line-strong: #c2b69b;
+
+  /* ---- type scale ---- */
+  --h-step--1: clamp(0.78rem, 0.76rem + 0.1vw, 0.84rem);
+  --h-step-0: clamp(1rem, 0.96rem + 0.2vw, 1.13rem);
+  --h-step-1: clamp(1.32rem, 1.2rem + 0.6vw, 1.6rem);
+  --h-step-2: clamp(1.8rem, 1.5rem + 1.4vw, 2.6rem);
+  --h-step-3: clamp(2.6rem, 1.9rem + 3.3vw, 4.6rem);
+  --h-step-4: clamp(3.4rem, 2.2rem + 5.6vw, 6.6rem);
+
+  background-color: var(--h-cream);
+  color: var(--h-ink);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: var(--h-step-0);
+  line-height: 1.6;
+  /* paper grain — a faint fractal-noise wash layered under a warm vignette.
+     Inlined SVG so there's no asset dependency for a demo route. */
+  background-image:
+    radial-gradient(120% 80% at 50% -10%, rgba(31, 61, 46, 0.05), transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+}
+
+.heritage *,
+.heritage *::before,
+.heritage *::after {
+  box-sizing: border-box;
+}
+
+/* ---- layout shells ---- */
+.heritage .h-wrap {
+  max-width: 1180px;
+  margin-inline: auto;
+  padding-inline: clamp(1.25rem, 4vw, 3.5rem);
+}
+.heritage .h-section {
+  padding-block: clamp(3.5rem, 7vw, 7rem);
+  border-top: 1px solid var(--h-line);
+}
+.heritage .h-section--flush {
+  border-top: 0;
+}
+
+/* ---- eyebrow / small print ---- */
+.heritage .h-eyebrow {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--h-clay);
+}
+.heritage .h-eyebrow--mute {
+  color: var(--h-dust);
+}
+.heritage .h-caption {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--h-dust);
+}
+
+/* ---- display type ---- */
+.heritage .h-display {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 600;
+  font-variation-settings: "opsz" 144;
+  line-height: 0.98;
+  letter-spacing: -0.012em;
+  color: var(--h-ink);
+  /* letterpress: a hair of light from above, a soft dark settle below */
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.45),
+    0 -1px 0 rgba(26, 22, 18, 0.06);
+}
+.heritage .h-display--xl {
+  font-size: var(--h-step-4);
+}
+.heritage .h-display--lg {
+  font-size: var(--h-step-3);
+}
+.heritage .h-display--md {
+  font-size: var(--h-step-2);
+}
+.heritage .h-headline {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 500;
+  font-size: var(--h-step-1);
+  line-height: 1.12;
+  letter-spacing: -0.005em;
+}
+.heritage .h-lede {
+  font-size: clamp(1.06rem, 1rem + 0.5vw, 1.3rem);
+  line-height: 1.5;
+  color: #34302a;
+  max-width: 34ch;
+}
+.heritage .h-prose {
+  max-width: 62ch;
+  color: #34302a;
+}
+.heritage .h-prose p + p {
+  margin-top: 1rem;
+}
+
+/* foil — a brushed metallic sweep for one premium moment only */
+.heritage .h-foil {
+  background: linear-gradient(
+    100deg,
+    var(--h-wheat) 0%,
+    #e9d28a 28%,
+    #a7842f 52%,
+    #e9d28a 74%,
+    var(--h-wheat) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+}
+
+/* ---- buttons ---- */
+.heritage .h-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.005em;
+  padding: 0.8rem 1.4rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+.heritage .h-btn--primary {
+  background: var(--h-clay);
+  color: var(--h-cream);
+}
+.heritage .h-btn--primary:hover {
+  background: var(--h-clay-deep);
+}
+.heritage .h-btn--ghost {
+  background: transparent;
+  color: var(--h-forest);
+  border-color: var(--h-line-strong);
+}
+.heritage .h-btn--ghost:hover {
+  border-color: var(--h-forest);
+}
+.heritage .h-btn--onforest {
+  background: var(--h-cream);
+  color: var(--h-forest-deep);
+}
+.heritage .h-btn--onforest:hover {
+  background: #fff;
+}
+
+/* ---- rules & marks ---- */
+.heritage .h-rule {
+  height: 1px;
+  background: var(--h-line);
+  border: 0;
+}
+.heritage .h-tick {
+  color: var(--h-clay);
+}
+
+/* ---- cards / panels ---- */
+.heritage .h-card {
+  background: var(--h-paper-bright);
+  border: 1px solid var(--h-line);
+  padding: clamp(1.4rem, 2.5vw, 2.2rem);
+}
+.heritage .h-panel-forest {
+  background: var(--h-forest);
+  color: var(--h-cream);
+}
+.heritage .h-panel-forest .h-display,
+.heritage .h-panel-forest .h-headline {
+  color: var(--h-cream);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+}
+
+/* ---- grids ---- */
+.heritage .h-grid {
+  display: grid;
+  gap: clamp(1.25rem, 3vw, 2.5rem);
+}
+@media (min-width: 760px) {
+  .heritage .h-cols-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+  .heritage .h-cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .heritage .h-hero-grid {
+    grid-template-columns: 1.05fr 0.95fr;
+    align-items: end;
+  }
+  .heritage .h-split-7-5 {
+    grid-template-columns: 7fr 5fr;
+  }
+}
+
+/* ---- step list (How it works) ---- */
+.heritage .h-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1.1rem;
+  padding-block: 1.4rem;
+  border-top: 1px solid var(--h-line);
+}
+.heritage .h-step:last-child {
+  border-bottom: 1px solid var(--h-line);
+}
+.heritage .h-step-num {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  color: var(--h-clay);
+  padding-top: 0.35rem;
+}
+
+/* ---- pricing card ---- */
+.heritage .h-price-card {
+  background: var(--h-paper-bright);
+  border: 1px solid var(--h-line-strong);
+  padding: clamp(1.6rem, 3vw, 2.4rem);
+  position: relative;
+}
+.heritage .h-price-tag {
+  position: absolute;
+  top: -0.7rem;
+  right: 1.4rem;
+  background: var(--h-forest);
+  color: var(--h-cream);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.7rem;
+}
+.heritage .h-price-amt {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 600;
+  font-size: clamp(2.6rem, 2rem + 2.4vw, 3.6rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.heritage .h-feature {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.7rem;
+  padding-block: 0.55rem;
+  border-top: 1px dotted var(--h-line-strong);
+  font-size: 0.95rem;
+}
+
+/* ---- dashboard widget ---- */
+.heritage .h-dash {
+  background: var(--h-paper-bright);
+  border: 1px solid var(--h-line-strong);
+}
+.heritage .h-dash-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.3rem;
+  border-bottom: 1px solid var(--h-line);
+  background: linear-gradient(var(--h-cream), var(--h-paper-bright));
+}
+.heritage .h-dash-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.85rem 1.3rem;
+  border-top: 1px solid var(--h-line);
+  font-size: 0.92rem;
+}
+.heritage .h-dash-row:first-of-type {
+  border-top: 0;
+}
+.heritage .h-pill {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.22rem 0.55rem;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.heritage .h-pill--done {
+  color: var(--h-forest);
+}
+.heritage .h-pill--wait {
+  color: var(--h-clay);
+}
+.heritage .h-pill--watch {
+  color: var(--h-dust);
+}
+.heritage .h-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.heritage .h-stat-num {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 600;
+  font-size: clamp(1.8rem, 1.4rem + 1.4vw, 2.4rem);
+  line-height: 1;
+}
+
+/* ---- Plaino chat moment ---- */
+.heritage .h-chat {
+  background: var(--h-paper-bright);
+  border: 1px solid var(--h-line-strong);
+  max-width: 560px;
+}
+.heritage .h-chat-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1.1rem;
+  border-bottom: 1px solid var(--h-line);
+}
+.heritage .h-chat-body {
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.heritage .h-bubble {
+  padding: 0.75rem 0.95rem;
+  font-size: 0.94rem;
+  line-height: 1.45;
+  max-width: 88%;
+}
+.heritage .h-bubble--them {
+  background: var(--h-cream);
+  border: 1px solid var(--h-line);
+  align-self: flex-start;
+}
+.heritage .h-bubble--me {
+  background: var(--h-forest);
+  color: var(--h-cream);
+  align-self: flex-end;
+}
+.heritage .h-chat-card {
+  align-self: flex-start;
+  border: 1px solid var(--h-line-strong);
+  background: var(--h-cream);
+  width: 100%;
+}
+
+/* ---- footer ---- */
+.heritage .h-footer {
+  background: var(--h-forest-deep);
+  color: #cdd8cb;
+}
+.heritage .h-footer a {
+  color: #cdd8cb;
+  text-decoration: none;
+}
+.heritage .h-footer a:hover {
+  color: #fff;
+}
+
+/* ---- spec strip (top of demo) ---- */
+.heritage .h-spec {
+  background: var(--h-ink);
+  color: var(--h-cream);
+}
+.heritage .h-swatch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border: 1px solid rgba(245, 240, 230, 0.18);
+}
+.heritage .h-swatch {
+  flex: 1 1 90px;
+  min-width: 90px;
+  padding: 0.7rem 0.75rem;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.64rem;
+  letter-spacing: 0.06em;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 76px;
+  border-right: 1px solid rgba(245, 240, 230, 0.18);
+}
+
+/* utilities */
+.heritage .h-mt-1 { margin-top: 0.5rem; }
+.heritage .h-mt-2 { margin-top: 1rem; }
+.heritage .h-mt-3 { margin-top: 1.5rem; }
+.heritage .h-mt-4 { margin-top: 2rem; }
+.heritage .h-mt-6 { margin-top: 3rem; }
+.heritage .h-flex { display: flex; gap: 0.9rem; flex-wrap: wrap; align-items: center; }
+.heritage .h-muted { color: var(--h-dust); }
+.heritage .h-forest-text { color: var(--h-forest); }

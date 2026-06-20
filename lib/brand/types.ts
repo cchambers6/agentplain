@@ -24,6 +24,21 @@ export interface BrandColors {
   flag: BrandColor;
   mute: BrandColor;
   rule: BrandColor;
+  // ── Support tokens (additive, 2026-06-19, de-AI-fication wave 2) ─────────────
+  // Extracted from the design-mirror study (docs/brand/design-mirror-2026-06-19.md):
+  // heritage earth tones + tonal-layering surfaces that read as "made by a person."
+  // All in-family (warm, desaturated) and Conner-gated for sign-off; clay remains
+  // the single primary accent — these support, never replace, the v0 charge rules.
+  /** Deep heritage green for grounded full-bleed pause bands. Patagonia/forest pull. */
+  forest?: BrandColor;
+  /** Harvest gold — the rare second accent (≤1 use per long page). Mailchimp-yellow pull. */
+  wheat?: BrandColor;
+  /** A half-step brighter than paper — lets a surface lift with no shadow. MUJI pull. */
+  paperBright?: BrandColor;
+  /** Clay at low value — highlight-band / pull-quote ground. Mailchimp/Linear pull. */
+  clayWash?: BrandColor;
+  /** A slightly stronger hairline than `rule`, for figure frames. Heritage pull. */
+  midRule?: BrandColor;
 }
 
 export interface BrandTypography {

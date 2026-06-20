@@ -33,7 +33,16 @@ The following values are ratified (`lib/brand/tokens.ts` + `app/globals.css`):
 #726A5E   mute (WCAG AA on paper — replaces deprecated #8C8478)
 #E0DAC9   rule
 #D9D5C7   mid-rule
+#1F3D2E   forest       (support — deep field tone; added 2026-06-19)
+#C8A24A   wheat        (support — rare harvest accent; added 2026-06-19)
+#FCFAF4   paper-bright (support — no-shadow surface lift; added 2026-06-19)
+#F3E7E0   clay-wash    (support — highlight-band ground; added 2026-06-19)
 ```
+
+Support tokens (`forest`, `wheat`, `paper-bright`, `clay-wash`) were extracted in
+the de-AI-fication design-mirror (`docs/brand/design-mirror-2026-06-19.md`) and are
+pending Conner sign-off (`docs/strategic-build-2026-06-17/TODOS-FOR-CONNER.md`).
+Clay remains the single primary accent; these support, never replace, the v0 charge rules.
 
 `#8C8478` is the deprecated pre-WCAG mute. It is always flagged even when present in the allowlist.
 

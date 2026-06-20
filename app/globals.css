@@ -17,6 +17,16 @@
   --color-flag: #B43A3A;
   --color-mute: #726A5E;
   --color-rule: #E0DAC9;
+  /* Support tokens (additive 2026-06-19 — docs/brand/design-mirror-2026-06-19.md).
+     Heritage earth tones + tonal-layering surfaces extracted from the design-mirror
+     study. Consume via Tailwind utilities (bg-forest, text-wheat, bg-paper-bright,
+     bg-clay-wash, border-mid-rule); the vars below back the editorial utilities in
+     the components layer + the photo-grade overlay. Conner-gated for sign-off. */
+  --color-forest: #1F3D2E;
+  --color-wheat: #C8A24A;
+  --color-paper-bright: #FCFAF4;
+  --color-clay-wash: #F3E7E0;
+  --color-mid-rule: #D9D5C7;
 }
 
 html,
@@ -124,6 +134,55 @@ body {
   .container-wide {
     @apply mx-auto w-full max-w-wide px-6 sm:px-8 lg:px-12;
   }
+
+  /* ── Editorial / human-fingerprint utilities (additive 2026-06-19) ──────────
+     The design-mirror (docs/brand/design-mirror-2026-06-19.md) found the "generic
+     AI" smell is the absence of made-by-a-person artifacts, not the tokens. These
+     are the cheapest, highest-signal of those artifacts. Opt-in — no existing
+     surface is restyled; first adopters are the /style guide + the hero photo. */
+
+  /* Confident heritage CTA — a larger, surer clay button for a single hero moment.
+     Mailchimp/heritage pull: big, plain, no hedging. One per fold, never stacked. */
+  .btn-confident {
+    @apply inline-flex items-center justify-center gap-2.5 rounded-none border border-clay bg-clay px-8 py-4 font-sans text-base font-medium text-paper transition hover:border-clay-deep hover:bg-clay-deep;
+  }
+
+  /* Drop-cap — a single Fraunces initial at the head of a long editorial passage.
+     Mailchimp pull: the cheapest "a human set this type" signal there is. Apply to
+     the wrapping <p>; the first letter is floated and oversized. */
+  .drop-cap::first-letter {
+    @apply float-left mr-3 font-display text-clay;
+    font-size: 3.4rem;
+    line-height: 0.78;
+    padding-top: 0.35rem;
+  }
+
+  /* Field-note — a margin-set mono aside that reads like a person annotated the
+     page. Patagonia pull. Hairline on the left, mono micro label, mute body. */
+  .field-note {
+    @apply border-l-2 border-wheat pl-4 font-sans text-[13px] leading-relaxed text-mute;
+  }
+
+  /* Pull-quote ground — clay-wash band for an editorial pull-quote. Linear/Mailchimp
+     pull: spend the one charge on a real focal device, not on every block. Backs the
+     <ApPullQuote> component; usable directly on a <blockquote>. */
+  .pull-quote {
+    @apply border-l-2 border-clay bg-clay-wash px-6 py-5 font-display text-2xl leading-snug text-ink md:text-[1.75rem];
+  }
+
+  /* Dateline / seal — heritage "est." stamp treatment. Mono, tracked, mute, with a
+     hairline frame. Heritage pull (Filson/Pendleton est.-18xx datelines). */
+  .dateline {
+    @apply inline-flex items-center gap-2 border border-mid-rule px-3 py-1.5 font-mono text-[10px] uppercase tracking-eyebrow text-mute;
+  }
+}
+
+/* Heritage photo grade — one consistent warm grade so any real photography reads
+   as one hand shot it (MUJI/Patagonia pull). Slight warm desaturation + gentle
+   contrast; never a hard duotone. Pair with a paper-deep frame for the editorial
+   "figure, not texture" treatment the hero already uses. */
+.img-heritage {
+  filter: grayscale(0.18) sepia(0.10) contrast(1.03) brightness(0.99) saturate(0.94);
 }
 
 /* Rooted loader — single hairline strip slides left-to-right inside a paper-deep band.

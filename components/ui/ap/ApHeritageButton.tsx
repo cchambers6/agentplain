@@ -14,9 +14,17 @@ import type {
 // verb-led, lowercase phrase ("approve draft", "connect gmail") — no Title Case.
 
 export type ApHeritageButtonVariant = "primary" | "secondary" | "ghost";
+export type ApHeritageButtonSize = "default" | "lg";
 
 type CommonProps = {
   variant?: ApHeritageButtonVariant;
+  /**
+   * Size step. `default` is the standard CTA. `lg` is the confident heritage CTA
+   * from the design-mirror (docs/brand/design-mirror-2026-06-19.md §5/§6, Mailchimp
+   * + heritage): bigger, surer, for a single hero moment — one per fold, never
+   * stacked. Ignored on the `ghost` variant (a text link has no scale step).
+   */
+  size?: ApHeritageButtonSize;
   /** Optional trailing chevron, useful on primary / secondary CTAs. */
   withArrow?: boolean;
   children: ReactNode;
@@ -37,16 +45,26 @@ type AsAnchorProps = CommonProps &
 
 export type ApHeritageButtonProps = AsButtonProps | AsAnchorProps;
 
+// `gap`/`text-size` live in SIZE (and on the ghost variant) so the `lg` step can
+// override them cleanly without relying on CSS source order.
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-none font-sans text-sm font-medium transition disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-paper focus-visible:ring-clay";
+  "inline-flex items-center justify-center rounded-none font-sans font-medium transition disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-paper focus-visible:ring-clay";
 
 const VARIANT: Record<ApHeritageButtonVariant, string> = {
   primary:
-    "border border-clay bg-clay px-6 py-3 text-paper hover:border-clay-deep hover:bg-clay-deep",
+    "border border-clay bg-clay text-paper hover:border-clay-deep hover:bg-clay-deep",
   secondary:
-    "border border-ink/30 bg-transparent px-6 py-3 text-ink hover:border-ink hover:bg-ink/[0.03]",
+    "border border-ink/30 bg-transparent text-ink hover:border-ink hover:bg-ink/[0.03]",
   ghost:
-    "px-2 py-1 text-ink underline-offset-4 hover:underline",
+    "gap-2 px-2 py-1 text-sm text-ink underline-offset-4 hover:underline",
+};
+
+// Padding/scale step. Applies to primary + secondary; ghost carries its own
+// text-link padding/size and ignores the size step. `lg` is the confident
+// heritage CTA — bigger type, more air, one per fold.
+const SIZE: Record<ApHeritageButtonSize, string> = {
+  default: "gap-2 px-6 py-3 text-sm",
+  lg: "gap-2.5 px-8 py-4 text-base",
 };
 
 /**
@@ -65,8 +83,12 @@ export const ApHeritageButton = forwardRef<
   HTMLButtonElement | HTMLAnchorElement,
   ApHeritageButtonProps
 >(function ApHeritageButton(props, ref) {
-  const { variant = "primary", withArrow, children, className } = props;
-  const classes = [BASE, VARIANT[variant], className].filter(Boolean).join(" ");
+  const { variant = "primary", size = "default", withArrow, children, className } = props;
+  // Ghost is a text link — it owns its padding/size and ignores the size step.
+  const sizeClasses = variant === "ghost" ? "" : SIZE[size];
+  const classes = [BASE, VARIANT[variant], sizeClasses, className]
+    .filter(Boolean)
+    .join(" ");
 
   const body = (
     <>
@@ -76,7 +98,7 @@ export const ApHeritageButton = forwardRef<
   );
 
   if ("href" in props && props.href) {
-    const { variant: _v, withArrow: _w, children: _c, className: _cl, href, prefetch = false, ...rest } = props;
+    const { variant: _v, size: _s, withArrow: _w, children: _c, className: _cl, href, prefetch = false, ...rest } = props;
     return (
       <Link
         href={href}
@@ -90,7 +112,7 @@ export const ApHeritageButton = forwardRef<
     );
   }
 
-  const { variant: _v, withArrow: _w, children: _c, className: _cl, ...rest } = props as AsButtonProps;
+  const { variant: _v, size: _s, withArrow: _w, children: _c, className: _cl, ...rest } = props as AsButtonProps;
   return (
     <button
       ref={ref as React.Ref<HTMLButtonElement>}

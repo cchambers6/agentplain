@@ -687,3 +687,37 @@ copy was already strong, so this was targeted cleanup, not a rewrite.
       were missed by the #262/#290 trial-policy correction and contradicted the rest
       of the site. Confirm 7-day is current policy (it is everywhere else) — if the
       policy actually changed, tell me and I'll align all surfaces instead.
+## De-AI-fication wave 2 — distinctive visual system (2026-06-19)
+
+Source: `docs/brand/design-mirror-2026-06-19.md` (seven-brand mirror) + the
+additive token/component work shipped in the same PR. All changes are additive —
+no existing surface was restyled; the new primitives are demonstrated on the new
+internal `/style` guide. Three decisions are yours:
+
+- [ ] **Sign off on the analysis + which brands' patterns to lean into.** The
+      mirror studied Linear, MUJI, Patagonia, early Stripe, pre-Intuit Mailchimp,
+      heritage Americana (Filson/Pendleton/Yeti/REI/Coors), and the robot-dog
+      precedents (Boston Dynamics/Aibo). **Recommendation:** lean hardest into
+      **Patagonia + heritage Americana** (nearest to our plains/service-partner
+      positioning) for tone and photography, **MUJI** for tonal layering, and
+      **Aibo/Boston Dynamics** for the Plaino "posture not a face" discipline.
+      Confirm, or re-weight.
+
+- [ ] **Approve the new color tokens.** Five support tokens were added through the
+      canonical channel (`lib/brand/tokens.ts` → `globals.css` → `tailwind.config.ts`
+      → `brand-gate.mjs`), so the brand gate stays green: `forest` #1F3D2E (deep
+      field band), `wheat` #C8A24A (the **rare second accent** — the one to scrutinize;
+      ≤1 use per long page, clay stays primary), `paper-bright` #FCFAF4 (no-shadow
+      surface lift), `clay-wash` #F3E7E0 (pull-quote/highlight band), `mid-rule`
+      #D9D5C7 (figure-frame hairline, already gate-known). See them all live on
+      `/style`. **Decide:** approve all five, or drop `wheat` if a second accent
+      feels like drift from the single-charge rule.
+
+- [ ] **Decide whether to invest in custom illustration** (vs. continuing the
+      current Plaino-PNG + line-motif style). The mirror's strongest "human" signal
+      across Mailchimp + heritage brands is hand-made illustration with visible
+      imperfection. We have the Plaino pose system already; the open question is
+      whether to commission **real photography of local-business work** (graded
+      with the new `.img-heritage` treatment, which currently has no production
+      photo to attach to) and/or bespoke hand-drawn vertical motifs. This is a
+      spend decision — route through `CreatorBrief` (`lib/creative-handoff`) if yes.

@@ -61,6 +61,11 @@ const CANONICAL_HEX = new Set([
   // Additional derived values ratified in globals.css / component usage
   "#F7F4ED",
   "#D9D5C7", // mid-rule
+  // Support tokens (additive 2026-06-19; docs/brand/design-mirror-2026-06-19.md)
+  "#1F3D2E", // forest
+  "#C8A24A", // wheat
+  "#FCFAF4", // paper-bright
+  "#F3E7E0", // clay-wash
 ]);
 
 // Deprecated tokens — always flagged even if in the canonical-adjacent zone.

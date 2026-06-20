@@ -58,6 +58,37 @@ export const tokens: BrandTokens = {
       source: "derived — mute @ ~20% on paper",
       derived: true,
     },
+    // ── Support tokens (additive, 2026-06-19) ─────────────────────────────────
+    // Source: docs/brand/design-mirror-2026-06-19.md — heritage earth tones +
+    // tonal-layering surfaces that read as human, not generic-SaaS. All warm and
+    // desaturated; clay stays the single primary accent. Conner-gated (see
+    // docs/strategic-build-2026-06-17/TODOS-FOR-CONNER.md). Until sign-off these
+    // are opt-in primitives surfaced on /style — no existing surface adopts them.
+    forest: {
+      hex: "#1F3D2E",
+      source: "design-mirror §3/§6 (Patagonia/heritage) — deep field tone, never a status green",
+      derived: true,
+    },
+    wheat: {
+      hex: "#C8A24A",
+      source: "design-mirror §5/§6 (Mailchimp/heritage) — rare harvest accent, ≤1 use per long page",
+      derived: true,
+    },
+    paperBright: {
+      hex: "#FCFAF4",
+      source: "design-mirror §2 (MUJI) — half-step above paper; no-shadow surface lift",
+      derived: true,
+    },
+    clayWash: {
+      hex: "#F3E7E0",
+      source: "design-mirror §1/§5 (Linear/Mailchimp) — clay @ low value, highlight-band ground",
+      derived: true,
+    },
+    midRule: {
+      hex: "#D9D5C7",
+      source: "design-mirror §6 (heritage) — stronger hairline for figure frames; already gate-known",
+      derived: true,
+    },
   },
   typography: {
     // Display face is Fraunces — the ratified brand display per
@@ -89,4 +120,11 @@ export const colorHex = {
   flag: tokens.colors.flag.hex,
   mute: tokens.colors.mute.hex,
   rule: tokens.colors.rule.hex,
+  // Support tokens (additive 2026-06-19) — auto-wired into Tailwind utilities
+  // (bg-forest, text-wheat, bg-paper-bright, bg-clay-wash, border-mid-rule).
+  forest: tokens.colors.forest!.hex,
+  wheat: tokens.colors.wheat!.hex,
+  "paper-bright": tokens.colors.paperBright!.hex,
+  "clay-wash": tokens.colors.clayWash!.hex,
+  "mid-rule": tokens.colors.midRule!.hex,
 } as const;

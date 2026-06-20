@@ -562,3 +562,64 @@ Shipped in `feat(team): multi-employee roles, context-aware routing, playbook ge
 - Optional LLM polish pass on the playbook (behind the existing degraded-
   mode seam) once the ANTHROPIC_API_KEY is restored — the generator is
   deterministic/heuristic today by design (no key needed).
+
+---
+
+## 🚨 Vercel deploys red — Neon database outage (diagnosed 2026-06-19)
+
+**Symptom:** "Vercel: failure" red on `main` and all open PRs for ~5h; blocking
+deployment of merged work.
+
+**Root cause (two layers):**
+
+1. **Neon is unreachable from Vercel (DB-side — needs you).** Every build hit
+   `Error: P1001: Can't reach database server at
+   ep-aged-snow-aq0e4b6k.c-8.us-east-1.aws.neon.tech:5432` and died in ~14s.
+   The host is unchanged from the last green build (so `DATABASE_URL` is **not**
+   stale) and it's `P1001` (unreachable), not `P1000` (auth) — credentials are
+   fine. The failure is instant (~80ms), not a slow timeout, which points to the
+   **compute endpoint being suspended/disabled or the Neon project itself
+   suspended** (quota/billing) rather than a cold-start hiccup. **I cannot fix
+   this from code or CLI** (and per policy I won't touch Vercel/Neon env or
+   secrets).
+   - **ACTION:** Open the Neon console for project `neondb` /
+     endpoint `ep-aged-snow-aq0e4b6k` (us-east-1). Check: is the compute
+     **suspended/disabled**? Is the **project suspended** for plan limits or
+     billing? Any Neon status-page incident? Resume/re-enable the compute. Once
+     `psql "$DATABASE_URL_DIRECT" -c 'select 1'` succeeds, production deploys
+     will recover.
+
+2. **The build command made one DB blip redden *everything* (fixed in PR #307).**
+   The build ran `prisma generate && prisma migrate deploy && next build` on
+   **every** build, so `migrate deploy`'s direct Neon connection gated even
+   docs-only preview builds — and preview builds were silently applying
+   migrations to the **production** DB (shared `DATABASE_URL`). PR #307 gates
+   `migrate deploy` to `VERCEL_ENV === "production"` only; previews are now
+   DB-free and went **green** (verified) even with Neon still down.
+
+**A second, previously-hidden break (also fixed in PR #307):** because every
+build died at `migrate deploy` before `next build` ran, nobody saw that #298
+added `lib/memory/byo-storage.test.ts` with `eslint-disable
+@typescript-eslint/no-explicit-any` comments — but that plugin isn't installed,
+so `next build`'s lint stage errored ("Definition for rule … was not found").
+PR #307 excludes colocated `*.test.ts(x)` from build lint + typecheck.
+
+**What's still on you after merging PR #307:**
+
+- **Production (`main`) stays red until Neon is reachable.** This is by design —
+  production builds still run `migrate deploy`, and we should NOT ship a
+  schema-dependent app against an un-migrated/unreachable DB. Resolve item (1).
+- **One pending migration must apply on the next healthy production deploy:**
+  `20260617000000_memory_scale_rls_tiering_byo` (from #298). It has never been
+  applied (all builds since it merged failed). Once Neon is back, the first
+  production deploy's `migrate deploy` will apply it; verify with
+  `npm run migrate:status`.
+- **To clear the other open PRs:** merge PR #307, then rebase the remaining open
+  PRs onto the new `main` so they pick up the DB-free preview build (their own
+  previews currently still run the old build command and will keep redding on a
+  Neon blip until rebased).
+- **Optional hardening (future):** move production `migrate deploy` out of the
+  Vercel build entirely into a dedicated GitHub Action on `push: main` (the repo
+  already runs Actions). That decouples schema migration from the build lifecycle
+  per Prisma's serverless guidance. Not done here because it requires adding a
+  `DATABASE_URL_DIRECT` repo secret (your call).

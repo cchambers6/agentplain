@@ -663,3 +663,27 @@ only NEW tics fail the build). Audit: `docs/brand/voice-audit-2026-06-19.md`.
   count ratchets toward zero (same path `brand-gate.mjs` took to zero, #227–#234).
 - Once the catalog is approved, consider folding the §3 word-families that overlap
   nobody else's gate into the same pre-commit pass brand-gate uses, for parity.
+## De-AI-fication content sweep (2026-06-19) — item 3 of 4
+
+Surgical voice sweep across marketing + product + email + voice. Full report:
+`docs/brand/content-sweep-violations-2026-06-19.md`. PR rewrites 11 files; the
+copy was already strong, so this was targeted cleanup, not a rewrite.
+
+- [ ] **Sign off on the highest-impact rewrites.** The PR surfaces ~12 before→after
+      pairs. The ones most likely to draw an opinion: the four "Not magic / pixie
+      dust" tricolons replaced with "working software, the people who run it, and a
+      brokerage we run it on" (homepage, about, custom ×2), and the five vertical
+      day-in-the-life scenarios that now name a person (Dana/insurance,
+      Priya/recruiting, James/ria, Maria/property-management, Rosa/title-escrow).
+      The named people are illustrative composites mapped only to facts already in
+      each scenario — no new claims. If you'd rather keep the verticals faceless,
+      say so and I'll revert the names.
+- [ ] **Decide per-vertical tone calibration.** Defaults lean: CPA = tax-season
+      grind, Law = billable-hour pressure, PM = 10pm maintenance call, RE = the
+      9:14pm deal, General = tired-owner-no-specifics. Tell me if any vertical should
+      read warmer/harder/more technical and I'll retune.
+- [ ] **Truthfulness fix to confirm (not just a style edit):** "first month free"
+      → "7-day free trial" on `/how-it-works` and `/waitlist`. Those two surfaces
+      were missed by the #262/#290 trial-policy correction and contradicted the rest
+      of the site. Confirm 7-day is current policy (it is everywhere else) — if the
+      policy actually changed, tell me and I'll align all surfaces instead.

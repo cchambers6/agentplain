@@ -333,12 +333,12 @@ export const propertyManagement: VerticalContent = {
 
   valueLoopExample: {
     scenario:
-      "Friday 4:53pm. Tenant maintenance request — water heater leaking, unit 4B.",
+      "Friday 4:53pm, the message every property manager dreads — tenant in unit 4B, water heater leaking.",
     before:
-      "Triage in Buildium, check the work-order history, message the vendor, message the owner, schedule the visit, follow up Monday. ~25 minutes of inbox ping-pong over the weekend.",
+      "Triage in Buildium, check the work-order history, message the vendor, message the owner, schedule the visit, then carry it into the weekend and follow up Monday. About 25 minutes of inbox ping-pong, most of it Saturday.",
     after:
-      "The fleet classified the request as urgent water damage and — once your Buildium API key is connected — pulled unit 4B's three prior plumbing tickets; it drafted the vendor dispatch message, drafted the owner notification with the likely cost band, and proposed a Saturday morning slot. Everything queued for the property manager's review.",
+      "The fleet classified the request as urgent water damage and — once Maria's Buildium API key is connected — pulled unit 4B's three prior plumbing tickets; it drafted the vendor dispatch, drafted the owner notification with the likely cost band, and proposed a Saturday morning slot. All of it queued for Maria's review.",
     outcome:
-      "One review, three approvals, one Saturday visit. The manager spends the weekend on owners and tenants, not on coordination.",
+      "One review, three approvals, one Saturday visit. Maria spends the weekend on her owners and tenants, not on coordination.",
   },
 };

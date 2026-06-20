@@ -233,8 +233,9 @@ export default function HowItWorksPage() {
             See the loop run on your own inbox.
           </h2>
           <p className="mt-6 max-w-2xl text-paper/75">
-            First month free. Month-to-month. Cancel anytime. By month two, the
-            fleet has either earned its seat or it hasn&apos;t.
+            7-day free trial, card at signup. Month-to-month. Cancel anytime.
+            By the time the trial ends, the fleet has either earned its seat or
+            it hasn&apos;t.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Link

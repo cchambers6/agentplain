@@ -313,12 +313,12 @@ export const titleEscrow: VerticalContent = {
 
   valueLoopExample: {
     scenario:
-      "Closing is 9am Thursday. Wednesday 5pm a buyer's lender flags a payoff discrepancy.",
+      "Closing is 9am Thursday. Wednesday 5pm, the buyer's lender flags a payoff discrepancy on Rosa's file.",
     before:
       "Pull the title file in SoftPro, find the prior payoff, re-request from the lender, draft the wire instructions update, notify the buyer's agent, the seller's agent, and the lender, then chase confirmations until 8pm. ~90 minutes.",
     after:
-      "The fleet identified the discrepancy at 5:04pm, pulled the original payoff (from the closing file once Qualia is connected, otherwise from the figures the closer confirms), drafted the lender re-request, and drafted the agent + buyer notifications with the new figure; the production-system update drops into SoftPro once that connector is built. All four messages are waiting in the closer's review queue at 5:08pm.",
+      "The fleet caught the discrepancy at 5:04pm, pulled the original payoff (from the closing file once Qualia is connected, otherwise from the figures Rosa confirms), drafted the lender re-request, and drafted the agent and buyer notifications with the new figure; the production-system update drops into SoftPro once that connector is built. All four messages are waiting in Rosa's review queue at 5:08pm.",
     outcome:
-      "The closer ships four reviewed messages before 5:30pm. Thursday's closing happens on schedule.",
+      "Rosa ships four reviewed messages before 5:30pm and goes home. Thursday's closing happens on schedule.",
   },
 };

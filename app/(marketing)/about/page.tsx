@@ -178,10 +178,9 @@ export default function AboutPage() {
             </p>
             <p>
               <span className="text-ink">Not magic.</span> Intelligence
-              rooted in reality means real product, real operators, and the
-              working precursor we run on our own brokerage. We don&apos;t sell
-              pixie dust. Every claim on this site cites a memory rule or a
-              working precursor we can show you.
+              rooted in reality means there&apos;s a working version running on
+              our own brokerage right now, operated by real people. Every claim
+              on this site points to a working precursor we can show you.
             </p>
             <p>
               <span className="text-ink">
@@ -199,8 +198,9 @@ export default function AboutPage() {
             <p>
               <span className="text-ink">Not a chatbot.</span> The fleet runs
               in the background and surfaces drafts for your review. It&apos;s
-              not on your homepage waiting to be prompted. Capable AI
-              partners, scoped to the recurring jobs of your business.
+              not a box on your homepage waiting to be prompted. It&apos;s
+              scoped to the recurring jobs of your business and it works whether
+              you&apos;re looking or not.
             </p>
             <p>
               <span className="text-ink">

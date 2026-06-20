@@ -121,6 +121,91 @@ export default function StyleGuidePage() {
         </div>
       </section>
 
+      {/* ── DESIGN BAKE-OFF ──────────────────────────────────────────────────
+          Five full design directions, each at its own scoped route. This banner
+          is the entry point: open /style and pick a direction to walk through.
+          Preview-only — none of these land on main until one is chosen. */}
+      <section id="bake-off" className="border-b border-rule bg-paper-deep">
+        <div className="container-wide py-16 md:py-20">
+          <span className="dateline mb-6">Bake-off · 2026-06-20 · pick one</span>
+          <h2 className="max-w-[44rem] font-display text-3xl leading-[1.08] text-ink sm:text-4xl md:text-[2.75rem]">
+            Five design directions, one preview. Walk each, then choose.
+          </h2>
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-soft">
+            Each direction is a complete, self-contained take on the agentplain
+            look — its own type, color, rhythm, and Plaino treatment. They live
+            side by side so you can compare without hopping between branches. Tap
+            a card to open the full direction.
+          </p>
+          <ol className="mt-10 grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                n: "01",
+                name: "Heritage Plains",
+                href: "/style/direction-1-heritage-plains/",
+                blurb:
+                  "Editorial Americana — paper, ink, and a spent clay accent. Made-by-a-person warmth; almanac, not dashboard.",
+              },
+              {
+                n: "02",
+                name: "Minimal Engineering",
+                href: "/style/direction-2-minimal-engineering/",
+                blurb:
+                  "Linear-grade restraint. Tight grid, mono detail, near-monochrome. Precision reads as trust.",
+              },
+              {
+                n: "03",
+                name: "Warm Service Partnership",
+                href: "/style/direction-3-warm-service/",
+                blurb:
+                  "Human and reassuring — soft surfaces, generous spacing. The done-for-you partner, not the tool.",
+              },
+              {
+                n: "04",
+                name: "Bold Working-Class",
+                href: "/style/direction-4-bold-working-class/",
+                blurb:
+                  "Loud and confident — heavy type, high contrast, pictogram Plaino. For the trades, in their voice.",
+              },
+              {
+                n: "05",
+                name: "Editorial Newsroom",
+                href: "/style/direction-5-editorial-newsroom/",
+                blurb:
+                  "Front-page authority — serif headlines, column rules, datelines. Credibility through editorial craft.",
+              },
+            ].map((d) => (
+              <li key={d.href} className="bg-paper">
+                <a
+                  href={d.href}
+                  className="group flex h-full flex-col p-6 transition-colors hover:bg-paper-bright md:p-7"
+                >
+                  <span className="font-mono text-[11px] uppercase tracking-eyebrow text-clay">
+                    Direction {d.n}
+                  </span>
+                  <span className="mt-3 font-display text-2xl leading-tight text-ink group-hover:text-clay">
+                    {d.name}
+                  </span>
+                  <span className="mt-3 flex-1 text-[15px] leading-relaxed text-ink-soft">
+                    {d.blurb}
+                  </span>
+                  <span className="mt-5 font-mono text-[12px] uppercase tracking-eyebrow text-mute group-hover:text-ink">
+                    Open direction →
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ol>
+          <p className="field-note mt-8 max-w-xl">
+            Field note — preview branch{" "}
+            <code className="font-mono text-ink">
+              preview/design-bake-off-2026-06-20
+            </code>
+            . Nothing here is merged; choosing a winner is a separate step.
+          </p>
+        </div>
+      </section>
+
       {/* TOKENS — color */}
       <Section
         id="tokens"

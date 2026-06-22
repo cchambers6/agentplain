@@ -90,10 +90,10 @@ function renderHtml(args: {
   headline: string;
 }): string {
   return `<!doctype html>
-<html><body style="font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif; color:#1A1A1F; background:#F7F4ED; padding:32px;">
-  <h2 style="font-weight:500; color:#1A1A1F;">Your morning briefing is ready.</h2>
+<html><body style="font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif; color:#1A1612; background:#F5F0E6; padding:32px;">
+  <h2 style="font-weight:500; color:#1A1612;">Your morning briefing is ready.</h2>
   <p>${escapeHtml(args.headline)} for ${escapeHtml(args.workspaceName)} — ${escapeHtml(args.today)}.</p>
-  <p><a href="${args.briefingsUrl}" style="display:inline-block; padding:12px 20px; background:#1A1A1F; color:#F7F4ED; text-decoration:none; font-weight:500;">Read the briefing</a></p>
+  <p><a href="${args.briefingsUrl}" style="display:inline-block; padding:12px 20px; background:#1A1612; color:#F5F0E6; text-decoration:none; font-weight:500;">Read the briefing</a></p>
   <p style="font-size:13px; color:#726A5E;">Briefings land daily Mon–Fri at ~09:00 ET. <a href="${args.briefingsUrl}" style="color:#726A5E;">Turn them off from the briefings page</a> if you'd rather not get this email.</p>
   <p style="font-size:13px; color:#726A5E;">Plaino, your service partner at agentplain</p>
   <p style="font-size:12px; color:#726A5E; margin-top:24px;">You're receiving this because you have an agentplain workspace.</p>

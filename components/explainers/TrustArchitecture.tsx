@@ -26,11 +26,11 @@
 // `import React` required: tsconfig uses jsx: preserve (classic runtime).
 import React from "react";
 
-const PAPER = "#F7F4ED";
-const PAPER_DEEP = "#EDE9DE";
-const INK = "#1A1A1F";
-const CLAY = "#B65D3A";
-const RULE = "#E0DAC9";
+const PAPER = "#F5F0E6";
+const PAPER_DEEP = "#ECE5D6";
+const INK = "#1A1612";
+const CLAY = "#B85540";
+const RULE = "#D8CFBA";
 const MOSS = "#3F5C3F";
 
 interface Layer {

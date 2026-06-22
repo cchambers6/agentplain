@@ -47,25 +47,28 @@ const FLAG_JSON = args.includes("--json");
 // Add new ratified tokens here when the design system grows.
 
 const CANONICAL_HEX = new Set([
-  // Spec tokens (lib/brand/tokens.ts)
-  "#F7F4ED", // paper
-  "#EDE9DE", // paper-deep
-  "#1A1A1F", // ink
-  "#2E2E33", // ink-soft
-  "#B65D3A", // clay
-  "#9A4D2F", // clay-deep
+  // Spec tokens (lib/brand/tokens.ts) — Heritage Plains Editorial values (PR #316,
+  // 2026-06-22). Newsprint cream base + warm letterpress ink. Keep in lockstep
+  // with lib/brand/tokens.ts.
+  "#F5F0E6", // paper (newsprint cream)
+  "#ECE5D6", // paper-deep
+  "#1A1612", // ink (warm letterpress)
+  "#34302A", // ink-soft
+  "#B85540", // clay
+  "#97402E", // clay-deep
   "#3F5C3F", // moss
   "#B43A3A", // flag
-  "#726A5E", // mute
-  "#E0DAC9", // rule
-  // Additional derived values ratified in globals.css / component usage
-  "#F7F4ED",
-  "#D9D5C7", // mid-rule
-  // Support tokens (additive 2026-06-19; docs/brand/design-mirror-2026-06-19.md)
+  "#726A5E", // mute (WCAG-AA caption — unchanged)
+  "#D8CFBA", // rule
+  "#C2B69B", // mid-rule
+  // Support + heritage earth tones (design-mirror 2026-06-19 + heritage rollout 2026-06-22)
   "#1F3D2E", // forest
+  "#16291F", // forest-deep
   "#C8A24A", // wheat
-  "#FCFAF4", // paper-bright
+  "#FBF8F1", // paper-bright
   "#F3E7E0", // clay-wash
+  "#9C8B73", // dust (decorative)
+  "#7A8B6F", // sage (decorative)
 ]);
 
 // Deprecated tokens — always flagged even if in the canonical-adjacent zone.

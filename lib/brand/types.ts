@@ -39,6 +39,13 @@ export interface BrandColors {
   clayWash?: BrandColor;
   /** A slightly stronger hairline than `rule`, for figure frames. Heritage pull. */
   midRule?: BrandColor;
+  // ── Heritage Plains Editorial rollout (2026-06-22, PR #316) ──────────────────
+  /** The darkest field tone — full-bleed footer / closing-panel ground. */
+  forestDeep?: BrandColor;
+  /** Weathered tan. DECORATIVE / large-text only (lighter than `mute`, fails AA small). */
+  dust?: BrandColor;
+  /** Muted field green. DECORATIVE accent only (fails AA at small sizes). */
+  sage?: BrandColor;
 }
 
 export interface BrandTypography {

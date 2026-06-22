@@ -53,7 +53,7 @@ export function StatusTimeline({
             <li key={e.id} className="mb-6 last:mb-0">
               <span
                 className="absolute -left-[5px] mt-1.5 h-2.5 w-2.5 "
-                style={{ backgroundColor: "var(--portal-accent, #B65D3A)" }}
+                style={{ backgroundColor: "var(--portal-accent, #B85540)" }}
                 aria-hidden
               />
               <div className="text-sm font-medium text-ink">{e.label}</div>

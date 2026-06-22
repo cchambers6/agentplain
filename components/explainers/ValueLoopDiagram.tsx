@@ -23,10 +23,10 @@ import React from "react";
 // Brand hexes (source: lib/brand/tokens.ts). Inlined as literals because SVG
 // presentation attributes can't read Tailwind tokens, and the diagram must
 // render identically under node:test (no CSS pipeline).
-const PAPER = "#F7F4ED";
-const INK = "#1A1A1F";
-const CLAY = "#B65D3A";
-const RULE = "#E0DAC9";
+const PAPER = "#F5F0E6";
+const INK = "#1A1612";
+const CLAY = "#B85540";
+const RULE = "#D8CFBA";
 const MUTE = "#726A5E";
 
 interface LoopNode {

@@ -30,6 +30,7 @@ export default function AboutPage() {
         <HeroBackdrop scene="about-hero" />
         <div className="relative container-wide py-20 md:py-28">
           <p className="eyebrow mb-3">About</p>
+          <p className="dateline mb-5">Atlanta · 2026</p>
           <p className="font-display text-base leading-snug text-clay md:text-lg">
             {tokens.tagline}
           </p>
@@ -51,7 +52,7 @@ export default function AboutPage() {
             <p className="eyebrow mb-4">The thesis</p>
           </div>
           <div className="max-w-prose space-y-6 text-lg leading-relaxed text-ink-soft">
-            <p>
+            <p className="drop-cap">
               Local business owners — realtors, mortgage brokers, insurance
               brokers, property managers, title and escrow professionals,
               recruiters, contractors, CPAs, lawyers, RIAs — spend most of
@@ -84,12 +85,12 @@ export default function AboutPage() {
               decide; we hand off to you at the steps where licensed
               judgment lives.
             </p>
-            <p className="text-ink">
+            <blockquote className="pull-quote">
               The fleet handles the systematic work. The service team runs
               the operation. The practitioner does the relationship work.
               That&apos;s the inversion — and we run it for you, not the
               other way around.
-            </p>
+            </blockquote>
           </div>
         </div>
       </section>
@@ -138,15 +139,17 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="border-b border-rule bg-paper">
+      <section className="bg-forest text-paper letterpress-dark">
         <div className="container-wide grid gap-12 py-20 md:grid-cols-[1fr_2fr] md:py-28">
           <div>
-            <p className="eyebrow mb-4">Where we&apos;re going</p>
+            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-paper/60">
+              Where we&apos;re going
+            </p>
           </div>
-          <div className="max-w-prose space-y-5 text-[15px] leading-relaxed text-ink-soft">
-            <p className="font-display text-2xl leading-snug text-ink md:text-3xl">
+          <div className="max-w-prose space-y-5 text-[15px] leading-relaxed text-paper/80">
+            <p className="font-display text-2xl leading-snug text-paper md:text-3xl">
               Local businesses can thrive through access to{" "}
-              <span className="text-clay">
+              <span className="text-wheat">
                 affordable, best-in-class tools and services.
               </span>
             </p>
@@ -221,7 +224,7 @@ export default function AboutPage() {
           <p className="font-mono text-[11px] tracking-eyebrow uppercase text-paper/60">
             The thesis, in one line
           </p>
-          <h2 className="mt-4 max-w-3xl font-display text-4xl leading-tight md:text-5xl">
+          <h2 className="foil mt-4 max-w-3xl font-display text-4xl leading-tight md:text-5xl">
             {tokens.tagline}
           </h2>
           <p className="mt-6 max-w-2xl text-paper/75">

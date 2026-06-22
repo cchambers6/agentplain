@@ -9,35 +9,45 @@ import type { BrandTokens } from "./types";
 export const tokens: BrandTokens = {
   colors: {
     paper: {
-      hex: "#F7F4ED",
-      source: "spec §4",
+      // Heritage Plains Editorial rollout (2026-06-22, PR #316 winner): the base
+      // surface is a true newsprint cream, warmed a half-step from the prior
+      // #F7F4ED. ink stays near-black so body contrast is unaffected (≈ 9:1).
+      // Source: app/style/direction-1-heritage-plains/styles.css --h-cream.
+      hex: "#F5F0E6",
+      source: "spec §4 / heritage rollout — newsprint cream (--h-cream)",
     },
     paperDeep: {
       // Derived: tonal step for header strips and card-on-card surfaces. Spec §6 prefers
       // hairline rules over tonal steps, but the existing layouts use a deeper tone; keeping
       // this in-family lets us land the brand without reworking section structure.
-      hex: "#EDE9DE",
-      source: "derived — paper @ -6% L",
+      // Re-grounded to the cream family for the heritage rollout.
+      hex: "#ECE5D6",
+      source: "derived — paper @ -5% L (heritage cream family)",
       derived: true,
     },
     ink: {
-      hex: "#1A1A1F",
-      source: "spec §4",
+      // Heritage rollout: warm near-black (was the neutral-cool #1A1A1F). Reads as
+      // letterpress ink on cream, not screen-black. Source: --h-ink.
+      hex: "#1A1612",
+      source: "spec §4 / heritage rollout — warm letterpress ink (--h-ink)",
     },
     inkSoft: {
-      // Derived: secondary text on paper. Held neutral-cool to match canonical ink.
-      hex: "#2E2E33",
-      source: "derived — ink @ +12% L",
+      // Secondary text on cream — heritage warm body tone (was the cool #2E2E33).
+      // Contrast on cream ≈ 8.5:1, well past WCAG AA. Source: --h-prose body color.
+      hex: "#34302A",
+      source: "derived — heritage warm body (--h-prose), AA on cream",
       derived: true,
     },
     clay: {
-      hex: "#B65D3A",
-      source: "spec §4 (primary accent)",
+      // Heritage clay — a hair more saturated than the prior #B65D3A. Stays the
+      // single primary accent. Source: --h-clay.
+      hex: "#B85540",
+      source: "spec §4 (primary accent) / heritage rollout (--h-clay)",
     },
     clayDeep: {
-      // Derived: hover state for clay CTAs.
-      hex: "#9A4D2F",
-      source: "derived — clay @ -12% L",
+      // Hover state for clay CTAs. Source: --h-clay-deep.
+      hex: "#97402E",
+      source: "derived — clay @ -12% L (--h-clay-deep)",
       derived: true,
     },
     moss: {
@@ -49,13 +59,17 @@ export const tokens: BrandTokens = {
       source: "spec §4 (compliance flag / error utility only)",
     },
     mute: {
+      // UNCHANGED through the heritage rollout: this is the WCAG-AA-tuned caption /
+      // small-print color (4.85:1 on cream). Heritage `dust` (#9C8B73) is lighter and
+      // is decorative/large-text only — small captions keep using `mute`.
       hex: "#726A5E",
       source: "spec §4 (captions, citations, secondary text); darkened from #8C8478 for WCAG AA — 4.85:1 on paper",
     },
     rule: {
-      // Derived: hairline rule color, mute-family.
-      hex: "#E0DAC9",
-      source: "derived — mute @ ~20% on paper",
+      // Hairline rule color. Heritage line tone — a touch stronger than the prior
+      // #E0DAC9 so editorial section rules read on cream. Source: --h-line.
+      hex: "#D8CFBA",
+      source: "derived — heritage hairline (--h-line)",
       derived: true,
     },
     // ── Support tokens (additive, 2026-06-19) ─────────────────────────────────
@@ -69,14 +83,21 @@ export const tokens: BrandTokens = {
       source: "design-mirror §3/§6 (Patagonia/heritage) — deep field tone, never a status green",
       derived: true,
     },
+    forestDeep: {
+      // Heritage rollout: the darkest field tone, for full-bleed footer + closing
+      // panels (the heritage footer/CTA ground). Source: --h-forest-deep.
+      hex: "#16291F",
+      source: "heritage rollout (--h-forest-deep) — full-bleed footer / closing panel ground",
+      derived: true,
+    },
     wheat: {
       hex: "#C8A24A",
       source: "design-mirror §5/§6 (Mailchimp/heritage) — rare harvest accent, ≤1 use per long page",
       derived: true,
     },
     paperBright: {
-      hex: "#FCFAF4",
-      source: "design-mirror §2 (MUJI) — half-step above paper; no-shadow surface lift",
+      hex: "#FBF8F1",
+      source: "design-mirror §2 (MUJI) / heritage (--h-paper-bright) — half-step above cream; no-shadow lift",
       derived: true,
     },
     clayWash: {
@@ -85,8 +106,22 @@ export const tokens: BrandTokens = {
       derived: true,
     },
     midRule: {
-      hex: "#D9D5C7",
-      source: "design-mirror §6 (heritage) — stronger hairline for figure frames; already gate-known",
+      hex: "#C2B69B",
+      source: "heritage rollout (--h-line-strong) — stronger hairline for figure frames + price cards",
+      derived: true,
+    },
+    // Heritage earth tones (2026-06-22, PR #316). DECORATIVE / large-text only —
+    // both are lighter than `mute` and must NOT back small captions or body copy
+    // (they fail WCAG AA at small sizes). Use on forest panels, dividers, marks,
+    // and oversized display flourishes. Source: --h-dust / --h-sage.
+    dust: {
+      hex: "#9C8B73",
+      source: "heritage rollout (--h-dust) — weathered tan; decorative / large-text only",
+      derived: true,
+    },
+    sage: {
+      hex: "#7A8B6F",
+      source: "heritage rollout (--h-sage) — muted field green; decorative accent only",
       derived: true,
     },
   },
@@ -127,4 +162,8 @@ export const colorHex = {
   "paper-bright": tokens.colors.paperBright!.hex,
   "clay-wash": tokens.colors.clayWash!.hex,
   "mid-rule": tokens.colors.midRule!.hex,
+  // Heritage rollout (2026-06-22) — bg-forest-deep, text-dust, text-sage, etc.
+  "forest-deep": tokens.colors.forestDeep!.hex,
+  dust: tokens.colors.dust!.hex,
+  sage: tokens.colors.sage!.hex,
 } as const;

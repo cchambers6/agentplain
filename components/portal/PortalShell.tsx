@@ -68,7 +68,7 @@ export function PortalShell({
 /** Accept only a safe hex color; fall back to agentplain clay otherwise so a
  *  bad value can never inject CSS. */
 function sanitizeColor(raw: string): string {
-  return /^#[0-9a-fA-F]{3,8}$/.test(raw.trim()) ? raw.trim() : "#B65D3A";
+  return /^#[0-9a-fA-F]{3,8}$/.test(raw.trim()) ? raw.trim() : "#B85540";
 }
 
 /** A primary action button rendered in the portal accent color. */
@@ -86,7 +86,7 @@ export function PortalAccentButton({
       type={type}
       disabled={disabled}
       className="inline-flex items-center px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-      style={{ backgroundColor: "var(--portal-accent, #B65D3A)" }}
+      style={{ backgroundColor: "var(--portal-accent, #B85540)" }}
     >
       {children}
     </button>

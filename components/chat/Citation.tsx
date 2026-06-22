@@ -85,7 +85,7 @@ export function Citation({ source }: { source: CitationSource }) {
             onClick={() => setOpen(false)}
             aria-hidden="true"
           />
-          <div className="relative z-10 max-h-[80vh] w-full max-w-lg overflow-auto rounded-lg border border-rule bg-paper p-5 shadow-lg">
+          <div className="relative z-10 max-h-[80vh] w-full max-w-lg overflow-auto border border-rule bg-paper p-5 shadow-[0_16px_48px_-16px_rgba(26,22,18,0.28)]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p

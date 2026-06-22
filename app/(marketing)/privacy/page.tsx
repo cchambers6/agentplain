@@ -27,8 +27,9 @@ export default function PrivacyPage() {
           <h1 className="mt-2 max-w-4xl font-display text-4xl leading-[1.08] text-ink sm:text-5xl md:text-[3.5rem] md:leading-[1.04]">
             What we collect, why, and how we protect it.
           </h1>
-          <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft md:text-xl">
-            Last updated: June 17, 2026. This policy describes how agentplain
+          <p className="dateline mt-6">Last updated: June 17, 2026</p>
+          <p className="mt-8 max-w-prose text-lg leading-relaxed text-ink-soft md:text-xl">
+            This policy describes how agentplain
             ("we", "us") handles data from customers and their connected
             systems. Plain language, no surprises. If anything here is unclear,
             email{" "}
@@ -40,9 +41,9 @@ export default function PrivacyPage() {
         </div>
       </section>
 
-      <Section title="What we collect">
+      <Section title="What we collect" label="§ 01">
         <Body>
-          <p>
+          <p className="drop-cap">
             agentplain is a service partnership. To do the work we promise, we
             need read access to your operating systems — email (Gmail or
             Microsoft 365), calendar, your file substrate (Google Drive or
@@ -66,7 +67,7 @@ export default function PrivacyPage() {
         </Body>
       </Section>
 
-      <Section title="How we use it">
+      <Section title="How we use it" label="§ 02">
         <Body>
           <p>
             Every piece of data we hold is scoped to a single customer
@@ -87,7 +88,7 @@ export default function PrivacyPage() {
         </Body>
       </Section>
 
-      <Section title="No training, and how we monitor for abuse">
+      <Section title="No training, and how we monitor for abuse" label="§ 03">
         <Body>
           <p>
             <strong>We never use your data to train models.</strong> Your chats
@@ -117,7 +118,7 @@ export default function PrivacyPage() {
         </Body>
       </Section>
 
-      <Section title="Encryption and isolation">
+      <Section title="Encryption and isolation" label="§ 04">
         <Body>
           <p>
             Customer-facing payloads (approval queue items, handoff log
@@ -141,7 +142,7 @@ export default function PrivacyPage() {
         </Body>
       </Section>
 
-      <Section title="Subprocessors">
+      <Section title="Subprocessors" label="§ 05">
         <Body>
           <p>
             We use a small set of named subprocessors. Each is contractually
@@ -183,7 +184,7 @@ export default function PrivacyPage() {
         </Body>
       </Section>
 
-      <Section title="Your rights">
+      <Section title="Your rights" label="§ 06">
         <Body>
           <p>
             You can export your workspace data and close the workspace from
@@ -206,7 +207,7 @@ export default function PrivacyPage() {
         </Body>
       </Section>
 
-      <Section title="GDPR and CCPA rights">
+      <Section title="GDPR and CCPA rights" label="§ 07">
         <Body>
           <p>
             Depending on where you and your clients are located, you may have
@@ -260,7 +261,7 @@ export default function PrivacyPage() {
         </Body>
       </Section>
 
-      <Section title="Liability boundaries">
+      <Section title="Liability boundaries" label="§ 08">
         <Body>
           <p>
             agentplain is not a licensed broker, lender, carrier, attorney,
@@ -274,14 +275,14 @@ export default function PrivacyPage() {
         </Body>
       </Section>
 
-      <Section title="Changes to this policy">
+      <Section title="Changes to this policy" label="§ 09">
         <Body>
           <p>
             Material changes are announced by email to your workspace owner at
             least 30 days before they take effect. The latest version always
             lives at this URL.
           </p>
-          <p className="text-sm text-ink-soft">
+          <p className="font-mono text-[12px] text-mute">
             Contact:{" "}
             <a className="underline text-clay" href="mailto:hello@agentplain.com">
               hello@agentplain.com
@@ -310,20 +311,23 @@ export default function PrivacyPage() {
 function Section({
   title,
   eyebrow,
+  label,
   children,
 }: {
   title: string;
   eyebrow?: string;
+  label?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="border-b border-rule">
       <div className="container-wide py-16 md:py-20">
         {eyebrow && <p className="eyebrow mb-3">{eyebrow}</p>}
-        <h2 className="max-w-3xl font-display text-2xl leading-snug text-ink md:text-3xl">
+        {label && <p className="figure-caption mb-2">{label}</p>}
+        <h2 className="max-w-prose font-display text-2xl leading-snug text-ink md:text-3xl">
           {title}
         </h2>
-        <div className="mt-6 max-w-3xl space-y-5 text-base leading-relaxed text-ink-soft md:text-lg">
+        <div className="mt-6 max-w-prose space-y-5 text-base leading-relaxed text-ink-soft md:text-lg">
           {children}
         </div>
       </div>

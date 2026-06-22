@@ -23,10 +23,10 @@ const renderHtml = (req: MagicLinkDeliveryRequest): string => {
         ? "Accept your invitation"
         : "Sign in to agentplain";
   return `<!doctype html>
-<html><body style="font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif; color:#1A1A1F; background:#F7F4ED; padding:32px;">
+<html><body style="font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif; color:#1A1612; background:#F5F0E6; padding:32px;">
   <p>${greeting}</p>
   <p>${cta} by clicking the link below. This link expires in 15 minutes and can only be used once.</p>
-  <p><a href="${req.verifyUrl}" style="display:inline-block; padding:12px 20px; background:#1A1A1F; color:#F7F4ED; text-decoration:none; font-weight:500;">${cta}</a></p>
+  <p><a href="${req.verifyUrl}" style="display:inline-block; padding:12px 20px; background:#1A1612; color:#F5F0E6; text-decoration:none; font-weight:500;">${cta}</a></p>
   <p style="font-size:13px; color:#726A5E;">If you didn't request this, ignore the email — nothing happens unless you click.</p>
   <p style="font-size:13px; color:#726A5E;">Plaino, your service partner at agentplain</p>
   <p style="font-size:12px; color:#726A5E; margin-top:24px;">You're receiving this because you have an agentplain workspace.</p>

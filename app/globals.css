@@ -7,26 +7,38 @@
    Direct CSS-variable reads are reserved for base body/html and ::selection. */
 :root {
   color-scheme: light;
-  --color-paper: #F7F4ED;
-  --color-paper-deep: #EDE9DE;
-  --color-ink: #1A1A1F;
-  --color-ink-soft: #2E2E33;
-  --color-clay: #B65D3A;
-  --color-clay-deep: #9A4D2F;
+  /* Heritage Plains Editorial rollout (2026-06-22, PR #316). These --color-* vars
+     are the hand-kept mirror of lib/brand/tokens.ts (the Tailwind utilities read
+     tokens.ts directly; these back the body, ::selection, skip-link + focus rings).
+     Keep both in sync. Newsprint cream base + warm letterpress ink. */
+  --color-paper: #F5F0E6;
+  --color-paper-deep: #ECE5D6;
+  --color-ink: #1A1612;
+  --color-ink-soft: #34302A;
+  --color-clay: #B85540;
+  --color-clay-deep: #97402E;
   --color-moss: #3F5C3F;
   --color-flag: #B43A3A;
   --color-mute: #726A5E;
-  --color-rule: #E0DAC9;
-  /* Support tokens (additive 2026-06-19 — docs/brand/design-mirror-2026-06-19.md).
-     Heritage earth tones + tonal-layering surfaces extracted from the design-mirror
-     study. Consume via Tailwind utilities (bg-forest, text-wheat, bg-paper-bright,
-     bg-clay-wash, border-mid-rule); the vars below back the editorial utilities in
-     the components layer + the photo-grade overlay. Conner-gated for sign-off. */
+  --color-rule: #D8CFBA;
+  /* Heritage support + earth tones. Consume via Tailwind utilities (bg-forest,
+     bg-forest-deep, text-wheat, text-dust, text-sage, bg-paper-bright, bg-clay-wash,
+     border-mid-rule). dust + sage are DECORATIVE / large-text only (lighter than
+     mute — never back small captions or body copy). */
   --color-forest: #1F3D2E;
+  --color-forest-deep: #16291F;
   --color-wheat: #C8A24A;
-  --color-paper-bright: #FCFAF4;
+  --color-paper-bright: #FBF8F1;
   --color-clay-wash: #F3E7E0;
-  --color-mid-rule: #D9D5C7;
+  --color-mid-rule: #C2B69B;
+  --color-dust: #9C8B73;
+  --color-sage: #7A8B6F;
+
+  /* Paper grain — a faint fractal-noise wash so the cream reads as stock, not a
+     flat fill. Inlined SVG (no asset dependency). Tiled at 160px, 3.5% opacity;
+     invisible up close, present in aggregate. Heritage DNA: "subtle paper grain
+     on backgrounds." Source: direction-1 styles.css. */
+  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
 }
 
 html,
@@ -40,6 +52,10 @@ body {
 
 body {
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  /* Global paper grain. Fixed so it doesn't scroll-shear, and behind everything. */
+  background-image: var(--paper-grain);
+  background-repeat: repeat;
+  background-attachment: fixed;
 }
 
 ::selection {
@@ -52,6 +68,26 @@ body {
     font-family: var(--font-display), Georgia, serif;
     font-weight: 400;
     letter-spacing: -0.01em;
+    /* Letterpress on cream — a hair of light from above, a soft dark settle below.
+       Heritage DNA: "letterpress-style headings." Calibrated faint so it embosses
+       on the cream ground without muddying small headings; on the dark forest/ink
+       panels the `.letterpress-dark` helper (below) overrides with the inverse. */
+    text-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.42),
+      0 -1px 0 rgba(26, 22, 18, 0.05);
+  }
+
+  /* Headings set on a dark ground (bg-ink / bg-forest / bg-forest-deep closing
+     panels + footer) invert the letterpress: the light-from-above sheen is
+     dropped and a soft dark settle is kept so the type still presses in. */
+  .letterpress-dark h1,
+  .letterpress-dark h2,
+  .letterpress-dark h3,
+  h1.letterpress-dark,
+  h2.letterpress-dark,
+  h3.letterpress-dark,
+  .letterpress-dark .h-display-shadow {
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.22);
   }
 
   /* WCAG 2.4.7 — keyboard focus must be visible on every interactive element.
@@ -121,6 +157,12 @@ body {
     @apply h-px w-full bg-rule;
   }
 
+  /* Column label on a dark ground (heritage footer) — the `.eyebrow` mono label
+     re-toned for cream-on-forest where `mute` would disappear. */
+  .footer-label {
+    @apply mb-4 font-mono text-[11px] uppercase tracking-eyebrow text-paper/50;
+  }
+
   /* Primary CTA — clay on paper. spec §6. */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-none border border-clay bg-clay px-6 py-3 font-sans text-sm font-medium text-paper transition hover:border-clay-deep hover:bg-clay-deep;
@@ -174,6 +216,45 @@ body {
      hairline frame. Heritage pull (Filson/Pendleton est.-18xx datelines). */
   .dateline {
     @apply inline-flex items-center gap-2 border border-mid-rule px-3 py-1.5 font-mono text-[10px] uppercase tracking-eyebrow text-mute;
+  }
+
+  /* ── Heritage Plains Editorial rollout (2026-06-22, PR #316) ────────────────── */
+
+  /* Foil — a brushed metallic wheat sweep for ONE premium moment per long page
+     (a price headline, the closing thesis line). Heritage DNA: "foil-effect
+     optional for premium moments." Clips the gradient to the glyphs; drops the
+     letterpress shadow so the sheen reads clean. Never stack two per fold. */
+  .foil {
+    background: linear-gradient(
+      100deg,
+      var(--color-wheat) 0%,
+      #e9d28a 28%,
+      #a7842f 52%,
+      #e9d28a 74%,
+      var(--color-wheat) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: none;
+  }
+
+  /* Photo figure — the editorial frame for commissioned golden-hour photography
+     (briefs: docs/brand/photography-briefs-2026-06-22.md). A hairline-bordered
+     figure on the paper-deep ground so the image reads as a plate, not a
+     background texture (the same "figure, not texture" rule the hero illustration
+     follows). Pair the <img> with `img-heritage` for the one warm grade. NOTE:
+     this is for PHOTOGRAPHY only — Plaino marks + logos keep their own treatment
+     and are never wrapped/altered by the heritage rollout. */
+  .photo-figure {
+    @apply border border-mid-rule bg-paper-deep;
+  }
+  .photo-figure img {
+    @apply block h-auto w-full object-cover;
+  }
+  /* Mono plate caption beneath a figure — heritage "captions in monospace." */
+  .figure-caption {
+    @apply mt-3 font-mono text-[11px] uppercase tracking-eyebrow text-mute;
   }
 }
 

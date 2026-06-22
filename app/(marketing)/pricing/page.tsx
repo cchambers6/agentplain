@@ -123,7 +123,7 @@ export default function PricingPage() {
       <section className="relative overflow-hidden border-b border-rule bg-paper">
         <HeroBackdrop scene="pricing" />
         <div className="relative container-wide py-20 md:py-28">
-          <p className="eyebrow mb-6">Pricing</p>
+          <span className="dateline mb-6 inline-block">Plans · 2026</span>
           <h1 className="max-w-4xl font-display text-5xl leading-[1.05] text-ink md:text-7xl md:leading-[1.02]">
             Three ways to partner.
             <br />
@@ -160,6 +160,7 @@ export default function PricingPage() {
         title="Same fleet, different service shape."
         intro="Pick the cadence and depth of partnership your shop needs. Switch up or down as your ops evolve."
       >
+        <span className="dateline mb-8 inline-block">Service-partnership tiers</span>
         <div className="grid gap-px overflow-hidden border border-rule bg-rule lg:grid-cols-3">
           <TierColumn
             name="Regular"
@@ -281,6 +282,7 @@ export default function PricingPage() {
       </Section>
 
       <Section
+        tone="forest"
         eyebrow="What ships with every tier"
         title="The same value loop, the same guardrails."
       >
@@ -440,7 +442,11 @@ function TierColumn({
       }`}
     >
       <div className="flex items-baseline justify-between">
-        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+        <p
+          className={`font-mono text-[11px] tracking-eyebrow uppercase ${
+            featured ? "foil" : "text-clay"
+          }`}
+        >
           {name}
         </p>
         {featured ? (

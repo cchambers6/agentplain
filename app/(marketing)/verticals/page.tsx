@@ -28,7 +28,7 @@ export default function VerticalsIndexPage() {
       <section className="relative overflow-hidden border-b border-rule bg-paper">
         <HeroBackdrop scene="verticals" />
         <div className="relative container-wide py-20 md:py-28">
-          <p className="eyebrow mb-6">All verticals</p>
+          <p className="dateline mb-6">Ten verticals · 2026</p>
           <h1 className="max-w-4xl font-display text-5xl leading-[1.05] text-ink md:text-7xl md:leading-[1.02]">
             Ten verticals.
             <br />
@@ -81,21 +81,23 @@ export default function VerticalsIndexPage() {
       </Section>
 
       <Section
-        tone="deep"
+        tone="forest"
         eyebrow="Outside the tiers?"
         title="When the productized tiers don't cover it, we scope custom."
         intro="Bespoke compliance corpus, white-label, custom integration to a tool that isn't on the roadmap, 100+ seats. Different from Max (a tier with non-standard scope): /custom is engagement work against a written spec."
       >
-        <div className="border border-rule bg-paper p-8 md:p-10">
-          <p className="eyebrow mb-3">Custom engagement</p>
-          <p className="max-w-3xl text-[15px] leading-relaxed text-ink-soft">
-            Starts at $5K. Typical scope $5K–$15K plus $200–$500/mo
-            maintenance. Scoping call, written spec, 4–6 week build, handoff,
-            ongoing maintenance. No surprise charges.
+        <div className="border border-mid-rule p-8 md:p-10">
+          <p className="mb-3 font-mono text-[11px] uppercase tracking-eyebrow text-wheat">
+            Custom engagement
+          </p>
+          <p className="max-w-3xl text-[15px] leading-relaxed text-paper/80">
+            Starts at <span className="foil">$5K</span>. Typical scope
+            $5K–$15K plus $200–$500/mo maintenance. Scoping call, written spec,
+            4–6 week build, handoff, ongoing maintenance. No surprise charges.
           </p>
           <Link
             href="/custom"
-            className="mt-5 inline-flex items-center gap-2 text-ink underline"
+            className="mt-5 inline-flex items-center gap-2 text-paper underline"
           >
             Build with us →
           </Link>

@@ -28,8 +28,9 @@ export default function AcceptableUsePage() {
           <h1 className="mt-2 max-w-4xl font-display text-4xl leading-[1.08] text-ink sm:text-5xl md:text-[3.5rem] md:leading-[1.04]">
             How agentplain may, and may not, be used.
           </h1>
-          <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft md:text-xl">
-            Last updated: June 17, 2026. This policy is part of our{" "}
+          <p className="dateline mt-6">Last updated: June 17, 2026</p>
+          <p className="mt-8 max-w-prose text-lg leading-relaxed text-ink-soft md:text-xl">
+            This policy is part of our{" "}
             <Link className="underline text-clay" href="/terms">
               terms of service
             </Link>
@@ -43,7 +44,7 @@ export default function AcceptableUsePage() {
         </div>
       </section>
 
-      <Section title="The short version">
+      <Section title="The short version" label="§ 01">
         <p>
           Use agentplain to run your business. Don&rsquo;t use it to attack the
           service, copy how it works, harvest what&rsquo;s in it, or resell it.
@@ -53,7 +54,7 @@ export default function AcceptableUsePage() {
         </p>
       </Section>
 
-      <Section title="Fair-use rate limits">
+      <Section title="Fair-use rate limits" label="§ 02">
         <p>
           Every account operates within per-account rate limits on requests,
           chat volume, connector reads, and model usage. The limits are sized
@@ -68,7 +69,7 @@ export default function AcceptableUsePage() {
         </p>
       </Section>
 
-      <Section title="No extraction of our prompts or logic">
+      <Section title="No extraction of our prompts or logic" label="§ 03">
         <p>
           You agree not to attempt to extract, reconstruct, or reverse-engineer
           agentplain&rsquo;s system prompts, skill definitions, vertical
@@ -86,7 +87,7 @@ export default function AcceptableUsePage() {
         </p>
       </Section>
 
-      <Section title="No scraping of our content">
+      <Section title="No scraping of our content" label="§ 04">
         <p>
           You agree not to use automated means (headless browsers, crawlers,
           scripts, scraping services) to harvest agentplain&rsquo;s marketplace,
@@ -97,7 +98,7 @@ export default function AcceptableUsePage() {
         </p>
       </Section>
 
-      <Section title="No identity probing or capacity abuse">
+      <Section title="No identity probing or capacity abuse" label="§ 05">
         <p>
           You agree not to run high-volume identity tests, credential-stuffing,
           or systematic probing against sign-in, sign-up, or any authentication
@@ -112,7 +113,7 @@ export default function AcceptableUsePage() {
         </p>
       </Section>
 
-      <Section title="No reselling or repackaging the service">
+      <Section title="No reselling or repackaging the service" label="§ 06">
         <p>
           Your subscription is for your own business&rsquo;s use. You agree not
           to resell, sublicense, or repackage agentplain capacity to third
@@ -122,7 +123,7 @@ export default function AcceptableUsePage() {
         </p>
       </Section>
 
-      <Section title="No reverse engineering of the agent">
+      <Section title="No reverse engineering of the agent" label="§ 07">
         <p>
           You agree not to decompile, disassemble, or otherwise attempt to
           derive the source code, model weights, or internal architecture of
@@ -131,7 +132,7 @@ export default function AcceptableUsePage() {
         </p>
       </Section>
 
-      <Section title="General prohibited uses">
+      <Section title="General prohibited uses" label="§ 08">
         <p>
           You also agree not to use agentplain to break the law in your
           vertical; to send communications that violate CAN-SPAM, the TCPA,
@@ -142,7 +143,7 @@ export default function AcceptableUsePage() {
         </p>
       </Section>
 
-      <Section title="How we enforce this">
+      <Section title="How we enforce this" label="§ 09">
         <p>
           We monitor access patterns for abuse — and for nothing else. (We do
           not use your activity to train models; see our{" "}
@@ -165,13 +166,13 @@ export default function AcceptableUsePage() {
         </p>
       </Section>
 
-      <Section title="Changes to this policy">
+      <Section title="Changes to this policy" label="§ 10">
         <p>
           Material changes are announced by email to your workspace owner at
           least 30 days before they take effect. The latest version always lives
           at this URL.
         </p>
-        <p className="text-sm text-ink-soft">
+        <p className="font-mono text-[12px] text-mute">
           Contact:{" "}
           <a className="underline text-clay" href="mailto:hello@agentplain.com">
             hello@agentplain.com
@@ -200,20 +201,23 @@ export default function AcceptableUsePage() {
 function Section({
   title,
   eyebrow,
+  label,
   children,
 }: {
   title: string;
   eyebrow?: string;
+  label?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="border-b border-rule">
       <div className="container-wide py-16 md:py-20">
         {eyebrow && <p className="eyebrow mb-3">{eyebrow}</p>}
-        <h2 className="max-w-3xl font-display text-2xl leading-snug text-ink md:text-3xl">
+        {label && <p className="figure-caption mb-2">{label}</p>}
+        <h2 className="max-w-prose font-display text-2xl leading-snug text-ink md:text-3xl">
           {title}
         </h2>
-        <div className="mt-6 max-w-3xl space-y-5 text-base leading-relaxed text-ink-soft md:text-lg">
+        <div className="mt-6 max-w-prose space-y-5 text-base leading-relaxed text-ink-soft md:text-lg">
           {children}
         </div>
       </div>

@@ -62,7 +62,7 @@ export const metadata: Metadata = {
   },
 };
 
-// Brand theme colour for the browser/PWA chrome — Ink #1A1A1F, no blue.
+// Brand theme colour for the browser/PWA chrome — Ink #1A1612, no blue.
 // In Next 14 themeColor lives on the viewport export, not metadata.
 export const viewport: Viewport = {
   themeColor: tokens.colors.ink.hex,

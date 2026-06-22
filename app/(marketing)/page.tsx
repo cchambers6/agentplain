@@ -204,11 +204,14 @@ export default function HomePage() {
           node — nothing leaves until your name is on it. CODE-SVG, so the five
           labels stay matched to the no-outbound architecture. */}
       <Section
+        tone="forest"
         eyebrow="The shape of it"
         title="Your tools in. Drafts out. You approve. Nothing sends on its own."
         intro="The fleet reads what's already in your systems, does the work that lives between your tools, and lands every result in your queue. You stay the only one who hits send."
       >
-        <div className="border border-rule bg-paper p-4 md:p-8">
+        {/* The conceptual anchor sits on the grounded forest band — one bold
+            pause where the diagram reads as a cream plate on deep field green. */}
+        <div className="border border-mid-rule bg-paper-bright p-4 md:p-8">
           <ValueLoopDiagram />
         </div>
       </Section>
@@ -284,7 +287,7 @@ export default function HomePage() {
       <Section
         eyebrow="Why we exist"
         title="Local business owners spend most of their week on the work they don't love."
-        intro="Email triage, copying data between tools, drafting boilerplate, scheduling, status updates — 60–70% of the week, in most surveys. The work that built the business in the first place — client relationships, judgment calls, growing the book — gets the leftover time."
+        intro="Email triage, copying data between tools, drafting boilerplate, scheduling, status updates: 60–70% of the week, in most surveys. The work that built the business in the first place — client relationships, judgment calls, growing the book — gets the leftover time."
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
           <div className="bg-paper p-8 md:p-10">
@@ -674,7 +677,10 @@ export default function HomePage() {
         title={
           <>
             Local businesses can thrive through access to{" "}
-            <span className="text-clay">
+            {/* The one foil moment on the home page — the harvest-gold premium
+                beat reserved for the thesis line (heritage DNA: foil for premium
+                moments, never stacked). */}
+            <span className="foil">
               affordable, best-in-class tools and services.
             </span>
           </>
@@ -706,8 +712,10 @@ export default function HomePage() {
       </Section>
 
       {/* CLOSING CTA — locked mission line, no realty-only framing.
-          Q9 double CTA: primary self-start, secondary talk-to-a-service-partner. */}
-      <section className="border-b border-rule bg-ink text-paper">
+          Q9 double CTA: primary self-start, secondary talk-to-a-service-partner.
+          Heritage rollout: the grounded close sits on the deepest field tone
+          (forest-deep), with the letterpress emboss inverted for dark type. */}
+      <section className="border-b border-forest-deep bg-forest-deep text-paper letterpress-dark">
         <div className="container-wide py-24 md:py-32">
           <p className="eyebrow mb-6 text-paper/60">{tokens.tagline}</p>
           <p className="max-w-3xl font-display text-3xl leading-[1.15] md:text-5xl md:leading-[1.08]">

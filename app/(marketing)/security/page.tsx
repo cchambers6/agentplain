@@ -27,8 +27,9 @@ export default function SecurityPage() {
           <h1 className="mt-2 max-w-4xl font-display text-4xl leading-[1.08] text-ink sm:text-5xl md:text-[3.5rem] md:leading-[1.04]">
             How we protect your data.
           </h1>
-          <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft md:text-xl">
-            Last updated: June 2, 2026. Architecture-grounded — every claim
+          <p className="dateline mt-6">Last updated: June 2, 2026</p>
+          <p className="mt-8 max-w-prose text-lg leading-relaxed text-ink-soft md:text-xl">
+            Architecture-grounded — every claim
             here maps to a real piece of production code. Questions or
             incident reports:{" "}
             <a className="underline text-clay" href="mailto:hello@agentplain.com">
@@ -39,7 +40,7 @@ export default function SecurityPage() {
         </div>
       </section>
 
-      <Section title="Encryption at rest">
+      <Section title="Encryption at rest" label="§ 01">
         <p>
           Customer-facing payloads — approval queue items, handoff log
           entries, the knowledge substrate documents you connect or upload,
@@ -57,7 +58,7 @@ export default function SecurityPage() {
         </p>
       </Section>
 
-      <Section title="Encryption in transit">
+      <Section title="Encryption in transit" label="§ 02">
         <p>
           All inbound and outbound network traffic uses TLS 1.2 or higher.
           The marketing site, the customer-facing app, the API, and every
@@ -67,7 +68,7 @@ export default function SecurityPage() {
         </p>
       </Section>
 
-      <Section title="Workspace isolation">
+      <Section title="Workspace isolation" label="§ 03">
         <p>
           Every database row in our primary store carries a{" "}
           <code>workspace_id</code> column enforced by row-level security
@@ -83,7 +84,7 @@ export default function SecurityPage() {
         </p>
       </Section>
 
-      <Section title="OAuth scope minimization">
+      <Section title="OAuth scope minimization" label="§ 04">
         <p>
           We request the minimum OAuth scopes needed to deliver the value
           loop. For email connections (Gmail, Microsoft 365), we ask for
@@ -106,7 +107,7 @@ export default function SecurityPage() {
         </p>
       </Section>
 
-      <Section title="Audit logs">
+      <Section title="Audit logs" label="§ 05">
         <p>
           Every agent action — every draft, every flag, every handoff, every
           configuration change — writes an append-only row to the workspace's
@@ -124,7 +125,7 @@ export default function SecurityPage() {
         </p>
       </Section>
 
-      <Section title="Credential handling">
+      <Section title="Credential handling" label="§ 06">
         <p>
           Production secrets — database connection strings, OAuth client
           secrets, the encryption key, the model API key, the Stripe key —
@@ -141,7 +142,7 @@ export default function SecurityPage() {
         </p>
       </Section>
 
-      <Section title="Subprocessor security">
+      <Section title="Subprocessor security" label="§ 07">
         <p>
           We use the named subprocessors listed in our{" "}
           <Link className="underline text-clay" href="/privacy">
@@ -154,7 +155,7 @@ export default function SecurityPage() {
         </p>
       </Section>
 
-      <Section title="Incident response">
+      <Section title="Incident response" label="§ 08">
         <p>
           If we detect or are notified of a security incident affecting
           customer data, we will: (1) contain the incident within 24 hours of
@@ -174,7 +175,7 @@ export default function SecurityPage() {
         </p>
       </Section>
 
-      <Section title="Backups + disaster recovery">
+      <Section title="Backups + disaster recovery" label="§ 09">
         <p>
           The primary Postgres database is backed up daily with point-in-time
           recovery enabled. Backups are encrypted at rest and rolled off
@@ -182,7 +183,7 @@ export default function SecurityPage() {
           from a service-affecting incident, and we never read backup
           contents in the course of normal operations.
         </p>
-        <p className="text-sm text-ink-soft">
+        <p className="font-mono text-[12px] text-mute">
           See also our{" "}
           <Link className="underline text-clay" href="/privacy">
             privacy policy
@@ -206,20 +207,23 @@ export default function SecurityPage() {
 function Section({
   title,
   eyebrow,
+  label,
   children,
 }: {
   title: string;
   eyebrow?: string;
+  label?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="border-b border-rule">
       <div className="container-wide py-16 md:py-20">
         {eyebrow && <p className="eyebrow mb-3">{eyebrow}</p>}
-        <h2 className="max-w-3xl font-display text-2xl leading-snug text-ink md:text-3xl">
+        {label && <p className="figure-caption mb-2">{label}</p>}
+        <h2 className="max-w-prose font-display text-2xl leading-snug text-ink md:text-3xl">
           {title}
         </h2>
-        <div className="mt-6 max-w-3xl space-y-5 text-base leading-relaxed text-ink-soft md:text-lg">
+        <div className="mt-6 max-w-prose space-y-5 text-base leading-relaxed text-ink-soft md:text-lg">
           {children}
         </div>
       </div>

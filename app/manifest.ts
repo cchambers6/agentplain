@@ -11,7 +11,7 @@ import { tokens } from "@/lib/brand/tokens";
 //   - apple-icon.png is consumed by iOS via the App Router apple-icon route, not
 //     the manifest, so it is intentionally not listed here.
 //
-// Colours are brand tokens — Paper #F7F4ED background, Ink #1A1A1F theme. No
+// Colours are brand tokens — Paper #F5F0E6 background, Ink #1A1612 theme. No
 // blue (brand rule). See lib/brand/tokens.ts.
 
 export default function manifest(): MetadataRoute.Manifest {

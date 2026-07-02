@@ -37,7 +37,7 @@ export function PortalChatComposer({ slug }: { slug: string }) {
         rows={3}
         required
         className="w-full border border-rule bg-white p-3 text-sm text-ink focus:outline-none focus:ring-2"
-        style={{ ["--tw-ring-color" as string]: "var(--portal-accent, #B65D3A)" }}
+        style={{ ["--tw-ring-color" as string]: "var(--portal-accent, #B85540)" }}
         placeholder="Type your question or update…"
       />
       {state.notice ? (
@@ -62,7 +62,7 @@ function Submit() {
       type="submit"
       disabled={pending}
       className="inline-flex items-center px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-      style={{ backgroundColor: "var(--portal-accent, #B65D3A)" }}
+      style={{ backgroundColor: "var(--portal-accent, #B85540)" }}
     >
       {pending ? "Sending…" : "Send"}
     </button>

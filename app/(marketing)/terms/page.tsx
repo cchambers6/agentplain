@@ -26,8 +26,9 @@ export default function TermsPage() {
           <h1 className="mt-2 max-w-4xl font-display text-4xl leading-[1.08] text-ink sm:text-5xl md:text-[3.5rem] md:leading-[1.04]">
             The agreement between us.
           </h1>
-          <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft md:text-xl">
-            Last updated: June 17, 2026. By using agentplain you agree to these
+          <p className="dateline mt-6">Last updated: June 17, 2026</p>
+          <p className="mt-8 max-w-prose text-lg leading-relaxed text-ink-soft md:text-xl">
+            By using agentplain you agree to these
             terms and to our{" "}
             <Link className="underline text-clay" href="/aup">
               acceptable use policy
@@ -41,7 +42,7 @@ export default function TermsPage() {
         </div>
       </section>
 
-      <Section title="What we provide">
+      <Section title="What we provide" label="§ 01">
         <p>
           agentplain is a service partnership. We install a fleet of AI agents
           inside the workspace we host, configure it for your vertical, run
@@ -59,7 +60,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="Payment + cancellation">
+      <Section title="Payment + cancellation" label="§ 02">
         <p>
           Subscription tiers are billed per seat, monthly in advance, via the
           payment method on file. Regular and Partner include a free trial — 7
@@ -82,7 +83,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="Your data is yours">
+      <Section title="Your data is yours" label="§ 03">
         <p>
           You own every input you provide and every output the fleet drafts on
           your behalf — including your clients&rsquo; information that flows
@@ -122,7 +123,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="Our intellectual property">
+      <Section title="Our intellectual property" label="§ 04">
         <p>
           The agentplain platform — its codebase, the vertical playbook logic,
           the system prompts and skill definitions, the curated knowledge
@@ -161,7 +162,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="What we are not responsible for">
+      <Section title="What we are not responsible for" label="§ 05">
         <p>
           We are not a licensed broker, lender, carrier, attorney, CPA, RIA,
           or any other regulated party in the verticals we serve. Liability
@@ -190,7 +191,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="Acceptable use">
+      <Section title="Acceptable use" label="§ 06">
         <p>
           You agree not to use agentplain to send unsolicited commercial
           communications in violation of CAN-SPAM, TCPA, GDPR, or any other
@@ -216,7 +217,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="Suspension + termination for violations">
+      <Section title="Suspension + termination for violations" label="§ 07">
         <p>
           We monitor access patterns for abuse and policy violations. When our
           systems detect a likely violation of these terms or the acceptable use
@@ -236,7 +237,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="Changes to these terms">
+      <Section title="Changes to these terms" label="§ 08">
         <p>
           Material changes are announced by email to your workspace owner at
           least 30 days before they take effect. Continued use after the
@@ -245,14 +246,14 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="Governing law">
+      <Section title="Governing law" label="§ 09">
         <p>
           These terms are governed by the laws of the State of Georgia, United
           States, without regard to conflict-of-law provisions. Any dispute
           arising under these terms is resolved exclusively in the state or
           federal courts located in Fulton County, Georgia.
         </p>
-        <p className="text-sm text-ink-soft">
+        <p className="font-mono text-[12px] text-mute">
           Contact:{" "}
           <a className="underline text-clay" href="mailto:hello@agentplain.com">
             hello@agentplain.com
@@ -272,20 +273,23 @@ export default function TermsPage() {
 function Section({
   title,
   eyebrow,
+  label,
   children,
 }: {
   title: string;
   eyebrow?: string;
+  label?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="border-b border-rule">
       <div className="container-wide py-16 md:py-20">
         {eyebrow && <p className="eyebrow mb-3">{eyebrow}</p>}
-        <h2 className="max-w-3xl font-display text-2xl leading-snug text-ink md:text-3xl">
+        {label && <p className="figure-caption mb-2">{label}</p>}
+        <h2 className="max-w-prose font-display text-2xl leading-snug text-ink md:text-3xl">
           {title}
         </h2>
-        <div className="mt-6 max-w-3xl space-y-5 text-base leading-relaxed text-ink-soft md:text-lg">
+        <div className="mt-6 max-w-prose space-y-5 text-base leading-relaxed text-ink-soft md:text-lg">
           {children}
         </div>
       </div>

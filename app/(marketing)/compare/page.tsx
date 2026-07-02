@@ -46,23 +46,29 @@ export default function CompareHubPage() {
         </div>
       </section>
 
-      <section className="bg-paper-deep">
+      <section className="bg-paper">
         <div className="container-wide py-16 md:py-24">
-          <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
+          <div className="flex items-baseline justify-between gap-4 border-b border-ink pb-4">
+            <p className="font-mono text-[11px] uppercase tracking-eyebrow text-mute">
+              The alternatives, side by side
+            </p>
+            <p className="dateline">Updated 2026</p>
+          </div>
+          <div className="border-t border-rule">
             {comparisons.map((c) => (
               <Link
                 key={c.slug}
                 href={`/compare/${c.slug}`}
-                className="group bg-paper p-7 transition hover:bg-paper md:p-8"
+                className="group grid items-baseline gap-3 border-b border-rule py-8 transition hover:bg-paper-deep md:grid-cols-[18rem_1fr_auto] md:gap-8 md:py-9"
               >
                 <p className="font-display text-2xl leading-snug text-ink">
                   agentplain vs.{" "}
                   <span className="text-clay">{c.alternative}</span>
                 </p>
-                <p className="mt-3 text-[15px] leading-relaxed text-ink-soft">
+                <p className="text-[15px] leading-relaxed text-ink-soft">
                   {c.cardSummary}
                 </p>
-                <span className="mt-5 inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-eyebrow text-mute group-hover:text-clay">
+                <span className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-eyebrow text-mute group-hover:text-clay md:justify-end">
                   Read the comparison
                   <span aria-hidden>→</span>
                 </span>

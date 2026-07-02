@@ -335,41 +335,41 @@ export function buildConfirmationEmail(
   ].join("\n");
 
   // Brand palette: canonical tokens from lib/brand/tokens.ts.
-  // paper #F7F4ED, ink #1A1A1F, clay #B65D3A, moss #3F5C3F, mute #726A5E.
+  // paper #F5F0E6, ink #1A1612, clay #B85540, moss #3F5C3F, mute #726A5E.
   // Display in a humanist body face; the email surface intentionally avoids
   // loading a custom display font — every client renders the fallback cleanly.
   const html = [
     `<!doctype html>`,
-    `<html><body style="margin:0;padding:0;background:#F7F4ED;">`,
-    `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#F7F4ED;">`,
+    `<html><body style="margin:0;padding:0;background:#F5F0E6;">`,
+    `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#F5F0E6;">`,
     `<tr><td align="center" style="padding:32px 16px;">`,
-    `<table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;background:#F7F4ED;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#1A1A1F;">`,
+    `<table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;background:#F5F0E6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#1A1612;">`,
     `<tr><td style="padding:0 0 24px 0;">`,
     `<p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;color:#3F5C3F;letter-spacing:-0.01em;">agentplain</p>`,
     `<p style="margin:4px 0 0 0;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#726A5E;">Intelligence rooted in reality</p>`,
     `</td></tr>`,
     `<tr><td style="padding:0 0 16px 0;">`,
-    `<p style="margin:0;font-size:16px;line-height:1.6;color:#1A1A1F;">Hi ${escapeHtml(input.name)},</p>`,
+    `<p style="margin:0;font-size:16px;line-height:1.6;color:#1A1612;">Hi ${escapeHtml(input.name)},</p>`,
     `</td></tr>`,
     `<tr><td style="padding:0 0 16px 0;">`,
-    `<p style="margin:0;font-size:16px;line-height:1.6;color:#1A1A1F;">Thanks for reaching out about <strong>${escapeHtml(
+    `<p style="margin:0;font-size:16px;line-height:1.6;color:#1A1612;">Thanks for reaching out about <strong>${escapeHtml(
       input.business,
     )}</strong>. Your note made it here, and we're reading it.</p>`,
     `</td></tr>`,
     `<tr><td style="padding:8px 0 8px 0;">`,
-    `<p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#B65D3A;">What happens next</p>`,
-    `<p style="margin:0;font-size:15px;line-height:1.65;color:#1A1A1F;">${escapeHtml(
+    `<p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#B85540;">What happens next</p>`,
+    `<p style="margin:0;font-size:15px;line-height:1.65;color:#1A1612;">${escapeHtml(
       slaParagraph,
     )}</p>`,
     `</td></tr>`,
     `<tr><td style="padding:16px 0 8px 0;">`,
-    `<p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#B65D3A;">How we work</p>`,
-    `<p style="margin:0;font-size:15px;line-height:1.65;color:#1A1A1F;">${escapeHtml(
+    `<p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#B85540;">How we work</p>`,
+    `<p style="margin:0;font-size:15px;line-height:1.65;color:#1A1612;">${escapeHtml(
       partnerParagraph,
     )}</p>`,
     `</td></tr>`,
     `<tr><td style="padding:20px 0 0 0;">`,
-    `<p style="margin:0;font-size:15px;line-height:1.65;color:#1A1A1F;">If anything changes on your end, or you want to send more context, just reply to this email — it goes to a real inbox we read.</p>`,
+    `<p style="margin:0;font-size:15px;line-height:1.65;color:#1A1612;">If anything changes on your end, or you want to send more context, just reply to this email — it goes to a real inbox we read.</p>`,
     `</td></tr>`,
     `<tr><td style="padding:24px 0 0 0;">`,
     `<p style="margin:0;font-size:15px;line-height:1.6;color:#3F5C3F;">Plaino, your service partner at agentplain</p>`,

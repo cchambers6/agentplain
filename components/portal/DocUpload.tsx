@@ -60,7 +60,7 @@ export function DocUpload({ slug, caseId }: { slug: string; caseId: string }) {
         className="block w-full text-sm text-ink-soft file:mr-3 file:border-0 file:px-3 file:py-2 file:text-sm file:text-white"
         style={
           {
-            ["--file-bg" as string]: "var(--portal-accent, #B65D3A)",
+            ["--file-bg" as string]: "var(--portal-accent, #B85540)",
           } as React.CSSProperties
         }
       />
@@ -68,7 +68,7 @@ export function DocUpload({ slug, caseId }: { slug: string; caseId: string }) {
         type="submit"
         disabled={status === "uploading"}
         className="inline-flex items-center px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        style={{ backgroundColor: "var(--portal-accent, #B65D3A)" }}
+        style={{ backgroundColor: "var(--portal-accent, #B85540)" }}
       >
         {status === "uploading" ? "Uploading…" : "Upload document"}
       </button>

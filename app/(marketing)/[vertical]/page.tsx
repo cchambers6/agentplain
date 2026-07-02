@@ -7,6 +7,7 @@ import {
   getVerticalContent,
 } from "@/lib/verticals";
 
+import Section from "@/components/Section";
 import VerticalHero from "@/components/vertical/VerticalHero";
 import VerticalDirectAnswer from "@/components/vertical/VerticalDirectAnswer";
 import ValueLoopExample from "@/components/vertical/ValueLoopExample";
@@ -102,6 +103,14 @@ export default function VerticalPage({
         />
       ) : null}
       <VerticalHero content={content} />
+      {/* Editorial dateline stamp under the hero — content-agnostic, so it reads
+          the same for all ten verticals plus the on-ramp surfaces. Heritage
+          "dateline kicker" treatment; no vertical name hardcoded. */}
+      <div className="border-b border-rule bg-paper">
+        <div className="container-wide py-5">
+          <p className="dateline">One managed fleet · 2026</p>
+        </div>
+      </div>
       {/* AEO direct-answer block, high on the page — the quotable "what is
           agentplain for {vertical}?" paragraph an answer engine can lift. */}
       {content.directAnswer ? (
@@ -118,6 +127,16 @@ export default function VerticalPage({
       <RoiAnchor roi={content.roi} />
       <ViolationAvoidance paragraph={content.roi.violationAvoidance} />
       <ClaimsTriadGrid claims={content.claims} />
+      {/* Grounded thesis pause — the one forest band on the template. Content-
+          agnostic mission line (renders identically for all ten verticals), with
+          a single wheat-foil accent on the closing phrase. Sits before pricing,
+          with room from the dark closing CTA so two dark bands never stack. */}
+      <Section tone="forest" eyebrow="Why we do this">
+        <p className="max-w-3xl font-display text-2xl leading-snug text-paper md:text-3xl">
+          We lift up local businesses by doing the work that takes their time and
+          money away from <span className="foil">the people they serve</span>.
+        </p>
+      </Section>
       <PricingTierBanner tier={content.tier} />
       <IntegrationsList integrations={content.integrations} />
       {content.verticalFaq && content.verticalFaq.length > 0 ? (

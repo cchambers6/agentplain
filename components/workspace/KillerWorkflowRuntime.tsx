@@ -147,7 +147,7 @@ function StepMarker({ status }: { status: WorkflowStepStatus }) {
         aria-hidden
         className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center border border-clay"
       >
-        <span className="h-2 w-2 animate-pulse rounded-full bg-clay" />
+        <span className="h-2 w-2 animate-pulse bg-clay" />
       </span>
     );
   }

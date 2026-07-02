@@ -479,7 +479,7 @@ function GlyphSquare({
   accent?: boolean;
   filled?: boolean;
 }): ReactNode {
-  const stroke = accent ? "#B65D3A" : "#1A1A1F";
+  const stroke = accent ? "#B85540" : "#1A1612";
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
       <rect
@@ -487,7 +487,7 @@ function GlyphSquare({
         y="1"
         width="10"
         height="10"
-        fill={filled ? stroke : "#F7F4ED"}
+        fill={filled ? stroke : "#F5F0E6"}
         stroke={stroke}
         strokeWidth="1.25"
       />

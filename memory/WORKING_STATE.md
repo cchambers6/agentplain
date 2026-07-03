@@ -40,3 +40,27 @@ _<Mirrored from `memory/data/pending-fires.yaml` by the Librarian: every entry w
 <!-- Example row (delete when a real fire is claimed):
 | fire-2026-06-15T22-30-00Z-plaino-paused-banner | Plaino-paused universal banner | claude-opus-4-8 | $80 | P1 | 5 | 2026-06-15T22:31:00Z |
 -->
+
+## Ratified governance decisions — 2026-07-03
+
+**Delegated by Conner Chambers, ratified by fleet, 2026-07-03.**
+
+### Kill list (CEO Pass 1)
+
+| Kill | Status | Restart trigger |
+|------|--------|-----------------|
+| #1 No new audit/retro loops | RATIFIED | Top-20 fix table burned down |
+| #2 GTM except GA RE closed | RATIFIED | 2 RE design partners live (weekly-running) |
+| #3 flatsbo waitlist-dark | **OVERRIDDEN** — flatsbo stays live | N/A |
+| #4 Client portal as funded workstream | RATIFIED | First signed partner asks for it |
+| #5 No LLM-dependent features | RATIFIED | Conner restores production key |
+| #6 Paid media + photography | HOLD | First design partner trial→paid |
+| #7 No new surface area | RATIFIED | Profitable milestone + 1 top-20 card shipped |
+
+Full ratification doc: `docs/kills/2026-07-03/RATIFIED.md`
+
+### Copy rulings (CEO Pass 1 contradictions)
+
+- **Contradiction 1 — /security absolutes:** Option A ratified. Incident response 24-hour containment SLA softened to "as quickly as possible." Founding-team name redacted. No funded hardening workstream. Full ruling: `docs/copy-rulings/2026-07-03/security-page.md`
+
+- **Contradiction 2 — model-vendor invisibility:** `feedback_model_vendor_invisible_on_customer_surfaces` (load-bearing) supersedes `project_sbm_wrapper_positioning_2026_06_06`. Model vendor is invisible on every customer-rendered surface, no exceptions beyond legal subprocessor disclosure. 7 non-subprocessor occurrences found — flagged for follow-up scrub PR. Full ruling: `docs/copy-rulings/2026-07-03/model-vendor-invisibility.md`

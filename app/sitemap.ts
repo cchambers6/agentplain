@@ -54,6 +54,7 @@ const MARKETING_ROUTES: Array<{
 }> = [
   { path: "/", changeFrequency: "weekly", priority: 1.0 },
   { path: "/how-it-works", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/contact", changeFrequency: "monthly", priority: 0.6 },
   { path: "/pricing", changeFrequency: "monthly", priority: 0.9 },
   { path: "/verticals", changeFrequency: "weekly", priority: 0.9 },
   { path: "/compare", changeFrequency: "monthly", priority: 0.7 },

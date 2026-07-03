@@ -19,6 +19,7 @@ const OPERATOR_NAV: Array<{ href: string; label: string }> = [
   { href: "/operator/workspaces", label: "Workspaces" },
   { href: "/operator/inquiries", label: "Inquiries" },
   { href: "/operator/leads", label: "Leads" },
+  { href: "/operator/outreach", label: "Outreach" },
   { href: "/operator/tickets", label: "Tickets" },
   { href: "/operator/support", label: "Support" },
   { href: "/operator/integrations", label: "Integrations" },

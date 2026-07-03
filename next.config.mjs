@@ -14,15 +14,13 @@ const nextConfig = {
         destination: "/#pricing",
         permanent: true,
       },
-      {
-        // /how-it-works is the obvious URL guess + stale-link target. Nav
-        // and footer link to the /#how anchor on the homepage; the bare
-        // path used to 404. Browsers honour the hash on the Location header
-        // so a direct hit lands on the anchor.
-        source: "/how-it-works",
-        destination: "/#how",
-        permanent: true,
-      },
+      // NOTE: no /how-it-works redirect here. The standalone page at
+      // app/(marketing)/how-it-works/page.tsx (PR #283) is the canonical
+      // explainer; a stale `permanent: true` redirect to /#how shadowed it
+      // for weeks because Next.js applies redirects() before filesystem
+      // routes (audit-2026-07-02 dept-1 P0). Browsers that cached the old
+      // 308 keep bouncing until their cache expires — do not re-add a
+      // redirect on this path.
       // ── Workspace IA collapse (13 tabs → 5) backward-compat ──────────────
       // docs/specs/workspace-ia-simplification-2026-06-14.md. The five-tab IA
       // (Today / Plaino / Connections / Reports / Account) drops two routes

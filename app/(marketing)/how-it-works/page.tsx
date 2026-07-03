@@ -5,6 +5,7 @@ import Section from "@/components/Section";
 import HeroBackdrop from "@/components/marketing/HeroBackdrop";
 import { Step } from "@/components/marketing/HomeCards";
 import { tokens } from "@/lib/brand/tokens";
+import { BOOKING_CTA_LABEL, bookingCta } from "@/lib/marketing/booking";
 import { alternatesFor } from "@/lib/seo/metadata";
 
 // Dedicated "How it works" page.
@@ -92,6 +93,35 @@ const SCENES: Array<{ vertical: string; href: string; scene: string }> = [
       "An after-hours quote request arrives. The fleet drafts a same-day reply in your standard scope language and lands it in your queue. You approve it on your phone; it goes out from your own email. The job doesn't go cold overnight, and nothing was promised that you didn't sign.",
   },
 ];
+
+// The intro-call CTA resolves through lib/marketing/booking: the real
+// scheduling link when NEXT_PUBLIC_BOOKING_URL is set, /contact otherwise.
+// External scheduling opens in a new tab; the internal fallback navigates
+// in place. Either way the button always lands somewhere real.
+function BookIntroCallCta() {
+  const cta = bookingCta();
+  const className =
+    "inline-flex items-center justify-center gap-2 border border-paper/40 bg-transparent px-6 py-3 text-sm font-medium text-paper transition hover:border-paper";
+  if (cta.external) {
+    return (
+      <a
+        href={cta.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+      >
+        {BOOKING_CTA_LABEL}
+        <span aria-hidden>→</span>
+      </a>
+    );
+  }
+  return (
+    <Link href={cta.href} className={className}>
+      {BOOKING_CTA_LABEL}
+      <span aria-hidden>→</span>
+    </Link>
+  );
+}
 
 export default function HowItWorksPage() {
   return (
@@ -245,6 +275,7 @@ export default function HowItWorksPage() {
               Start free trial
               <span aria-hidden>→</span>
             </Link>
+            <BookIntroCallCta />
             <Link
               href="/verticals"
               className="inline-flex items-center justify-center gap-2 border border-paper/40 bg-transparent px-6 py-3 text-sm font-medium text-paper transition hover:border-paper"

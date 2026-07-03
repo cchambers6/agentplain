@@ -3177,3 +3177,72 @@ model PortalDocument {
   @@index([caseId])
   @@index([clientId])
 }
+
+// ── Design-partner outreach CRM-lite (send-path wave 2026-07-03) ──────────
+// System of record for the founder-led design-partner motion. The sales
+// deep-dive (docs/sales/deep-dive-2026-07-02/06-pipeline-and-forecasting.md)
+// ratified the stage ladder + the "every non-terminal row carries a next
+// action" rule; this pair of tables is deliberately Airtable-sized — a
+// prospect row and an append-only touch log — not a CRM. Operator-only
+// surface at /operator/outreach; like LeadCapture, prospects are global
+// (they aren't customers yet, so there is no workspace to scope to).
+
+enum OutreachStage {
+  LIST // on the prospect list, lane open, no touch sent yet
+  FIT // first touch sent, not disqualified
+  DISCOVERY // discovery call booked or held
+  DP_TALK // design-partner program terms presented, prospect engaging
+  AGREEMENT // verbal yes, agreement out for signature
+  ACTIVATION // signed, stack check underway
+  ACTIVE_PILOT // drafts flowing, weekly cadence running
+  NOT_YET // named blocker + revisit date; re-enters at FIT
+  LOST // clean no
+}
+
+enum OutreachTouchKind {
+  EMAIL_SENT
+  REPLY_RECEIVED
+  CALL_HELD
+  NOTE
+  STAGE_CHANGE
+}
+
+model OutreachProspect {
+  id             String          @id @default(uuid()) @db.Uuid
+  name           String
+  business       String?
+  email          String?
+  vertical       String?
+  // "warm" / "cold" / "referral" — free text on purpose; doc 01's list spec
+  // is the authority on sourcing lanes, the CRM just records which one.
+  source         String?
+  stage          OutreachStage   @default(LIST)
+  // Doc 06 §1: a non-terminal row without a next action is stuck by
+  // definition — the UI flags rows where these are empty.
+  nextAction     String?
+  nextActionDate DateTime?
+  // NOT_YET rows re-enter at FIT on this date; doc 06 treats it as the
+  // stage's exit criterion.
+  revisitDate    DateTime?
+  // For NOT_YET / LOST: the blocker or the clean no, verbatim.
+  reason         String?
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  touches        OutreachTouch[]
+
+  @@index([stage, nextActionDate])
+  @@index([createdAt])
+}
+
+model OutreachTouch {
+  id         String            @id @default(uuid()) @db.Uuid
+  prospectId String            @db.Uuid
+  kind       OutreachTouchKind
+  note       String?
+  occurredAt DateTime          @default(now())
+  createdAt  DateTime          @default(now())
+  prospect   OutreachProspect  @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+
+  @@index([prospectId, occurredAt])
+}

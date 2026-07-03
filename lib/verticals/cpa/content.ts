@@ -314,24 +314,27 @@ export const cpa: VerticalContent = {
   },
 
   integrations: {
-    // Live today — TaxDome + Karbon connect with a pasted API key;
-    // QuickBooks + Outlook/M365 via OAuth. See
-    // `lib/integrations/marketplace.ts` (status: 'available').
+    // Live today — QuickBooks + Outlook/M365 via OAuth. TaxDome + Karbon
+    // moved to planned[] 2026-07-03: their read layer is built, but the
+    // paste-your-key connect step isn't open yet, so the catalog lists them
+    // `coming-soon` (`lib/integrations/marketplace.ts`) and this page must
+    // not claim them live. They return to shipped[] when the connect forms
+    // ship — tests/vertical-routes.test.ts pins the placement.
     shipped: [
-      {
-        name: "TaxDome",
-        category: "Practice mgmt",
-        note: "Reads the docs your clients upload, surfaces what is pending review, and brings client-document state into your close drafts.",
-      },
-      {
-        name: "Karbon",
-        category: "Practice mgmt",
-        note: "Reads workflows, jobs, and recurring tasks so close drafts reflect what is actually in flight.",
-      },
       { name: "QuickBooks Online", category: "Accounting" },
       { name: "Outlook + M365 Graph", category: "Email + calendar" },
     ],
     planned: [
+      {
+        name: "TaxDome",
+        category: "Practice mgmt",
+        note: "Will read the docs your clients upload and bring client-document state into your close drafts. The connect step opens soon.",
+      },
+      {
+        name: "Karbon",
+        category: "Practice mgmt",
+        note: "Will read workflows, jobs, and recurring tasks so close drafts reflect what is actually in flight. The connect step opens soon.",
+      },
       { name: "Canopy", category: "Practice mgmt" },
       { name: "Lacerte", category: "Tax prep" },
       { name: "UltraTax", category: "Tax prep" },

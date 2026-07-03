@@ -378,41 +378,52 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     disciplines: ['finance'],
     verticalRelevance: 'all',
   },
+  // TaxDome + Karbon — the dispatch layer is real (taxdome-mcp / karbon-mcp
+  // routes + tool surfaces, exercised by the wave-3 smoke suite), but no
+  // customer or operator UI can save a credential for either: neither had a
+  // connect form, and their key schemas (portalSubdomain / accessToken+
+  // accessKey) don't fit the generic single-key form. Advertised `available`
+  // + unconnectable is the silent-dead-end class audit-2026-07-02 dept-5
+  // flagged as P0-1, so the catalog stays honest: `coming-soon` until the
+  // bespoke connect forms ship. Flipping back to `available` REQUIRES those
+  // forms first — the wave-3 guardrail test pins this.
   {
     id: 'taxdome',
     name: 'TaxDome',
     category: 'Documents',
     description:
-      'Your service partner reads the docs your clients upload — surfaces what is pending review, and brings client-document state into your month-end close drafts.',
+      'Plaino will read the docs your clients upload — what is pending review, what is missing — and bring client-document state into your month-end close drafts. Available soon; email hello@agentplain.com to prioritize it.',
     mcpEndpointTemplate: '/api/integrations/taxdome-mcp/{workspaceId}',
     // API-key flow — the customer pastes the key from Account → API
     // Keys in TaxDome. We do not request OAuth scopes.
     scopes: [],
     oauthConfigKey: 'TAXDOME_API_KEY',
-    status: 'available',
-    providerKey: 'TAXDOME',
+    status: 'coming-soon',
+    providerKey: null,
     disciplines: ['finance', 'operations'],
     // CPA + small bookkeeping firms; hidden for realty workspaces by
     // default. The vertical slug here matches the SLUG_TO_ENUM key.
     // CPA + future bookkeeping vertical (`cpa` is the current slug;
     // when a `bookkeeping` slug lands the tile auto-applies).
     verticalRelevance: ['cpa'],
+    connectMode: 'api-key',
   },
   {
     id: 'karbon',
     name: 'Karbon',
     category: 'Documents',
     description:
-      'Your service partner reads workflows, jobs, and recurring tasks so you can see what is in flight and what is blocked — and so close drafts reflect what is actually happening.',
+      'Plaino will read workflows, jobs, and recurring tasks so close drafts reflect what is actually in flight. Available soon; email hello@agentplain.com to prioritize it.',
     mcpEndpointTemplate: '/api/integrations/karbon-mcp/{workspaceId}',
     scopes: [],
     oauthConfigKey: 'KARBON_API_KEY',
-    status: 'available',
-    providerKey: 'KARBON',
+    status: 'coming-soon',
+    providerKey: null,
     disciplines: ['finance', 'operations'],
     // CPA + future bookkeeping vertical (`cpa` is the current slug;
     // when a `bookkeeping` slug lands the tile auto-applies).
     verticalRelevance: ['cpa'],
+    connectMode: 'api-key',
   },
   {
     id: 'buildium',
@@ -581,7 +592,7 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     name: 'BoldTrail',
     category: 'CRM',
     description:
-      'Plaino will read your BoldTrail leads and write back triage decisions once we complete BoldTrail\'s developer-partner enrollment. The MCP server scaffolding is in place; the credential path opens with the enrollment. Join the waitlist below.',
+      'Plaino will read your BoldTrail leads and write back triage decisions once we complete BoldTrail\'s developer-partner enrollment. Join the waitlist below.',
     mcpEndpointTemplate: '/api/integrations/boldtrail-mcp/{workspaceId}',
     scopes: [
       'contacts:read',

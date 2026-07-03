@@ -1,8 +1,23 @@
-# L2 — weekly Fable profitability lens prompt
+# L2 — Fable profitability lens prompt (continuous loop)
 
-Model: **claude-fable-5** (Opus acceptable fallback). Cadence: Sundays,
-chained immediately after L1, once per vertical. Parameterized by `{VERTICAL}`
-and `{RUN_DATE}`. Internal doc — model names allowed.
+Model: **claude-fable-5** while the plan-included window lasts (until
+2026-07-07; then per RUNBOOK § After Jul 7). Cadence: **continuous** — runs in
+the same governor-fired pass as L1, immediately after it, once per vertical
+the pass touched. Parameterized by `{VERTICAL}` and `{RUN_DATE}`. Internal
+doc — model names allowed.
+
+## Pass preamble (do this before any analysis)
+
+1. Read `memory/data/loop/state.yaml` (schema v2). **Address every pending
+   `corrective_nudges` entry** targeting L2 or both, and set each
+   `status: consumed`.
+2. Depth-mode passes: update the vertical's newest existing profitability
+   file in place — re-score rows whose journey verdicts changed, add rows for
+   newly surfaced wants, note verdict changes rather than re-deriving.
+3. For rows meeting impact=high AND build_effort=S AND classification ≠
+   do-not-build that have no card yet: file a backlog card at
+   `docs/loop/backlog/{RUN_DATE}-<slug>.md` per `backlog_card` in the schema
+   (the governor conducts the loop; card-filing is yours).
 
 ---
 
@@ -56,11 +71,24 @@ For each undelivered want, fill every field of `profitability_row`
 
 ## Output
 
-Exactly one file: `docs/profitability/{RUN_DATE}/{VERTICAL}.md`, following
-`docs/loop/templates/profitability.md`, rows ordered (impact desc, effort asc),
-machine yaml block agreeing with the prose, roll-up section at the end.
+One file per vertical: `docs/profitability/{RUN_DATE}/{VERTICAL}.md` (or the
+newest existing file, edited in place, on depth passes), following
+`docs/loop/templates/profitability.md`, rows ordered (impact desc, effort
+asc), machine yaml block agreeing with the prose, roll-up section at the end.
+Plus any backlog cards from the preamble.
 
-The nightly heartbeat consumes only `impact`, `build_effort`,
-`classification`, and `want_id` — get those four right even if a nuance field
-must be coarse. Do not schedule work, open PRs, or edit anything outside your
-one output file.
+Fleet code sessions consume only `impact`, `build_effort`, `classification`,
+and `want_id` — get those four right even if a nuance field must be coarse.
+
+## State handoff (closes the pass)
+
+You are the last stage of the pass. Per the pass-writer rules in
+`memory/data/loop/schema.yaml`: increment `pass_number`, set
+`last_pass_completed_at`, update touched `coverage_map` cells (including
+recomputed `open_gap_count`), extend the `queue` tail per the algorithm in
+`docs/loop/00-DESIGN.md` § Queue algorithm, and set `next_pass_plan`. Then
+voice-gate your files and commit directly to main (allowed paths only:
+docs/journeys/, docs/profitability/, docs/loop/backlog/, memory/data/loop/)
+and push, as the governor's launch prompt instructs. Do not write your own
+`pass_records` entry — the governor gates you next tick and can re-queue
+your scope if the gate rejects.

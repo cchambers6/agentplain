@@ -1,28 +1,229 @@
-# Loop state — conforms to loop_state in memory/data/loop/schema.yaml (v2)
-# Written by L1/L2 passes (completion records, coverage, queue tail) and the
-# L3 governor (every 30-min tick). Seeded 2026-07-02 after pass 1.
-schema_version: 2
+# Loop state — conforms to loop_state in memory/data/loop/schema.yaml (v3)
+# Written by track passes (own close-out) and the L3 governor (30-min tick).
+# v3 reseed 2026-07-03: 9-track rotation, no stop condition — every pass
+# designs the business toward profitability (the objective, not a gate) and
+# must end with a declared deliverable. Pass 1 (L1+L2 seed) and the manual
+# CEO / chief-of-staff first passes (2026-07-02) predate this schema.
+schema_version: 3
 
 pass_number: 1
 last_pass_completed_at: 2026-07-02T20:00:00Z
 pass_in_flight_session_id: null
 pass_in_flight_started_at: null
 pass_in_flight_scope: null
-stop_after: 2026-07-07T00:00:00Z   # Fable plan-included window ends; governor stops firing passes
+pass_model: claude-fable-5            # Conner's knob — switch here when the plan-included window closes (RUNBOOK § Model switch)
+last_pass_deliverables: []            # written by the finishing pass ({type, ref}); verified + cleared by the governor's design-for-profit gate
 
+rotation_cursor: 20   # start of cycle: next tick scans from slot 1 (ceo)
+tracks:
+  - {track: ceo,               weight_pct: 20, paused: false, last_completed_at: 2026-07-02T22:00:00Z, passes_completed: 1}  # manual pass 1, docs/ceo/2026-07-02/
+  - {track: chief-of-staff,    weight_pct: 15, paused: false, last_completed_at: 2026-07-02T22:00:00Z, passes_completed: 1}  # manual pass 1, docs/chief-of-staff/2026-07-02/
+  - {track: product-owner,     weight_pct: 15, paused: false, last_completed_at: null, passes_completed: 0}
+  - {track: l1-journey,        weight_pct: 15, paused: false, last_completed_at: 2026-07-02T20:00:00Z, passes_completed: 1}  # seed pass 1
+  - {track: l2-profitability,  weight_pct: 10, paused: false, last_completed_at: 2026-07-02T20:00:00Z, passes_completed: 1}  # ran inside seed pass 1
+  - {track: tab-audit,         weight_pct: 10, paused: false, last_completed_at: null, passes_completed: 0}
+  - {track: agent-audit,       weight_pct: 5,  paused: false, last_completed_at: null, passes_completed: 0}
+  - {track: business-model,    weight_pct: 5,  paused: false, last_completed_at: null, passes_completed: 0}
+  - {track: vertical-priority, weight_pct: 5,  paused: false, last_completed_at: null, passes_completed: 0}
+
+# Queue: grouped by track. Governor picks the track by rotation (heartbeat
+# STEP 2b), then pops that track's first item. ceo is perpetual (exactly one
+# item, re-enqueued each pass). Seed 2026-07-03: 24 finite items (3 per track
+# across the 8 non-ceo tracks) + the perpetual ceo item. Every pass ends with
+# a deliverable (design decision / fix spec / action) — no new analysis layers.
 queue:
+  # --- ceo (perpetual — always exactly one) ---
+  - pass: null
+    track: ceo
+    mode: recurring
+    scope: "CEO pass: design the shortest path to a profitable business — read state + newest track outputs + memory; update docs/ceo/<date>/ with decisions, not analysis: the current critical-path order, the biggest lever, and what to cut; re-enqueue this item"
+    reason: "perpetual highest-priority lens; first pass fired manually 2026-07-02"
+    priority: 1
+    last_completed_at: 2026-07-02T22:00:00Z
+
+  # --- chief-of-staff ---
+  - pass: null
+    track: chief-of-staff
+    mode: recurring
+    scope: "Sequenced blocker list + Conner decision queue: reconcile the kaizen MASTER synthesis first-5 (stamp wiring, CI floor, guarantee leak, data-min branch, Conner-queue SLA) and the product-audit MASTER top-20 into one ordered list with a recommended default per Conner item"
+    reason: "two MASTER syntheses exist but no single sequenced queue; Conner-time is the scarcest input"
+    priority: 1
+    last_completed_at: null
+  - pass: null
+    track: chief-of-staff
+    mode: recurring
+    scope: "Redundancy sweep: open PRs, unmerged audit/kaizen branches (retros 01/05/06/08 read from unmerged PRs #336/#341/#339/#340), duplicate branches, worktree sprawl — kill / merge / land recommendations"
+    reason: "kaizen 1/10 found PR-less committed work and 41% of PRs >1k insertions; unmerged retros are invisible to the fleet"
+    priority: 2
+    last_completed_at: null
+  - pass: null
+    track: chief-of-staff
+    mode: recurring
+    scope: "Dependency map for the first-paying-customer path: order of operations across the Connect-button first-value fix, connectors P0s (audit 5/10), portal activation (audit 6/10), guarantee saved-time writers (audit 9/10)"
+    reason: "loop-v2 seed found first-value path dies at the Connect button; these fixes have unstated ordering dependencies"
+    priority: 3
+    last_completed_at: null
+
+  # --- product-owner ---
+  - pass: null
+    track: product-owner
+    mode: piece
+    scope: "Product-owner lens: connectors page + marketplace (piece = surface). Am I delivering value / profitable to run? Baseline: audit 5/10 3 P0s (TaxDome/Karbon available-but-unconnectable, tile Connect bypasses disclosure, positioning branch unmerged)"
+    reason: "activation-critical surface with the worst open P0 count"
+    priority: 1
+    last_completed_at: null
+  - pass: null
+    track: product-owner
+    mode: piece
+    scope: "Product-owner lens: Plaino agent (chat + support surfaces). Value delivered vs token cost per conversation; degraded-mode experience; two-surface /api/chat mode flag health"
+    reason: "the named service partner IS the product experience; no owner-level value/cost verdict exists"
+    priority: 2
+    last_completed_at: null
+  - pass: null
+    track: product-owner
+    mode: piece
+    scope: "Product-owner lens: marketing home (front door). Who lands, what wants it addresses (cite journey want ids), conversion path to signup; baseline = marketing deep-dive front-door play + Truth Wave constraints"
+    reason: "front door of the funnel; marketing deep-dive named it play #1"
+    priority: 3
+    last_completed_at: null
+
+  # --- l1-journey (carried over from v2 queue; L2 runs in-pass) ---
   - pass: 2
+    track: l1-journey
     mode: coverage
     scope: "L1+L2 coverage: law + property-management — personas from the ratified JTBD tables in lib/verticals/{law,property-management}/content.ts (buyer role + heaviest daily-user role per vertical; if only one role is ratified, map that one and record the gap)"
     reason: "largest unmapped area: two whole verticals at depth 0"
+    priority: 1
+    last_completed_at: null
   - pass: 3
+    track: l1-journey
     mode: coverage
     scope: "L1+L2 coverage: general vertical (buyer persona from its JTBD table) + DEPTH on real-estate--individual-agent (raise depth to 2: fill buying-stage thinness, verify Today-tab per-agent scoping verdict, expand daily-use micro-moments)"
     reason: "last unmapped vertical, paired with the shallowest existing map (18 wants, under floor)"
+    priority: 2
+    last_completed_at: null
   - pass: 4
+    track: l1-journey
     mode: depth
     scope: "L1+L2 DEPTH: cpa (both personas to depth 2) — tighten the pass-1 gap set: split the practice-mgmt blocker into per-agent wants, add audit-senior/CSM/admin personas as new maps, re-verdict anything the fleet shipped since pass 1"
     reason: "highest open_gap_count vertical (38 open across 2 personas) once coverage saturates"
+    priority: 3
+    last_completed_at: null
+
+  # --- l2-profitability (standalone re-scores; no new L1 stage) ---
+  - pass: null
+    track: l2-profitability
+    mode: rescore
+    scope: "Re-score real-estate profitability rows (docs/profitability/2026-07-02/) against everything the fleet merged since pass 1; note verdict changes, file/expire backlog cards accordingly"
+    reason: "rows decay as fixes land; RE is the ratified beachhead so its rows steer the most work"
+    priority: 1
+    last_completed_at: null
+  - pass: null
+    track: l2-profitability
+    mode: rescore
+    scope: "Re-score cpa profitability rows against shipped fixes; same discipline as the RE re-score"
+    reason: "second-largest row set from pass 1 (23+15 open gaps)"
+    priority: 2
+    last_completed_at: null
+  - pass: null
+    track: l2-profitability
+    mode: rescore
+    scope: "Cross-vertical roll-up: collapse universal-cluster wants (universal: true) into build-once rows with also_covers, so the fleet sees one card per shared fix instead of N per-vertical duplicates"
+    reason: "pass 1 tagged universal clusters but never rolled them up; duplicate cards waste fleet sessions"
+    priority: 3
+    last_completed_at: null
+
+  # --- tab-audit ---
+  - pass: null
+    track: tab-audit
+    mode: route-group
+    scope: "Tab audit: the workspace 5-tab IA (Today / Plaino / Connections / Reports / Account) — purpose, lander, wants addressed (cite want ids), delivering verdict per route; baseline = audit 3/10 (missing loading.tsx, settings silent-null) — verify, don't re-derive"
+    reason: "the surfaces every paying customer lives in daily"
+    priority: 1
+    last_completed_at: null
+  - pass: null
+    track: tab-audit
+    mode: route-group
+    scope: "Tab audit: marketing site routes (/, /how-it-works, /compare, /pricing, /waitlist, /verticals/*, /style) — incl. the stale /how-it-works redirect shadowing #283 (audit 1/10 P0)"
+    reason: "funnel-entry routes; a known P0 redirect may still be live"
+    priority: 2
+    last_completed_at: null
+  - pass: null
+    track: tab-audit
+    mode: route-group
+    scope: "Tab audit: settings + account + data-rights routes (incl. /settings/data/storage) — BYO-storage marketed-but-inert finding (audit 10/10), billing copy vs facts.ts drift"
+    reason: "trust surfaces; audit 10/10 found 3 P0s here"
+    priority: 3
+    last_completed_at: null
+
+  # --- agent-audit ---
+  - pass: null
+    track: agent-audit
+    mode: agent
+    scope: "Agent audit: support-handler pipeline (draft-into-review, resolve-reply) — value per run, cost shape, human review time, keep/fix/retire"
+    reason: "highest-frequency agent family in the customer path"
+    priority: 1
+    last_completed_at: null
+  - pass: null
+    track: agent-audit
+    mode: agent
+    scope: "Agent audit: per-vertical killer-workflow runtimes (5 demos, PR #303) — do they run on real data yet, cost per run, are they in the profit path or demo-ware"
+    reason: "the sales-demo backbone; verdict decides whether they get real-data investment"
+    priority: 2
+    last_completed_at: null
+  - pass: null
+    track: agent-audit
+    mode: agent
+    scope: "Agent audit: sentinel/compliance + budget/caching wrappers — cost per fire, does the compose order (Logging→Budget→Sentinel→Caching→Anthropic) hold at every call site, could Haiku replace any Sonnet/Opus step"
+    reason: "these wrappers ARE the margin; nobody has audited them as a product piece"
+    priority: 3
+    last_completed_at: null
+
+  # --- business-model (proposals only; lib/billing/facts.ts is SSOT, never edited) ---
+  - pass: null
+    track: business-model
+    mode: proposal
+    scope: "Tier-fit review: Regular/Partner/Max promises vs delivered value per the journey maps — where a tier over-promises (guarantee undercounting, portal 0%-activatable) propose the honest fix: deliver, re-scope, or re-price. Proposal doc only"
+    reason: "audits 6/9/10 show tier promises ahead of delivery — a churn and refund risk priced into no tier"
+    priority: 1
+    last_completed_at: null
+  - pass: null
+    track: business-model
+    mode: proposal
+    scope: "Add-on packaging: bundle the L2 sell-as-add-on rows into candidate add-ons that don't hollow out tier promises; name price anchor logic, no fabricated dollar figures"
+    reason: "L2 classified rows as sell-as-add-on but no packaging exists to sell"
+    priority: 2
+    last_completed_at: null
+  - pass: null
+    track: business-model
+    mode: proposal
+    scope: "Alternative revenue models: per-vertical bundles, services-led onboarding fee, usage-based component — beat the current ladder on margin AND simplicity or say why not; explicitly Conner-ratification-flagged"
+    reason: "Conner's directive: iterate the business model, not just the product"
+    priority: 3
+    last_completed_at: null
+
+  # --- vertical-priority ---
+  - pass: null
+    track: vertical-priority
+    mode: recurring
+    scope: "Double-down / hold / cut scorecard across RE, CPA, law, PM, general — evidence = coverage_map gap counts, L2 roll-ups, sales deep-dive priors (RE/GA beachhead; CPA/law closed till 2 RE pilots)"
+    reason: "the ratified sales strategy implies a ranking nobody has written down as a standing scorecard"
+    priority: 1
+    last_completed_at: null
+  - pass: null
+    track: vertical-priority
+    mode: recurring
+    scope: "Next focus-week recommendation: which vertical gets concentrated fleet attention next, with the top-5 items that week would land"
+    reason: "focus beats breadth pre-revenue; make the pick explicit and evidence-cited"
+    priority: 2
+    last_completed_at: null
+  - pass: null
+    track: vertical-priority
+    mode: recurring
+    scope: "Cut criteria: define, per vertical, the evidence threshold that would trigger a cut (so the future cut call is mechanical, not emotional)"
+    reason: "no-new-verticals rule exists; no cut rule does"
+    priority: 3
+    last_completed_at: null
 
 coverage_map:
   - {vertical: real-estate, persona: broker-owner, mapped: true, depth: 1, open_gap_count: 27, last_pass: 1}
@@ -33,7 +234,7 @@ coverage_map:
   - {vertical: property-management, persona: tbd-from-jtbd, mapped: false, depth: 0, open_gap_count: 0, last_pass: null}
   - {vertical: general, persona: tbd-from-jtbd, mapped: false, depth: 0, open_gap_count: 0, last_pass: null}
 
-next_pass_plan: "Pass 2 widens coverage to law + property-management from their ratified JTBD tables."
+next_pass_plan: "Rotation slot 1: ceo — first governor-fired CEO strategic pass (or slot 2 chief-of-staff if the CEO track is still inside its 6h freshness cap)."
 
 corrective_nudges: []
 
@@ -43,11 +244,14 @@ stalls_logged: 0
 
 pass_records:
   - pass: 1
+    track: l1-journey
     scope: "seed: real-estate (broker-owner, individual-agent) + cpa (partner-owner, staff-accountant), L1+L2"
     completed_at: 2026-07-02T20:00:00Z
     schema_ok: true
     coverage_hit: true
     voice_gate_ok: true
+    paths_ok: null
+    closeout_ok: null
     want_count: 108
     duplicate_want_ids: []
     verdict: accepted

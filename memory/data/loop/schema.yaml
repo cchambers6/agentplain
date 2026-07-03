@@ -1,0 +1,140 @@
+# Customer-journey loop — machine-readable schema
+# Consumed by: L1 journey-mapper (writes journeys), L2 profitability lens (writes
+# profitability rows), L3 governor (reads/writes state, conducts the loop).
+# Readers: lib/memory/data-readers.ts pattern (plain YAML docs).
+#
+# VERSIONING: bump `schema_version` on any breaking field change. L3 must refuse
+# to act on a schema_version it does not recognize (defer, do not guess).
+
+schema_version: 2   # v2 2026-07-02: continuous-loop state (queue/coverage/nudges/ticks) replaced weekly-cadence state
+
+# ---------------------------------------------------------------------------
+# 1. Journey map (one file per vertical × persona, emitted/extended by L1)
+#    Location: docs/journeys/<run-date>/<vertical>--<persona-slug>.md
+#    A DEPTH pass edits the newest existing file in place (new micro-moments /
+#    wants appended, verdicts tightened) rather than emitting a new date-dir.
+# ---------------------------------------------------------------------------
+journey:
+  vertical: string            # one of: real-estate | cpa | law | property-management | general (loop scope; subset of the locked ten)
+  persona: string             # slug; MUST trace to a real-signal source
+  persona_source: string      # file path or memory pointer; "TODO: real signal needed" is legal and is itself a gap
+  run_date: date              # date of the pass that created the file
+  last_deepened_pass: int     # pass_number of the most recent DEPTH pass touching this map
+  depth: int                  # 1 on creation; +1 per DEPTH pass
+  produced_by: string         # model id (internal doc; never customer-facing)
+  stages:                     # ordered; awareness | consideration | signup | activation | daily-use | expansion | renewal | advocacy
+    - stage: enum
+      micro_moments:
+        - id: string          # <vertical>.<stage>.<slug> — stable across passes; ids are the join key
+          moment: string
+          wants:
+            - id: string      # <micro_moment_id>.<n>
+              want: string
+              signal:         # ≥1 required; Truth-Wave rule: no fabricated signal
+                - kind: enum  # audit | kaizen | code | doc | memory | support-ticket | todo-real-signal
+                  ref: string
+              delivering: enum   # yes | partial | no | not-in-scope
+              evidence: string   # code path / doc, or "gap: <what is missing>"
+              universal: boolean # same cluster seen in ≥3 verticals
+              cluster: string    # cross-vertical cluster slug
+
+# ---------------------------------------------------------------------------
+# 2. Profitability row (one per want with delivering ∈ {partial, no}, emitted
+#    by L2). Location: docs/profitability/<run-date>/<vertical>.md
+# ---------------------------------------------------------------------------
+profitability_row:
+  want_id: string             # FK → journey want id (representative when one fix covers several)
+  also_covers: [string]       # optional; sibling want ids resolved by the same fix
+  vertical: string
+  run_date: date
+  cost_to_deliver:
+    build_effort: enum        # S | M | L | XL (S ≤ 1 fleet session; M ≤ 1 wave; L multi-wave; XL new subsystem)
+    runtime_cost: enum        # none | tokens-light | tokens-heavy | integration | human-time
+    runtime_notes: string
+    support_burden: enum      # none | low | medium | high
+  price_capture:
+    tier: enum                # regular | partner | max | all
+    addon_viable: boolean
+    differentiator: enum      # table-stakes | parity | differentiator
+    incumbent: string
+  margin_band:
+    at_100_customers: enum    # accretive | neutral | dilutive
+    at_1000_customers: enum
+    at_10000_customers: enum
+    driver: string
+  classification: enum        # include-in-tier | sell-as-add-on | partner-referral | do-not-build
+  impact: enum                # high | medium | low
+  rule_check:
+    no_outbound: boolean
+    byo_key: boolean
+    degraded_mode_safe: boolean
+    cost_architecture: boolean
+
+# ---------------------------------------------------------------------------
+# 3. Loop state (single file, memory/data/loop/state.yaml).
+#    Written by: L1/L2 passes (pass completion, coverage_map, queue extension)
+#    and the L3 governor (every tick). Write discipline: a pass only appends
+#    its completion record and updates coverage_map / pass_number / queue tail;
+#    the governor owns everything else.
+# ---------------------------------------------------------------------------
+loop_state:
+  schema_version: int
+  # --- continuous-loop core ---
+  pass_number: int            # last COMPLETED pass
+  last_pass_completed_at: datetime|null   # UTC
+  pass_in_flight_session_id: string|null  # dispatch session id of the running L1/L2 pass; null when idle
+  pass_in_flight_started_at: datetime|null  # governor uses this for the >4h stall rule
+  pass_in_flight_scope: string|null       # the queue entry the running pass is executing
+  stop_after: datetime        # hard stop for firing Fable passes (2026-07-07T00:00:00Z — plan-included window ends)
+  queue:                      # ordered; head = next pass to fire. Governor pops the head when firing; the finishing pass appends new tail entries per the queue algorithm (00-DESIGN.md)
+    - pass: int               # intended pass number
+      mode: enum              # coverage | depth
+      scope: string           # e.g. "L1+L2 coverage: law (managing-partner) + property-management (property-manager)"
+      reason: string          # queue-algorithm trace ("largest unmapped area", "highest open_gap_count", ...)
+  coverage_map:               # one entry per vertical × persona cell in loop scope
+    - vertical: string
+      persona: string
+      mapped: boolean
+      depth: int              # 0 = unmapped; 1 = first map; +1 per deepening pass
+      open_gap_count: int     # wants with delivering ∈ {partial,no} at last pass — deepening priority signal
+      last_pass: int|null
+  next_pass_plan: string      # one sentence, human-readable mirror of queue[0]
+  corrective_nudges:          # written by governor quality-gate; consumed (status→consumed) by the next pass
+    - id: string              # nudge-<pass>-<n>
+      target: enum            # L1 | L2 | both
+      note: string            # e.g. "pass 3 emitted 4 wants with no signal ref — every want needs one"
+      raised_by_tick: datetime
+      status: enum            # pending | consumed
+  # --- governor tick bookkeeping ---
+  last_tick_at: datetime|null
+  tick_metrics:               # rolling; governor keeps the newest 48 entries (~1 day) and drops older
+    - at: datetime
+      action: enum            # fired-pass | pass-running | stalled-replaced | quality-gated | idle-queue-empty | stopped-window-over | deferred
+      detail: string          # one line
+  stalls_logged: int          # lifetime count of >4h stall replacements
+  # --- pass quality records (appended by governor at quality-gate time) ---
+  pass_records:
+    - pass: int
+      scope: string
+      completed_at: datetime
+      schema_ok: boolean      # yaml blocks parse + conform
+      coverage_hit: boolean   # pass did what its queue entry said
+      voice_gate_ok: boolean  # npm run voice-gate clean on the pass's files
+      want_count: int
+      duplicate_want_ids: [string]  # ids colliding with earlier passes (DEPTH passes intentionally reusing ids are not duplicates)
+      verdict: enum           # accepted | accepted-with-nudges | rejected (rejected ⇒ governor re-queues the scope at head)
+
+# ---------------------------------------------------------------------------
+# 4. Backlog card front-matter (docs/loop/backlog/YYYY-MM-DD-<slug>.md)
+#    Cards are filed by L2 passes for rows meeting impact=high AND effort=S
+#    AND classification ≠ do-not-build (the governor conducts; it does not
+#    mine gaps itself).
+# ---------------------------------------------------------------------------
+backlog_card:
+  want_id: string
+  vertical: string
+  impact: enum                # high
+  effort: enum                # S
+  classification: enum        # never do-not-build
+  status: enum                # open | picked-up | shipped | rejected
+  picked_up_by: string

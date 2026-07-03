@@ -1,0 +1,53 @@
+# Loop state — conforms to loop_state in memory/data/loop/schema.yaml (v2)
+# Written by L1/L2 passes (completion records, coverage, queue tail) and the
+# L3 governor (every 30-min tick). Seeded 2026-07-02 after pass 1.
+schema_version: 2
+
+pass_number: 1
+last_pass_completed_at: 2026-07-02T20:00:00Z
+pass_in_flight_session_id: null
+pass_in_flight_started_at: null
+pass_in_flight_scope: null
+stop_after: 2026-07-07T00:00:00Z   # Fable plan-included window ends; governor stops firing passes
+
+queue:
+  - pass: 2
+    mode: coverage
+    scope: "L1+L2 coverage: law + property-management — personas from the ratified JTBD tables in lib/verticals/{law,property-management}/content.ts (buyer role + heaviest daily-user role per vertical; if only one role is ratified, map that one and record the gap)"
+    reason: "largest unmapped area: two whole verticals at depth 0"
+  - pass: 3
+    mode: coverage
+    scope: "L1+L2 coverage: general vertical (buyer persona from its JTBD table) + DEPTH on real-estate--individual-agent (raise depth to 2: fill buying-stage thinness, verify Today-tab per-agent scoping verdict, expand daily-use micro-moments)"
+    reason: "last unmapped vertical, paired with the shallowest existing map (18 wants, under floor)"
+  - pass: 4
+    mode: depth
+    scope: "L1+L2 DEPTH: cpa (both personas to depth 2) — tighten the pass-1 gap set: split the practice-mgmt blocker into per-agent wants, add audit-senior/CSM/admin personas as new maps, re-verdict anything the fleet shipped since pass 1"
+    reason: "highest open_gap_count vertical (38 open across 2 personas) once coverage saturates"
+
+coverage_map:
+  - {vertical: real-estate, persona: broker-owner, mapped: true, depth: 1, open_gap_count: 27, last_pass: 1}
+  - {vertical: real-estate, persona: individual-agent, mapped: true, depth: 1, open_gap_count: 16, last_pass: 1}
+  - {vertical: cpa, persona: partner-owner, mapped: true, depth: 1, open_gap_count: 23, last_pass: 1}
+  - {vertical: cpa, persona: staff-accountant, mapped: true, depth: 1, open_gap_count: 15, last_pass: 1}
+  - {vertical: law, persona: tbd-from-jtbd, mapped: false, depth: 0, open_gap_count: 0, last_pass: null}
+  - {vertical: property-management, persona: tbd-from-jtbd, mapped: false, depth: 0, open_gap_count: 0, last_pass: null}
+  - {vertical: general, persona: tbd-from-jtbd, mapped: false, depth: 0, open_gap_count: 0, last_pass: null}
+
+next_pass_plan: "Pass 2 widens coverage to law + property-management from their ratified JTBD tables."
+
+corrective_nudges: []
+
+last_tick_at: null
+tick_metrics: []
+stalls_logged: 0
+
+pass_records:
+  - pass: 1
+    scope: "seed: real-estate (broker-owner, individual-agent) + cpa (partner-owner, staff-accountant), L1+L2"
+    completed_at: 2026-07-02T20:00:00Z
+    schema_ok: true
+    coverage_hit: true
+    voice_gate_ok: true
+    want_count: 108
+    duplicate_want_ids: []
+    verdict: accepted

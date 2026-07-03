@@ -1,0 +1,99 @@
+# Customer-journey loop — machine-readable schema
+# Consumed by: L1 journey-mapper (writes journeys), L2 profitability lens (writes
+# profitability rows), L3 nightly heartbeat (reads both, writes state + backlog refs).
+# Readers: lib/memory/data-readers.ts pattern (YAML front-matter-free, plain docs).
+#
+# VERSIONING: bump `schema_version` on any breaking field change. L3 must refuse
+# to run against a schema_version it does not recognize (defer, do not guess).
+
+schema_version: 1
+
+# ---------------------------------------------------------------------------
+# 1. Journey map (one file per vertical × persona, emitted by L1)
+#    Location: docs/journeys/<run-date>/<vertical>--<persona-slug>.md
+#    The markdown file carries a fenced ```yaml block matching `journey`.
+# ---------------------------------------------------------------------------
+journey:
+  vertical: string            # one of: real-estate | cpa | law | property-management | general
+  persona: string             # slug; MUST trace to a real-signal source (see persona_source)
+  persona_source: string      # file path or memory pointer proving this persona is not invented;
+                              # "TODO: real signal needed" is a legal value and a standing gap
+  run_date: date              # YYYY-MM-DD
+  produced_by: string         # model id, e.g. claude-fable-5 (internal doc; never customer-facing)
+  stages:                     # ordered; canonical stage ids below
+    - stage: enum             # awareness | consideration | signup | activation | daily-use | expansion | renewal | advocacy
+      micro_moments:
+        - id: string          # <vertical>.<stage>.<slug>  (stable across runs; L3 keys on this)
+          moment: string      # what the customer is doing/feeling, one sentence
+          wants:
+            - id: string      # <micro_moment_id>.<n>
+              want: string    # "As a <persona> at <moment>, I want ..."
+              signal:         # ≥1 required; Truth-Wave rule: no fabricated signal
+                - kind: enum  # audit | kaizen | code | doc | memory | support-ticket | todo-real-signal
+                  ref: string # file path, PR #, or memory slug
+              delivering: enum      # yes | partial | no | not-in-scope
+              evidence: string      # code path / doc proving the verdict, or "gap: <what is missing>"
+              universal: boolean    # true when the same want id-cluster appears in ≥3 verticals
+              cluster: string       # optional cross-vertical cluster slug (e.g. "know-what-plaino-did")
+
+# ---------------------------------------------------------------------------
+# 2. Profitability row (one row per want with delivering ∈ {partial, no},
+#    emitted by L2). Location: docs/profitability/<run-date>/<vertical>.md
+#    carrying a fenced ```yaml block: a list of `profitability_row`.
+# ---------------------------------------------------------------------------
+profitability_row:
+  want_id: string             # FK → journey want id (representative when one fix covers several)
+  also_covers: [string]       # optional; sibling want ids resolved by the same fix (added v1 seed — dedup keeps L3 from filing duplicate cards)
+  vertical: string
+  run_date: date
+  cost_to_deliver:
+    build_effort: enum        # S | M | L | XL   (S ≤ 1 fleet session; M ≤ 1 wave; L ≤ multi-wave; XL = new subsystem)
+    runtime_cost: enum        # none | tokens-light | tokens-heavy | integration | human-time
+    runtime_notes: string     # which model tier does the work; cite compose-order/budget rules
+    support_burden: enum      # none | low | medium | high
+  price_capture:
+    tier: enum                # regular | partner | max | all
+    addon_viable: boolean     # can this be sold as a paid add-on without violating tier promises
+    differentiator: enum      # table-stakes | parity | differentiator
+    incumbent: string         # who the customer uses today for this want (or "nothing")
+  margin_band:                # gross-margin direction of this want at scale, per tier it lands in
+    at_100_customers: enum    # accretive | neutral | dilutive
+    at_1000_customers: enum
+    at_10000_customers: enum
+    driver: string            # one sentence: what dominates the cost curve (tokens, humans, integration upkeep)
+  classification: enum        # include-in-tier | sell-as-add-on | partner-referral | do-not-build
+  impact: enum                # high | medium | low   (L3 filters on this)
+  rule_check:                 # hard architecture rules; a row violating any of these is do-not-build or redesign
+    no_outbound: boolean      # respects project_no_outbound_architecture (agents draft, customer system sends)
+    byo_key: boolean          # integrations BYO-key by default
+    degraded_mode_safe: boolean  # want is still honest when LLM key is paused (degraded mode is live experience)
+    cost_architecture: boolean   # Haiku triage → Sonnet/Opus escalation, no polling, prompt caching
+
+# ---------------------------------------------------------------------------
+# 3. Heartbeat state (single file, overwritten nightly by L3)
+#    Location: memory/data/loop/state.yaml
+# ---------------------------------------------------------------------------
+heartbeat_state:
+  schema_version: int
+  last_run: datetime          # ET timestamp of last L3 run
+  last_l1_l2_run: date        # run_date of the journey/profitability set L3 read
+  picks:                      # 0–3 per night
+    - want_id: string
+      action: enum            # backlog-card | direct-pr | working-state-append | deferred
+      ref: string             # backlog file path, PR #, or defer note
+  skipped:                    # wants that matched filters but were not picked, with reason
+    - want_id: string
+      reason: string          # e.g. "already in fleet PR #348", "could not classify cheaply — deferred"
+  consecutive_empty_runs: int # ≥7 → heartbeat should flag "L1/L2 outputs stale or exhausted" in WORKING_STATE.md
+
+# ---------------------------------------------------------------------------
+# 4. Backlog card front-matter (docs/loop/backlog/YYYY-MM-DD-<slug>.md)
+# ---------------------------------------------------------------------------
+backlog_card:
+  want_id: string
+  vertical: string
+  impact: enum                # high (L3 only picks high)
+  effort: enum                # S (L3 only picks S)
+  classification: enum        # never do-not-build
+  status: enum                # open | picked-up | shipped | rejected
+  picked_up_by: string        # PR # or session ref once a fleet session claims it

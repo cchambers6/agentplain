@@ -1,0 +1,8 @@
+# Heartbeat state — rewritten nightly by L3 (see docs/loop/prompts/L3-haiku-heartbeat.md)
+# Conforms to heartbeat_state in memory/data/loop/schema.yaml
+schema_version: 1
+last_run: null            # no heartbeat has fired yet
+last_l1_l2_run: 2026-07-02   # pass-1 seed (real-estate + cpa)
+picks: []
+skipped: []
+consecutive_empty_runs: 0

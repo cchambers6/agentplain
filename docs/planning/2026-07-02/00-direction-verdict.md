@@ -77,3 +77,27 @@ a deliberate packaging of the ~5 Conner-only decisions so they cost one sitting 
 
 **Sign-off recommendation for a skeptical board member:** approve the direction; withhold
 approval of the current work plan until the stop list (04) and start list (05) are adopted.
+
+---
+
+## Late-breaking addendum (2026-07-03, pre-merge of this PR)
+
+Two PRs opened while this session ran; both are open, not merged (main still d95d279). They
+change the precision of two findings without changing any verdict:
+
+- **PR #348 (CEO Pass 1)** landed as a branch. Its kill list and single-lever pick converge
+  independently with this session's stop list and precondition 2 (Conner's first 5 sends) —
+  two sessions reading the same evidence reached the same conclusions, which raises confidence
+  in both. It also proposes candidate profitability definitions ($10K MRR ≈ founder-inclusive
+  line; cash-breakeven 3/9/25 RE seats) — *with fixed costs explicitly unmeasured* because the
+  spend pipeline is unwired. That is exactly start-list move 3's remaining work: ratify one
+  ladder and wire the inputs.
+- **PR #349 (loop v3, the 9-track expansion)** now exists on a branch. It adds a
+  `profitable_milestone_reached` brake flag (writable by Conner or a CEO pass, never the
+  governor) — good design — but the flag still has **no ratified definition and no measured
+  data source** behind it, and v3 *deletes the Jul 7 calendar stop* (`stop_after` removed from
+  schema). A brake nobody can legitimately pull, on a loop that no longer stops on its own,
+  against unmeasured economics: the stop list's freeze-dormant recommendation (04, item 1)
+  stands unchanged. Its restart condition (a) becomes "ratify the definition behind the flag
+  PR #348 proposed"; condition (b) — one backlog card shipped as a merged fix — remains fully
+  unmet. The governor scheduled task has still never been created.

@@ -1,6 +1,9 @@
 # Loop state — conforms to loop_state in memory/data/loop/schema.yaml (v2)
 # Written by L1/L2 passes (completion records, coverage, queue tail) and the
 # L3 governor (every 30-min tick). Seeded 2026-07-02 after pass 1.
+# Queue extended 2026-07-04: 32 items added from dept-head plans PRs #356–#365
+# and two cross-cutting CoS/pilot items. L1+L2 coverage items (passes 2–4)
+# remain at queue head; dept-head design passes follow at tail.
 schema_version: 2
 
 pass_number: 1
@@ -11,6 +14,7 @@ pass_in_flight_scope: null
 stop_after: 2026-07-07T00:00:00Z   # Fable plan-included window ends; governor stops firing passes
 
 queue:
+  # --- L1+L2 journey coverage (original queue, unchanged) ---
   - pass: 2
     mode: coverage
     scope: "L1+L2 coverage: law + property-management — personas from the ratified JTBD tables in lib/verticals/{law,property-management}/content.ts (buyer role + heaviest daily-user role per vertical; if only one role is ratified, map that one and record the gap)"
@@ -23,6 +27,160 @@ queue:
     mode: depth
     scope: "L1+L2 DEPTH: cpa (both personas to depth 2) — tighten the pass-1 gap set: split the practice-mgmt blocker into per-agent wants, add audit-senior/CSM/admin personas as new maps, re-verdict anything the fleet shipped since pass 1"
     reason: "highest open_gap_count vertical (38 open across 2 personas) once coverage saturates"
+
+  # --- Department-head design passes (PRs #356–#365, 2026-07-03) ---
+  # Each dept contributes: (a) design-for-profitable, (b) spec-gap, (c) close-handoff.
+  # Fable executes the scope directly; L1/L2 prompts are secondary to the scope text.
+
+  # MARKETING (PR #356 — dept/marketing-head-2026-07-03)
+  - pass: 5
+    mode: depth
+    scope: "Design GA-RE content for profitable — ratify the Jul-6 five-piece send (anchor: 'A $26,262 typo') as the marketing-head deliverable; confirm each piece is voice-gate clean, Heritage-token styled, and links to a matched comparison page per the prospect-stack map; read docs/departments/2026-07-03/marketing/ before producing the send plan"
+    reason: "marketing-head plan PR #356 #1 profit item: first send drives the entire revenue curve; Jul-6 date is hard"
+  - pass: 6
+    mode: depth
+    scope: "Spec: NEXT_PUBLIC_BOOKING_URL seam — Calendly booking URL wired into env and every CTA that routes to booking; marketing cannot convert without it; specify the fallback CTA (/contact) if env is blank by Jul-5 EOD; baseline: docs/departments/2026-07-03/marketing/06-profit-contribution.md"
+    reason: "marketing-head plan PR #356 biggest gap: booking-URL blocker is the hardstop before Monday send"
+  - pass: 7
+    mode: depth
+    scope: "Close marketing→Conner handoff — surface five decision items with defaults: (1) NEXT_PUBLIC_BOOKING_URL from Calendly, (2) five prospects entered in /operator/outreach, (3) LinkedIn banner uploaded, (4) founder-bio decision, (5) prospect-to-stack map (which CRM each runs) by Jul-4; default each if no Conner response by Jul-5 EOD; read docs/departments/2026-07-03/marketing/04-what-i-need-from-other-heads.md"
+    reason: "marketing-head plan PR #356 handoff: all Conner inputs are blocking the Jul-6 send"
+
+  # ENGINEERING (PR #357 — dept/engineering-head-2026-07-03)
+  - pass: 8
+    mode: depth
+    scope: "Design guarantee seam for profitable — recordSavedTime has exactly 1 caller today; spec the missing callers at every saved-time flow so the guarantee does not leak money; deliverable: merge-ready fix spec listing files, seam locations, and acceptance criteria; read docs/departments/2026-07-03/engineering/01-top-5-P0-fixes-to-burn-down.md"
+    reason: "eng-head plan PR #357 #1 profit item: guarantee money leak is the P0 margin risk (audit 9)"
+  - pass: 9
+    mode: depth
+    scope: "Spec: CI baseline-ratchet floor — freeze the 41 pre-existing failing tests as baseline; any new failure blocks merge; produce the CI config change (baseline-ratchet step in .github/workflows/) as a merge-ready diff; read docs/departments/2026-07-03/engineering/02-CI-floor-and-gates.md"
+    reason: "eng-head plan PR #357 biggest gap: CI at 41 failures with no floor means any new break is invisible"
+  - pass: 10
+    mode: depth
+    scope: "Close eng→CEO handoff — prod-key un-pause decision spec: define the exact activation signal (proposed: first real approval submitted by a paying customer), the $50/session cap replacing NO_CAP, and the default plan if no Conner decision by Jul-11; write a decision doc so silence has a plan; read docs/departments/2026-07-03/engineering/03-prod-key-unpause-readiness.md + 04-what-i-need-from-other-heads.md"
+    reason: "eng-head plan PR #357 handoff: un-pause target Jul-11; NO_CAP is unsafe without a cap"
+
+  # DATA (PR #358 — dept/data-head-2026-07-03)
+  - pass: 11
+    mode: depth
+    scope: "Design event instrumentation for profitable — ratify the 3 must-fire-before-Monday events; spec stampSessionCost call sites at each event so cost is attributed before the first send creates traffic worth attributing; deliverable: list of call sites + event names + analytics adapter seam; read docs/departments/2026-07-03/data/"
+    reason: "data-head plan PR #358 #1 profit item: 3 must-fire events need wiring before Jul-6 send"
+  - pass: 12
+    mode: depth
+    scope: "Spec: 3 operating dashboards — cost-per-run, activation funnel, guarantee accuracy; for each: data sources, update cadence, and the one number that makes it actionable; size each S (≤1 fleet session); read docs/departments/2026-07-03/data/"
+    reason: "data-head plan PR #358 biggest gap: no dashboards exist to operate the business post-first-send"
+  - pass: 13
+    mode: depth
+    scope: "Close data→eng handoff — stampSessionCost zero-call-site gap: enumerate the 3 must-fire events Eng must wire by Monday, the expected call site pattern, and what happens if unset (log warning default); write the handoff as a concrete Eng ticket scope; read docs/departments/2026-07-03/data/ + kaizen retro 09 (docs/kaizen/2026-07-02/09-data.md)"
+    reason: "data-head plan PR #358 handoff: stampSessionCost has zero call sites (kaizen retro 09)"
+
+  # PRODUCT (PR #359 — dept/product-head-2026-07-03)
+  - pass: 14
+    mode: depth
+    scope: "Design after-hours lead-triage killer workflow for profitable — ratified as the RE killer workflow; produce the one fix that most raises value-per-cost: decide demo-only vs real-data-enabled and what the minimum viable real-data path requires; deliverable: design decision or fix spec; read docs/departments/2026-07-03/product/"
+    reason: "product-head plan PR #359 #1 profit item: RE killer workflow is the first-pitch sales demo"
+  - pass: 15
+    mode: depth
+    scope: "Spec: TTFDV ≤5min instrumentation — define the metric (what is first value for a real-estate customer?), the measurement seam (which event fires at that moment), and the acceptance threshold; deliverable: metric definition doc + one instrumentation call site; read docs/departments/2026-07-03/product/"
+    reason: "product-head plan PR #359 biggest gap: TTFDV is the one product metric but has no seam"
+  - pass: 16
+    mode: depth
+    scope: "Close product→eng handoff — produce the freeze list with thaw triggers: which features are frozen until Eng unpauses prod, what activation signal thaws each; deliverable: freeze table in docs/product-owners/<date>/ or docs/departments/2026-07-03/product/; read docs/departments/2026-07-03/product/04-what-i-need-from-other-heads.md"
+    reason: "product-head plan PR #359 handoff: freeze list with thaw triggers needed for Eng–Product coordination"
+
+  # LEGAL (PR #360 — dept/legal-head-2026-07-03)
+  - pass: 17
+    mode: depth
+    scope: "Design counsel-intake packet for profitable — ratify the 3-batch counsel packet (entity + short-form sales + DPA) as the single legal-intake route; produce the intake doc structure as a merge-ready file that a one-session fleet agent can fill in; read docs/departments/2026-07-03/legal/"
+    reason: "legal-head plan PR #360 #1 profit item: counsel packet is the pre-Monday top item; single intake beats 3 ad-hoc asks"
+  - pass: 18
+    mode: depth
+    scope: "Spec: DPA prerequisite gate — portal RLS + deletion must be provably in CI before DPA ships; identify the missing CI assertions and the files to add them to; deliverable: merge-ready CI test stubs; read docs/departments/2026-07-03/legal/"
+    reason: "legal-head plan PR #360 biggest gap: DPA hard-stopped until portal RLS/deletion in CI"
+  - pass: 19
+    mode: depth
+    scope: "Close legal→Conner handoff — entity confirmation decision: proposed default = GA LLC + EIN filing; surface to Conner decision queue with the consequence of delay; default applies if no response before Monday; read docs/departments/2026-07-03/legal/04-what-i-need-from-other-heads.md"
+    reason: "legal-head plan PR #360 handoff: entity unconfirmed (kaizen 8) + zero counsel signoff yet"
+
+  # CUSTOMER SUCCESS (PR #361 — dept/customer-success-head-2026-07-03)
+  - pass: 20
+    mode: depth
+    scope: "Design 90-min onboarding call for profitable — activation bar = first approval live on the call; produce the call script structure with success criteria and the two connectors that must be reachable (audit 5 P0s); read docs/departments/2026-07-03/customer-success/01-first-partner-onboarding-runbook.md"
+    reason: "CS-head plan PR #361 #1 profit item: onboarding call activation is the breakeven unlock"
+  - pass: 21
+    mode: depth
+    scope: "Spec: prod-key un-pause criteria — define the activation condition, the $50/session cap replacing NO_CAP, and the budget.ts seam change required; verify the compose order (Logging→Budget→Sentinel→Caching→Anthropic) enforces the cap at every call site; deliverable: budget.ts seam spec; read docs/departments/2026-07-03/customer-success/ + docs/departments/2026-07-03/engineering/03-prod-key-unpause-readiness.md"
+    reason: "CS-head plan PR #361 biggest gap: NO_CAP is unsafe; $50/session cap undefined and unenforced"
+  - pass: 22
+    mode: depth
+    scope: "Close CS→CEO handoff — prod-key un-pause trigger decision: which activation signal allows un-pause? Proposed default: first real approval submitted by a paying customer; write as a Conner decision item with the default so silence has a plan; read docs/departments/2026-07-03/customer-success/04-what-i-need-from-other-heads.md"
+    reason: "CS-head plan PR #361 handoff: un-pause trigger is the top decision blocking both CS and Eng"
+
+  # DESIGN (PR #362 — dept/design-head-2026-07-03)
+  - pass: 23
+    mode: depth
+    scope: "Design /how-it-works + CTA-contrast for profitable — two P0s still live at d95d279: /how-it-works 308 redirect and CTA-contrast failure; spec the minimal fix for each so the marketing front door converts before the Jul-6 send; deliverable: fix spec (files, hex values, acceptance criteria); read docs/departments/2026-07-03/design/"
+    reason: "design-head plan PR #362 #1 profit item: these P0s block conversion before any send lands"
+  - pass: 24
+    mode: depth
+    scope: "Spec: /how-it-works route fix + CTA contrast fix — (1) unshadow the /how-it-works route (link direct to /real-estate or deduplicate the 308), (2) list the 2 failing CTA elements with passing Heritage-token hex alternates; deliverable: PR-ready diff; read docs/departments/2026-07-03/design/ P0 list + Heritage tokens at lib/brand/tokens.ts"
+    reason: "design-head plan PR #362 biggest gap: P0s are identified but no fix is specced"
+  - pass: 25
+    mode: depth
+    scope: "Close design→fleet-ops handoff — document the .get-token.mjs cwd requirement (must run from C:/agentplain, not a worktree subdirectory) in either .get-token.mjs header comment or a WORKTREES.md section so fleet agents don't fail silently when spawned from worktree paths; deliverable: one-file update; read docs/departments/2026-07-03/design/04-what-i-need-from-other-heads.md"
+    reason: "design-head plan PR #362 handoff: .get-token.mjs cwd is undocumented and breaks fleet worktree runs"
+
+  # SALES (PR #363 — dept/sales-head-2026-07-03)
+  - pass: 26
+    mode: depth
+    scope: "Design GA-RE outreach sequence for profitable — 5/12/21-day chain to 5 named Georgia RE prospects (Adams, Cannon, Path&Post, Atl-Intown, ARE-Brokers; alt: Watson); goal: 2+ replies + 1 booked call by Jul-17; confirm each send links to the correct matched comparison piece per prospect's CRM stack; deliverable: sequenced send plan with dates + piece assignments; read docs/departments/2026-07-03/sales/ + docs/outreach/"
+    reason: "sales-head plan PR #363 #1 profit item: 5 sends by Jul-6 is the lever CEO pass 1 named"
+  - pass: 27
+    mode: depth
+    scope: "Spec: sales motion doc — docs/audits/full-audit-2026-07-02/ has no 05-sales section (05 = connectors audit); create a sales ops doc covering current outreach assets, pipeline state (0 sends, 0 replies), and the motion from the sales deep-dive (docs/sales/deep-dive-2026-07-02/); deliverable: docs/departments/2026-07-03/sales/ motion doc"
+    reason: "sales-head plan PR #363 biggest gap: 05-sales.md doesn't exist; sales motion is undocumented"
+  - pass: 28
+    mode: depth
+    scope: "Close sales→marketing handoff — UTM tagging discipline: produce the five UTM-tagged first-touch URLs (convention: utm_source=founder&utm_medium=outreach&utm_campaign=ga-re-dp&utm_content=<prospect-slug>) and confirm NEXT_PUBLIC_BOOKING_URL is set before each send; deliverable: UTM URL table in docs/departments/2026-07-03/sales/ or docs/outreach/; read docs/departments/2026-07-03/marketing/04-what-i-need-from-other-heads.md § From Sales"
+    reason: "sales-head plan PR #363 handoff: UTM tagging and booking URL both block the Monday send"
+
+  # FLEET-OPS (PR #364 — dept/fleet-ops-head-2026-07-03)
+  - pass: 29
+    mode: depth
+    scope: "Design governor scheduling for profitable — the L3 governor task is currently NEVER scheduled (#349 dormant); produce the exact CronCreate call or schedule command (Jul-6 18:00 ET, silence-default: Opus + 4 pauses) needed to wire the loop overnight; deliverable: a runnable schedule command with params; read docs/departments/2026-07-03/fleet-ops/ + docs/loop/prompts/L3-haiku-heartbeat.md"
+    reason: "fleet-ops-head plan PR #364 headline: governor never scheduled = loop never fires"
+  - pass: 30
+    mode: depth
+    scope: "Spec: .get-token.mjs node_modules cwd fix — document the node_modules cwd requirement (must run from C:/agentplain) and update the fleet invocation recipe so worktree agents do not fail silently; deliverable: updated recipe comment in .get-token.mjs or WORKTREES.md; read docs/departments/2026-07-03/fleet-ops/"
+    reason: "fleet-ops-head plan PR #364 biggest gap: .get-token.mjs cwd is undocumented, breaks every fleet wave spawned from a worktree"
+  - pass: 31
+    mode: depth
+    scope: "Close fleet-ops→product handoff — minter location split-brain: docs/outreach/memory says wrong path; confirmed correct path is .claude/worktrees/; update the outreach memory entry or add a correction to WORKING_STATE.md so the fleet doesn't spawn from the wrong location; deliverable: one corrected memory entry; read docs/departments/2026-07-03/fleet-ops/04-what-i-need-from-other-heads.md"
+    reason: "fleet-ops-head plan PR #364 handoff: minter location is split-brain between two memory sources"
+
+  # FINANCE-OPS (PR #365 — dept/finance-ops-head-2026-07-03)
+  - pass: 32
+    mode: depth
+    scope: "Design cost-governor for profitable — spec the 3 governor gaps: (1) BREACH alert when daily fleet spend exceeds threshold, (2) $25/day fleet breaker in budget.ts, (3) zero-NO_CAP preflight that blocks any session where the budget context is unset; each must be a merge-ready fix spec with files + acceptance criteria; read docs/departments/2026-07-03/finance-ops/"
+    reason: "fin-ops-head plan PR #365 #1 profit item: runway ≥10mo but governor gaps are margin leaks"
+  - pass: 33
+    mode: depth
+    scope: "Spec: NO_CAP preflight gate — add a budget.ts assertion that blocks any pass where NO_CAP would be active (budget context unset); verify the assertion fires at the compose-order entry point (Logging→Budget→Sentinel→Caching→Anthropic); deliverable: merge-ready budget.ts change + test; read lib/llm/budget.ts + docs/departments/2026-07-03/finance-ops/"
+    reason: "fin-ops-head plan PR #365 biggest gap: NO_CAP when budget context is unset is an uncapped spend risk"
+  - pass: 34
+    mode: depth
+    scope: "Close fin-ops→Conner handoff — 3 inputs needed for the 10-month runway model: (1) current cash position, (2) current R rate (revenue, if any), (3) Claude plan cost per month; produce a decision doc with lean-burn defaults for each input so the model can run before Conner responds; read docs/departments/2026-07-03/finance-ops/04-what-i-need-from-other-heads.md"
+    reason: "fin-ops-head plan PR #365 handoff: 3 Conner inputs are blocking the runway model"
+
+  # --- Cross-cutting items ---
+  - pass: 35
+    mode: depth
+    scope: "Cross-department coordination Pass 2 — read docs/chief-of-staff/2026-07-02/ (CoS pass 1, branch cos/pass-1-retry-2026-07-03) and iterate: (a) reconcile the 10 head-of-department plans (PRs #356–#365) against the existing blocked-items and Conner-queue lists, identifying any new ordering dependencies introduced by the Jul-6 send date; (b) produce an updated Conner decision queue with defaults for each open item; deliverable: docs/chief-of-staff/<date>/ pass-2 output"
+    reason: "10 dept-head plans landed after CoS pass 1; execution sequence needs reconciling against Jul-6 hard date"
+  - pass: 36
+    mode: depth
+    scope: "First-partner pilot-week runbook Pass 2 — read docs/departments/2026-07-03/customer-success/01-first-partner-onboarding-runbook.md (CS-head plan PR #361) and iterate: reconcile the runbook against the activation bar (first approval live on 90-min call), the prod-key un-pause decision, and the connectors P0 list (audit 5); produce a day-by-day pilot-week schedule with go/no-go criteria; deliverable: updated runbook or docs/chief-of-staff/<date>/pilot-week.md"
+    reason: "CS-head plan v1 runbook needs reconciling against prod-key un-pause and connector P0 state before pilot launch"
 
 coverage_map:
   - {vertical: real-estate, persona: broker-owner, mapped: true, depth: 1, open_gap_count: 27, last_pass: 1}

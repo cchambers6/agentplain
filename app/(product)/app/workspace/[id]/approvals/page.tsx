@@ -27,12 +27,17 @@ export default async function ApprovalsPage({ params, searchParams }: PageProps)
   const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
   const ctx = { userId: member.userId, workspaceId, isOperator: false };
 
-  const items = await withRls(ctx, (tx) =>
-    tx.workApprovalQueueItem.findMany({
-      where: { workspaceId, status: "PENDING" },
-      orderBy: { proposedAt: "desc" },
-      take: 50,
-    }),
+  const [items, totalPending] = await withRls(ctx, (tx) =>
+    Promise.all([
+      tx.workApprovalQueueItem.findMany({
+        where: { workspaceId, status: "PENDING" },
+        orderBy: { proposedAt: "desc" },
+        take: 50,
+      }),
+      tx.workApprovalQueueItem.count({
+        where: { workspaceId, status: "PENDING" },
+      }),
+    ]),
   );
 
   const rows: ApprovalRow[] = items.map((item) => ({
@@ -73,12 +78,20 @@ export default async function ApprovalsPage({ params, searchParams }: PageProps)
           />
         </div>
       ) : (
-        <ApprovalsList
-          workspaceId={workspaceId}
-          rows={rows}
-          initialDiscipline={initialDiscipline}
-          initialFocusId={initialFocusId}
-        />
+        <>
+          {totalPending > 50 && (
+            <p className="mt-6 border border-rule bg-paper-deep px-4 py-3 font-mono text-[12px] tracking-wide text-ink-soft">
+              Showing the 50 most recent of {totalPending} pending decisions.
+              Approve or reject items to surface the rest.
+            </p>
+          )}
+          <ApprovalsList
+            workspaceId={workspaceId}
+            rows={rows}
+            initialDiscipline={initialDiscipline}
+            initialFocusId={initialFocusId}
+          />
+        </>
       )}
     </div>
   );

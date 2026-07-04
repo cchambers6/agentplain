@@ -6,7 +6,7 @@
 # VERSIONING: bump `schema_version` on any breaking field change. L3 must refuse
 # to act on a schema_version it does not recognize (defer, do not guess).
 
-schema_version: 2   # v2 2026-07-02: continuous-loop state (queue/coverage/nudges/ticks) replaced weekly-cadence state
+schema_version: 3   # v3 2026-07-03: 9-track rotation (tracks/rotation_cursor/pass_model/last_pass_deliverables) replaced the 2-track + Jul-7-stop state; no stop condition of any kind — design-for-profit is the objective, not a gate. v2 2026-07-02: continuous-loop state replaced weekly cadence.
 
 # ---------------------------------------------------------------------------
 # 1. Journey map (one file per vertical × persona, emitted/extended by L1)
@@ -72,25 +72,41 @@ profitability_row:
 
 # ---------------------------------------------------------------------------
 # 3. Loop state (single file, memory/data/loop/state.yaml).
-#    Written by: L1/L2 passes (pass completion, coverage_map, queue extension)
-#    and the L3 governor (every tick). Write discipline: a pass only appends
-#    its completion record and updates coverage_map / pass_number / queue tail;
-#    the governor owns everything else.
+#    Written by: track passes (their own close-out: pass_number, queue item
+#    removal + own-track follow-ups, tracks[].last_completed_at, coverage_map
+#    for l1/l2) and the L3 governor (every tick). The governor owns everything
+#    else. pass_model and tracks[].paused are Conner's operator knobs. The
+#    loop has NO stop condition — profitability is the objective every pass
+#    designs toward, not a gate the state machine waits on.
 # ---------------------------------------------------------------------------
 loop_state:
   schema_version: int
   # --- continuous-loop core ---
-  pass_number: int            # last COMPLETED pass
+  pass_number: int            # last COMPLETED pass (global counter across all tracks)
   last_pass_completed_at: datetime|null   # UTC
-  pass_in_flight_session_id: string|null  # dispatch session id of the running L1/L2 pass; null when idle
+  pass_in_flight_session_id: string|null  # dispatch session id of the running pass; null when idle
   pass_in_flight_started_at: datetime|null  # governor uses this for the >4h stall rule
-  pass_in_flight_scope: string|null       # the queue entry the running pass is executing
-  stop_after: datetime        # hard stop for firing Fable passes (2026-07-07T00:00:00Z — plan-included window ends)
-  queue:                      # ordered; head = next pass to fire. Governor pops the head when firing; the finishing pass appends new tail entries per the queue algorithm (00-DESIGN.md)
-    - pass: int               # intended pass number
-      mode: enum              # coverage | depth
-      scope: string           # e.g. "L1+L2 coverage: law (managing-partner) + property-management (property-manager)"
-      reason: string          # queue-algorithm trace ("largest unmapped area", "highest open_gap_count", ...)
+  pass_in_flight_scope: string|null       # "<track>: <scope>" of the running pass
+  pass_model: string          # model id passes launch on (governor reads, never writes). claude-fable-5 while plan-included; Conner switches (e.g. claude-opus-4-8) when the window closes — RUNBOOK § Model switch.
+  last_pass_deliverables:     # written by the finishing pass; the design-for-profit gate input. Governor verifies (non-empty, refs exist) then clears it. Empty at gate time ⇒ verdict `drift`.
+    - type: enum              # design-decision | fix-spec | action
+      ref: string             # file path (or path#anchor) in the pass's commit containing the deliverable
+  # --- 9-track rotation ---
+  rotation_cursor: int        # 1–20; last slot used in the fixed 20-slot cycle in L3-haiku-heartbeat.md STEP 2b. Governor-owned.
+  tracks:                     # one row per track (slugs + weights per docs/loop/prompts/TRACKS.md)
+    - track: enum             # ceo | chief-of-staff | product-owner | l1-journey | l2-profitability | tab-audit | agent-audit | business-model | vertical-priority
+      weight_pct: int         # documentation of the rotation weight (the cycle encodes it; keep in lockstep)
+      paused: boolean         # Conner-set; governor skips paused tracks (RUNBOOK § Model switch option B)
+      last_completed_at: datetime|null  # freshness cap input: track skipped while < 6h old
+      passes_completed: int
+  queue:                      # ordered; grouped by track in file order. The governor picks the track by rotation, then pops that track's FIRST item; a finishing pass appends follow-ups for ITS OWN track only (cap: 5 open items/track). ceo is perpetual: exactly one item, re-enqueued on completion (governor re-seeds if missing).
+    - pass: int|null          # intended pass number where meaningful (l1-journey seeds); null otherwise
+      track: enum             # see tracks
+      mode: enum              # coverage | depth | rescore | piece | route-group | agent | proposal | recurring
+      scope: string           # e.g. "Product-owner lens: connectors page + marketplace"
+      reason: string          # queue-trace ("largest unmapped area", "3 P0s in audit 5/10", ...)
+      priority: int           # 1 = highest; orders items WITHIN a track
+      last_completed_at: datetime|null  # when this item's subject was last passed over (null = never)
   coverage_map:               # one entry per vertical × persona cell in loop scope
     - vertical: string
       persona: string
@@ -99,9 +115,9 @@ loop_state:
       open_gap_count: int     # wants with delivering ∈ {partial,no} at last pass — deepening priority signal
       last_pass: int|null
   next_pass_plan: string      # one sentence, human-readable mirror of queue[0]
-  corrective_nudges:          # written by governor quality-gate; consumed (status→consumed) by the next pass
+  corrective_nudges:          # written by governor quality-gate AND by CEO passes (cross-track steering); consumed (status→consumed) by the next pass on the targeted track
     - id: string              # nudge-<pass>-<n>
-      target: enum            # L1 | L2 | both
+      target: enum            # a track slug | all
       note: string            # e.g. "pass 3 emitted 4 wants with no signal ref — every want needs one"
       raised_by_tick: datetime
       status: enum            # pending | consumed
@@ -109,20 +125,24 @@ loop_state:
   last_tick_at: datetime|null
   tick_metrics:               # rolling; governor keeps the newest 48 entries (~1 day) and drops older
     - at: datetime
-      action: enum            # fired-pass | pass-running | stalled-replaced | quality-gated | idle-queue-empty | stopped-window-over | deferred
+      action: enum            # fired-pass | pass-running | stalled-replaced | quality-gated | idle-all-fresh-or-empty | deferred
       detail: string          # one line
   stalls_logged: int          # lifetime count of >4h stall replacements
   # --- pass quality records (appended by governor at quality-gate time) ---
   pass_records:
     - pass: int
+      track: enum             # which track's gate applied (l1-journey/l2-profitability = full gate; others = light gate, want fields null)
       scope: string
       completed_at: datetime
-      schema_ok: boolean      # yaml blocks parse + conform
-      coverage_hit: boolean   # pass did what its queue entry said
+      deliverable_ok: boolean # PRIMARY design-for-profit gate: last_pass_deliverables non-empty, typed, refs exist. false ⇒ verdict drift.
+      schema_ok: boolean|null # yaml blocks parse + conform (full gate only)
+      coverage_hit: boolean   # pass did what its queue item said
       voice_gate_ok: boolean  # npm run voice-gate clean on the pass's files
-      want_count: int
+      paths_ok: boolean|null  # light gate: commit stayed inside the track's allowed paths (business-model touching lib/billing/facts.ts ⇒ rejected)
+      closeout_ok: boolean|null # light gate: queue item removed + last_completed_at stamped
+      want_count: int|null
       duplicate_want_ids: [string]  # ids colliding with earlier passes (DEPTH passes intentionally reusing ids are not duplicates)
-      verdict: enum           # accepted | accepted-with-nudges | rejected (rejected ⇒ governor re-queues the scope at head)
+      verdict: enum           # accepted | accepted-with-nudges | rejected | drift (rejected ⇒ governor re-queues the item at its track's head; drift ⇒ no re-queue, corrective nudge to the track: analysis without a deliverable)
 
 # ---------------------------------------------------------------------------
 # 4. Backlog card front-matter (docs/loop/backlog/YYYY-MM-DD-<slug>.md)

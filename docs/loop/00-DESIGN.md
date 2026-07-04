@@ -1,8 +1,24 @@
 # Customer-journey + profitability loop with governor — system design
 
-**Status:** v2, 2026-07-02 (v1 weekly cadence replaced same day per Conner:
-continuous Fable passes until Jul 7, conducted by a 30-minute governor).
-Internal doc — model names allowed.
+**Status:** v3, 2026-07-03 — **non-stop, 9-track, design-for-profit**.
+v2's Jul-7 stop rule is removed per Conner: the loop never stops —
+**profitability is the objective every pass designs toward, not a stop
+condition** ("design FOR profitable", not "run UNTIL profitable"). The
+Jul-7 window close is a model-knob change (`pass_model`), not a stop. Every
+pass must end with a declared deliverable — a design decision, a merge-ready
+fix spec, or a specific action — never another analysis layer; the
+governor's primary gate (`deliverable_ok`) marks deliverable-less passes as
+`drift`. The two v2 workers (L1 journey, L2 profitability) are now tracks
+4–5 of nine lenses — CEO strategic, chief-of-staff, product-owner-per-piece,
+every-tab audit, agent audit, business-model iteration, vertical priority —
+selected by a weighted 20-slot rotation with a 6h per-track freshness cap.
+Track definitions + deliverable rule: `docs/loop/prompts/TRACKS.md`;
+rotation mechanics: the L3 prompt; weights, objective, and model-switch
+procedure: `RUNBOOK.md`. The v2 design below still describes the L1/L2
+method, the governor split, and the failure-mode table accurately — read
+"until Jul 7" as "forever" and "queue head" as "chosen track's queue head"
+throughout. (v2 2026-07-02: continuous until Jul 7. v1: weekly cadence,
+replaced same day.) Internal doc — model names allowed.
 **Owner question this system answers, continuously:** *does the product
 actually deliver what customers want, and can we deliver the missing parts
 profitably?*
@@ -19,9 +35,11 @@ inventory a standing, customer-journey-shaped, profitability-ranked artifact.
 
 **Why continuous, why now:** Fable is included in the MAX plan window until
 **2026-07-07** (`reference_claude_fable_5_back_2026_06_28`), after which it
-moves to usage credits. Marginal Fable cost is therefore ~$0 for five more
-days — the loop burns that window back-to-back rather than metering itself
-weekly, then stops and hands the cadence decision back to Conner.
+moves to usage credits. Marginal Fable cost is therefore ~$0 for the window —
+the loop burns it back-to-back rather than metering itself weekly. **v3:**
+when the window closes the loop does not stop — Conner switches `pass_model`
+(or pauses the mapping tracks and keeps the strategic ones) per RUNBOOK §
+Model switch; the loop itself has no stop condition at all.
 
 ## The architecture: two Fable workers, one Haiku conductor
 
@@ -33,7 +51,7 @@ sequenceDiagram
     participant Pass as Fable pass N<br/>(L1 then L2, one session)
     participant Repo as docs/journeys + docs/profitability + backlog
 
-    loop every 30 minutes until 2026-07-07
+    loop every 30 minutes, forever (no stop condition)
         Gov->>State: read (schema v2)
         Gov->>Gov: session list vs pass_in_flight
         alt pass running < 4h
@@ -45,18 +63,18 @@ sequenceDiagram
             Gov->>Repo: QUALITY GATE (schema/coverage/voice-gate/counts/dupes)
             Gov->>State: pass_records + corrective_nudges
         end
-        opt idle AND queue non-empty AND now < stop_after
+        opt idle AND rotation finds an eligible track (unpaused, non-empty, ≥6h fresh)
             Gov->>Pass: start_code_task(queue head + pending nudges)
             Pass->>Repo: journey maps + profitability rows + backlog cards
             Pass->>State: pass close-out (coverage_map, queue tail, pass_number)
         end
     end
-    Note over Gov: after 2026-07-07: fire nothing,<br/>post pause note, keep ticking cheaply
+    Note over Gov: no stop condition — pausing is an operator<br/>action (delete the task / pause a track), never a branch
 ```
 
 | | L1 journey-mapper | L2 profitability lens | L3 governor |
 |---|---|---|---|
-| Model | claude-fable-5 (until Jul 7) | claude-fable-5 (until Jul 7) | claude-haiku-4-5, never escalates, never calls another model |
+| Model | `pass_model` (claude-fable-5 today) | `pass_model` (claude-fable-5 today) | claude-haiku-4-5, never escalates, never calls another model |
 | Cadence | continuous: fired by governor as pass stage 1 | same session, stage 2 | every 30 min (~48 ticks/day) |
 | Prompt | `docs/loop/prompts/L1-journey-mapper.md` | `.../L2-profitability-lens.md` | `.../L3-haiku-heartbeat.md` |
 | Unit of work | the queue entry's vertical × persona cells (coverage) or existing maps (depth) | same scope's verticals; files backlog cards for high/S rows | one tick: reconcile → gate → fire |
@@ -130,8 +148,8 @@ Design decisions worth stating:
   `git revert` plus governor re-queue. The system's own prompts/schema/docs
   still change via reviewed PRs (like this one).
 - **This slots into existing precedent:** the YAML data layer (PR #265),
-  `memory/WORKING_STATE.md` (the governor's pause note is its first real
-  writer), the dispatch session tooling the fleet already uses, and the
+  `memory/WORKING_STATE.md`, the dispatch session tooling the fleet already
+  uses, and the
   weekly kaizen (which should read the newest maps as retro input).
 - **Truth Wave applies internally too.** Every want carries a `signal` ref;
   `todo-real-signal` exists so gaps in our customer research surface as
@@ -177,7 +195,8 @@ Design decisions worth stating:
 | Runaway pass (>100k output tokens) | RUNBOOK sanity caps | one pass | kill session; governor re-queues |
 | Schema drift | governor refuses on unknown schema_version | one skipped tick chain | bump schema + prompts in one PR |
 | Loop edits something it shouldn't | pass allowed-paths rule + governor allowed-files rule; CI gates | none if respected | git revert |
-| Jul 7 passes unnoticed | STEP 2 checks `stop_after` every tick | zero — loop stops itself | RUNBOOK § After Jul 7 decision |
+| Jul 7 window closes with no model decision | RUNBOOK § Model switch: passes keep firing on Fable at usage-credit rates | spend, not correctness — a deliberate-by-default trap | Conner sets `pass_model` (or pauses tracks 4–9); the CoS track surfaces the open decision |
+| Pass drifts into analysis-for-its-own-sake | governor's primary gate: `last_pass_deliverables` empty or unresolvable → verdict `drift` | one wasted pass, no compounding analysis layers | corrective nudge to the track; repeated drift ⇒ fix TRACKS.md via reviewed PR |
 
 ## Cost projection
 

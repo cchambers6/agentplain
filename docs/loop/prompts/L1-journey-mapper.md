@@ -1,20 +1,30 @@
-# L1 — Fable journey-mapper prompt (continuous loop)
+# L1 — journey-mapper prompt (track `l1-journey` of the 9-track loop)
 
-Model: **claude-fable-5** while the plan-included window lasts (until
-2026-07-07; then on-demand or Opus 4.8 per RUNBOOK § After Jul 7). Cadence:
-**continuous** — the L3 governor fires a pass as soon as the previous one
-completes; each pass runs L1 then L2 back-to-back for the scope named in its
-queue entry. Internal doc — model names allowed; output must never be pasted
-to customer surfaces without a voice-gate pass.
+**Design the journey the customer would pay for.** The map is not the
+product of this pass — it is the evidence base the pass's L2 stage turns
+into deliverables (backlog cards, classification calls) that make the
+business more profitable. A map that changes no decision is drift.
+
+Model: **whatever `pass_model` in state.yaml says** (claude-fable-5 while the
+plan-included window lasts; Conner switches the knob after — RUNBOOK § Model
+switch). Cadence: **continuous, by rotation** — the L3 governor fires this
+track when the 20-slot rotation lands on `l1-journey` (15% weight, ≥6h
+freshness gap; see `docs/loop/prompts/TRACKS.md`, including the deliverable
+rule every track shares); each `l1-journey` pass runs L1 then L2
+back-to-back for the scope named in its queue item. This is one of nine
+tracks — CEO, chief-of-staff, product-owner, tab-audit, agent-audit,
+business-model, and vertical-priority passes run beside it and read your
+maps. Internal doc — model names allowed; output must never be pasted to
+customer surfaces without a voice-gate pass.
 
 ## Pass preamble (do this before any mapping)
 
-1. Read `memory/data/loop/state.yaml` (schema v2). Confirm your scope matches
-   the queue entry the governor fired you with; you are pass
-   `pass_number + 1`.
-2. **Address every pending `corrective_nudges` entry** targeting L1 or both —
-   these are quality-gate corrections from the previous pass. Apply each one
-   throughout your work and set its `status: consumed`.
+1. Read `memory/data/loop/state.yaml` (schema v3). Confirm your scope matches
+   the queue item (track `l1-journey`) the governor fired you with; you are
+   pass `pass_number + 1`.
+2. **Address every pending `corrective_nudges` entry** targeting
+   `l1-journey` or `all` — quality-gate corrections and CEO-pass steering.
+   Apply each one throughout your work and set its `status: consumed`.
 3. Check your mode:
    - **coverage** — you are mapping new vertical × persona cells. Derive
      personas ONLY from real signal (the vertical's ratified JTBD table in
@@ -73,7 +83,7 @@ deepens it, so a wrong "delivering: yes" is worse than a missed want.
 Coverage mode: one file per persona,
 `docs/journeys/{RUN_DATE}/{VERTICAL}--{PERSONA_SLUG}.md`, following
 `docs/loop/templates/journey.md`, machine yaml conforming to `journey` in
-`memory/data/loop/schema.yaml` (schema_version 2). Depth mode: edit the
+`memory/data/loop/schema.yaml` (schema_version 3). Depth mode: edit the
 newest existing file in place. The yaml block is the contract; make the prose
 agree with it.
 
@@ -86,6 +96,7 @@ reached.
 
 ## State handoff
 
-L2 (which runs next in this same pass) closes out state.yaml — see its
-prompt. Your only state duty is accuracy of the maps it will read; do not
-write `pass_records` (the governor gates the pass on its next tick).
+L2 (which runs next in this same pass) closes out state.yaml — including
+`last_pass_deliverables`, the design-for-profit gate input — see its prompt.
+Your only state duty is accuracy of the maps it will read; do not write
+`pass_records` (the governor gates the pass on its next tick).

@@ -1,19 +1,30 @@
-# L2 — Fable profitability lens prompt (continuous loop)
+# L2 — profitability lens prompt (track `l2-profitability` of the 9-track loop)
 
-Model: **claude-fable-5** while the plan-included window lasts (until
-2026-07-07; then per RUNBOOK § After Jul 7). Cadence: **continuous** — runs in
-the same governor-fired pass as L1, immediately after it, once per vertical
-the pass touched. Parameterized by `{VERTICAL}` and `{RUN_DATE}`. Internal
-doc — model names allowed.
+**Design the margin.** Your rows exist to produce deliverables — backlog
+cards (fix specs) and classification calls (design decisions) that make the
+business more profitable. Scoring without a resulting card or call is drift.
+
+Model: **whatever `pass_model` in state.yaml says** (claude-fable-5 while the
+plan-included window lasts; then Conner's knob — RUNBOOK § Model switch).
+Cadence: **continuous, by rotation** — runs two ways: (a) inside every
+`l1-journey` pass, immediately after L1, once per vertical the pass touched;
+(b) as a standalone `l2-profitability` queue item (mode: rescore — 10%
+rotation weight) re-scoring existing rows with no new L1 stage. Parameterized
+by `{VERTICAL}` and `{RUN_DATE}`. See `docs/loop/prompts/TRACKS.md` for the
+full track roster; business-model passes consume your `sell-as-add-on` rows
+and product-owner passes consume your per-piece verdicts. Internal doc —
+model names allowed.
 
 ## Pass preamble (do this before any analysis)
 
-1. Read `memory/data/loop/state.yaml` (schema v2). **Address every pending
-   `corrective_nudges` entry** targeting L2 or both, and set each
-   `status: consumed`.
-2. Depth-mode passes: update the vertical's newest existing profitability
-   file in place — re-score rows whose journey verdicts changed, add rows for
-   newly surfaced wants, note verdict changes rather than re-deriving.
+1. Read `memory/data/loop/state.yaml` (schema v3). **Address every pending
+   `corrective_nudges` entry** targeting `l2-profitability` or `all` (when
+   running inside an l1-journey pass, `l1-journey`-targeted nudges were
+   handled by L1), and set each `status: consumed`.
+2. Depth-mode and rescore-mode passes: update the vertical's newest existing
+   profitability file in place — re-score rows whose journey verdicts
+   changed, add rows for newly surfaced wants, note verdict changes rather
+   than re-deriving.
 3. For rows meeting impact=high AND build_effort=S AND classification ≠
    do-not-build that have no card yet: file a backlog card at
    `docs/loop/backlog/{RUN_DATE}-<slug>.md` per `backlog_card` in the schema
@@ -45,7 +56,7 @@ tickets: tie every judgment to unit economics.
 ## Per-row judgments
 
 For each undelivered want, fill every field of `profitability_row`
-(`memory/data/loop/schema.yaml`, schema_version 1):
+(`memory/data/loop/schema.yaml`, schema_version 3):
 
 - **Build effort** S/M/L/XL calibrated as: S ≤ one fleet session; M ≤ one
   wave/PR series; L = multi-wave; XL = new subsystem. Cite the existing seam
@@ -83,11 +94,21 @@ and `want_id` — get those four right even if a nuance field must be coarse.
 ## State handoff (closes the pass)
 
 You are the last stage of the pass. Per the pass-writer rules in
-`memory/data/loop/schema.yaml`: increment `pass_number`, set
-`last_pass_completed_at`, update touched `coverage_map` cells (including
-recomputed `open_gap_count`), extend the `queue` tail per the algorithm in
-`docs/loop/00-DESIGN.md` § Queue algorithm, and set `next_pass_plan`. Then
-voice-gate your files and commit directly to main (allowed paths only:
+`memory/data/loop/schema.yaml` (v3): increment `pass_number`, set
+`last_pass_completed_at`, remove your queue item and stamp your track's
+`last_completed_at` in `tracks`, update touched `coverage_map` cells
+(including recomputed `open_gap_count`), append follow-up queue items **for
+your own track only** (l1-journey passes extend the `l1-journey` items per
+`docs/loop/00-DESIGN.md` § Queue algorithm; standalone rescore passes may add
+rescore follow-ups; per-track open-item cap: 5), set `next_pass_plan`, and
+**write `last_pass_deliverables`** — one entry per backlog card filed
+(`type: fix-spec`) and per classification change or do-not-build call
+(`type: design-decision`), each with a `ref` to the file; an empty list
+fails the governor's primary gate as `drift`, so if this pass genuinely
+produced no new card or call, its deliverable is the explicit statement of
+which existing deliverable your evidence strengthens (ref the roll-up
+section saying so).
+Then voice-gate your files and commit directly to main (allowed paths only:
 docs/journeys/, docs/profitability/, docs/loop/backlog/, memory/data/loop/)
 and push, as the governor's launch prompt instructs. Do not write your own
 `pass_records` entry — the governor gates you next tick and can re-queue

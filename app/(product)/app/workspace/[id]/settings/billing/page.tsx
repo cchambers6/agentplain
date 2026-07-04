@@ -117,6 +117,7 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
   const currentSeats = subscription?.seats ?? 1;
   const trialDays = env.stripeTrialPeriodDays();
   const billingEnabled = env.stripeBillingEnabled();
+  const checkoutEnabled = env.stripeCheckoutEnabled();
 
   // Advisory recommended monthly budget (MRR × 0.30, lib/billing/recommendations.ts).
   // Customer-facing copy only — nothing is enforced unless the operator sets an
@@ -134,9 +135,10 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
         Your plan and invoices.
       </h1>
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
-        Per-seat, monthly, month-to-month. First {trialDays} days are on
-        us — no card required to start. Add a card any time before your
-        trial ends and your subscription rolls over without a gap.
+        Per-seat, monthly, month-to-month.{" "}
+        {checkoutEnabled
+          ? `First ${trialDays} days on us — card collected at signup, charged only when the trial ends. Cancel before day ${trialDays} to owe nothing.`
+          : `First ${trialDays} days on us — add a card any time before your trial ends and your subscription rolls over without a gap.`}
       </p>
 
       {flash ? (

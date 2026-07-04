@@ -135,10 +135,10 @@ export default function SecurityPage() {
         </p>
         <p>
           Internal access to the production environment is limited to the
-          workspace owner (Conner Chambers) and is gated behind multi-factor
-          authentication on the Vercel account. There is no shared admin
-          account; engineering changes are deployed through Git, not through
-          dashboard edits.
+          founding team and is gated behind multi-factor authentication on
+          our hosting infrastructure. There is no shared admin account;
+          engineering changes are deployed through Git, not through dashboard
+          edits.
         </p>
       </Section>
 

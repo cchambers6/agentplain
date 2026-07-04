@@ -86,12 +86,21 @@ columns, same `ON DELETE` / `ON UPDATE` semantics — Prisma's
 `migrate diff` re-formats them due to a version difference in how FK
 constraints serialize. Effectively a no-op rewrite.
 
-### 4. One index rename
+### 4. Two index renames
 
-`HandoffLogEntry_subject_idx` → the auto-generated multi-column name
+**`HandoffLogEntry_subject_idx`** → the auto-generated multi-column name
 `HandoffLogEntry_workspaceId_relatedSubjectTable_relatedSubj_idx`. The
 schema declares the multi-column index; Prisma auto-names it from the
 columns; the original migration used a shorter manual name. Cosmetic.
+
+**`TimeSavingsEntry_workspaceId_sourceTable_sourceId_actionType_ke`** →
+`TimeSavingsEntry_workspaceId_sourceTable_sourceId_actionTyp_key`. The
+`20260618000004_guarantee_time_savings` migration applied a unique-index
+name that is 64 characters long; Postgres silently truncates identifiers
+at 63 characters (`…_actionType_ke`). Prisma generates its own 63-char
+truncation (`…_actionTyp_key`) when reading the schema, so `migrate diff`
+proposes a rename. Both names are 63 chars; truncation points differ.
+Cosmetic — the index and its uniqueness constraint are unchanged.
 
 ## The deeper reconciliation — tracked follow-up
 

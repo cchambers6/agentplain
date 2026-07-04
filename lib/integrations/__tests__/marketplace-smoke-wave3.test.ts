@@ -254,8 +254,30 @@ describe('Marketplace MCP contract — wave 3 (dispatch connectors: TaxDome, Kar
     describe(`${adapter.id} (${adapter.providerKey})`, () => runReadOnlyContract(adapter));
   }
 
-  // Guardrail: every connector this wave claims to cover must still be
-  // marketplace-available. If one is flipped off, the claim is stale.
+  // Guardrail, updated 2026-07-03 (send-path wave): the dispatch surfaces
+  // this wave exercises stay real, but TaxDome + Karbon are deliberately
+  // `coming-soon` in the catalog — they were advertised `available` with no
+  // UI able to save a credential (audit-2026-07-02 dept-5 P0-1), the exact
+  // silent-dead-end class this suite exists to prevent. They may only flip
+  // back to `available` together with bespoke connect forms (TaxDome needs
+  // portalSubdomain, Karbon needs accessToken+accessKey); when that ships,
+  // move them out of DORMANT_UNTIL_CONNECT_UI and this test enforces
+  // availability again. Everything else the wave covers must still be
+  // marketplace-available.
+  const DORMANT_UNTIL_CONNECT_UI = new Set(['taxdome', 'karbon']);
+
+  it('dormant dispatch connectors stay honestly coming-soon until a connect form ships', () => {
+    for (const id of DORMANT_UNTIL_CONNECT_UI) {
+      const entry = listIntegrations().find((e) => e.id === id);
+      assert.ok(entry, `${id} missing from the catalog`);
+      assert.equal(
+        entry!.status,
+        'coming-soon',
+        `${id} is '${entry!.status}' — flipping it to 'available' requires a working connect form first (audit-5 P0-1)`,
+      );
+    }
+  });
+
   it('covers only connectors that are still marketplace-available', () => {
     const available = new Set(
       listIntegrations()
@@ -263,7 +285,7 @@ describe('Marketplace MCP contract — wave 3 (dispatch connectors: TaxDome, Kar
         .map((e) => e.id),
     );
     const notAvailable = [...ADAPTERS.map((a) => a.id), ...INTERFACE_CONNECTORS.map((c) => c.id)].filter(
-      (id) => !available.has(id),
+      (id) => !available.has(id) && !DORMANT_UNTIL_CONNECT_UI.has(id),
     );
     assert.deepEqual(
       notAvailable,

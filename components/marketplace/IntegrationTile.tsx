@@ -83,6 +83,18 @@ function TileAction({
   const focusRing =
     "focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper";
 
+  // Api-key connectors (FUB, Sierra, Buildium, …) have no OAuth start route —
+  // sending them to oauthStartPath dead-ends at "isn't open for self-connect
+  // yet", which is false: the paste-your-key form lives on the integration
+  // detail page (audit-2026-07-02 dept-5, P1-5). Connect/Reconnect for the
+  // api-key family route there instead; the detail page also carries the
+  // connection-time storage disclosure.
+  const detailPath = `/app/workspace/${workspaceId}/integrations/${entry.id}`;
+  const connectHref =
+    entry.connectMode === "api-key"
+      ? detailPath
+      : oauthStartPath(entry, workspaceId);
+
   if (status === "connected") {
     return (
       <div className="flex flex-col gap-2">
@@ -109,7 +121,7 @@ function TileAction({
       <div className="flex flex-col gap-3">
         <Link
           prefetch={false}
-          href={oauthStartPath(entry, workspaceId)}
+          href={connectHref}
           className={`inline-flex min-h-[44px] items-center justify-center gap-2 border border-flag bg-flag px-4 py-3 font-sans text-[13px] font-medium text-paper transition hover:opacity-90 ${focusRing}`}
         >
           Reconnect
@@ -159,13 +171,15 @@ function TileAction({
       <div className="flex flex-col gap-3">
         <Link
           prefetch={false}
-          href={oauthStartPath(entry, workspaceId)}
+          href={connectHref}
           className={`inline-flex min-h-[44px] items-center justify-center gap-2 border border-clay bg-clay px-4 py-3 font-sans text-[13px] font-medium text-paper transition hover:border-clay-deep hover:bg-clay-deep ${focusRing}`}
         >
           Connect
         </Link>
         <p className="text-[11px] leading-relaxed text-mute">
-          You&rsquo;ll grant read access — nothing sends without your review.
+          {entry.connectMode === "api-key"
+            ? "You’ll paste a key from your account — nothing sends without your review."
+            : "You’ll grant read access — nothing sends without your review."}
         </p>
       </div>
     );

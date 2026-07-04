@@ -232,13 +232,22 @@ describe("vertical-routes", () => {
     );
   });
 
-  it("CPA practice-mgmt connectors (TaxDome, Karbon) are shipped", () => {
+  it("CPA practice-mgmt connectors (TaxDome, Karbon) are planned, not shipped", () => {
+    // 2026-07-03 send-path wave: both are `coming-soon` in the marketplace
+    // catalog — the read layer is built but no connect form exists, so the
+    // vertical page must not claim them live (audit-2026-07-02 dept-5 P0-1).
+    // When the connect forms ship and the catalog flips them back to
+    // `available`, move them to shipped[] and update this test with them.
     const cpa = getVerticalContent("cpa");
     assert.ok(cpa);
     for (const vendor of ["TaxDome", "Karbon"]) {
       assert.ok(
-        cpa.integrations.shipped.some((i) => i.name === vendor),
-        `cpa: "${vendor}" must be in shipped[] (status:'available', verticalRelevance ['cpa'] in marketplace.ts)`,
+        !cpa.integrations.shipped.some((i) => i.name === vendor),
+        `cpa: "${vendor}" must NOT be in shipped[] — marketplace status is 'coming-soon' (no open connect path)`,
+      );
+      assert.ok(
+        cpa.integrations.planned.some((i) => i.name === vendor),
+        `cpa: "${vendor}" must be in planned[] so the roadmap still names it honestly`,
       );
     }
   });

@@ -47,13 +47,18 @@ describe("marketplace catalog", () => {
     // the realty-CRM tier is honest about the four-of-six it can serve
     // today + the two waiting on partner agreements.
     // Wave-5 adds taxdome + karbon as available CPA-vertical API-key
-    // connectors.
+    // connectors. (Send-path wave 2026-07-03 flips both to coming-soon —
+    // no connect UI could save their credentials, audit-5 P0-1 — but they
+    // stay in the catalog.)
     // Wave-7 flips hubspot to available + appends salesforce and notion
     // as the three universal MCPs. All three use OAuth.
     // Buildium (property-management, available, api-key) and the law
     // practice-management connectors Clio + MyCase (coming-soon) landed in
     // their own waves. The 2026-06-17 vertical-MCP scaffold wave adds
     // AppFolio (property-management, coming-soon).
+    // The voice/Twilio layer (PR #304) added the Phone & Voice tile
+    // (coming-soon, non-MCP dispatch path) — reconciled here 2026-07-03;
+    // this suite had drifted from the catalog it pins.
     assert.deepEqual(ids, [
       "gmail",
       "outlook",
@@ -73,6 +78,7 @@ describe("marketplace catalog", () => {
       "canva",
       "follow-up-boss",
       "kvcore",
+      "voice",
       "sierra",
       "boldtrail",
       "lofty",
@@ -82,7 +88,7 @@ describe("marketplace catalog", () => {
       "salesforce",
       "notion",
     ]);
-    assert.equal(entries.length, 26, "marketplace surface size is the architectural contract");
+    assert.equal(entries.length, 27, "marketplace surface size is the architectural contract");
   });
 
   it("Gmail + the M365 integrations are available with the right provider keys", () => {
@@ -119,13 +125,19 @@ describe("marketplace catalog", () => {
     // The law connectors Clio + MyCase (partner/API-access pending) and the
     // 2026-06-17 vertical-MCP scaffold AppFolio (PM partner-program pending,
     // ~2-month review) ride along as honest coming-soon entries.
+    // Phone & Voice (PR #304) waits on Twilio provisioning. TaxDome +
+    // Karbon joined 2026-07-03: dispatch-ready but no connect form can save
+    // their credentials yet (audit-5 P0-1) — `available` was a dead end.
     assert.deepEqual(
       soon.map((e) => e.id),
       [
         "paypal",
+        "taxdome",
+        "karbon",
         "appfolio",
         "canva",
         "kvcore",
+        "voice",
         "boldtrail",
         "lofty",
         "real-geeks",
@@ -192,11 +204,16 @@ describe("marketplace catalog", () => {
           `${entry.id} declares at least one scope`,
         );
       }
-      assert.match(
-        entry.mcpEndpointTemplate,
-        new RegExp(`^/api/integrations/${entry.id}-mcp/\\{workspaceId\\}$`),
-        `${entry.id} mcpEndpointTemplate shape`,
-      );
+      // Phone & Voice answers at /api/voice/twilio/* by design — it is not
+      // an MCP dispatch connector (see the catalog entry's comment), so the
+      // <slug>-mcp template shape doesn't apply to it.
+      if (entry.id !== "voice") {
+        assert.match(
+          entry.mcpEndpointTemplate,
+          new RegExp(`^/api/integrations/${entry.id}-mcp/\\{workspaceId\\}$`),
+          `${entry.id} mcpEndpointTemplate shape`,
+        );
+      }
       assert.ok(entry.category.length > 0, `${entry.id} declares a category`);
     }
   });

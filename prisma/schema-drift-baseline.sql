@@ -300,3 +300,6 @@ ALTER TABLE "PreferenceFeedback" ADD CONSTRAINT "PreferenceFeedback_userId_fkey"
 
 -- RenameIndex
 ALTER INDEX "HandoffLogEntry_subject_idx" RENAME TO "HandoffLogEntry_workspaceId_relatedSubjectTable_relatedSubj_idx";
+
+-- RenameIndex
+ALTER INDEX "TimeSavingsEntry_workspaceId_sourceTable_sourceId_actionType_ke" RENAME TO "TimeSavingsEntry_workspaceId_sourceTable_sourceId_actionTyp_key";

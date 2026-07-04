@@ -134,17 +134,22 @@ describe('buildActivationCardFromConnectedProviders — first-session lead', () 
 
 describe('buildActivationCardFromState — snapshot pass-through', () => {
   it('accepts an already-built snapshot without re-reading the connected set', () => {
+    // Fixture uses PM/QuickBooks (a customer-connectable unlock). The
+    // previous fixture was CPA/TaxDome — retired 2026-07-03 when TaxDome
+    // went `coming-soon` with providerKey null (audit-5 P0-1): a snapshot
+    // can no longer represent a TAXDOME connection, which is the honest
+    // state until its connect form ships.
     const snapshot = buildCapabilitySnapshotSync({
-      connectedProviders: new Set<MarketplaceProviderKey>(['TAXDOME']),
+      connectedProviders: new Set<MarketplaceProviderKey>(['QUICKBOOKS']),
     });
     const card = buildActivationCardFromState({
       workspaceId: WS,
-      vertical: 'CPA',
+      vertical: 'PROPERTY_MANAGEMENT',
       snapshot,
       firstSession: true,
       onboarding: { ...FRESH_ONBOARDING, firstToolConnected: true },
     });
-    // TaxDome connected → CPA workflow leads with "see it run".
+    // QuickBooks connected → PM workflow leads with "see it run".
     assert.match(card.steps[0]!.label, /see it run$/);
   });
 });

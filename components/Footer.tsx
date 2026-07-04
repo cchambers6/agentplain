@@ -73,7 +73,10 @@ export default function Footer() {
           <p className="footer-label">Product</p>
           <ul className="space-y-2 text-sm">
             <li>
-              <Link href="/#how" className="text-paper/80 hover:text-wheat">
+              <Link
+                href="/how-it-works"
+                className="text-paper/80 hover:text-wheat"
+              >
                 How it works
               </Link>
             </li>
@@ -122,6 +125,11 @@ export default function Footer() {
             <li>
               <Link href="/about" className="text-paper/80 hover:text-wheat">
                 About
+              </Link>
+            </li>
+            <li>
+              <Link href="/contact" className="text-paper/80 hover:text-wheat">
+                Contact
               </Link>
             </li>
             <li>

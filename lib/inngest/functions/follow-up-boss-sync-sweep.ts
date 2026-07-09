@@ -17,6 +17,7 @@
  */
 
 import { withSystemContext } from '@/lib/db/rls';
+import { isDemoCredentialMetadata } from '@/lib/demo/peachtree-dataset';
 import { asDisciplineId } from '@/lib/disciplines';
 import { runSkill as runLeadTriageSkill } from '@/lib/skills/lead-triage-realestate';
 import { PrismaLeadTriageApprovalSink } from '@/lib/skills/lead-triage-realestate/prisma-approval-sink';
@@ -238,8 +239,7 @@ async function defaultListCandidates(): Promise<WorkspaceCandidate[]> {
             status: 'ACTIVE',
             provider: 'FOLLOW_UP_BOSS',
           },
-          select: { id: true },
-          take: 1,
+          select: { id: true, providerMetadata: true },
         },
       },
       orderBy: { createdAt: 'asc' },
@@ -248,7 +248,14 @@ async function defaultListCandidates(): Promise<WorkspaceCandidate[]> {
       id: ws.id,
       vertical: ws.vertical,
       disabledDisciplines: ws.preference?.disabledDisciplines ?? [],
-      hasFubCredential: ws.integrationCredentials.length > 0,
+      // Seeded demo credentials (Peachtree Realty Demo) hold a sentinel,
+      // not a vendor key — treat them as not-connected so the sweep never
+      // calls Follow Up Boss with one. JS-side filter on purpose: a Prisma
+      // JSON-path NOT filter drops rows whose providerMetadata is NULL
+      // (SQL null comparison), which would skip every real credential.
+      hasFubCredential: ws.integrationCredentials.some(
+        (c) => !isDemoCredentialMetadata(c.providerMetadata),
+      ),
     }));
   });
 }

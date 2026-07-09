@@ -1,6 +1,11 @@
 import Link from "next/link";
 import Section from "@/components/Section";
 import { FaqList } from "@/components/FAQ";
+import {
+  ApClosingBand,
+  ApClosingBandAction,
+} from "@/components/ui/ap";
+import { TRIAL_PERIOD_DAYS } from "@/lib/billing/facts";
 import type { Comparison } from "@/lib/marketing/comparisons";
 
 // Renderer for a single "agentplain vs {alternative}" page. Honest by
@@ -69,12 +74,14 @@ export default function ComparisonView({ c }: { c: Comparison }) {
         </div>
       </Section>
 
-      {/* Side-by-side table */}
+      {/* Side-by-side table — set as a ledger exhibit (mid-rule frame,
+          paper-bright plate) so the page's one anchor is the comparison
+          itself; everything around it stays quiet type on paper. */}
       <Section eyebrow="Side by side" title="Line by line.">
-        <div className="overflow-hidden border border-rule">
+        <div className="overflow-x-auto border border-mid-rule bg-paper-bright">
           <table className="w-full border-collapse text-left text-[15px]">
             <thead>
-              <tr className="border-b border-rule bg-paper-deep">
+              <tr className="border-b border-mid-rule">
                 <th className="p-4 font-mono text-[11px] uppercase tracking-eyebrow text-mute">
                   &nbsp;
                 </th>
@@ -128,32 +135,24 @@ export default function ComparisonView({ c }: { c: Comparison }) {
         <FaqList items={c.faq} />
       </Section>
 
-      {/* CTA */}
-      <section className="border-b border-rule bg-ink text-paper">
-        <div className="container-wide py-20 md:py-24">
-          <p className="max-w-3xl font-display text-3xl leading-[1.12] md:text-4xl">
-            See agentplain on your own business.
-          </p>
-          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-paper/75">
-            First month free. Month-to-month. The fleet drafts; you decide.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-4">
-            <Link
-              href="/app/sign-up"
-              className="inline-flex items-center justify-center gap-2 border border-paper bg-paper px-6 py-3 text-sm font-medium text-ink transition hover:bg-paper-deep"
-            >
+      {/* CTA — the shared grounded close. The old copy said "First month
+          free", which contradicted the ratified trial policy; the trial
+          length now reads from lib/billing/facts.ts so it cannot drift. */}
+      <ApClosingBand
+        eyebrow={null}
+        title="See agentplain on your own business."
+        body={`${TRIAL_PERIOD_DAYS}-day free trial. Month-to-month. The fleet drafts; you decide.`}
+        actions={
+          <>
+            <ApClosingBandAction href="/app/sign-up" variant="primary">
               Start free trial
-              <span aria-hidden>→</span>
-            </Link>
-            <Link
-              href="/verticals"
-              className="inline-flex items-center justify-center gap-2 border border-paper/40 bg-transparent px-6 py-3 text-sm font-medium text-paper transition hover:border-paper"
-            >
+            </ApClosingBandAction>
+            <ApClosingBandAction href="/verticals" withArrow={false}>
               See all ten verticals
-            </Link>
-          </div>
-        </div>
-      </section>
+            </ApClosingBandAction>
+          </>
+        }
+      />
     </>
   );
 }

@@ -21,8 +21,10 @@ export default function Footer() {
   // deepest field tone (forest-deep) with cream type — the heritage chrome that
   // closes every page. The wordmark uses Logo's existing `inverted` variant
   // (paper-on-dark); the logo component itself is untouched.
+  // `letterpress-dark` marks the dark ground so keyboard focus rings render
+  // wheat here (clay is near-invisible on forest-deep — kaizen 4b).
   return (
-    <footer className="border-t border-forest-deep bg-forest-deep text-paper/85">
+    <footer className="letterpress-dark border-t border-forest-deep bg-forest-deep text-paper/85">
       <div className="container-wide grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div>
           <Logo variant="inverted" />
@@ -83,6 +85,17 @@ export default function Footer() {
             <li>
               <Link href="/pricing" className="text-paper/80 hover:text-wheat">
                 Pricing
+              </Link>
+            </li>
+            <li>
+              {/* The 14-day money-back promise was spoken across the estate but
+                  /guarantee had zero inbound links (audit 2026-07-02 finding 5).
+                  The risk-reversal page is now one click from every page. */}
+              <Link
+                href="/guarantee"
+                className="text-paper/80 hover:text-wheat"
+              >
+                Money-back guarantee
               </Link>
             </li>
             <li>

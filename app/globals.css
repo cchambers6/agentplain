@@ -34,6 +34,21 @@
   --color-dust: #9C8B73;
   --color-sage: #7A8B6F;
 
+  /* Motion tokens (2026-07-08 design-system tighten). THREE durations, TWO
+     easings — the whole sanctioned motion vocabulary. Mirrors lib/brand/
+     tokens.ts `motion`; keep in lockstep. No animation may introduce a new
+     duration or easing outside this set (docs/brand/design-tokens-2026-07-08.md §6).
+       quick  — hover/focus state changes
+       settle — sheet + panel entrances (translate only, no fade)
+       drift  — ambient loader travel (the rooted-loader strip)
+       out-soft — entrances settle in like a sheet of paper laid down
+       travel   — continuous, even travel for looping movement */
+  --motion-quick: 120ms;
+  --motion-settle: 180ms;
+  --motion-drift: 1200ms;
+  --ease-out-soft: cubic-bezier(0.2, 0, 0, 1);
+  --ease-travel: cubic-bezier(0.4, 0, 0.6, 1);
+
   /* Paper grain — a faint fractal-noise wash so the cream reads as stock, not a
      flat fill. Inlined SVG (no asset dependency). Tiled at 160px, 3.5% opacity;
      invisible up close, present in aggregate. Heritage DNA: "subtle paper grain
@@ -111,6 +126,18 @@ body {
     outline-offset: 0;
   }
 
+  /* Dark-ground focus ring (kaizen 2026-07-02 improvement 4b): the clay ring
+     reads at only ~2.5:1 on forest/forest-deep/ink panels. Any dark band that
+     carries `.letterpress-dark` (the existing dark-ground marker class) gets a
+     wheat ring instead — 5.8:1 on forest-deep. */
+  .letterpress-dark a:focus-visible,
+  .letterpress-dark button:focus-visible,
+  .letterpress-dark summary:focus-visible,
+  .letterpress-dark [role="button"]:focus-visible,
+  .letterpress-dark [role="link"]:focus-visible {
+    outline-color: var(--color-wheat);
+  }
+
   /* Suppress the visible outline when focus is mouse-driven (matches
      keyboard-vs-mouse convention every modern browser supports). */
   :focus:not(:focus-visible) {
@@ -163,14 +190,17 @@ body {
     @apply mb-4 font-mono text-[11px] uppercase tracking-eyebrow text-paper/50;
   }
 
-  /* Primary CTA — clay on paper. spec §6. */
+  /* Primary CTA — clay on paper. spec §6. `text-white` (not text-paper): the
+     cream on clay sat at 4.19:1 and failed WCAG AA at button size; white
+     clears it at 4.76:1, matching the portal buttons (standing P0, review
+     2026-06-22, closed 2026-07-08). min-h clears the 44px touch target. */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-none border border-clay bg-clay px-6 py-3 font-sans text-sm font-medium text-paper transition hover:border-clay-deep hover:bg-clay-deep;
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-none border border-clay bg-clay px-6 py-3 font-sans text-sm font-medium text-white transition hover:border-clay-deep hover:bg-clay-deep;
   }
 
   /* Secondary CTA — outlined ink on paper. spec §6. */
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-none border border-ink/30 bg-transparent px-6 py-3 font-sans text-sm font-medium text-ink transition hover:border-ink hover:bg-ink/[0.03];
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-none border border-ink/30 bg-transparent px-6 py-3 font-sans text-sm font-medium text-ink transition hover:border-ink hover:bg-ink/[0.03];
   }
 
   .container-wide {
@@ -186,7 +216,7 @@ body {
   /* Confident heritage CTA — a larger, surer clay button for a single hero moment.
      Mailchimp/heritage pull: big, plain, no hedging. One per fold, never stacked. */
   .btn-confident {
-    @apply inline-flex items-center justify-center gap-2.5 rounded-none border border-clay bg-clay px-8 py-4 font-sans text-base font-medium text-paper transition hover:border-clay-deep hover:bg-clay-deep;
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2.5 rounded-none border border-clay bg-clay px-8 py-4 font-sans text-base font-medium text-white transition hover:border-clay-deep hover:bg-clay-deep;
   }
 
   /* Drop-cap — a single Fraunces initial at the head of a long editorial passage.
@@ -274,7 +304,7 @@ body {
 }
 
 .ap-rooted-loader-bar {
-  animation: ap-rooted-loader 1200ms cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation: ap-rooted-loader var(--motion-drift) var(--ease-travel) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -290,7 +320,7 @@ body {
 }
 
 .ap-paper-sheet-in {
-  animation: ap-paper-sheet-in 180ms ease-out;
+  animation: ap-paper-sheet-in var(--motion-settle) var(--ease-out-soft);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -307,13 +337,15 @@ body {
   to   { transform: translateY(0); }
 }
 
+/* The bottom sheet used to run 200ms — collapsed onto the settle token (180ms)
+   so the motion vocabulary stays at three durations total. */
 .ap-sheet-bottom {
-  animation: ap-sheet-up 200ms ease-out;
+  animation: ap-sheet-up var(--motion-settle) var(--ease-out-soft);
 }
 
 @media (min-width: 768px) {
   .ap-sheet-bottom {
-    animation: ap-paper-sheet-in 180ms ease-out;
+    animation: ap-paper-sheet-in var(--motion-settle) var(--ease-out-soft);
   }
 }
 

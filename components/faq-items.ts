@@ -26,6 +26,12 @@ export type FAQItem = {
    * the seam that keeps /pricing's JSON-LD honest — see `pricingFaqItems()`.
    */
   topic?: "pricing";
+  /**
+   * Optional trailing link rendered after the answer (FaqList renders it;
+   * the JSON-LD builder ignores it). Kept as data, not JSX, so this module
+   * stays React-free for the KB loader.
+   */
+  link?: { href: string; label: string };
 };
 
 export const FAQ_ITEMS: FAQItem[] = [
@@ -35,7 +41,7 @@ export const FAQ_ITEMS: FAQItem[] = [
   },
   {
     q: "What does the service partner actually do?",
-    a: "Five things. (1) Install — the partner sets up the fleet, connects your tools, loads your vertical's JTBD table and compliance corpus, and runs the first week alongside you. (2) Review — a recurring touchpoint (a monthly review for Regular; priority support plus a quarterly async check-in for Partner) covering what the fleet drafted, what got approved, what needs tuning. (3) Customize — when your ops shift (new compliance rule, new transaction system, new comp model), the partner updates the agents so you don't have to. (4) Escalate — if a draft hits a hard call, the partner brings it to you with the context. (5) Translate — when something looks off, the partner is your single human contact, not a ticket queue.",
+    a: "Five things. (1) Install: the partner sets up the fleet, connects your tools, loads your vertical's JTBD table and compliance corpus, and runs the first week alongside you. (2) Review: a recurring touchpoint (a monthly review for Regular; priority support plus a quarterly async check-in for Partner) covering what the fleet drafted, what got approved, what needs tuning. (3) Customize: when your ops shift — a new compliance rule, a new transaction system, a new comp model — the partner updates the agents so you don't have to. (4) Escalate: if a draft hits a hard call, the partner brings it to you with the context. (5) Translate: when something looks off, the partner is your single human contact, not a ticket queue.",
   },
   {
     q: "Is this just an AI chatbot with extra steps?",
@@ -47,7 +53,7 @@ export const FAQ_ITEMS: FAQItem[] = [
   },
   {
     q: "What if I just want the tool, not the service?",
-    a: "agentplain isn't sold without the service. The product is the partnership — install, run, customize — not a self-serve platform you wire together yourself. If you want to assemble your own agents from scratch, the foundation-model APIs are open and you can build on them; that's a different product than what we sell. The reason we run it for you is that the vertical-specific corpus, the integration plumbing, and the compliance posture are where local businesses bleed the most time — and those are exactly the layers a generic tool won't solve for you.",
+    a: "agentplain isn't sold without the service. The product is the partnership — install, run, customize — not a self-serve platform you wire together yourself. If you want to assemble your own agents from scratch, the foundation-model APIs are open and you can build on them; that's a different product than what we sell. The reason we run it for you is that the vertical-specific corpus, the integration plumbing, and the compliance posture are where local businesses bleed the most time. Those are exactly the layers a generic tool won't solve for you.",
   },
   {
     q: "How is this different from existing vertical software?",
@@ -63,12 +69,13 @@ export const FAQ_ITEMS: FAQItem[] = [
   },
   {
     q: "What data do you need access to?",
-    a: "OAuth into your email (Gmail, Outlook), file substrate (Google Drive, OneDrive), spreadsheets (Excel), e-signature (DocuSign), messaging (Slack, Teams), and accounting (QuickBooks Online) — those connect tiles live on the /integrations page today. The vertical-specific feeds — MLS for real estate, AMS for insurance, LOS for mortgage, practice-management for CPA / law / RIA — sit on the per-vertical integration roadmap; your service partner sets up what's available with you on a call and runs the unbuilt ones by hand until those adapters land. The fleet reads what's needed for the task, drafts the response, and returns the draft to your review queue. We don't use your client list to train foundation models.",
+    a: "OAuth into your email (Gmail, Outlook), file substrate (Google Drive, OneDrive), spreadsheets (Excel), e-signature (DocuSign), messaging (Slack, Teams), and accounting (QuickBooks Online): those connect tiles live on the /integrations page today. The vertical-specific feeds — MLS for real estate, AMS for insurance, LOS for mortgage, practice-management for CPA / law / RIA — sit on the per-vertical integration roadmap; your service partner sets up what's available with you on a call and runs the unbuilt ones by hand until those adapters land. The fleet reads what's needed for the task, drafts the response, and returns the draft to your review queue. We don't use your client list to train foundation models.",
   },
   {
     q: "How does pricing work?",
     topic: "pricing",
-    a: "Three tiers of service partnership, all per seat, month-to-month, with a 7-day free trial (14 days for CPA & Law), card captured at signup. (1) Regular — standard partnership, monthly review, $199 solo sliding to $99 at 50+ seats. (2) Partner — everything in Regular plus priority support and a quarterly async check-in with your service team, $299 solo sliding to $199 at scale. (3) Max — ad-hoc service partnership for firms with non-standard scope; quoted to the engagement, sales-led. No setup charges. No long-term contract. 14-day money-back guarantee. Cancel anytime from your billing settings.",
+    a: "Three tiers of service partnership, all per seat, month-to-month, with a 7-day free trial (14 days for CPA & Law), card captured at signup. (1) Regular: standard partnership, monthly review, $199 solo sliding to $99 at 50+ seats. (2) Partner: everything in Regular plus priority support and a quarterly async check-in with your service team, $299 solo sliding to $199 at scale. (3) Max: ad-hoc service partnership for firms with non-standard scope — quoted to the engagement, sales-led. No setup charges. No long-term contract. 14-day money-back guarantee. Cancel anytime from your billing settings.",
+    link: { href: "/guarantee", label: "Read the 14-day money-back guarantee" },
   },
   {
     q: "What's the difference between Regular, Partner, and Max?",
@@ -88,15 +95,15 @@ export const FAQ_ITEMS: FAQItem[] = [
   {
     q: "What's the ROI math?",
     topic: "pricing",
-    a: "Modeled value delivered per practitioner runs $2,900–$10,600/mo — modeled on 8–15 hr/wk of systematic work saved × your productive-hour rate, plus deals closed faster. Against the $99 → $299 per-seat subscription cost depending on tier, the modeled ROI multiple is 15x to 50x per workflow. On top of that sits the regulatory exposure a draft-then-approve loop removes: a non-compliant message (TCPA, fair-housing, RESPA, SEC Marketing Rule, and the like) is caught as a draft, never sent — the one thing an auto-execution tool can't promise to dodge. Run your own numbers in the calculator on the pricing page.",
+    a: "We publish the assumptions instead of a headline number. At the ROI calculator's defaults — 10 hours a week of systematic work back, valued at $100 an hour — the modeled value is about $4,300 a month per practitioner, against a $99 to $299 per-seat subscription depending on tier. Your hours and your rate will differ, so the calculator on the pricing page is interactive: put in your own. On top of the hours sits the regulatory exposure a draft-then-approve loop removes: a non-compliant message (TCPA, fair-housing, RESPA, SEC Marketing Rule, and the like) is caught as a draft, never sent. That's the one thing an auto-execution tool can't promise to dodge.",
   },
   {
     q: "Why should anyone believe you?",
-    a: "Four things. (1) We run the service partnership on flatsbo — our own brokerage — before we sell it. The ~35 cron-fired agents in production there are the working precursor of what we sell, operating on a real local business. (2) Outside counsel is reviewing the per-vertical compliance corpus. (3) Every claim on this site cites a memory rule we can show you. (4) Every agent action is visible in your workspace — nothing your service partner does is behind a curtain.",
+    a: "Four things. (1) We run the service partnership on flatsbo, our own brokerage, before we sell it. The ~35 cron-fired agents in production there are the working precursor of what we sell, operating on a real local business. (2) Outside counsel is reviewing the per-vertical compliance corpus. (3) Every claim on this site cites a memory rule we can show you. (4) Every agent action is visible in your workspace — nothing your service partner does is behind a curtain.",
   },
   {
     q: "Is my data safe?",
-    a: "The fleet reads through read-only OAuth and pulls only what a task needs. To do the work, your content is processed by the AI providers that power the fleet and stored in our database under per-workspace isolation. The full data-handling specifics — including the current subprocessor list that names those providers — live in our privacy policy. Liability for licensed activities — anything that requires a state license — stays with you and your firm. We don't act as a brokerage, lender, insurance carrier, law firm, RIA, or any other licensed party. Your service partner runs the AI ops; you run the licensed business.",
+    a: "The fleet reads through read-only OAuth and pulls only what a task needs. To do the work, your content is processed by the AI providers that power the fleet and stored in our database under per-workspace isolation. The full data-handling specifics — including the current subprocessor list that names those providers — live in our privacy policy. Liability for licensed activities (anything that requires a state license) stays with you and your firm. We don't act as a brokerage, lender, insurance carrier, law firm, RIA, or any other licensed party. Your service partner runs the AI ops; you run the licensed business.",
   },
   {
     q: "Is my data resold or used to train someone else's model?",

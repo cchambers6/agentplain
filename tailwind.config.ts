@@ -1,5 +1,5 @@
 import type { Config } from "tailwindcss";
-import { colorHex } from "./lib/brand/tokens";
+import { colorHex, motion } from "./lib/brand/tokens";
 
 const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
@@ -17,6 +17,18 @@ const config: Config = {
       },
       letterSpacing: {
         eyebrow: "0.18em",
+      },
+      // Motion tokens — duration-quick/settle/drift + ease-out-soft/travel.
+      // Values come from lib/brand/tokens.ts `motion` (single source); the CSS
+      // variables in globals.css mirror them for keyframe rules.
+      transitionDuration: {
+        quick: motion.durations.quick,
+        settle: motion.durations.settle,
+        drift: motion.durations.drift,
+      },
+      transitionTimingFunction: {
+        "out-soft": motion.easings.outSoft,
+        travel: motion.easings.travel,
       },
     },
   },

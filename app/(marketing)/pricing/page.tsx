@@ -8,6 +8,10 @@ import { faqPageJsonLd } from "@/lib/seo/structured-data";
 import { alternatesFor } from "@/lib/seo/metadata";
 import { tierLadderBands } from "@/lib/pricing/tiers";
 import HeroBackdrop from "@/components/marketing/HeroBackdrop";
+import {
+  ApClosingBand,
+  ApClosingBandAction,
+} from "@/components/ui/ap";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -134,7 +138,14 @@ export default function PricingPage() {
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft md:text-xl">
             Every tier is a service partnership: we install the fleet, run
             reviews, and customize alongside you. Per seat, month-to-month.
-            7-day free trial, card at signup. 14-day money-back guarantee.
+            7-day free trial, card at signup.{" "}
+            <Link
+              href="/guarantee"
+              className="text-ink underline underline-offset-4 hover:text-clay-deep"
+            >
+              14-day money-back guarantee
+            </Link>
+            .
           </p>
           <div className="mt-10 flex flex-wrap items-center gap-4">
             <Link href="/app/sign-up" className="btn-primary">
@@ -334,38 +345,38 @@ export default function PricingPage() {
         <FaqList items={faqItems} />
       </Section>
 
-      <section className="border-b border-rule bg-ink text-paper">
-        <div className="container-wide py-24 md:py-32">
-          <p className="eyebrow mb-6 text-paper/60">Start where it&apos;s free</p>
-          <p className="max-w-3xl font-display text-3xl leading-[1.15] md:text-5xl md:leading-[1.08]">
-            7-day free trial, card at signup. By day 7 your service team
-            has either shown up or it hasn&apos;t. 14-day money-back if it
-            hasn&apos;t.
-          </p>
-          <div className="mt-10 flex flex-wrap gap-4">
+      {/* The shared grounded close (ApClosingBand, 2026-07-08) — this page
+          used bg-ink while home closed on forest-deep; resolved one way. The
+          money-back promise links to /guarantee. */}
+      <ApClosingBand
+        eyebrow="Start where it's free"
+        title={
+          <>
+            7-day free trial, card at signup. By day 7 your service team has
+            either shown up or it hasn&apos;t.{" "}
             <Link
-              href="/app/sign-up"
-              className="inline-flex items-center justify-center gap-2 border border-paper bg-paper px-6 py-3 text-sm font-medium text-ink transition hover:bg-paper-deep"
+              href="/guarantee"
+              className="underline underline-offset-4 hover:text-wheat"
             >
+              14-day money-back
+            </Link>{" "}
+            if it hasn&apos;t.
+          </>
+        }
+        actions={
+          <>
+            <ApClosingBandAction href="/app/sign-up" variant="primary">
               Start free trial
-              <span aria-hidden>→</span>
-            </Link>
-            <a
-              href="mailto:hello@agentplain.com?subject=agentplain%20service%20partner%20conversation"
-              className="inline-flex items-center justify-center gap-2 border border-paper/40 bg-transparent px-6 py-3 text-sm font-medium text-paper transition hover:border-paper"
-            >
+            </ApClosingBandAction>
+            <ApClosingBandAction href="mailto:hello@agentplain.com?subject=agentplain%20service%20partner%20conversation">
               Talk to a service partner
-              <span aria-hidden>→</span>
-            </a>
-            <Link
-              href="/custom"
-              className="inline-flex items-center justify-center gap-2 border border-paper/20 bg-transparent px-6 py-3 text-sm font-medium text-paper/80 transition hover:border-paper hover:text-paper"
-            >
+            </ApClosingBandAction>
+            <ApClosingBandAction href="/custom" variant="quiet" withArrow={false}>
               Build with us
-            </Link>
-          </div>
-        </div>
-      </section>
+            </ApClosingBandAction>
+          </>
+        }
+      />
     </>
   );
 }
@@ -442,11 +453,10 @@ function TierColumn({
       }`}
     >
       <div className="flex items-baseline justify-between">
-        <p
-          className={`font-mono text-[11px] tracking-eyebrow uppercase ${
-            featured ? "foil" : "text-clay"
-          }`}
-        >
+        {/* Foil retired here: at 11px on cream its light gradient stops read
+            at 1.3–2.1:1 (kaizen 2026-07-02 friction 6). The featured tier is
+            already carried by the clay ring + "Priority support" chip. */}
+        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
           {name}
         </p>
         {featured ? (

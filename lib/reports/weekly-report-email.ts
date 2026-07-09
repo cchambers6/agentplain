@@ -23,20 +23,24 @@
  * underlying data carried one.
  */
 
+import { colorHex } from '@/lib/brand/tokens';
 import type { WeeklyReportData } from './weekly-report-data';
 import type { VerticalOutcome } from './vertical-outcomes';
 
 // ── Brand palette (mirrors app/globals.css :root tokens) ──────────────────────
+// Read from the canonical token source so this email can never strand on an
+// old palette again (the hand-kept copy here missed the 2026-06-22 Heritage
+// Plains move; kaizen 2026-07-02 friction 1).
 const C = {
-  paper: '#F7F4ED',
-  paperDeep: '#EDE9DE',
-  ink: '#1A1A1F',
-  inkSoft: '#2E2E33',
-  clay: '#B65D3A',
-  clayDeep: '#9A4D2F',
-  moss: '#3F5C3F',
-  mute: '#726A5E',
-  rule: '#E0DAC9',
+  paper: colorHex.paper,
+  paperDeep: colorHex['paper-deep'],
+  ink: colorHex.ink,
+  inkSoft: colorHex['ink-soft'],
+  clay: colorHex.clay,
+  clayDeep: colorHex['clay-deep'],
+  moss: colorHex.moss,
+  mute: colorHex.mute,
+  rule: colorHex.rule,
   white: '#FFFFFF',
 } as const;
 

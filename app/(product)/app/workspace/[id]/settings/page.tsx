@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import {
   ApEyebrow,
   ApHairlineList,
@@ -43,7 +44,10 @@ export default async function SettingsPage({ params }: PageProps) {
       },
     }),
   );
-  if (!workspace) return null;
+  // notFound(), not a silent null: the bare return used to render a blank
+  // pane with live nav around it (audit 2026-07-02 shell finding F3). The
+  // workspace-level not-found boundary gives the designed dead-end instead.
+  if (!workspace) notFound();
 
   const memberCount = await withSystemContext((tx) =>
     tx.membership.count({

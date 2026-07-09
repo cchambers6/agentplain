@@ -5,6 +5,11 @@
 // to the reference table in §6 of the design language doc in the same PR.
 
 export { ApAppShell, ApWorkspaceStrip } from "./ApAppShell";
+export { ApBadge } from "./ApBadge";
+export type { ApBadgeTone } from "./ApBadge";
+export { ApCallout } from "./ApCallout";
+export type { ApCalloutTone } from "./ApCallout";
+export { ApClosingBand, ApClosingBandAction } from "./ApClosingBand";
 export { ApEyebrow } from "./ApEyebrow";
 export {
   ApHairlineList,

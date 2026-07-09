@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>agentplain — one-pager</title>
+<meta name="robots" content="noindex">
+<style>
+  /* Print collateral. Canonical brand tokens only (lib/brand/tokens.ts):
+     paper #F5F0E6 · ink #1A1612 · ink-soft #34302A · clay #B85540 ·
+     clay-deep #97402E · forest-deep #16291F · wheat #C8A24A · mute #726A5E ·
+     rule #D8CFBA · mid-rule #C2B69B · paper-bright #FBF8F1.
+     Square corners, hairlines, no shadows — the same system as the site. */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @page { size: letter; margin: 0; }
+  html, body { background: #F5F0E6; color: #1A1612; }
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .sheet {
+    width: 8.5in; min-height: 11in; margin: 0 auto;
+    padding: 0.55in 0.65in; background: #F5F0E6;
+    display: flex; flex-direction: column;
+  }
+  .mono {
+    font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+    font-size: 8.5pt; letter-spacing: 0.18em; text-transform: uppercase;
+  }
+  .mute { color: #726A5E; }
+  .clay { color: #B85540; }
+  .rule { border: 0; border-top: 1px solid #D8CFBA; margin: 0.18in 0; }
+  header { display: flex; justify-content: space-between; align-items: baseline; }
+  .wordmark { font-family: 'Fraunces', Georgia, serif; font-size: 22pt; }
+  h1 {
+    font-family: 'Fraunces', Georgia, serif; font-weight: 400;
+    font-size: 21pt; line-height: 1.12; max-width: 6.6in; margin-top: 0.22in;
+  }
+  h1 .clay { color: #B85540; }
+  .lede { font-size: 11pt; line-height: 1.5; color: #34302A; max-width: 6.6in; margin-top: 0.14in; }
+  .cols { display: flex; gap: 0.24in; margin-top: 0.2in; }
+  .col { flex: 1; border: 1px solid #D8CFBA; background: #FBF8F1; padding: 0.16in; }
+  .col h2 { font-family: 'Fraunces', Georgia, serif; font-weight: 400; font-size: 12pt; margin-top: 0.06in; }
+  .col p { font-size: 9.5pt; line-height: 1.5; color: #34302A; margin-top: 0.06in; }
+  .loop { display: flex; gap: 1px; background: #D8CFBA; border: 1px solid #D8CFBA; margin-top: 0.12in; }
+  .loop div { flex: 1; background: #F5F0E6; padding: 0.1in; }
+  .loop .mono { color: #B85540; letter-spacing: 0.12em; }
+  .loop p { font-size: 8.5pt; line-height: 1.45; color: #34302A; margin-top: 0.04in; }
+  .exhibit { border: 1px solid #C2B69B; background: #FBF8F1; margin-top: 0.2in; }
+  .exhibit .head { border-bottom: 1px solid #C2B69B; padding: 0.08in 0.16in; }
+  .exhibit .body { display: flex; gap: 0.3in; padding: 0.14in 0.16in; align-items: baseline; }
+  .fig { font-family: 'JetBrains Mono', Consolas, monospace; font-size: 17pt; }
+  .fig-label { display: block; margin-top: 0.04in; }
+  .exhibit .note { font-size: 8.5pt; line-height: 1.5; color: #34302A; padding: 0 0.16in 0.12in; max-width: 6.4in; }
+  .facts { display: flex; gap: 0.24in; margin-top: 0.2in; }
+  .facts > div { flex: 1; }
+  .facts p { font-size: 9.5pt; line-height: 1.55; color: #34302A; margin-top: 0.06in; }
+  footer {
+    margin-top: auto; background: #16291F; color: #F5F0E6;
+    padding: 0.22in 0.24in; display: flex; justify-content: space-between; align-items: center;
+  }
+  footer .contact { font-size: 10.5pt; line-height: 1.5; }
+  footer .contact .mono { color: #C8A24A; letter-spacing: 0.14em; }
+  footer .close { font-family: 'Fraunces', Georgia, serif; font-size: 12pt; max-width: 3.4in; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <header>
+    <span class="wordmark">agentplain</span>
+    <span class="mono clay">Intelligence rooted in reality.</span>
+  </header>
+  <hr class="rule">
+
+  <h1>We lift up <span class="clay">local businesses</span> by doing the work that takes their time and money away from the people they serve.</h1>
+  <p class="lede">The best AI tools are powerful. Most owners don&rsquo;t have time to figure them out. agentplain is the service partner that runs it: pre-built skills and agents for your vertical, your tools connected, the whole thing operated for a low flat fee. The fleet drafts and proposes; you approve and send. We run the operation; you run the business.</p>
+
+  <div class="cols">
+    <div class="col">
+      <span class="mono clay">We install</span>
+      <h2>Set up for your trade</h2>
+      <p>Your service team connects the tools you already pay for &mdash; email, calendar, CRM, accounting &mdash; loads your vertical&rsquo;s jobs-to-be-done and compliance corpus, and runs the first week alongside you.</p>
+    </div>
+    <div class="col">
+      <span class="mono clay">We run</span>
+      <h2>Working before you are</h2>
+      <p>The fleet reads what lands, categorizes it, coordinates across threads, proposes times inside your hours, and drafts replies in your voice &mdash; on a cadence, all day, in the background.</p>
+    </div>
+    <div class="col">
+      <span class="mono clay">We customize</span>
+      <h2>Tuned as your ops shift</h2>
+      <p>A recurring review covers what the fleet drafted and what needs tuning. New compliance rule, new transaction system, new comp model &mdash; your service partner updates the agents so you don&rsquo;t have to.</p>
+    </div>
+  </div>
+
+  <div class="loop">
+    <div><span class="mono">&sect; 01 Read</span><p>Starts from what just landed, never a blank prompt.</p></div>
+    <div><span class="mono">&sect; 02 Categorize</span><p>Lead, scheduling ask, vendor pitch, noise &mdash; workspace-tuned.</p></div>
+    <div><span class="mono">&sect; 03 Coordinate</span><p>Walks the thread, grounded in your actual files.</p></div>
+    <div><span class="mono">&sect; 04 Schedule</span><p>Proposes slots inside your stated hours only.</p></div>
+    <div><span class="mono">&sect; 05 Draft</span><p>Lands in your queue. Nothing leaves without your name on it.</p></div>
+  </div>
+
+  <div class="exhibit">
+    <div class="head"><span class="mono mute">Exhibit &middot; the working math, at our stated assumptions</span></div>
+    <div class="body">
+      <span class="fig">10 hrs<span class="mono mute fig-label">a week back &middot; the assumption</span></span>
+      <span class="fig">$4,300<span class="mono mute fig-label">modeled value / month</span></span>
+      <span class="fig">$99&ndash;$199<span class="mono mute fig-label">per seat / month</span></span>
+    </div>
+    <p class="note">Those are the ROI calculator&rsquo;s defaults &mdash; 10 saved hours a week valued at $100 an hour &mdash; not your numbers. Run yours at agentplain.com/pricing.</p>
+  </div>
+
+  <div class="facts">
+    <div>
+      <span class="mono mute">The honest mechanics</span>
+      <p>Nothing sends on its own &mdash; every draft waits in your approval queue, and your own email, calendar, and CRM do the sending. A per-vertical compliance scan reviews customer-facing drafts first (real estate&rsquo;s fair-housing scanner fires live today; other verticals&rsquo; corpora load as counsel red-lines them). Liability for licensed activities stays with you. No data resold; no client list used to train models.</p>
+    </div>
+    <div>
+      <span class="mono mute">The terms</span>
+      <p>Three service-partnership tiers, per seat, month-to-month: Regular ($199 solo, sliding to $99 at scale), Partner ($299 sliding to $199, priority support + quarterly check-in), Max (quoted to scope). 7-day free trial, card at signup. 14-day money-back guarantee. Cancel anytime. Built for ten kinds of local business, real estate first.</p>
+    </div>
+  </div>
+
+  <div class="facts">
+    <div>
+      <span class="mono mute">From the founder</span>
+      <p>agentplain is founder-run. We use the same fleet model we sell &mdash; our own brokerage runs it in production today, and it built most of this product. If it stops earning its seat at your firm, the guarantee means you don&rsquo;t pay for it. &mdash; Conner Chambers, founder</p>
+    </div>
+  </div>
+
+  <footer>
+    <div class="contact">
+      <span class="mono">Talk to us</span><br>
+      hello@agentplain.com &middot; agentplain.com
+    </div>
+    <div class="close">The fleet drafts. You decide.</div>
+  </footer>
+</div>
+</body>
+</html>

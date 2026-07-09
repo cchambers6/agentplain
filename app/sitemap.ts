@@ -60,6 +60,9 @@ const MARKETING_ROUTES: Array<{
   { path: "/compare", changeFrequency: "monthly", priority: 0.7 },
   { path: "/about", changeFrequency: "monthly", priority: 0.7 },
   { path: "/custom", changeFrequency: "monthly", priority: 0.7 },
+  // Risk-reversal page — newly linked from footer/FAQ/closing CTA (2026-07-08;
+  // it previously had zero inbound links and no sitemap entry).
+  { path: "/guarantee", changeFrequency: "monthly", priority: 0.6 },
   { path: "/waitlist", changeFrequency: "monthly", priority: 0.6 },
   // AEO surfaces — glossary. Per-comparison pages enumerated below.
   { path: "/glossary", changeFrequency: "monthly", priority: 0.6 },

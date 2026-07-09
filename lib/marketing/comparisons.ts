@@ -33,6 +33,15 @@ export interface ComparisonRow {
   agentplain: string;
 }
 
+/** One specific, defensible thing the compared product cannot do. */
+export interface ComparisonGap {
+  /** Short imperative title ("Write the follow-up."). */
+  title: string;
+  /** The defensible specifics — every claim here has a source line in
+   *  docs/marketing/compare-pages-2026-07-08/RESEARCH-NOTES.md. */
+  detail: string;
+}
+
 export interface Comparison {
   /** URL slug under /compare/. */
   slug: string;
@@ -61,6 +70,22 @@ export interface Comparison {
   /** …pick agentplain if… */
   chooseAgentplainIf: string;
   faq: Array<{ q: string; a: string }>;
+
+  // ── Optional vendor-page fields (named-competitor comparisons) ──────────
+  // The vendor pages follow the ratified "DIY vs run-for-you" frame
+  // (docs/marketing/deep-dive-2026-07-02/01-competitive-positioning.md):
+  // shared pain first, the vendor's genuine strengths, the specific gaps,
+  // what run-for-you means, then the honest bottom line. Generic pages
+  // (diy/chatgpt/assistant/agency) omit these and render unchanged.
+
+  /** The concrete week both products exist to fix — rendered after the hero. */
+  sharedPain?: string;
+  /** What the compared product can't do — specific and defensible. */
+  cantDo?: ComparisonGap[];
+  /** What "run-for-you" means, as plain paragraphs. */
+  runForYou?: string[];
+  /** Render the intro-call booking CTA instead of the trial CTA. */
+  bookingCta?: boolean;
 }
 
 const NO_OUTBOUND_ANSWER =
@@ -266,6 +291,323 @@ const REGISTRY: Record<string, Comparison> = {
     ],
   },
 };
+
+// ── Named-vendor pages: Georgia real estate (the beachhead) ──────────────────
+//
+// The "DIY vs run-for-you" pages the founder outreach emails link to.
+// Frame ratified 2026-07-03; claims sourced in
+// docs/marketing/compare-pages-2026-07-08/RESEARCH-NOTES.md (retrieved
+// 2026-07-03, re-verified 2026-07-08 — re-verify quarterly per the
+// competitive-positioning doc).
+//
+// Extra rules on top of the registry rules above:
+//   - Follow Up Boss, Sierra Interactive, and BoldTrail are ROADMAP, not
+//     wired. Never claim integration; "works alongside" is the truthful verb.
+//     The live integration story is email + calendar + QuickBooks, plus
+//     DocuSign/Drive on the realty stack.
+//   - The one dollar figure outside the seat ladder is the HUD first-offense
+//     fair-housing civil penalty ($26,262, 24 CFR 180.671, 2025 inflation
+//     adjustment) — a cited regulatory figure, not a price.
+//   - Each page names where the vendor wins first. Kept deliberately fair:
+//     many of our best customers already run one of these, and should.
+
+const VENDOR_REGISTRY: Record<string, Comparison> = {
+  "follow-up-boss": {
+    slug: "follow-up-boss",
+    alternative: "Follow Up Boss",
+    navLabel: "Follow Up Boss",
+    cardSummary:
+      "The team CRM of record vs. a service that does the drafting work around it. Most brokerages that fit us keep both.",
+    metaTitle: "Follow Up Boss vs run for you",
+    metaDescription:
+      "Follow Up Boss organizes your leads and reminds your agents to follow up. Someone still writes the follow-up. An honest comparison for Georgia brokers: the team CRM of record vs. a run-for-you service that drafts the work for your approval.",
+    heroHeadline: "Follow Up Boss vs run for you",
+    directAnswer:
+      "Follow Up Boss is the CRM of record for real-estate teams: it organizes leads, routes them, and reminds your agents to follow up. It does not write the follow-up. agentplain is a run-for-you service — the fleet reads what's already in your inbox and calendar, drafts the replies, the chases, and the summaries, and a person on your team approves each one before anything goes out. If your leads are a mess, buy the CRM first. If the writing is what eats your evenings, that's the work we run.",
+    sharedPain:
+      "You run a Georgia brokerage. Portal leads arrive at nine and ten at night, and the first useful reply usually wins the client. Your CRM logs every lead and fires a task at the right agent. The reply itself still has to be written by a person, and so does the commission-invoice chase, the transaction status update, and the month-end report. That writing is the part of the desk no CRM does.",
+    whereAlternativeWins: [
+      "The pipeline of record. Lead routing, deal stages, and agent accountability in one place — Follow Up Boss does this as well as anything in the category.",
+      "Lead-source coverage: portals and lead providers forward into it with an email swap, and its own docs put basic setup at minutes, not weeks.",
+      "Automation at volume once built — Automations 2.0 fires templates, tasks, and record updates on triggers your team defines.",
+      "Phone-first team workflows, with a dialer add-on and calling reports.",
+    ],
+    whereAgentplainWins: [
+      "The work between the records: reading the thread, drafting the reply in your voice, chasing the missing document.",
+      "A service team installs it and runs a monthly review. Nobody at your brokerage becomes the software administrator.",
+      "Real-estate drafts are checked against the fair-housing corpus, and a person approves everything before it goes out.",
+      "Works across the whole desk — email, calendar, QuickBooks, and the transaction documents — not inside one tool's walls.",
+    ],
+    cantDo: [
+      {
+        title: "Write the follow-up.",
+        detail:
+          "Follow Up Boss fires the task and the template. The 9pm buyer who asked about schools, financing, and a Saturday showing gets a merge-field email until a person writes back. The fleet drafts the specific reply from the actual thread; your agent reads it, edits if needed, and sends.",
+      },
+      {
+        title: "Run itself.",
+        detail:
+          "Action plans, automations, and routing rules are built and maintained by someone at your brokerage — its own plans reserve richer onboarding for the higher tiers because setup is real work. With run-for-you, setup and the monthly tune-up are our job, not a role you staff.",
+      },
+      {
+        title: "Hold every send for a human.",
+        detail:
+          "Its automation sends what you pre-wrote. One fair-housing slip in an auto-sent drip is a first-offense civil penalty of up to $26,262 (HUD, 24 CFR 180.671). Our architecture is the reverse: real-estate drafts pass a fair-housing review, and nothing leaves without a person approving it.",
+      },
+      {
+        title: "See past its own walls.",
+        detail:
+          "The commission invoice lives in QuickBooks. The closing docs live in DocuSign and Drive. The month-end story lives across all of it. A CRM works its own database; the fleet reads across the desk and drafts what sits between the tools.",
+      },
+    ],
+    runForYou: [
+      "Run-for-you means the service does the work and you do the deciding. We install the fleet against the tools you already use — email, calendar, QuickBooks, and the document stack — and configure the workflows for how your brokerage actually runs.",
+      "Every day the fleet reads what came in, drafts the replies, chases, and summaries a person would otherwise type, and queues each one for approval. Nothing sends on its own. You, or the agent you assign, approve and send from your own systems.",
+      "A person on our side runs a monthly review with you: what the fleet drafted, what you edited, what to change. You never file a ticket to get your own software configured.",
+    ],
+    rows: [
+      {
+        dimension: "Setup time",
+        alternative: "Self-serve in minutes; automations and action plans are yours to build",
+        agentplain: "Installed and configured by a service team in days",
+      },
+      {
+        dimension: "Ongoing labor",
+        alternative: "An admin or team lead owns automations, templates, and routing",
+        agentplain: "You approve drafts; we run the fleet and the monthly review",
+      },
+      {
+        dimension: "Personalization",
+        alternative: "Templates and merge fields your team writes ahead of time",
+        agentplain: "Per-thread drafts written in your voice from the live context",
+      },
+      {
+        dimension: "Cost predictability",
+        alternative: "Per-user pricing, with add-ons like the dialer billed per user on top",
+        agentplain: "Flat per-seat monthly, $99–$299 by tier, published in full",
+      },
+      {
+        dimension: "When you need help",
+        alternative: "Help center and support, with richer onboarding on higher plans",
+        agentplain: "A named service partner and a standing monthly review",
+      },
+    ],
+    chooseAlternativeIf:
+      "Your problem is lead organization — routing, accountability, pipeline visibility — and someone on your team will own building and maintaining the automations. Follow Up Boss is a strong CRM of record, and nothing about agentplain asks you to leave it.",
+    chooseAgentplainIf:
+      "Your leads are already organized and the bottleneck is the writing: first-touch replies, document chases, status updates, the month-end report. We run that work alongside the CRM you keep.",
+    faq: [
+      {
+        q: "Do I have to replace Follow Up Boss to use agentplain?",
+        a: "No. Keep it. Follow Up Boss stays your CRM of record; agentplain works alongside it on the email, calendar, QuickBooks, and document work a CRM doesn't do. There is no direct Follow Up Boss integration today — the fleet works from your inbox and calendar, where the real conversations already live.",
+      },
+      {
+        q: "Follow Up Boss has automations. How is run-for-you different?",
+        a: "Its automations fire templates and tasks on triggers someone at your brokerage builds and maintains. The fleet writes the message itself — a specific draft for the specific thread — and a person approves it before it goes anywhere. Automation sends what you pre-wrote; run-for-you drafts what you would have written.",
+      },
+      { q: "Does the fleet send anything on its own?", a: NO_OUTBOUND_ANSWER },
+    ],
+    bookingCta: true,
+  },
+
+  sierra: {
+    slug: "sierra",
+    alternative: "Sierra Interactive",
+    navLabel: "Sierra Interactive",
+    cardSummary:
+      "The IDX website + CRM front door vs. a service for the desk work every captured lead creates.",
+    metaTitle: "Sierra Interactive vs run for you",
+    metaDescription:
+      "Sierra Interactive captures and nurtures leads with an IDX website and CRM. The desk work each lead creates is still yours. An honest comparison for Georgia brokers: the lead-capture front door vs. a run-for-you drafting service.",
+    heroHeadline: "Sierra Interactive vs run for you",
+    directAnswer:
+      "Sierra Interactive couples an IDX website with a CRM: it captures buyer leads on your site, alerts them to listings, and runs drip campaigns tied to what they browsed. It's a strong front door. agentplain is a run-for-you service for the work behind the door — the fleet reads your inbox and calendar, drafts the replies and follow-ups a person would otherwise type, and queues everything for a person to approve. One captures the lead. The other does the desk work the lead creates.",
+    sharedPain:
+      "The Georgia broker who buys Sierra usually has the same week: the site captures inquiries all day, the alerts and drips keep leads warm, and every serious buyer still turns into a thread in somebody's inbox — schools, financing, a showing this weekend. The website did its job. The evenings still go to writing.",
+    whereAlternativeWins: [
+      "The lead-capture front end. Fast IDX sites with saved searches, listing alerts, and behavioral tracking — the websites are the product's spine.",
+      "Drip campaigns and e-alerts at volume, tied to what the buyer actually browsed.",
+      "Built for teams that want to rank on Google organically, not just run a brochure site.",
+      "One vendor for site plus CRM, with lead routing built in.",
+    ],
+    whereAgentplainWins: [
+      "The specific reply. The fleet drafts from the actual thread, in your voice, and your agent approves it.",
+      "The off-site desk: commission invoices in QuickBooks, closing docs, the month-end report.",
+      "A service partner configures and runs it — no campaign upkeep lands on your team.",
+      "Nothing auto-sends. Real-estate drafts pass a fair-housing review, then a person approves.",
+    ],
+    cantDo: [
+      {
+        title: "Answer the buyer.",
+        detail:
+          "Drips and alerts keep a lead warm. They can't answer the question the buyer actually asked — the school district, the seller's timeline, whether Saturday at ten works. The fleet drafts that reply from the thread itself, and your agent approves it before it goes out.",
+      },
+      {
+        title: "Work off the website.",
+        detail:
+          "Sierra lives on your site and its CRM. The commission invoice lives in QuickBooks, the closing docs in DocuSign and Drive, the month-end story in email. That off-site desk work is exactly what the fleet reads and drafts.",
+      },
+      {
+        title: "Come with a person.",
+        detail:
+          "Sierra's plans sell onboarding windows measured in days — 30 to 90 by tier, per its published pricing — and campaign upkeep is your team's job after that. Run-for-you includes a service partner who configures the fleet, runs it, and reviews the month with you, every month.",
+      },
+      {
+        title: "Hold every send for a human.",
+        detail:
+          "Automated campaigns send on triggers. One fair-housing slip in an auto-sent message is a first-offense civil penalty of up to $26,262 (HUD, 24 CFR 180.671). The fleet drafts, the fair-housing corpus reviews, a person approves. That order is the product.",
+      },
+    ],
+    runForYou: [
+      "Run-for-you means the service does the work and you do the deciding. We install the fleet against the tools you already use — email, calendar, QuickBooks, and the document stack — and configure the workflows for how your brokerage actually runs.",
+      "Every day the fleet reads what came in, drafts the replies, chases, and summaries a person would otherwise type, and queues each one for approval. Nothing sends on its own. You, or the agent you assign, approve and send from your own systems.",
+      "A person on our side runs a monthly review with you: what the fleet drafted, what you edited, what to change. You never file a ticket to get your own software configured.",
+    ],
+    rows: [
+      {
+        dimension: "Setup time",
+        alternative: "Site build plus an onboarding window; campaigns are yours to configure",
+        agentplain: "Installed and configured by a service team in days",
+      },
+      {
+        dimension: "Ongoing labor",
+        alternative: "Someone maintains the campaigns, alerts, and routing",
+        agentplain: "You approve drafts; we run the fleet and the monthly review",
+      },
+      {
+        dimension: "Personalization",
+        alternative: "Behavior-triggered templates written ahead of time",
+        agentplain: "Per-thread drafts written in your voice from the live context",
+      },
+      {
+        dimension: "Cost predictability",
+        alternative: "Platform tiers with setup fees on monthly billing and per-feed add-ons",
+        agentplain: "Flat per-seat monthly, $99–$299 by tier, published in full",
+      },
+      {
+        dimension: "When you need help",
+        alternative: "An onboarding window and support tiers that vary by plan",
+        agentplain: "A named service partner and a standing monthly review",
+      },
+    ],
+    chooseAlternativeIf:
+      "You need the front door: an IDX site that captures and nurtures leads, and you have — or are — the person who will run its campaigns. If ranking organically is your growth plan, Sierra's sites are built for it.",
+    chooseAgentplainIf:
+      "Lead capture isn't your bottleneck; the desk work is. We draft the replies, chases, and reports your captured leads generate, alongside whatever site and CRM you keep.",
+    faq: [
+      {
+        q: "Does agentplain integrate with Sierra Interactive?",
+        a: "Not directly today. The fleet works from your email, calendar, QuickBooks, and document tools — which is where Sierra's leads land the moment a real conversation starts. Sierra stays your site and CRM of record; we work beside it, not inside it.",
+      },
+      {
+        q: "Sierra already sends automated follow-ups. Why add agentplain?",
+        a: "Sierra's follow-ups are templates fired on behavioral triggers — good for keeping a cold lead warm. The fleet writes the specific reply to the specific thread, in your voice, and a person approves it before it goes out. When a lead gets serious, templates stop being enough. That's the handoff we cover.",
+      },
+      { q: "Does the fleet send anything on its own?", a: NO_OUTBOUND_ANSWER },
+    ],
+    bookingCta: true,
+  },
+
+  boldtrail: {
+    slug: "boldtrail",
+    alternative: "BoldTrail",
+    navLabel: "BoldTrail",
+    cardSummary:
+      "The brokerage all-in-one platform vs. a service that takes the platform-running work off your plate.",
+    metaTitle: "BoldTrail vs run for you",
+    metaDescription:
+      "BoldTrail puts website, CRM, and lead nurture under one login — and hands your brokerage a platform to run. An honest comparison for Georgia brokers: the all-in-one vs. a run-for-you service that drafts the work for your approval.",
+    heroHeadline: "BoldTrail vs run for you",
+    directAnswer:
+      "BoldTrail, the platform that grew out of kvCORE, is the big brokerage all-in-one: website, CRM, lead nurture, marketing, and back-office modules under one login. It's built to be the system a brokerage standardizes on. agentplain doesn't compete for that job. We're a run-for-you service: the fleet does the reading and drafting work a platform still leaves to people — first-touch replies, document chases, month-end summaries — and a person approves every draft. Brokerages standardize on a platform. Owners hand the typing to us.",
+    sharedPain:
+      "The all-in-one pitch is real: one platform, every module, one contract. What arrives with it is a platform to run. Public reviews consistently describe a learning curve measured in weeks, and someone at your Georgia brokerage becomes the person who builds the campaigns, maintains the routing, and trains every new agent. Meanwhile the 9pm lead still gets a template until a person writes back.",
+    whereAlternativeWins: [
+      "Breadth. Website, CRM, nurture, marketing, and back-office modules in one contract instead of five.",
+      "Brokerage-scale standardization — one platform every agent logs into, with brokerage-level reporting and recruiting tools.",
+      "Automated lead nurture at volume: behavioral alerts and campaigns across a database of thousands.",
+      "If you're consolidating a scattered stack into one system, this is the category to shop.",
+    ],
+    whereAgentplainWins: [
+      "Nothing new to administer. The fleet works your existing email, calendar, QuickBooks, and documents.",
+      "Days to running, installed by a service team — no quote cycle, no admin role to staff.",
+      "Per-thread drafts in your voice, not campaign templates.",
+      "Published flat pricing, $99–$299 per seat.",
+    ],
+    cantDo: [
+      {
+        title: "Shrink the job of running it.",
+        detail:
+          "An all-in-one is also all on you: a quote-based sale, onboarding, a learning curve public reviewers put at weeks, then standing campaign and routing upkeep. Every module you add is more surface someone at the brokerage administers. Run-for-you moves that administration to our side of the table.",
+      },
+      {
+        title: "Write the specific reply.",
+        detail:
+          "Its nurture campaigns work a database at volume. The serious buyer's question — the one that decides whether you win the client — still waits for a person to write back. The fleet drafts that reply from the thread; your agent approves and sends.",
+      },
+      {
+        title: "Watch the books and the paperwork.",
+        detail:
+          "Commission invoices age in QuickBooks. Closing documents sit in DocuSign and Drive. The month-end report has to be assembled from all of it. Platform modules track their own records; the fleet reads across the desk and drafts what's between them.",
+      },
+      {
+        title: "Hold every send for a human.",
+        detail:
+          "Automated nurture sends on triggers. One fair-housing slip across a database that size is a first-offense civil penalty of up to $26,262 (HUD, 24 CFR 180.671) — and the risk scales with the volume. The fleet drafts, the fair-housing corpus reviews, a person approves. Nothing goes out on its own.",
+      },
+    ],
+    runForYou: [
+      "Run-for-you means the service does the work and you do the deciding. We install the fleet against the tools you already use — email, calendar, QuickBooks, and the document stack — and configure the workflows for how your brokerage actually runs.",
+      "Every day the fleet reads what came in, drafts the replies, chases, and summaries a person would otherwise type, and queues each one for approval. Nothing sends on its own. You, or the agent you assign, approve and send from your own systems.",
+      "A person on our side runs a monthly review with you: what the fleet drafted, what you edited, what to change. You never file a ticket to get your own software configured.",
+    ],
+    rows: [
+      {
+        dimension: "Setup time",
+        alternative: "A quote-based sale, onboarding, and a learning curve reviewers measure in weeks",
+        agentplain: "Installed and configured by a service team in days",
+      },
+      {
+        dimension: "Ongoing labor",
+        alternative: "An admin owns campaigns, routing, and training every new agent",
+        agentplain: "You approve drafts; we run the fleet and the monthly review",
+      },
+      {
+        dimension: "Personalization",
+        alternative: "Behavioral campaigns built from templates",
+        agentplain: "Per-thread drafts written in your voice from the live context",
+      },
+      {
+        dimension: "Cost predictability",
+        alternative: "Quote-based; rates aren't published",
+        agentplain: "Flat per-seat monthly, $99–$299 by tier, published in full",
+      },
+      {
+        dimension: "When you need help",
+        alternative: "Vendor support channels and training resources",
+        agentplain: "A named service partner and a standing monthly review",
+      },
+    ],
+    chooseAlternativeIf:
+      "You're consolidating your brokerage's stack and want one platform every agent runs on — and you have the admin capacity to own it. BoldTrail's breadth is the point, and a service like ours doesn't replace it.",
+    chooseAgentplainIf:
+      "You don't want to run more software. You want the reading, drafting, chasing, and reporting handled, alongside whatever platform your agents already use.",
+    faq: [
+      {
+        q: "Does agentplain integrate with BoldTrail?",
+        a: "Not directly today. The fleet works from your email, calendar, QuickBooks, and document tools. BoldTrail stays your platform of record for whatever you run in it; we do the drafting work beside it, and a person on your team approves everything before it moves.",
+      },
+      {
+        q: "BoldTrail already has automation and a big feature list. What's left for agentplain?",
+        a: "The part no module does: writing the specific message. Platforms automate templates at volume and track records in their modules. The fleet reads the live thread, drafts the reply or the chase or the summary a person would have typed, and queues it for approval. Feature breadth and run-for-you solve different problems; plenty of brokerages will want both.",
+      },
+      { q: "Does the fleet send anything on its own?", a: NO_OUTBOUND_ANSWER },
+    ],
+    bookingCta: true,
+  },
+};
+
+Object.assign(REGISTRY, VENDOR_REGISTRY);
 
 export const COMPARISON_SLUGS = Object.keys(REGISTRY);
 

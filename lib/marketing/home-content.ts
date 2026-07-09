@@ -104,8 +104,14 @@ export const proof = [
   },
   {
     label: "ROI math, not vibes",
-    body: "Value math anchored at $2,900–$10,600/mo per practitioner against $99–$199/mo per-seat subscription — typical ROI multiple 15x to 50x per workflow, plus the regulatory violations a draft-then-approve loop keeps from ever sending. Every claim traceable to a memory rule.",
-    cite: "project_pricing_value_anchor.md",
+    // The dollar figure here is the ROI calculator's own labeled default
+    // (components/RoiCalculator.tsx: DEFAULT_HOURS=10 × DEFAULT_RATE=$100/hr
+    // × 4.3 wk/mo ≈ $4,300) — the one derivation that exists in code. The
+    // prior $2,900–$10,600 range had no source anywhere in the repo (audit
+    // 2026-07-02 finding 3) and is retired: this page never renders an
+    // unsourced dollar figure again.
+    body: "At the calculator's own defaults — 10 hours a week back, valued at $100 an hour — the fleet returns about $4,300 a month against a $99–$199 per-seat subscription. Those are our assumptions, not your numbers: the calculator below is interactive, so run yours.",
+    cite: "components/RoiCalculator.tsx defaults (10h × $100 × 4.3wk)",
   },
   {
     label: "Open feedback loop",

@@ -7,6 +7,7 @@
 export { FAQ_ITEMS, pricingFaqItems } from "./faq-items";
 export type { FAQItem } from "./faq-items";
 
+import Link from "next/link";
 import { FAQ_ITEMS, type FAQItem } from "./faq-items";
 
 /** Reusable disclosure-list renderer so /pricing and the homepage share UI. */
@@ -32,6 +33,16 @@ export function FaqList({ items: list }: { items: FAQItem[] }) {
           <p className="mt-4 max-w-prose text-[15px] leading-relaxed text-ink-soft">
             {item.a}
           </p>
+          {item.link ? (
+            <p className="mt-3">
+              <Link
+                href={item.link.href}
+                className="text-[14px] text-ink underline underline-offset-4 hover:text-clay-deep"
+              >
+                {item.link.label} →
+              </Link>
+            </p>
+          ) : null}
         </details>
       ))}
     </div>

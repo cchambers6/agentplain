@@ -30,6 +30,7 @@
 // re-run on the same day re-derives the same state and no-ops.
 
 import type { Prisma, SubscriptionStatus } from "@prisma/client";
+import { colorHex } from "@/lib/brand/tokens";
 import { getEmailProvider } from "@/lib/email";
 import type { EmailProvider } from "@/lib/email";
 import { withSystemContext as defaultWithSystemContext } from "@/lib/db";
@@ -407,15 +408,15 @@ export function renderDunningEmail(args: RenderArgs): {
   const grace = graceLine(candidate);
 
   const html = `<!doctype html>
-<html><body style="font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif; color:#1A1A1F; background:#F7F4ED; padding:32px;">
-  <h2 style="font-weight:500; color:#1A1A1F;">We couldn't process your last payment.</h2>
+<html><body style="font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif; color:${colorHex.ink}; background:${colorHex.paper}; padding:32px;">
+  <h2 style="font-weight:500; color:${colorHex.ink};">We couldn't process your last payment.</h2>
   <p>Your most recent ${escapeHtml(amount)} invoice for <strong>${escapeHtml(candidate.workspaceName)}</strong> didn't go through. It happens — usually an expired card or a bank hold.</p>
   <p>${escapeHtml(grace)}</p>
   <p>Fixing it takes under a minute — add or update your card here:</p>
-  <p><a href="${billingUrl}" style="display:inline-block; padding:12px 20px; background:#1A1A1F; color:#F7F4ED; text-decoration:none; font-weight:500;">Update payment method</a></p>
-  <p style="font-size:13px; color:#726A5E;">Once your card is updated we retry automatically — nothing else for you to do.</p>
-  <p style="font-size:13px; color:#726A5E;">Plaino, your service partner at agentplain</p>
-  <p style="font-size:12px; color:#726A5E; margin-top:24px;">You're receiving this because you have an agentplain workspace.</p>
+  <p><a href="${billingUrl}" style="display:inline-block; padding:12px 20px; background:${colorHex.ink}; color:${colorHex.paper}; text-decoration:none; font-weight:500;">Update payment method</a></p>
+  <p style="font-size:13px; color:${colorHex.mute};">Once your card is updated we retry automatically — nothing else for you to do.</p>
+  <p style="font-size:13px; color:${colorHex.mute};">Plaino, your service partner at agentplain</p>
+  <p style="font-size:12px; color:${colorHex.mute}; margin-top:24px;">You're receiving this because you have an agentplain workspace.</p>
 </body></html>`;
 
   const text = `We couldn't process your last payment.

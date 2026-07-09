@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1584" height="396" viewBox="0 0 1584 396" role="img" aria-label="agentplain — Intelligence rooted in reality. A managed AI fleet for local businesses, run for you.">
+  <!-- Canonical tokens only: forest-deep #16291F, forest #1F3D2E, paper #F5F0E6,
+       wheat #C8A24A, dust #9C8B73, mid-rule #C2B69B. No marks, no Plaino —
+       type + grounded plains line-work per the two-family rule. -->
+  <rect width="1584" height="396" fill="#16291F"/>
+
+  <!-- grounded field band -->
+  <rect y="332" width="1584" height="64" fill="#1F3D2E"/>
+  <line x1="0" y1="332" x2="1584" y2="332" stroke="#9C8B73" stroke-width="1.5" opacity="0.55"/>
+
+  <!-- horizon tussocks (ApMotif "horizon" idiom, scaled) -->
+  <g stroke="#9C8B73" stroke-width="1.5" stroke-linecap="round" opacity="0.5">
+    <line x1="960"  y1="332" x2="960"  y2="318"/>
+    <line x1="1012" y1="332" x2="1012" y2="324"/>
+    <line x1="1064" y1="332" x2="1064" y2="314"/>
+    <line x1="1120" y1="332" x2="1120" y2="322"/>
+    <line x1="1178" y1="332" x2="1178" y2="317"/>
+    <line x1="1238" y1="332" x2="1238" y2="325"/>
+    <line x1="1296" y1="332" x2="1296" y2="315"/>
+    <line x1="1352" y1="332" x2="1352" y2="323"/>
+    <line x1="1408" y1="332" x2="1408" y2="318"/>
+    <line x1="1462" y1="332" x2="1462" y2="326"/>
+  </g>
+
+  <!-- lone tree on the right horizon (ApMotif "lone-tree" idiom, scaled) -->
+  <g stroke="#C2B69B" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1490 332 V266"/>
+    <path d="M1462 266 Q1490 204 1518 266"/>
+    <path d="M1468 254 Q1490 220 1512 254"/>
+  </g>
+
+  <!-- drifting cloud bands (big-sky idiom) -->
+  <g stroke="#9C8B73" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.35">
+    <path d="M1050 96 Q1122 76 1194 96"/>
+    <path d="M1220 150 Q1300 128 1380 150"/>
+    <path d="M1120 210 Q1210 190 1300 210"/>
+  </g>
+
+  <!-- type block: wordmark treatment (lowercase display serif, cream) -->
+  <text x="96" y="188" font-family="Fraunces, Georgia, 'Times New Roman', serif" font-size="88" fill="#F5F0E6">agentplain</text>
+
+  <!-- tagline — wheat mono eyebrow -->
+  <text x="98" y="238" font-family="'JetBrains Mono', Consolas, monospace" font-size="21" letter-spacing="4.2" fill="#C8A24A">INTELLIGENCE ROOTED IN REALITY.</text>
+
+  <!-- hairline + supporting line -->
+  <line x1="98" y1="266" x2="760" y2="266" stroke="#9C8B73" stroke-width="1" opacity="0.6"/>
+  <text x="98" y="300" font-family="Georgia, 'Times New Roman', serif" font-size="24" fill="#F5F0E6" opacity="0.82">A managed AI fleet for local businesses &#8212; run for you.</text>
+</svg>

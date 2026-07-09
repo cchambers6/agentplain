@@ -167,3 +167,26 @@ export const colorHex = {
   dust: tokens.colors.dust!.hex,
   sage: tokens.colors.sage!.hex,
 } as const;
+
+// Motion tokens (2026-07-08 design-system tighten). The complete sanctioned
+// motion vocabulary: three durations, two easings. Mirrored as CSS variables
+// in app/globals.css (--motion-*, --ease-*) and as Tailwind utilities
+// (duration-quick, ease-out-soft, …) in tailwind.config.ts — keep all three
+// in lockstep, same rule as the color tokens. Reference:
+// docs/brand/design-tokens-2026-07-08.md §6.
+export const motion = {
+  durations: {
+    /** Hover/focus state changes. */
+    quick: "120ms",
+    /** Sheet + panel entrances — translate only, never fade. */
+    settle: "180ms",
+    /** Ambient loader travel (the rooted-loader hairline strip). */
+    drift: "1200ms",
+  },
+  easings: {
+    /** Entrances — settles in like a sheet of paper laid down. */
+    outSoft: "cubic-bezier(0.2, 0, 0, 1)",
+    /** Continuous, even travel for looping movement. */
+    travel: "cubic-bezier(0.4, 0, 0.6, 1)",
+  },
+} as const;

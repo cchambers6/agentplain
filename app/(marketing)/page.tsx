@@ -10,14 +10,14 @@ import {
   KnowledgeStat,
   ProofCard,
   Card,
-  TierCard,
 } from "@/components/marketing/HomeCards";
+import { PriceTiers } from "@/components/marketing/PriceTiers";
+import { uniques, proof } from "@/lib/marketing/home-content";
 import {
-  ladderBands,
-  partnerBands,
-  uniques,
-  proof,
-} from "@/lib/marketing/home-content";
+  ApClosingBand,
+  ApClosingBandAction,
+  ApPaperCard,
+} from "@/components/ui/ap";
 import {
   organizationJsonLd,
   serviceJsonLd,
@@ -577,16 +577,60 @@ export default function HomePage() {
         </p>
       </Section>
 
-      {/* Q6 — Why should anyone believe us? */}
+      {/* Q6 — Why should anyone believe us?
+          The converting numbers get the page's premium visual weight: the ROI
+          proof is set as a captioned ledger exhibit (mono figures, hairline-
+          ruled header, paper-bright plate — the Stripe-style "show the real
+          thing" frame), not a flat text card. The foil that used to sit on the
+          Q8 mission copy is retired from cream grounds entirely — its light
+          gradient stops read at 1.3–2.1:1 there (kaizen 2026-07-02 friction
+          6); the exhibit frame carries the premium moment instead. */}
       <Section
         eyebrow="Rooted in reality"
         title="Here's what we mean by &lsquo;rooted in reality.&rsquo;"
         intro="Four things we can point at today. Not a pitch — working software, the people who run it, and a brokerage we run it on. We don't claim 'built for X' without the per-vertical compliance corpus + JTBD tables; we don't claim 'integrates with X' without the value-loop demo. The bar is functional, not marketing."
       >
-        <div className="grid gap-px overflow-hidden border border-rule bg-rule lg:grid-cols-2">
-          {proof.map((p) => (
-            <ProofCard key={p.label} {...p} />
-          ))}
+        <ApPaperCard
+          variant="ledger"
+          eyebrow="Exhibit · the working math, at our stated assumptions"
+        >
+          <div className="grid gap-6 sm:grid-cols-3">
+            <div>
+              <p className="font-mono text-3xl text-ink md:text-4xl">10 hrs</p>
+              <p className="mt-2 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                a week back · the assumption
+              </p>
+            </div>
+            <div>
+              <p className="font-mono text-3xl text-ink md:text-4xl">$4,300</p>
+              <p className="mt-2 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                modeled value per month
+              </p>
+            </div>
+            <div>
+              <p className="font-mono text-3xl text-ink md:text-4xl">
+                $99–$199
+              </p>
+              <p className="mt-2 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+                per seat per month
+              </p>
+            </div>
+          </div>
+          <p className="mt-6 max-w-prose text-[14px] leading-relaxed text-ink-soft">
+            Those are the ROI calculator&apos;s own defaults — 10 saved hours a
+            week valued at $100 an hour — not your numbers.{" "}
+            <Link href="#pricing" className="text-ink underline underline-offset-4">
+              Run yours in the calculator below.
+            </Link>
+          </p>
+        </ApPaperCard>
+
+        <div className="mt-px grid gap-px overflow-hidden border border-rule bg-rule lg:grid-cols-3">
+          {proof
+            .filter((p) => p.label !== "ROI math, not vibes")
+            .map((p) => (
+              <ProofCard key={p.label} {...p} />
+            ))}
         </div>
       </Section>
 
@@ -604,38 +648,12 @@ export default function HomePage() {
       >
         <RoiCalculator />
 
-        <div className="mt-12 grid gap-px overflow-hidden border border-rule bg-rule lg:grid-cols-3">
-          <TierCard
-            name="Regular"
-            tagline="Standard service partnership."
-            description="Our team installs the fleet, configures it for your vertical, and runs a monthly review. Day-to-day, the fleet drafts inside the workspace you log into."
-            bands={ladderBands}
-            ctaLabel="Start free trial"
-            ctaHref="/app/sign-up"
-            ctaStyle="primary"
-            footnote="7-day free trial. Month-to-month. Per seat."
-          />
-          <TierCard
-            name="Partner"
-            tagline="Priority support + a quarterly check-in."
-            description="Same fleet, plus priority support and a quarterly async check-in with your service team — a faster line and a regular pulse on the fleet as your ops shift."
-            bands={partnerBands}
-            ctaLabel="Talk to a service partner"
-            ctaHref="mailto:hello@agentplain.com?subject=agentplain%20Partner%20tier%20interest"
-            ctaStyle="secondary"
-            footnote="7-day free trial. Month-to-month. Per seat."
-            featured
-          />
-          <TierCard
-            name="Max"
-            tagline="Ad-hoc service partnership."
-            description="For firms whose ops don't fit the productized shape — quoted to scope, not by seat. Talk to us about what you need and we'll come back with a written engagement."
-            quotedNote="Quoted per engagement"
-            ctaLabel="Talk to us"
-            ctaHref="mailto:hello@agentplain.com?subject=agentplain%20Max%20tier%20inquiry"
-            ctaStyle="secondary"
-            footnote="Sales-led — no self-checkout."
-          />
+        {/* Tier grid extracted to PriceTiers (2026-07-08): the ladders come
+            from lib/pricing/tiers.ts and the trial/guarantee facts from
+            lib/billing/facts.ts, so this block can no longer drift from
+            billing truth. */}
+        <div className="mt-12">
+          <PriceTiers />
         </div>
 
         <div className="mt-10 grid gap-8 md:grid-cols-[2fr_1fr]">
@@ -677,10 +695,11 @@ export default function HomePage() {
         title={
           <>
             Local businesses can thrive through access to{" "}
-            {/* The one foil moment on the home page — the harvest-gold premium
-                beat reserved for the thesis line (heritage DNA: foil for premium
-                moments, never stacked). */}
-            <span className="foil">
+            {/* Foil retired from cream grounds (its light stops read at
+                1.3–2.1:1 there — kaizen 2026-07-02 friction 6; the ledger
+                exhibit above now carries the page's premium moment). The
+                thesis emphasis uses the same clay span as the hero. */}
+            <span className="text-clay">
               affordable, best-in-class tools and services.
             </span>
           </>
@@ -713,56 +732,52 @@ export default function HomePage() {
 
       {/* CLOSING CTA — locked mission line, no realty-only framing.
           Q9 double CTA: primary self-start, secondary talk-to-a-service-partner.
-          Heritage rollout: the grounded close sits on the deepest field tone
-          (forest-deep), with the letterpress emboss inverted for dark type. */}
-      <section className="border-b border-forest-deep bg-forest-deep text-paper letterpress-dark">
-        <div className="container-wide py-24 md:py-32">
-          <p className="eyebrow mb-6 text-paper/60">{tokens.tagline}</p>
-          <p className="max-w-3xl font-display text-3xl leading-[1.15] md:text-5xl md:leading-[1.08]">
+          Set with ApClosingBand (2026-07-08): the one grounded close every long
+          page now shares — forest-deep, letterpress inverted, wheat focus
+          rings, hairline seam against the footer. The money-back promise now
+          LINKS to /guarantee, which previously had zero inbound links (audit
+          2026-07-02 finding 5). */}
+      <ApClosingBand
+        title={
+          <>
             We lift up local businesses by doing the work that takes their
             time and money{" "}
             <span className="block mt-4 text-paper/70">
               away from the people they serve.
             </span>
-          </p>
-          <p className="mt-8 max-w-2xl text-lg leading-relaxed text-paper/75">
+          </>
+        }
+        body={
+          <>
             7-day free trial, card at signup. Month-to-month from day one.
             Cancel anytime. By the time the trial ends, your service team has
-            either earned its seat or it hasn&apos;t — and there&apos;s a
-            14-day money-back guarantee if it hasn&apos;t.
-          </p>
-
-          <div className="mt-10 flex flex-wrap gap-4">
+            either earned its seat or it hasn&apos;t — and there&apos;s a{" "}
             <Link
-              href="/app/sign-up"
-              className="inline-flex items-center justify-center gap-2 border border-paper bg-paper px-6 py-3 text-sm font-medium text-ink transition hover:bg-paper-deep"
+              href="/guarantee"
+              className="text-paper underline underline-offset-4 hover:text-wheat"
             >
+              14-day money-back guarantee
+            </Link>{" "}
+            if it hasn&apos;t.
+          </>
+        }
+        actions={
+          <>
+            <ApClosingBandAction href="/app/sign-up" variant="primary">
               Start free trial
-              <span aria-hidden>→</span>
-            </Link>
-            <a
-              href="mailto:hello@agentplain.com?subject=agentplain%20service%20partner%20conversation"
-              className="inline-flex items-center justify-center gap-2 border border-paper/40 bg-transparent px-6 py-3 text-sm font-medium text-paper transition hover:border-paper"
-            >
+            </ApClosingBandAction>
+            <ApClosingBandAction href="mailto:hello@agentplain.com?subject=agentplain%20service%20partner%20conversation">
               Talk to a service partner
-              <span aria-hidden>→</span>
-            </a>
-            <Link
-              href="/custom"
-              className="inline-flex items-center justify-center gap-2 border border-paper/40 bg-transparent px-6 py-3 text-sm font-medium text-paper transition hover:border-paper"
-            >
+            </ApClosingBandAction>
+            <ApClosingBandAction href="/custom">
               Build with us
-              <span aria-hidden>→</span>
-            </Link>
-            <Link
-              href="/verticals"
-              className="inline-flex items-center justify-center gap-2 border border-paper/20 bg-transparent px-6 py-3 text-sm font-medium text-paper/80 transition hover:border-paper hover:text-paper"
-            >
+            </ApClosingBandAction>
+            <ApClosingBandAction href="/verticals" variant="quiet" withArrow={false}>
               See all ten verticals
-            </Link>
-          </div>
-        </div>
-      </section>
+            </ApClosingBandAction>
+          </>
+        }
+      />
     </>
   );
 }

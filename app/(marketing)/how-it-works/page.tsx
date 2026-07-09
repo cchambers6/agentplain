@@ -4,7 +4,11 @@ import Link from "next/link";
 import Section from "@/components/Section";
 import HeroBackdrop from "@/components/marketing/HeroBackdrop";
 import { Step } from "@/components/marketing/HomeCards";
-import { tokens } from "@/lib/brand/tokens";
+import {
+  ApClosingBand,
+  ApClosingBandAction,
+  ApPullQuote,
+} from "@/components/ui/ap";
 import { BOOKING_CTA_LABEL, bookingCta } from "@/lib/marketing/booking";
 import { alternatesFor } from "@/lib/seo/metadata";
 
@@ -101,7 +105,7 @@ const SCENES: Array<{ vertical: string; href: string; scene: string }> = [
 function BookIntroCallCta() {
   const cta = bookingCta();
   const className =
-    "inline-flex items-center justify-center gap-2 border border-paper/40 bg-transparent px-6 py-3 text-sm font-medium text-paper transition hover:border-paper";
+    "inline-flex min-h-[44px] items-center justify-center gap-2 border border-paper/40 bg-transparent px-6 py-3 text-sm font-medium text-paper transition hover:border-paper";
   if (cta.external) {
     return (
       <a
@@ -130,7 +134,12 @@ export default function HowItWorksPage() {
       <section className="relative overflow-hidden border-b border-rule bg-paper">
         <HeroBackdrop scene="home-crew" />
         <div className="relative container-wide py-20 md:py-28">
-          <p className="eyebrow mb-3">How it works</p>
+          {/* Dateline kicker — the "a person published this on a date" tell.
+              This page had zero editorial markers against home's 16 (dept
+              design plan 2026-07-03 §days 6–9); the rhythm lands here. */}
+          <span className="dateline mb-6 inline-block">
+            How it works · 2026
+          </span>
           <h1 className="max-w-4xl font-display text-4xl leading-[1.08] text-ink sm:text-5xl md:text-[4rem] md:leading-[1.04]">
             Read. Categorize. Coordinate. Schedule.{" "}
             <span className="text-clay">Draft.</span>
@@ -142,17 +151,13 @@ export default function HowItWorksPage() {
             you choose to. It drafts; you sign; nothing leaves without you.
           </p>
           <div className="mt-9 flex flex-wrap gap-4">
-            <Link
-              href="/app/sign-up"
-              className="inline-flex items-center justify-center gap-2 border border-ink bg-ink px-6 py-3 text-sm font-medium text-paper transition hover:bg-ink/90"
-            >
+            {/* The estate's one primary-CTA treatment (clay), not the ad-hoc
+                ink button this page used to carry. */}
+            <Link href="/app/sign-up" className="btn-primary">
               Start free trial
               <span aria-hidden>→</span>
             </Link>
-            <Link
-              href="/pricing"
-              className="inline-flex items-center justify-center gap-2 border border-rule bg-paper px-6 py-3 text-sm font-medium text-ink transition hover:border-ink"
-            >
+            <Link href="/pricing" className="btn-secondary">
               See pricing
             </Link>
           </div>
@@ -166,9 +171,16 @@ export default function HowItWorksPage() {
         title="Five steps the crew runs on its own"
         intro="The chain runs every five minutes against your backlog and reacts to push events as your tools connect. There is no idle hour where the crew has stopped working — and no step where it acts without you."
       >
+        {/* The five steps as numbered plates — the `§ 01` document grammar
+            that won the trust verticals (kaizen 2026-07-02 win 5). */}
         <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-5">
           {LOOP.map((s) => (
-            <Step key={s.number} number={s.number} title={s.title} body={s.body} />
+            <Step
+              key={s.number}
+              number={`§ ${s.number}`}
+              title={s.title}
+              body={s.body}
+            />
           ))}
         </div>
       </Section>
@@ -215,6 +227,31 @@ export default function HowItWorksPage() {
             </p>
           </div>
         </div>
+
+        {/* Contained figure — the #312 real-estate 3-step illustration set as
+            an editorial plate (hairline frame, paper-deep mat, mono caption).
+            Real estate leads because it is the beachhead. Same treatment as
+            the home hero figure; never a background, never cropped. */}
+        <figure className="m-0 mt-12">
+          <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-3">
+            {["step-1", "step-2", "step-3"].map((step) => (
+              /* eslint-disable-next-line @next/next/no-img-element -- local
+                 brand SVG; next/image avoided product-wide (see Plaino.tsx) */
+              <img
+                key={step}
+                src={`/brand/illustrations/real-estate/${step}.svg`}
+                alt=""
+                aria-hidden
+                className="block h-auto w-full bg-paper-deep object-contain p-6"
+                width={320}
+                height={200}
+              />
+            ))}
+          </div>
+          <figcaption className="mt-3 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+            The loop on a real-estate thread — read, draft, land in your queue
+          </figcaption>
+        </figure>
       </Section>
 
       {/* Concrete per-vertical scenes */}
@@ -253,38 +290,45 @@ export default function HowItWorksPage() {
         </p>
       </Section>
 
-      {/* Closing CTA */}
-      <section className="bg-ink text-paper">
-        <div className="container-wide py-20 md:py-24">
-          <p className="font-mono text-[11px] tracking-eyebrow uppercase text-paper/60">
-            {tokens.tagline}
-          </p>
-          <h2 className="mt-4 max-w-3xl font-display text-4xl leading-tight md:text-5xl">
-            See the loop run on your own inbox.
-          </h2>
-          <p className="mt-6 max-w-2xl text-paper/75">
-            7-day free trial, card at signup. Month-to-month. Cancel anytime.
-            By the time the trial ends, the fleet has either earned its seat or
-            it hasn&apos;t.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-4">
-            <Link
-              href="/app/sign-up"
-              className="inline-flex items-center justify-center gap-2 border border-paper bg-paper px-6 py-3 text-sm font-medium text-ink transition hover:bg-paper-deep"
-            >
-              Start free trial
-              <span aria-hidden>→</span>
-            </Link>
-            <BookIntroCallCta />
-            <Link
-              href="/verticals"
-              className="inline-flex items-center justify-center gap-2 border border-paper/40 bg-transparent px-6 py-3 text-sm font-medium text-paper transition hover:border-paper"
-            >
-              See all ten verticals
-            </Link>
-          </div>
+      {/* The sparse close — one pull-quote on open paper carrying the
+          no-outbound promise, nothing else in the block. Editorial rhythm:
+          a dense fact run above, a full-bleed pause here. */}
+      <section className="border-b border-rule bg-paper">
+        <div className="container-wide py-16 md:py-20">
+          <ApPullQuote>Nothing leaves without your name on it.</ApPullQuote>
         </div>
       </section>
+
+      {/* Closing CTA — the shared grounded close (ApClosingBand). Conviction
+          peaks on this page, so the booking CTA rides beside the trial CTA. */}
+      <ApClosingBand
+        title="See the loop run on your own inbox."
+        body={
+          <>
+            7-day free trial, card at signup. Month-to-month. Cancel anytime.
+            By the time the trial ends, the fleet has either earned its seat or
+            it hasn&apos;t — and there&apos;s a{" "}
+            <Link
+              href="/guarantee"
+              className="text-paper underline underline-offset-4 hover:text-wheat"
+            >
+              14-day money-back guarantee
+            </Link>{" "}
+            if it hasn&apos;t.
+          </>
+        }
+        actions={
+          <>
+            <ApClosingBandAction href="/app/sign-up" variant="primary">
+              Start free trial
+            </ApClosingBandAction>
+            <BookIntroCallCta />
+            <ApClosingBandAction href="/verticals" variant="quiet" withArrow={false}>
+              See all ten verticals
+            </ApClosingBandAction>
+          </>
+        }
+      />
     </>
   );
 }

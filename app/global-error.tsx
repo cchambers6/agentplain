@@ -13,6 +13,11 @@
 
 import { useEffect } from "react";
 import { reportError } from "@/lib/observability";
+// tokens.ts is a dependency-free data module (imports only its own types), so
+// it is safe to pull into this boundary even when the app module graph failed.
+// Routing the colors through it closed the last customer surface still
+// rendering the pre-heritage palette (kaizen 2026-07-02 friction 1).
+import { colorHex } from "@/lib/brand/tokens";
 
 export default function GlobalError({
   error,
@@ -39,8 +44,8 @@ export default function GlobalError({
           minHeight: "100vh",
           fontFamily:
             "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-          background: "#F7F4ED",
-          color: "#1A1A1F",
+          background: colorHex.paper,
+          color: colorHex.ink,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -53,7 +58,7 @@ export default function GlobalError({
               fontSize: 11,
               letterSpacing: "0.18em",
               textTransform: "uppercase",
-              color: "#7a7368",
+              color: colorHex.mute,
               margin: "0 0 12px",
             }}
           >
@@ -61,7 +66,7 @@ export default function GlobalError({
           </p>
           <h1
             style={{
-              fontFamily: "'Source Serif 4', Georgia, serif",
+              fontFamily: "'Fraunces', Georgia, serif",
               fontSize: 32,
               lineHeight: 1.2,
               margin: "0 0 16px",
@@ -82,10 +87,10 @@ export default function GlobalError({
               padding: "10px 20px",
               fontSize: 14,
               fontWeight: 500,
-              background: "#1A1A1F",
-              color: "#F7F4ED",
+              background: colorHex.ink,
+              color: colorHex.paper,
               border: "none",
-              borderRadius: 2,
+              borderRadius: 0,
               cursor: "pointer",
             }}
           >
@@ -99,7 +104,7 @@ export default function GlobalError({
                 fontSize: 11,
                 letterSpacing: "0.12em",
                 textTransform: "uppercase",
-                color: "#7a7368",
+                color: colorHex.mute,
               }}
             >
               reference · {error.digest}

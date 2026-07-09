@@ -14,7 +14,11 @@ export type ApMotifName =
   | "horizon"
   | "seed"
   | "plow"
-  | "big-sky";
+  | "big-sky"
+  | "windmill"
+  | "homestead"
+  | "creek"
+  | "gate";
 
 interface ApMotifProps extends SVGProps<SVGSVGElement> {
   name?: ApMotifName;
@@ -61,6 +65,14 @@ export function ApMotif({
       return <PlowMotif {...props} />;
     case "big-sky":
       return <BigSkyMotif {...props} />;
+    case "windmill":
+      return <WindmillMotif {...props} />;
+    case "homestead":
+      return <HomesteadMotif {...props} />;
+    case "creek":
+      return <CreekMotif {...props} />;
+    case "gate":
+      return <GateMotif {...props} />;
     case "lone-tree":
     default:
       return <LoneTreeMotif {...props} />;
@@ -189,6 +201,98 @@ function PlowMotif(props: SVGProps<SVGSVGElement>) {
       <path d="M14 62 Q48 56 82 62" />
       {/* a single seed-mound at center */}
       <path d="M46 82 Q48 78 50 82" />
+    </svg>
+  );
+}
+
+function WindmillMotif(props: SVGProps<SVGSVGElement>) {
+  // Prairie water-pump windmill — steady background work, running whether or
+  // not anyone is watching. Fits "the fleet works overnight" moments and the
+  // reports surfaces (heritage expansion, 2026-07-08).
+  return (
+    <svg {...props}>
+      {/* ground */}
+      <path d="M4 80 H92" />
+      {/* tower — two legs with a cross-brace */}
+      <path d="M42 80 L48 34" />
+      <path d="M58 80 L52 34" />
+      <path d="M44.5 62 H55.5" />
+      <path d="M46 50 H54" />
+      {/* hub + four sails, offset like a paused rotation */}
+      <path d="M50 30 L58 22" />
+      <path d="M50 30 L58 38" />
+      <path d="M50 30 L42 22" />
+      <path d="M50 30 L42 38" />
+      {/* tail vane */}
+      <path d="M50 30 H64 L68 27 V33 Z" />
+      {/* low outbuilding on the horizon */}
+      <path d="M14 80 V72 H28 V80" />
+    </svg>
+  );
+}
+
+function HomesteadMotif(props: SVGProps<SVGSVGElement>) {
+  // The home place — a small house with a lit doorway and a fence run. The
+  // firm itself: what all the work is in service of. Fits welcome strips and
+  // account/settings empty states (heritage expansion, 2026-07-08).
+  return (
+    <svg {...props}>
+      {/* ground */}
+      <path d="M4 76 H92" />
+      {/* house body */}
+      <path d="M34 76 V54 H66 V76" />
+      {/* gable roof with an eave overhang */}
+      <path d="M30 56 L50 40 L70 56" />
+      {/* doorway */}
+      <path d="M46 76 V62 H54 V76" />
+      {/* chimney */}
+      <path d="M60 47 V38 H64 V50" />
+      {/* fence run to the edge */}
+      <path d="M10 76 V70 M18 76 V70 M26 76 V70 M12 72 H26" />
+      <path d="M74 76 V70 M82 76 V70 M76 72 H82" />
+    </svg>
+  );
+}
+
+function CreekMotif(props: SVGProps<SVGSVGElement>) {
+  // A creek crossing the plain — steady flow, always moving, never rushed.
+  // Fits activity feeds and briefing/report dividers (heritage expansion,
+  // 2026-07-08).
+  return (
+    <svg {...props}>
+      {/* far bank */}
+      <path d="M4 50 H92" />
+      {/* creek — two meandering banks widening toward the viewer */}
+      <path d="M40 50 Q34 62 44 70 Q54 78 46 88" />
+      <path d="M54 50 Q62 60 54 70 Q46 80 58 88" />
+      {/* current marks inside the channel */}
+      <path d="M46 60 Q49 62 52 60" />
+      <path d="M48 74 Q51 76 54 74" />
+      {/* tussocks on the banks */}
+      <path d="M22 50 V45 M30 50 V47 M70 50 V46 M80 50 V47" />
+    </svg>
+  );
+}
+
+function GateMotif(props: SVGProps<SVGSVGElement>) {
+  // An opened field gate — access granted, a connection made. Fits the
+  // connections/integrations surfaces and the first-connect moment
+  // (heritage expansion, 2026-07-08).
+  return (
+    <svg {...props}>
+      {/* ground */}
+      <path d="M4 76 H92" />
+      {/* posts */}
+      <path d="M30 76 V44" />
+      <path d="M70 76 V44" />
+      {/* gate leaf, swung open toward the viewer (foreshortened) */}
+      <path d="M30 48 L58 58" />
+      <path d="M30 64 L58 70" />
+      <path d="M30 48 V64 M58 58 V70" />
+      <path d="M30 64 L58 58" />
+      {/* fence wires running off both posts */}
+      <path d="M4 52 H30 M4 62 H30" />
+      <path d="M70 52 H92 M70 62 H92" />
     </svg>
   );
 }

@@ -1,0 +1,24 @@
+id: first-language-lessons
+name: "First Language Lessons for the Well-Trained Mind"
+publisher: "Well-Trained Mind Press (formerly Peace Hill Press); author Jessie Wise"
+subjects: [grammar]
+stages: [grammar]   # levels 1-4, grades 1-4
+philosophy_affinity: [classical-trivium, charlotte-mason]
+format: [scripted-teacher-book, student-workbook, audio-companion]   # Levels 1-2 are one all-in-one scripted book (mostly oral); Levels 3-4 add a separate student workbook; optional audio companion for Levels 1-2
+pace: "roughly 3 lessons per week over a 36-week year (100 lessons each in Levels 1-2, 89 in Level 3, 85 in Level 4); lessons are short and largely oral in early levels"
+entry_age: 6   # Level 1 targets grade 1
+typical_completion_time: "one school year per level; 4 levels total"
+public_scope_and_sequence_url: "https://s3.us-east-1.amazonaws.com/samples.welltrainedmind.com/FLL_Samples/FLL1_sample.pdf"
+typical_price_range: "USD ~$8-$40 per component depending on level and retailer; Levels 1-2 need only one book each, Levels 3-4 need teacher book plus student workbook"
+known_pairings:
+  - "Writing With Ease (Susan Wise Bauer — same author family, designed together; FLL grammar concepts are reinforced by WWE writing assignments)"
+  - "The Ordinary Parent's Guide to Teaching Reading (same publisher, common grade-1 stack)"
+known_conflicts:
+  - "Redundant alongside another full grammar program (e.g., Rod & Staff English) at the same grades"
+  - "Scripted recitation and memorized definition chants feel over-repetitive to some Charlotte Mason purists despite the shared techniques"
+philosophy_notes: "FLL's gentle oral lessons, copywork, narration, and poem memorization align closely with Charlotte Mason practice, though its scripted recitation of grammar definitions leans classical-trivium rather than pure Mason."
+sources:
+  - "https://welltrainedmind.com/c/series/first-language-lessons/"   # publisher series page (blocks bot fetch, publicly accessible in browser)
+  - "https://welltrainedmind.com/p/first-language-lessons-level-1/"
+  - "https://s3.us-east-1.amazonaws.com/samples.welltrainedmind.com/FLL_Samples/FLL1_sample.pdf"
+  - "https://cathyduffyreviews.com/homeschool-reviews-core-curricula/composition-and-grammar/graded-language-arts-curricula/first-language-lessons"

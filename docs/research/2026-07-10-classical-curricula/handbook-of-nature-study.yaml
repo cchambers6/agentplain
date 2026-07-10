@@ -1,0 +1,23 @@
+id: handbook-of-nature-study
+name: Handbook of Nature-Study for Teachers and Parents
+publisher: Comstock Publishing Company (1911, Ithaca NY); modern reprints from Cornell University Press
+subjects: [science]
+stages: [grammar, logic]
+philosophy_affinity: [charlotte-mason]
+format: [living-book]  # parent/teacher reference (~900 pp., 24+ editions) of observation-based nature lessons, not a scheduled student curriculum
+pace: null  # designed as a reference; CM families typically pull one lesson/topic per weekly nature-study session
+entry_age: null  # written for teachers and parents; used with children of essentially any age
+typical_completion_time: null  # a lifetime reference — never "completed"; often used across the entire homeschool span
+public_scope_and_sequence_url: https://archive.org/details/handbookofnature00coms
+typical_price_range: "free (public domain)"  # 1911 text freely downloadable on archive.org; Cornell University Press sells modern print editions
+known_pairings:
+  - Ambleside Online nature study rotations (the de facto CM scheduling layer over Comstock's topics)
+  - Nature Anatomy (Rothman) as the child-facing illustrated companion to this teacher reference
+  - Charlotte Mason nature journals / notebooks
+known_conflicts:
+  - Content is dated (1911) and regionally centered on the northeastern US — species lists and some science need supplementing for other regions and modern accuracy
+philosophy_notes: The foundational text of the nature study movement and the single most-cited resource for Charlotte Mason nature study, which is a core pillar of CM science education.
+sources:
+  - https://archive.org/details/handbookofnature00coms
+  - https://archive.org/details/handbookofnature00coms_0
+  - https://www.cornellpress.cornell.edu/book/9780801493843/handbook-of-nature-study/

@@ -1,0 +1,24 @@
+id: saxon-math
+name: Saxon Math (Homeschool editions)
+publisher: Saxon Publishers / Houghton Mifflin Harcourt (HMH)
+subjects: [math]
+stages: [grammar, logic, rhetoric]           # Saxon K through Calculus
+philosophy_affinity: [classical-trivium, eclectic]
+format: [textbook, workbook, spiral]
+pace: "4-5 lessons per week (~120-140 lessons per level plus investigations/tests) over a 36-week year"
+entry_age: "5 (Saxon K)"
+typical_completion_time: "1 level per school year"
+public_scope_and_sequence_url: null
+typical_price_range: null
+known_pairings:
+  - life-of-fred: "narrative living-book supplement that offsets Saxon's dry incremental drill"
+known_conflicts:
+  - math-u-see: "spiral-vs-mastery conflict — Saxon's distributed incremental review directly contradicts MUS's one-topic-per-level mastery sequencing within the same year"
+  - rightstart-mathematics: "spiral procedural drill vs RightStart's strategy-first mastery approach; combining in one year sends conflicting messages about how to work a problem"
+philosophy_notes: "Weak Charlotte Mason fit — long lesson-plus-30-problem review sets run against the CM short-lesson ideal, though the predictable rhythm suits structure-loving homes."
+sources:
+  - https://www.hmhco.com/programs/saxon-math                     # verified via WebFetch 2026-07-10 (official HMH Saxon page; confirms incremental/distributed spiral approach; no S&S on page)
+  - https://www.hmhco.com/~/media/sites/home/education/global/pdf/scope-and-sequence/mathematics/k-12/saxon-math-homeschool/shs_ssintroduction.pdf  # NOT verified — request timed out repeatedly on 2026-07-10 (WebFetch and curl); known HMH homeschool S&S PDF location
+# NOTE: public_scope_and_sequence_url is null because HMH's Saxon homeschool scope-and-sequence PDFs (hmhco.com /~/media/... paths) timed out on every fetch attempt 2026-07-10; the HTML program page loads but carries no scope/sequence. Do not cite the PDF as verified.
+# NOTE: typical_price_range is null — homeschool kit prices appear only on third-party retailers and were not verified against a publisher surface.
+# NOTE: homeschool editions are distinct SKUs (e.g., Math 5/4 - 8/7 Homeschool Kits with solutions manuals); classroom editions differ.

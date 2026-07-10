@@ -1,0 +1,27 @@
+id: mystery-of-history
+name: The Mystery of History (Volumes I-IV)
+publisher: Bright Ideas Press
+subjects: [history]
+stages: [grammar, logic, rhetoric]   # every lesson has activity tiers for younger (K-3), middle (4-6), and older (7-12) students
+philosophy_affinity: [classical-trivium, eclectic]   # publisher describes a "Classical approach"; written from a young-earth Christian perspective
+format: [textbook, workbook]   # hardback narrative Student Reader + Companion Guide (pretests, activities, quizzes, maps, timelines)
+pace: "3 lessons/week over 36 weeks (108 lessons in Vol I; 84 lessons in Vols III-IV)"
+entry_age: 5   # marketed "for all ages" with differentiated activity bands; Volume IV is best suited for 6th grade and up
+typical_completion_time: "1 school year per volume; 4 years for the full Creation-to-modern cycle"
+# Verified via WebFetch 2026-07-10: publisher's World History overview page lists all four volumes with periods:
+# Vol I Creation to the Resurrection (c. 4004 BC - c. AD 33); Vol II Early Church & Middle Ages (AD 33-1456);
+# Vol III Renaissance, Reformation & Growth of Nations (1455-1707); Vol IV Wars of Independence to Modern Times (1708-2014).
+public_scope_and_sequence_url: https://brightideaspress.com/world-history/
+typical_price_range: "USD $99.95 per volume (Student Reader with digital Companion Guide); printed Companion Guide or digital reader $49.95; supplements $8-60"
+known_pairings:
+  - "WonderMaps (Bright Ideas Press) — same-publisher map integration"
+  - "Timeline/memory-card notebooking — Companion Guide is built around them"
+known_conflicts:
+  - "Secular history spines — young-earth biblical framing is integral to the text"
+  - "Story of the World — overlapping chronological spine; families pick one"
+philosophy_notes: "Short narrative lessons read aloud well for multi-age Charlotte Mason families, but the pretest/quiz apparatus and explicit young-earth doctrinal framing go beyond what a strict CM home typically uses."
+sources:
+  - https://brightideaspress.com/world-history/
+  - https://brightideaspress.com/world-history/the-mystery-of-history-volume-i-3/
+  - https://brightideaspress.com/world-history/the-mystery-of-history-volume-ii/
+  - https://brightideaspress.com/shop/the-mystery-of-history-volume-iv/

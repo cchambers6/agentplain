@@ -1,0 +1,24 @@
+id: getting-started-with-latin
+name: "Getting Started with Latin: Beginning Latin for Homeschoolers and Self-Taught Students of Any Age"
+publisher: William E. Linney (Armfield Academic Press imprint)
+subjects: [latin]
+stages: [upper-elementary, middle, high-school, adult]
+philosophy_affinity: [classical-trivium, minimalist-self-taught]   # deliberately philosophy-neutral; one-new-concept-per-lesson mastery method
+format: [single-self-contained-book, built-in-answer-key, free-web-audio, free-author-commentary-recordings, free-mobile-drill-app]
+pace: "Self-paced; publisher math: 134 lessons at 5 lessons/week = ~27 weeks, at 10/week = ~13 weeks"
+entry_age: "No stated minimum — publisher positions it for 'students of any age' able to read independently"
+typical_completion_time: "~13-27 weeks (one book; 134 short lessons)"
+public_scope_and_sequence_url: http://www.gettingstartedwithlatin.com/faq.html
+typical_price_range: "~$21.95 (single paperback; all audio recordings and commentary free from publisher site; Kindle edition also available)"
+known_pairings:
+  - "Getting Started with Latin -> Keep Going with Latin -> Linney's Latin Class (free online course through Gunnison & Harley's 'The First Year of Latin') — publisher-stated sequence"
+  - "Commonly used as a gentle standalone Latin spine or as a pre-/co-program alongside any pronunciation track, since free recordings ship in BOTH classical and ecclesiastical styles"
+  - "Sibling titles in the same method: Getting Started with Spanish / French / Greek etc."
+known_conflicts:
+  - "None documented by publisher; dual-pronunciation recordings make it track-agnostic. Publisher's own FAQ flags coverage gaps vs a full high-school Latin 1 (no imperfect/perfect/future tenses, no numbers), so it cannot substitute 1:1 for a graded classical sequence like Memoria Forms or CAP Latin for Children"
+philosophy_notes: "Its very short, mastery-based, one-concept-per-lesson format is closer in spirit to Charlotte Mason's short-lesson principle than Memoria-style drill, but it remains a grammar-translation method rather than Mason's oral-first language teaching."
+sources:
+  - http://www.gettingstartedwithlatin.com/   # verified 2026-07-10 (HTTP 200; site is HTTP-only on Google-hosted storage, HTTPS cert mismatched)
+  - http://www.gettingstartedwithlatin.com/faq.html   # verified 2026-07-10 — 134 lessons, full grammar scope list, both pronunciations, GSWL->KGWL->Linney's Latin Class sequence
+  - https://www.amazon.com/Getting-Started-Latin-Homeschoolers-Self-Taught/dp/0979505100   # per web search ($21.95 paperback)
+  - http://www.linneyslatinclass.com/   # publisher's free follow-on course (same host; HTTPS unavailable)

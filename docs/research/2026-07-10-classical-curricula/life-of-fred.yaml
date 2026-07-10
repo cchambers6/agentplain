@@ -1,0 +1,25 @@
+id: life-of-fred
+name: Life of Fred
+publisher: Polka Dot Publishing
+subjects: [math]
+stages: [grammar, logic, rhetoric]           # elementary series (Apples-Jelly Beans) through high school and university-level titles
+philosophy_affinity: [charlotte-mason, eclectic]
+format: [living-book, textbook, mastery]
+pace: "self-paced narrative chapters (a chapter per sitting is common); publisher states Apples through Mineshaft (13 books) takes about 16-21 months total"
+entry_age: "6 (publisher: start anywhere between 1st and 4th grade depending on reading readiness; begin with Apples if addition facts are not yet cold)"
+typical_completion_time: "multiple books per year; ~16-21 months for the full elementary + intermediate arc (publisher-stated)"
+public_scope_and_sequence_url: https://lifeoffred.com/elementary.html   # verified 2026-07-10; full series order (Apples-Jelly Beans + Kidneys/Liver/Mineshaft), placement guidance, pacing — publisher has no formal S&S grid
+typical_price_range: "$19 per elementary hardback (Apples verified at $19.00 on shop.lifeoffred.com); ~$190 for the 10-book elementary series"
+known_pairings:
+  - math-u-see: "LoF narrative enrichment over a skill-drill mastery spine"
+  - saxon-math: "LoF is the classic 'story antidote' supplement to Saxon's dry spiral drill"
+  - rightstart-mathematics: "adds independent reading-based math to a parent-intensive program"
+known_conflicts:
+  - saxon-math: "as co-equal spines the mastery-style once-through narrative and Saxon's spiral review sequence contradict each other — use LoF as supplement, not parallel spine"
+philosophy_notes: "Excellent Charlotte Mason fit — a genuine living-book approach with short story-driven lessons, though most families add a practice-heavy spine since built-in exercises ('Your Turn to Play') are sparse."
+sources:
+  - https://lifeoffred.com/elementary.html                       # verified via WebFetch 2026-07-10 (series order, placement, 16-21 month pacing)
+  - https://lifeoffred.com/                                      # verified via WebFetch 2026-07-10 (publisher = Polka Dot Publishing; Where-to-Start guidance)
+  - https://shop.lifeoffred.com/products/life-of-fred-apples     # verified via WebFetch 2026-07-10 (price $19.00)
+# NOTE: format classification — LoF is neither drill-spiral nor strict topic-mastery; it presents each concept once inside a continuous narrative with light practice. "mastery" is the closer bucket per the schema's spiral-or-mastery requirement, but treat it as a supplement-grade spine for most families.
+# NOTE: author Stanley F. Schmidt writes the entire series; no teacher manuals or tests at the elementary level.

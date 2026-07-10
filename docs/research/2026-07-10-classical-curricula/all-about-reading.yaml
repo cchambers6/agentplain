@@ -1,0 +1,21 @@
+id: all-about-reading
+name: All About Reading
+publisher: All About Learning Press
+subjects: [reading]
+stages: [early-years, grammar]
+philosophy_affinity: [charlotte-mason, classical-trivium, eclectic]
+format: [manipulative-heavy, mastery]
+pace: "about 20 minutes per day of core instruction (publisher guidance); self-paced, mastery-based"
+entry_age: "~4 (Pre-reading level targets preschoolers; publisher states the program serves pre-readers through teens and adults)"
+typical_completion_time: null   # publisher does not state a per-level duration; mastery-based
+public_scope_and_sequence_url: https://www.allaboutlearningpress.com/scope-and-sequence/
+typical_price_range: "$159.95 per level for complete materials (publisher direct); components sold separately"
+known_pairings:
+  - "All About Spelling (same publisher, same Orton-Gillingham method; letter tiles are a shared one-time purchase covering AAR 1-4 and AAS 1-7)"
+known_conflicts:
+  - "Running a second full Orton-Gillingham phonics program (e.g., a complete Explode the Code sequence or Phonics Pathways) simultaneously is redundant"
+philosophy_notes: "Short, multisensory, mastery-paced lessons fit Charlotte Mason's short-lessons principle, though the scripted activity-book approach is more structured than CM purists prefer."
+sources:
+  - https://www.allaboutlearningpress.com/all-about-reading/
+  - https://www.allaboutlearningpress.com/scope-and-sequence/
+  - https://www.allaboutlearningpress.com/ortongillingham

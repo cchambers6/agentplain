@@ -1,0 +1,24 @@
+id: latin-for-children
+name: Latin for Children (Primers A, B, C)
+publisher: Classical Academic Press
+subjects: [latin]
+stages: [upper-elementary, middle]
+philosophy_affinity: [classical-trivium]
+format: [student-text, activity-book, answer-key, video-and-audio-lessons, chant-audio, online-practice, test-packet, history-reader]
+pace: "Daily lessons of 20-25 minutes corresponding to a weekly chapter"
+entry_age: "9 (publisher: 'students as young as fourth graders'; Primer A grades 4-5, B grades 5-6, C grades 6-7)"
+typical_completion_time: "1 school year per primer (3 years for the full A-B-C series)"
+public_scope_and_sequence_url: https://classicalacademicpress.com/collections/latin-for-children
+typical_price_range: "$29.95-31.95 (student edition alone) to ~$133-170 (full program bundle per primer; Primer A Program listed $169.75, sale $152.95, as of 2026-07)"
+known_pairings:
+  - "Song School Latin -> Latin for Children Primer A (CAP sequence; SSL Book 2 explicitly pre-teaches 75 LFC-A words/grammar topics)"
+  - "Latin for Children A -> B -> C -> Latin Alive! (CAP's upper-school continuation, referenced on CAP's Latin series pages)"
+  - "History Reader supplements per primer for translation practice"
+known_conflicts:
+  - "Ships chant audio in BOTH classical and ecclesiastical pronunciation — pick one track and stay on it; crossing over from/to Memoria's ecclesiastical-only sequence (Latina Christiana / First Form) mid-stream mixes pronunciation systems and duplicates grammar sequence"
+  - "Grammar-chant intensity is heavier than gentle/CM approaches expect at age 9-10"
+philosophy_notes: "The daily chant-and-drill mastery of declensions and conjugations from grade 4 is classic trivium grammar-stage pedagogy, well beyond Charlotte Mason's gentler, delayed and more oral approach to Latin, though the short 20-25 minute lessons echo Mason's short-lesson habit."
+sources:
+  - https://classicalacademicpress.com/collections/latin-for-children   # verified via WebFetch 2026-07-10 (A/B/C grades and bundle prices)
+  - https://classicalacademicpress.com/products/latin-for-children-primer-a-program-1   # verified via WebFetch 2026-07-10 (pacing, dual pronunciation, $152.95/$169.75)
+  - https://classicalacademicpress.com/products/latin-for-children-primer-a   # per web search (student edition, grades 4-7 positioning)

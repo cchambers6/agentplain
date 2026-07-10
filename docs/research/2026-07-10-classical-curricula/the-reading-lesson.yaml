@@ -1,0 +1,23 @@
+id: the-reading-lesson
+name: "The Reading Lesson: Teach Your Child to Read in 20 Easy Lessons"
+publisher: Mountcastle Company (Michael Levin, MD & Charan Langton, MS; first published 1998)
+subjects: [reading]
+stages: [early-years]
+philosophy_affinity: [charlotte-mason, eclectic]
+format: [textbook, mastery]
+pace: "about 15 minutes of study per day; each of the 20 lessons takes one to two weeks depending on the child's age"
+entry_age: "3 (publisher targets ages 3-8, most commonly ages 3-7)"
+typical_completion_time: "approximately 40-50 weeks for the full 20-lesson book"
+public_scope_and_sequence_url: null   # publisher site readinglesson.com is live but minimal (no machine-readable scope document found); 20-lesson structure confirmed via publisher-site content and retailer listings
+typical_price_range: "$27.95 list for the single 448-page book; used copies ~$11-$22"
+known_pairings:
+  - "Scheduled as the reading spine in Heart of Dakota's early programs (Heart of Dakota sells a companion teacher's guide); same publisher also offers The Verbal Math Lesson series"
+known_conflicts:
+  - "Uses a phonics-plus-keyword-recognition hybrid, so it conflicts with running a strict Orton-Gillingham program (e.g., All About Reading) simultaneously and is disfavored by phonics-only purists"
+philosophy_notes: "Gentle 15-minute daily lessons for very young children align well with Charlotte Mason's short-lessons principle, though its keyword-recognition element departs from pure phonics methods CM-classical hybrids often prefer."
+sources:
+  - https://readinglesson.com/
+  - https://www.christianbook.com/the-reading-lesson-michael-levin/9780913063026/pd/163029
+  - https://cathyduffyreviews.com/homeschool-reviews-core-curricula/phonics-reading/phonics-reading-programs/the-reading-lesson
+  - https://www.heartofdakota.com/product/303g-the-reading-lesson-tg/
+  - https://eric.ed.gov/?id=ED454491

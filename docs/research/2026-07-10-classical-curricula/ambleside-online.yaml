@@ -1,0 +1,48 @@
+id: ambleside-online
+name: AmblesideOnline (AO)
+publisher: AmblesideOnline Advisory (amblesideonline.org; volunteer advisory, non-commercial)
+subjects:
+  - bible
+  - history
+  - geography
+  - literature
+  - language-arts
+  - science
+  - nature-study
+  - poetry
+  - shakespeare
+  - plutarch (citizenship)
+  - picture-study
+  - composer-study
+  - hymn-study
+  - foreign-language
+  - handicrafts
+stages:
+  - early-years (Year 0 / pre-6, informal)
+  - elementary (Years 1-6)
+  - middle (Years 7-8, incl. Year 3.5 and Pre-7 flex entry points)
+  - high-school (Years 9-12)
+philosophy_affinity: [charlotte-mason]
+format:
+  - free-online-curriculum-plan   # booklists + weekly schedules, NOT a boxed product
+  - living-book
+  - booklists
+  - weekly-reading-schedules
+  - many-scheduled-titles-free-online (public domain)
+pace: "36-week school year organized into 3 terms; short lessons; weekly reading assignments per Year; one AO Year per school year"
+entry_age: "Year 1 at about age 6 (site cites Charlotte Mason's rule that no child under six should be required to narrate); Year 0 is informal pre-6"
+typical_completion_time: "one school year (36 weeks) per Year; full sequence Year 0 through Year 12 (13 years)"
+public_scope_and_sequence_url: https://www.amblesideonline.org/curriculum.php
+typical_price_range: "free — the curriculum plan itself costs nothing ('no cost to use this information'); only expense is books not available free online"
+known_pairings:
+  - "a separate math program of the family's choice — AO explicitly does not prescribe math ('all children should be working at their grade level in math and language arts regardless of which Year of AO they're doing')"
+  - "Handbook of Nature Study (Anna Botsford Comstock) as the classic nature-study companion"
+  - "Living Book Press reprints — LBP organizes its shop by AO Year (Years 1-12 incl. 3.5 and Pre-7)"
+known_conflicts:
+  - "running a full boxed classical core (e.g., a Memoria Press full core) alongside AO double-schedules the day — AO is a complete multi-subject plan, not a supplement"
+  - "other full CM plans (A Gentle Feast, Simply Charlotte Mason family plans) are alternatives to AO, not add-ons"
+philosophy_notes: "The flagship free Charlotte Mason curriculum plan, designed to hew as closely as possible to the curriculum Mason used in her own PNEU schools — living books, narration, copywork, nature study, picture/composer study, and short lessons."
+sources:
+  - https://www.amblesideonline.org/curriculum.php
+  - https://www.amblesideonline.org/faq
+  - https://www.amblesideonline.org/years

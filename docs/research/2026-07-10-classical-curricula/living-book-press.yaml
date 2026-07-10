@@ -1,0 +1,41 @@
+id: living-book-press
+name: Living Book Press
+publisher: Living Book Press (Australian family-run publisher; livingbookpress.com)
+subjects:
+  # catalog subjects — LBP is a PUBLISHER of living-book reprints, not a curriculum
+  - literature
+  - nature-study (incl. Handbook of Nature Study editions with new color images)
+  - history
+  - geography
+  - biography
+  - science
+  - folk-tales-and-mythology
+  - poetry
+  - religion
+  - charlotte-mason-source-texts (Home Education Series, 6 volumes)
+  - handicraft
+  - citizenship
+stages: []            # not staged — per-title reading levels; shop is organized by the year/form/cycle of the curricula that schedule each book
+philosophy_affinity: [charlotte-mason]
+format:
+  - living-book-reprints (transcribed and reformatted public-domain and licensed titles)
+  - softcover
+  - hardcover
+  - ebook (2 free e-books offered monthly)
+  - audiobook
+pace: null            # not applicable — a book publisher, not a scheduled program
+entry_age: null       # per-title; no program entry point
+typical_completion_time: null
+public_scope_and_sequence_url: https://www.livingbookpress.com/subject/charlotte-mason/   # publisher catalog page, not a scope-and-sequence — LBP has none because it is not a curriculum
+typical_price_range: "per title, roughly $4 ebook / ~$14 softcover / ~$24-27 hardcover (site shows localized currency; figures observed as EUR equivalents in product data, 2026-07)"
+known_pairings:
+  - "AmblesideOnline — LBP shop has per-Year catalog pages (Years 1-12 incl. 3.5 and Pre-7)"
+  - "A Gentle Feast — per-Cycle catalog pages (Cycles 1-4)"
+  - "Mater Amabilis, Sabbath Mood Homeschool, A Mind In The Light, The Children's Tradition, Schola Rosa, Living Heritage, Charlotte Mason Cottage Curriculum — all have dedicated LBP catalog mappings"
+known_conflicts:
+  - "none as a program — it is a book supplier, not a schedule; only risk is duplicate purchases when a curriculum bundle already includes print books"
+philosophy_notes: "Not a curriculum but the CM ecosystem's reprint house — an Australian homeschool-family publisher whose mission is 'making great quality reprints of living books affordable for everyone,' with its catalog explicitly organized around the CM plans (AO years, AGF cycles, etc.) that schedule its titles."
+sources:
+  - https://www.livingbookpress.com/about-us/
+  - https://www.livingbookpress.com/subject/charlotte-mason/
+  - https://www.livingbookpress.com/product/home-education/

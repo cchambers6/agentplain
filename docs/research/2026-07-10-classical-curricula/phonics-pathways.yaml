@@ -1,0 +1,22 @@
+id: phonics-pathways
+name: "Phonics Pathways: Clear Steps to Easy Reading and Perfect Spelling (10th Edition)"
+publisher: Jossey-Bass (an imprint of Wiley); originally self-published via Dorbooks
+subjects: [phonics]
+stages: [early-years, grammar]
+philosophy_affinity: [classical-trivium, eclectic]
+format: [textbook, mastery]
+pace: null   # self-paced single volume; author suggests short incremental sessions but no fixed lessons/week is published
+entry_age: "~5 (designed for K-2 emergent readers; also used with adolescent/adult learners, ESL students, and students with dyslexia)"
+typical_completion_time: null   # single-volume program; no published per-level duration
+public_scope_and_sequence_url: null   # Wiley product page blocks automated verification (HTTP 403) and author site dorbooks.com is offline; sequence is described in the book listing (sounds/patterns built one at a time into syllables, words, phrases, sentences)
+typical_price_range: "$20-$26 one-time for the single self-contained book (no separate teacher's manual needed)"
+known_pairings:
+  - "Standalone and complete for decoding; pairs with any separate spelling program despite covering spelling patterns itself"
+known_conflicts:
+  - "Redundant to run simultaneously with another full systematic phonics program such as All About Reading or The Ordinary Parent's Guide to Teaching Reading"
+philosophy_notes: "A single inexpensive book of very short, incremental lessons suits Charlotte Mason's short-lesson habit, though it is pure phonics drill with no living-book component."
+sources:
+  - https://cathyduffyreviews.com/homeschool-reviews-core-curricula/phonics-reading/phonics-reading-programs/phonics-pathways-tenth-edition
+  - https://www.wiley.com/en-us/Phonics+Pathways:+Clear+Steps+to+Easy+Reading+and+Perfect+Spelling,+10th+Edition-p-9781118037195
+  - https://eric.ed.gov/?id=ED520172
+  - https://www.amazon.com/Phonics-Pathways-Reading-Perfect-Spelling/dp/1118022432

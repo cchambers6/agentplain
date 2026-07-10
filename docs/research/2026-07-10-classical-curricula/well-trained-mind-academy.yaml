@@ -1,0 +1,66 @@
+id: well-trained-mind-academy
+name: Well-Trained Mind Academy
+publisher: Well-Trained Mind Academy (founded by Susan Wise Bauer; sister to Well-Trained Mind Press)
+# NOTE: This is a live online CLASS provider, not a boxed curriculum. It is the
+# teaching arm of the classical model laid out in the book "The Well-Trained
+# Mind: A Guide to Classical Education at Home" (Susan Wise Bauer & Jessie
+# Wise, first published 1999). Founded 2014 (per welltrainedmind.com);
+# accredited by MSA-CESS, with NCAA-approved core high school courses.
+subjects:
+  - history
+  - literature
+  - math
+  - science
+  - social-science
+  - study-skills
+  - writing-grammar
+  - fine-arts
+  - health-physical-fitness
+  - world-languages
+stages:
+  - logic     # middle school
+  - rhetoric  # high school
+programs: []
+philosophy_affinity: [classical-trivium]
+format:
+  - online
+  - live-classes
+  - recorded-lecture-option  # delayed lecture sections offered as alternative
+pace: >-
+  À la carte per-course enrollment on a standard academic calendar (full-year
+  or one-semester courses); live interactive online class meetings with
+  instructor grading, plus independent homework between sessions. No weekly
+  community-day model.
+entry_age: "~10 (grades 5-12 per welltrainedmind.com; official catalog centers on middle and high school)"
+typical_completion_time: One semester or one academic year per course
+public_scope_and_sequence_url: https://www.wtmacademy.com/courses/
+typical_price_range: >-
+  Per course (official tuition page): $825-$975 full-year, $500-$525
+  one-semester, $275 clubs; plus $100 registration per student ($125 if paid
+  by charter/third-party funds) and $25 STEM fee (max $50). A full course
+  load therefore runs roughly $3,500-$5,000+/yr.
+known_pairings:
+  - The Well-Trained Mind book as the at-home master plan, with WTMA classes outsourcing selected subjects
+  - Well-Trained Mind Press curricula (e.g., Story of the World, First Language Lessons, Writing With Ease/Skill) for younger siblings or non-WTMA subjects
+  - WTMA-designated textbooks sold through Well-Trained Mind Press
+known_conflicts:
+  - >-
+    Fixed live class meeting times constrain family schedules and time zones
+    (delayed-lecture sections mitigate this).
+  - >-
+    À la carte classes are not a complete boxed program — families must
+    assemble remaining subjects themselves, and per-course pricing scales
+    steeply for a full load.
+philosophy_notes: >-
+  The Well-Trained Mind's literature-rich, history-cycle neoclassical approach
+  is closer in texture to Charlotte Mason's living-books style than
+  memory-drill programs, but its structured rigor, formal outlining, and
+  stage-based trivium framing still diverge from CM's short-lesson,
+  ideas-first pedagogy.
+sources:
+  - https://www.wtmacademy.com/about-wtma/
+  - https://www.wtmacademy.com/courses/
+  - https://www.wtmacademy.com/tuition/
+  - https://welltrainedmind.com/a/well-trained-mind-academy/  # founded 2014, grades 5-12
+  - https://susanwisebauer.com/well-trained-mind-academy/
+  - https://welltrainedmind.com/c/subject/well-trained-mind-academy-textbooks/

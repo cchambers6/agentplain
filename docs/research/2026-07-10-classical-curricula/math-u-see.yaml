@@ -1,0 +1,24 @@
+id: math-u-see
+name: Math-U-See
+publisher: Demme Learning
+subjects: [math]
+stages: [grammar, logic, rhetoric]           # Primer through PreCalculus/Calculus
+philosophy_affinity: [charlotte-mason, eclectic]
+format: [mastery, manipulative-heavy, video, workbook]
+pace: "~1 lesson per week over a 30-lesson level (each lesson spans multiple worksheet days); fits a 36-week year with review weeks"
+entry_age: "4-5 (Primer level; readiness-based — publisher gives interest-in-counting criteria rather than an age)"
+typical_completion_time: "1 level per school year"
+public_scope_and_sequence_url: https://mathusee.com/products/math-u-see-curriculum/primer/   # verified 2026-07-10; each level page has an expandable Scope & Sequence section (Primer = 30 lessons)
+typical_price_range: "~$220 for a full level set incl. Integer Block Kit (Alpha Set verified at $220.12 on store.demmelearning.com); configurations without the block kit cost less (exact prices not verified)"
+known_pairings:
+  - life-of-fred: "story-based living-book enrichment alongside a skill-focused mastery spine"
+known_conflicts:
+  - saxon-math: "mastery-vs-spiral conflict — running MUS single-topic mastery levels alongside Saxon's incremental spiral in the same year gives the child two contradictory sequencing models"
+  - rightstart-mathematics: "competing manipulative mental models — MUS base-10 integer blocks vs RightStart's fives-grouped AL abacus teach different number-visualization strategies; mixing within a year muddies both"
+philosophy_notes: "Good Charlotte Mason fit through short, concrete-to-abstract manipulative lessons, though the DVD/streaming video instruction substitutes for parent-led narration."
+sources:
+  - https://mathusee.com/products/math-u-see-curriculum/primer/   # verified via WebFetch 2026-07-10 (scope & sequence section, 30 lessons, Integer Block Kit, four-step mastery approach)
+  - https://store.demmelearning.com/products/alpha-set            # verified via WebFetch 2026-07-10 (Alpha Set $220.12, contents)
+  - https://demmelearning.com/support-center/category/math-u-see/mus-levels/primer/
+# NOTE: Primer is the gentle kindergarten entry level; publisher describes it as familiarity, not mastery — formal mastery expectations begin at Alpha.
+# NOTE: publisher does not state a numeric entry age on the Primer page; 4-5/kindergarten is the widely reported placement.

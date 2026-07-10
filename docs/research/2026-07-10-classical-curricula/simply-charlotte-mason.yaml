@@ -1,0 +1,50 @@
+id: simply-charlotte-mason
+name: Simply Charlotte Mason (SCM)
+publisher: Simply Charlotte Mason, LLC (simplycharlottemason.com)
+subjects:
+  # family-style (topic-based) subjects — taught to all ages together
+  - bible (Story of God and His People, 4 volumes)
+  - history (A Pageant of History: Ancient / Middle Ages / Early Modern / Modern)
+  - geography (This Beautiful Earth, 4 regional volumes)
+  - scripture-memory
+  - picture-study (3 artists/year)
+  - music-study (3 composers/year)
+  - hymn-study (6 hymns/year)
+  - handicrafts-and-art
+  - nature-study (weekly)
+  - poetry (1 poet/year)
+  - foreign-language
+  - habits-and-character
+  - character-studies (Shakespeare + Plutarch, grades 4-12)
+  # individual (skill-based) subjects — per-student pace
+  - math (SCM's own Elementary Arithmetic series grades 1-6 + Practical Geometry; Pre-Algebra onward outsourced)
+  - science (Living Science courses; labeled high-school courses gr 9-12)
+  - language-arts (reading, handwriting/copywork, spelling via studied dictation, composition)
+stages:
+  - preschool-kindergarten (informal, PreK-K guide)
+  - elementary (grades 1-6)
+  - middle (grades 7-8)
+  - high-school (grades 9-12)
+philosophy_affinity: [charlotte-mason]
+format:
+  - living-book
+  - open-and-go-lesson-plan-books (print and ebook)
+  - individual-subject-guides
+  - free-online-curriculum-guide (planning charts + per-grade recommendations)
+  - online-planning-tool (CM Organizer)
+pace: "family-style topic subjects taught together with older students assigned deeper books; skill subjects (math, science, language arts) at each student's own pace; free curriculum guide lays out per-grade weekly schedule charts; pre-planned 'Charlotte Mason Homeschool Plans' years available"
+entry_age: "formal lessons from grade 1 (~age 6); Preschool/Kindergarten stage is informal (informal math activities, letter sounds, outdoor play)"
+typical_completion_time: "one school year per grade level / per lesson-plan book; history and geography each rotate through 4 volumes"
+public_scope_and_sequence_url: https://simplycharlottemason.com/planning/curriculum-guide/overview-chart/
+typical_price_range: "curriculum guide and planning charts are free online; individual subject guides typically ~$27-$33 each (e.g., A Pageant of History: Ancient Times listed $26.95-$32.95)"
+known_pairings:
+  - "upper-level math (Pre-Algebra through Calculus) is outsourced to a separate math program; SCM only publishes its own arithmetic series through the elementary years"
+  - "SCM guides are modular — families commonly pair individual SCM subject guides with other CM plans"
+  - "Living Book Press and similar living-book publishers supply many scheduled titles"
+known_conflicts:
+  - "SCM's full family plan is a complete CM curriculum — running it alongside AmblesideOnline, A Gentle Feast, or a full boxed classical core (e.g., Memoria full cores) double-schedules the day"
+philosophy_notes: "The most productized Charlotte Mason exemplar — a Christian, family-combined CM curriculum sold as open-and-go individual subject guides plus a free online planning guide, trading AO's DIY scheduling for pre-built lesson plans."
+sources:
+  - https://simplycharlottemason.com/planning/curriculum-guide/
+  - https://simplycharlottemason.com/planning/curriculum-guide/overview-chart/
+  - https://simplycharlottemason.com/store/a-pageant-of-history-ancient-times/

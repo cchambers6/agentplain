@@ -1,0 +1,23 @@
+id: nature-anatomy
+name: "Nature Anatomy: The Curious Parts and Pieces of the Natural World"
+publisher: Storey Publishing (Hachette Book Group)
+subjects: [science]
+stages: [grammar, logic]
+philosophy_affinity: [charlotte-mason]
+format: [living-book]  # NOT a formal curriculum — an illustrated living book (Julia Rothman, 2015, 224 pp.) used by homeschoolers as a nature-study spine
+pace: null  # no lesson structure; families typically read topically alongside seasonal nature walks
+entry_age: null  # all-ages illustrated reference; no publisher-stated age band verified
+typical_completion_time: null  # commonly stretched across a full year of nature study, but no defined completion point
+public_scope_and_sequence_url: https://www.hachettebookgroup.com/titles/julia-rothman/nature-anatomy/9781612122311/  # publisher page; no scope & sequence exists (it is not a curriculum)
+typical_price_range: "$18.99 paperback / $11.99 ebook (publisher list price)"
+known_pairings:
+  - Nature Anatomy Notebook (companion sketchbook/activity book by the same author)
+  - Handbook of Nature Study (Comstock) as the deeper teacher reference behind the same walks
+  - Other Rothman Anatomy titles (Ocean Anatomy, Farm Anatomy, Food Anatomy, Wildlife Anatomy, Insect Anatomy) for extended rotations
+known_conflicts:
+  - Not a standalone curriculum — families expecting lesson plans, experiments, or assessments must supply structure themselves or pair it with a formal program
+philosophy_notes: Near-ideal Charlotte Mason material — a true living book whose hand-drawn illustrations and short narrative entries feed directly into CM nature journaling and outdoor observation.
+sources:
+  - https://www.hachettebookgroup.com/titles/julia-rothman/nature-anatomy/9781612122311/
+  - https://www.juliarothman.com/nature-anatomy
+  - https://archive.org/details/natureanatomycur0000roth_j5h0

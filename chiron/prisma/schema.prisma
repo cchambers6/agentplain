@@ -1,0 +1,176 @@
+// Chiron POC — M1 data model (per agentplain PR #380 plan, doc 02).
+//
+// Two schema-level invariants:
+//  1. NO curriculum-content column exists anywhere. Curriculum rows hold
+//     titles, publishers, scope/sequence *labels*, pacing, and the parent's
+//     own notes (`parentNotes`) — never publisher lesson text. The core
+//     product rule is enforced by schema shape, not just prompts.
+//  2. Every table carries `workspaceId` (= familyId in the POC) so v1
+//     multi-tenancy is config, not a retrofit.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Family {
+  id           String   @id @default(cuid())
+  workspaceId  String   @unique // = id in POC; future multi-tenancy seam
+  parentName   String
+  state        String   @default("GA")
+  timezone     String   @default("America/New_York")
+  philosophy   String   @default("charlotte_mason") // philosophy pack key
+  schoolDays   Int[]    @default([1, 2, 3, 4]) // ISO weekday numbers; Mon–Thu default
+  goals        String? // parent's freetext vision for the child's education
+  calendarFeed String? // optional external calendar feed URL (M2+)
+  createdAt    DateTime @default(now())
+
+  children        Child[]
+  curricula       Curriculum[]
+  weeklyPlans     WeeklyPlan[]
+  dailyLogs       DailyLog[]
+  compliance      ComplianceRecord[]
+  dailyCosts      DailyCostRecord[]
+}
+
+model Child {
+  id          String   @id @default(cuid())
+  workspaceId String
+  familyId    String
+  family      Family   @relation(fields: [familyId], references: [id])
+  name        String
+  birthdate   DateTime
+  stage       String   @default("grammar") // grammar | logic | rhetoric
+
+  /// Longitudinal model, materialized. Shape:
+  /// { modalities: {...}, strengths: [...], struggles: [...],
+  ///   pacing_notes: {...}, interests: [...], last_updated: ISO }
+  model Json @default("{}")
+
+  dailyLogs DailyLog[]
+
+  @@index([workspaceId])
+  @@index([familyId])
+}
+
+model Curriculum {
+  id          String  @id @default(cuid())
+  workspaceId String
+  familyId    String
+  family      Family  @relation(fields: [familyId], references: [id])
+  name        String
+  publisher   String?
+  subjects    String[] // math | reading | writing | history | science | latin | ...
+  /// METADATA ONLY: unit/lesson labels, counts, ordering — the publisher's
+  /// table-of-contents shape, never lesson text.
+  /// { units: [{ordinal, label, lessonCount, estMinutesPerLesson}], source_url }
+  scopeSequence Json?
+  pace          String? // e.g. "4 lessons/week"
+  /// The ONLY free-text column on this table, and it holds the parent's own
+  /// words about how they use the material — never curriculum text.
+  parentNotes String?
+  catalogId   String? // id of the docs/research catalog entry it was autofilled from
+
+  @@index([workspaceId])
+  @@index([familyId])
+}
+
+// --- M2 fills these -------------------------------------------------------
+
+model WeeklyPlan {
+  id          String    @id @default(cuid())
+  workspaceId String
+  familyId    String
+  family      Family    @relation(fields: [familyId], references: [id])
+  weekStart   DateTime // Monday of the plan week
+  status      String    @default("planned") // planned | active | replanned | completed
+  /// Headmaster rationale rows: [{change, evidence, sourceLogIds}]
+  rationale   Json      @default("[]")
+  dayPlans    DayPlan[]
+  createdAt   DateTime  @default(now())
+
+  @@unique([familyId, weekStart])
+  @@index([workspaceId])
+}
+
+model DayPlan {
+  id           String     @id @default(cuid())
+  workspaceId  String
+  weeklyPlanId String
+  weeklyPlan   WeeklyPlan @relation(fields: [weeklyPlanId], references: [id])
+  date         DateTime
+  /// Blocks reference curricula by id + lesson ordinal — never content:
+  /// [{ childId, curriculumId, unitOrdinal, lessonOrdinal, estMinutes, note }]
+  blocks       Json       @default("[]")
+  status       String     @default("planned") // planned | done | partial | skipped
+
+  @@unique([weeklyPlanId, date])
+  @@index([date])
+  @@index([workspaceId])
+}
+
+// --- M3/M5 fill these -----------------------------------------------------
+
+model DailyLog {
+  id          String    @id @default(cuid())
+  workspaceId String
+  familyId    String
+  family      Family    @relation(fields: [familyId], references: [id])
+  childId     String
+  child       Child     @relation(fields: [childId], references: [id])
+  date        DateTime
+  /// Structured completion: [{ blockRef, status: done|partial|skipped, minutes }]
+  completion  Json      @default("[]")
+  /// Debrief conversation turns (parent + agent), persisted per turn.
+  debriefTranscript Json @default("[]")
+  debriefClosedAt   DateTime?
+
+  @@unique([childId, date])
+  @@index([familyId, date])
+  @@index([workspaceId])
+}
+
+model ComplianceRecord {
+  id          String   @id @default(cuid())
+  workspaceId String
+  familyId    String
+  family      Family   @relation(fields: [familyId], references: [id])
+  childId     String
+  date        DateTime
+  /// Georgia home-study record (O.C.G.A. § 20-2-690.1):
+  /// { attended: bool, subjects: ["reading","math",...], minutes: {...} }
+  record      Json
+  source      String   @default("rules") // rules | edge-case-triage
+  createdAt   DateTime @default(now())
+
+  @@unique([childId, date])
+  @@index([familyId, date])
+  @@index([workspaceId])
+}
+
+// --- M6 cost reporting ----------------------------------------------------
+
+model DailyCostRecord {
+  id          String   @id @default(cuid())
+  workspaceId String
+  familyId    String
+  family      Family   @relation(fields: [familyId], references: [id])
+  date        DateTime // calendar day, family timezone
+  agent       String // integrator | headmaster | tutor | registrar
+  tier        String // heavy | conversational | lightweight
+  calls       Int      @default(0)
+  inputTokens Int      @default(0)
+  outputTokens Int     @default(0)
+  cacheReadTokens  Int @default(0)
+  cacheWriteTokens Int @default(0)
+  /// Cost in microcents (1e-6 cents) so integer math never loses pennies.
+  costMicrocents Int   @default(0)
+
+  @@unique([familyId, date, agent, tier])
+  @@index([familyId, date])
+  @@index([workspaceId])
+}

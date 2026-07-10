@@ -1,0 +1,6 @@
+{
+  "crons": [
+    { "path": "/api/cron/headmaster?run=weekly-plan", "schedule": "0 22 * * 0" },
+    { "path": "/api/cron/headmaster?run=friday-report", "schedule": "0 20 * * 5" }
+  ]
+}

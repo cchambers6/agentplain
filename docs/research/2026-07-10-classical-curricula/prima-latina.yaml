@@ -1,0 +1,24 @@
+id: prima-latina
+name: Prima Latina — Introduction to Christian Latin
+publisher: Memoria Press
+subjects: [latin]
+stages: [lower-elementary, elementary]
+philosophy_affinity: [memoria, classical-trivium]   # memoria affinity strong — this is Memoria Press's own entry-level Latin
+format: [workbook, teacher-manual, streaming-video-lessons, streaming-pronunciation-audio, digital-flashcards]
+pace: "5 days/week, ~20 minutes/day (Memoria lesson plans schedule 5 days/week; instructional videos ~20 min per lesson)"
+entry_age: "7 (publisher lists Grades 1-4; Memoria guidance is to start once the child is a fluent reader, typically grade 2)"
+typical_completion_time: "1 school year (25 lessons + 5 review lessons)"
+public_scope_and_sequence_url: https://www.memoriapress.com/curriculum/latin/prima-latina/
+typical_price_range: "$17.90 (student workbook) to $113.90 (Complete Set with streaming videos, audio, flashcards; on sale $104.68 as of 2026-07); basic book-only sets ~$35-45"
+known_pairings:
+  - "Prima Latina -> Latina Christiana -> First Form Latin (Memoria Press Latin sequence; product page states Prima Latina was built on Latina Christiana's format as its on-ramp)"
+  - "Lingua Angelica (Memoria Press Latin hymn/song program; Prima Latina pronunciation audio includes select Lingua Angelica songs and four prayers)"
+  - "Doubles as the parts-of-speech grammar program for the year in Memoria's cores"
+known_conflicts:
+  - "Ecclesiastical (Christian) pronunciation track — switching mid-stream into Classical Academic Press's classical-pronunciation materials (or vice versa) forces a pronunciation relearn"
+  - "Explicitly Christian content (prayers, hymns, e.g. the Sanctus) — a mismatch for families wanting secular Latin"
+philosophy_notes: "Charlotte Mason taught foreign languages orally and gently in the early years, so Prima Latina's systematic daily vocabulary-and-grammar drill with memorized prayers is squarely Memoria-style classical pedagogy rather than Mason's, though its short 20-minute lessons keep it CM-tolerable as an add-on."
+sources:
+  - https://www.memoriapress.com/curriculum/latin/prima-latina/   # verified 2026-07-10 (HTTP 200 via direct fetch; site blocks some crawlers with 403)
+  - https://www.memoriapress.com/articles/which-latin-program-do-i-start-with/   # per web search; page fetch blocked (403), grade-2 fluent-reader guidance from search excerpt
+  - https://www.christianbook.com/prima-latina-lesson-plans/9781615382729/pd/382729

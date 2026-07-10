@@ -1,0 +1,29 @@
+id: story-of-the-world
+name: The Story of the World, History for the Classical Child (Volumes 1-4)
+publisher: Well-Trained Mind Press (formerly Peace Hill Press)
+subjects: [history]
+stages: [grammar, logic]   # Vol 1 grades 1-4 up through Vol 4 grades 4-8; maps/activities extend to grade 8
+philosophy_affinity: [classical-trivium, charlotte-mason]
+format: [living-book, workbook]   # narrative story-spine text + optional consumable Activity Book per volume
+pace: "~1 chapter/week (42 chapters per volume fill one school year; Activity Book turns each volume into a full-year history + geography course)"
+entry_age: 6   # Volume 1 recommended for grades 1-4
+typical_completion_time: "1 school year per volume; 4 years for the full ancient-to-modern cycle, often repeated with more depth"
+# Verified via WebFetch 2026-07-10: publisher-hosted Activity Book 1 sample PDF containing the complete
+# Volume 1 table of contents (42 chapters, Ancient Times, "From the Earliest Nomads to the Last Roman Emperor").
+# welltrainedmind.com product/series pages return HTTP 403 to automated fetch (bot protection), so the
+# publisher's S3-hosted sample is used as the verifiable TOC URL.
+public_scope_and_sequence_url: https://s3.amazonaws.com/downloads.peacehillpress.com/pdfs/samples/sotw1absample.pdf
+typical_price_range: "USD $12-25 per text volume; $20-40 per Activity Book; ~$9-13 per test book (per Cathy Duffy review; publisher retail text $19.95)"
+known_pairings:
+  - "The Well-Trained Mind parent manual — designed as its history spine"
+  - "Usborne/Kingfisher history encyclopedias — Activity Book cross-references them"
+  - "First Language Lessons / Writing With Ease — same-publisher grammar-stage stack"
+known_conflicts:
+  - "Mystery of History — duplicate chronological world-history spine"
+  - "Abeka/BJU textbook history — clashing narrative-vs-textbook approach"
+philosophy_notes: "Narrative storytelling with built-in narration and read-aloud rhythm makes it a natural history spine for a Charlotte Mason home, which can simply skip the workbook-style activity pages."
+sources:
+  - https://s3.amazonaws.com/downloads.peacehillpress.com/pdfs/samples/sotw1absample.pdf
+  - https://cathyduffyreviews.com/homeschool-reviews-core-curricula/history-and-geography/world-history-core-curricula/the-story-of-the-world-history-for-the-classical-child-volumes-14
+  - https://welltrainedmind.com/c/series/the-story-of-the-world/   # confirmed via search results; direct fetch blocked (403)
+  - https://support.welltrainedmind.com/hc/en-us/articles/4408237709459-Tell-me-about-The-Story-of-the-World-Activity-Books   # confirmed via search results; direct fetch blocked (403)

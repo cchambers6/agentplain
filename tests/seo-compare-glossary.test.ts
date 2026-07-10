@@ -65,15 +65,42 @@ describe("aeo — comparison pages", () => {
     }
   });
 
-  it("pricing claims cite only the locked $99–$299 ladder", () => {
+  it("pricing claims cite only the locked $99–$299 ladder (+ cited regulatory figures)", () => {
+    // Seat prices must be the locked ladder. The single non-price figure
+    // allowed is the HUD first-offense fair-housing civil penalty — a cited
+    // regulatory amount (24 CFR 180.671, 2025 inflation adjustment), sourced
+    // in docs/marketing/compare-pages-2026-07-08/RESEARCH-NOTES.md. Any new
+    // dollar figure needs a source note there before it lands here.
+    const ALLOWED = ["$99", "$199", "$299", "$26,262"];
     for (const c of getAllComparisons()) {
       const blob = deepStrings(c).join(" ");
-      // Any dollar figure mentioned must be one of the locked seat prices.
-      const dollars = blob.match(/\$\d+/g) ?? [];
+      const dollars = blob.match(/\$[\d,]+/g) ?? [];
       for (const d of dollars) {
+        assert.ok(ALLOWED.includes(d), `${c.slug} cites an unsourced figure ${d}`);
+      }
+    }
+  });
+
+  it("ships the Georgia real-estate vendor comparisons (2026-07-08 wave)", () => {
+    for (const slug of ["follow-up-boss", "sierra", "boldtrail"]) {
+      const c = getComparison(slug);
+      assert.ok(c, `missing vendor comparison: ${slug}`);
+      // The ratified vendor-page frame: shared pain, specific gaps, the
+      // run-for-you explainer, and the intro-call CTA the outbound emails
+      // drive to.
+      assert.ok(c!.sharedPain && c!.sharedPain.length > 100, `${slug} missing shared-pain intro`);
+      assert.ok((c!.cantDo?.length ?? 0) >= 3, `${slug} needs ≥3 specific gaps`);
+      assert.ok((c!.runForYou?.length ?? 0) >= 2, `${slug} missing run-for-you section`);
+      assert.equal(c!.bookingCta, true, `${slug} must use the booking CTA`);
+      assert.equal(c!.rows.length, 5, `${slug} table must be the 5 ratified dimensions`);
+      // Integration honesty: these vendors are roadmap, not wired. The word
+      // "integrate" may appear only in an FAQ that answers honestly ("Not
+      // directly today").
+      const faqIntegration = c!.faq.find((f) => /integrat/i.test(f.q));
+      if (faqIntegration) {
         assert.ok(
-          ["$99", "$199", "$299"].includes(d),
-          `${c.slug} cites a non-ladder price ${d}`,
+          /not directly today/i.test(faqIntegration.a),
+          `${slug} integration FAQ must answer honestly`,
         );
       }
     }

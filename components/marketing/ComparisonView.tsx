@@ -6,6 +6,7 @@ import {
   ApClosingBandAction,
 } from "@/components/ui/ap";
 import { TRIAL_PERIOD_DAYS } from "@/lib/billing/facts";
+import { BOOKING_CTA_LABEL, bookingCta } from "@/lib/marketing/booking";
 import type { Comparison } from "@/lib/marketing/comparisons";
 
 // Renderer for a single "agentplain vs {alternative}" page. Honest by
@@ -13,7 +14,13 @@ import type { Comparison } from "@/lib/marketing/comparisons";
 // agentplain's, then a side-by-side table, then the honest "choose X if"
 // bottom line, then the FAQ. The quotable direct answer sits high on the page
 // so an answer engine can lift it.
+//
+// Named-vendor pages (the "DIY vs run-for-you" frame) add three optional
+// sections — the shared pain, the vendor's specific gaps, and what
+// run-for-you means — and swap the closing CTA for the intro-call booking
+// link. Pages that omit those fields render exactly as before.
 export default function ComparisonView({ c }: { c: Comparison }) {
+  const booking = c.bookingCta ? bookingCta() : null;
   return (
     <>
       {/* HERO */}
@@ -33,6 +40,15 @@ export default function ComparisonView({ c }: { c: Comparison }) {
           </p>
         </div>
       </section>
+
+      {/* The shared pain — the concrete week both products exist to fix. */}
+      {c.sharedPain && (
+        <Section eyebrow="The shared pain" title="The week this page is about.">
+          <p className="max-w-3xl text-lg leading-relaxed text-ink-soft">
+            {c.sharedPain}
+          </p>
+        </Section>
+      )}
 
       {/* Where each genuinely wins — alternative FIRST (honest). */}
       <Section
@@ -73,6 +89,44 @@ export default function ComparisonView({ c }: { c: Comparison }) {
           </div>
         </div>
       </Section>
+
+      {/* The specific gaps — what the compared product can't do. */}
+      {c.cantDo && c.cantDo.length > 0 && (
+        <Section
+          eyebrow="The gap"
+          title={<>What {c.navLabel} can&apos;t do.</>}
+        >
+          <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-2">
+            {c.cantDo.map((gap) => (
+              <div key={gap.title} className="bg-paper p-7 md:p-8">
+                <p className="font-display text-xl leading-snug text-ink">
+                  {gap.title}
+                </p>
+                <p className="mt-3 text-[15px] leading-relaxed text-ink-soft">
+                  {gap.detail}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* What run-for-you means — the agentplain half of the frame. */}
+      {c.runForYou && c.runForYou.length > 0 && (
+        <Section
+          tone="forest"
+          eyebrow="The other half"
+          title={<>What &ldquo;run-for-you&rdquo; means.</>}
+        >
+          <div className="max-w-3xl space-y-5">
+            {c.runForYou.map((p) => (
+              <p key={p.slice(0, 40)} className="text-lg leading-relaxed text-paper/85">
+                {p}
+              </p>
+            ))}
+          </div>
+        </Section>
+      )}
 
       {/* Side-by-side table — set as a ledger exhibit (mid-rule frame,
           paper-bright plate) so the page's one anchor is the comparison
@@ -135,24 +189,66 @@ export default function ComparisonView({ c }: { c: Comparison }) {
         <FaqList items={c.faq} />
       </Section>
 
-      {/* CTA — the shared grounded close. The old copy said "First month
-          free", which contradicted the ratified trial policy; the trial
-          length now reads from lib/billing/facts.ts so it cannot drift. */}
-      <ApClosingBand
-        eyebrow={null}
-        title="See agentplain on your own business."
-        body={`${TRIAL_PERIOD_DAYS}-day free trial. Month-to-month. The fleet drafts; you decide.`}
-        actions={
-          <>
-            <ApClosingBandAction href="/app/sign-up" variant="primary">
-              Start free trial
-            </ApClosingBandAction>
-            <ApClosingBandAction href="/verticals" withArrow={false}>
-              See all ten verticals
-            </ApClosingBandAction>
-          </>
-        }
-      />
+      {/* CTA — booking variant for named-vendor pages (intro call), trial
+          CTA otherwise. Trial length reads from lib/billing/facts.ts so it
+          cannot drift from the ratified policy. */}
+      {booking ? (
+        <section className="border-b border-rule bg-ink text-paper">
+          <div className="container-wide py-20 md:py-24">
+            <p className="max-w-3xl font-display text-3xl leading-[1.12] md:text-4xl">
+              Bring your real week.
+            </p>
+            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-paper/75">
+              Twenty minutes with a person, not a demo script. We walk
+              through what the fleet would draft for your shop and where you
+              stay in control. If it isn&apos;t a fit, we say so.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-4">
+              {booking.external ? (
+                <a
+                  href={booking.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 border border-paper bg-paper px-6 py-3 text-sm font-medium text-ink transition hover:bg-paper-deep"
+                >
+                  {BOOKING_CTA_LABEL}
+                  <span aria-hidden>→</span>
+                </a>
+              ) : (
+                <Link
+                  href={booking.href}
+                  className="inline-flex items-center justify-center gap-2 border border-paper bg-paper px-6 py-3 text-sm font-medium text-ink transition hover:bg-paper-deep"
+                >
+                  {BOOKING_CTA_LABEL}
+                  <span aria-hidden>→</span>
+                </Link>
+              )}
+              <Link
+                href="/app/sign-up"
+                className="inline-flex items-center justify-center gap-2 border border-paper/40 bg-transparent px-6 py-3 text-sm font-medium text-paper transition hover:border-paper"
+              >
+                Start free trial
+              </Link>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <ApClosingBand
+          eyebrow={null}
+          title="See agentplain on your own business."
+          body={`${TRIAL_PERIOD_DAYS}-day free trial. Month-to-month. The fleet drafts; you decide.`}
+          actions={
+            <>
+              <ApClosingBandAction href="/app/sign-up" variant="primary">
+                Start free trial
+              </ApClosingBandAction>
+              <ApClosingBandAction href="/verticals" withArrow={false}>
+                See all ten verticals
+              </ApClosingBandAction>
+            </>
+          }
+        />
+      )}
     </>
   );
 }

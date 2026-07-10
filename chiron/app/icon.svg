@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Placeholder favicon: the letter C in the wordmark serif. Replaced by
+       the illustrator-drawn centaur mark when it lands — see
+       public/brand/chiron/README.md -->
+  <rect width="64" height="64" rx="12" fill="#F7F1E6"/>
+  <text x="32" y="33" text-anchor="middle" dominant-baseline="central"
+        font-family="'Cormorant Garamond', Georgia, 'Times New Roman', serif"
+        font-size="46" font-weight="700" fill="#1E1B18">C</text>
+</svg>

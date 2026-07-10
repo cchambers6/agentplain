@@ -1,0 +1,21 @@
+id: all-about-spelling
+name: All About Spelling
+publisher: All About Learning Press
+subjects: [spelling]
+stages: [grammar, logic]
+philosophy_affinity: [charlotte-mason, classical-trivium, eclectic]
+format: [manipulative-heavy, mastery]
+pace: "approximately 20 minutes daily (publisher guidance); scripted, open-and-go, self-paced by mastery"
+entry_age: "~6 (publisher positions Levels 1-7 for elementary through middle school; mastery-based rather than grade-based)"
+typical_completion_time: null   # publisher does not state a per-level duration; explicitly self-paced by mastery
+public_scope_and_sequence_url: https://www.allaboutlearningpress.com/scope-and-sequence/
+typical_price_range: "$49.95-$69.95 per level for complete materials (publisher direct)"
+known_pairings:
+  - "All About Reading (same publisher, same Orton-Gillingham method; shared letter-tile set covers both programs)"
+known_conflicts:
+  - "Redundant with the spelling strand of any full language-arts program already teaching rule-based spelling; running two rule-explicit OG spelling programs at once duplicates effort"
+philosophy_notes: "Its dictation-based practice loosely echoes Charlotte Mason's studied dictation, but explicit rule-drill via letter tiles is a different mechanism than CM's transcription-first approach."
+sources:
+  - https://www.allaboutlearningpress.com/all-about-spelling/
+  - https://www.allaboutlearningpress.com/scope-and-sequence/
+  - https://www.allaboutlearningpress.com/content/samples/AAS-L1-Scope-and-Sequence.pdf

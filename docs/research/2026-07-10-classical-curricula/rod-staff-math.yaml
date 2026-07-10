@@ -1,0 +1,24 @@
+id: rod-staff-math
+name: Rod & Staff Math (Mathematics for Christian Living series)
+publisher: Rod and Staff Publishers, Inc.
+subjects: [math]
+stages: [grammar, logic]                     # grades 1-8 ("Beginning Arithmetic" through grade 8 pre-algebra-level work)
+philosophy_affinity: [memoria, eclectic]     # Memoria Press recommends R&S arithmetic in its classical cores
+format: [workbook, textbook, mastery]
+pace: "5 lessons per week (daily lessons across a full school year; grades 1-2 are consumable workbooks, grades 3+ hardcover texts)"
+entry_age: "6 (grade 1; no kindergarten level)"
+typical_completion_time: "1 grade level per school year"
+public_scope_and_sequence_url: null
+typical_price_range: "~$50-100 per grade across components (distributor-verified grade 1 examples: pupil workbooks $10.20 each x2, teacher's manual $31.15, speed drills $7.15 — Milestone Books)"
+known_pairings:
+  - life-of-fred: "narrative warmth and real-world story context on top of R&S's austere drill spine"
+known_conflicts:
+  - saxon-math: "mastery-vs-spiral conflict — R&S teaches one operation continuously over weeks to mastery, the opposite of Saxon's distributed spiral; running both duplicates review load with contradictory sequencing"
+  - beast-academy: "drill-and-memorization vs discovery problem-solving; pedagogical opposites in the same year"
+philosophy_notes: "Weak-to-moderate Charlotte Mason fit — concrete and incremental but drill-heavy and visually austere, so CM homes typically shorten the written work to keep lessons brief."
+sources:
+  - https://www.rodstaff.com/rod-and-staff-mathematics.html                    # verified via WebFetch 2026-07-10 (authorized storefront; grades 1-8, speed drills, continuous review, blacklines)
+  - https://www.milestonebooks.com/list/Mathematics_for_Christian_Living_Series/  # verified via WebFetch 2026-07-10 (major distributor; component prices)
+  - https://www.milestonebooks.com/item/1-19118/                               # printed Scope and Sequence Charts booklet (sold, not free online)
+# NOTE: public_scope_and_sequence_url is null — Rod and Staff Publishers (Crockett, KY) maintains no official publisher website; rodstaff.com and milestonebooks.com are resellers/distributors, and the scope-and-sequence exists as a printed booklet for sale, not a public publisher URL.
+# NOTE: conservative Mennonite publisher — Christian content and Bible-based word problems are integral to every level.

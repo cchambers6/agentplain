@@ -1,0 +1,28 @@
+id: sonlight-hbl
+name: Sonlight History / Bible / Literature (HBL) Programs
+publisher: Sonlight Curriculum
+subjects: [history, bible, literature]
+stages: [grammar, logic, rhetoric]   # levels from preschool through high school (K/A elementary up to 100-500 level courses)
+philosophy_affinity: [charlotte-mason, eclectic]   # literature-based "real books" approach from a Protestant Christian perspective, not trivium-structured
+format: [living-book]   # curated book packages (spine + historical fiction + biographies) scheduled by an open-and-teach Instructor's Guide
+pace: "4-day or 5-day weekly schedules; Instructor's Guide provides 36 weekly lesson plans per level"
+entry_age: 5   # history-focused HBL levels begin at K (Intro to World Cultures, ages 5-7); preschool programs exist from ages 3-4
+typical_completion_time: "1 school year per level; adjacent levels (B+C, D+E) can be combined into single years; three sweeps through history from preschool to high school"
+# NOTE: sonlight.com and cdn1.sonlight.com return HTTP 403 to automated fetch (bot protection), so the canonical
+# scope-and-sequence page (https://www.sonlight.com/homeschool/subjects/history-bible-literature/scope-and-sequence,
+# confirmed to exist via search results) could not be verified by WebFetch. The URL below is Sonlight's own help-center
+# article describing and linking the scope & sequence; it was verified to load.
+public_scope_and_sequence_url: https://sonlight.zendesk.com/hc/en-us/articles/360004198211-What-is-the-Scope-and-Sequence
+typical_price_range: "USD ~$600-1,200 for a complete all-subjects package year per third-party reviews; HBL-only packages are less; exact 2026 prices could not be verified (publisher site blocks automated fetch)"
+known_pairings:
+  - "Math-U-See / Singapore Math — Sonlight sells math alongside; HBL includes none"
+  - "Sonlight Science and Language Arts — same-catalog coordinated scheduling"
+known_conflicts:
+  - "Story of the World or Mystery of History as spines — HBL is already a complete history core"
+  - "Secular-only households — Bible study is woven through every HBL level"
+philosophy_notes: "Its living-books reading lists and heavy read-aloud rhythm feel deeply Charlotte Mason, though the scripted Instructor's Guide and comprehension questions are more structured than pure CM narration."
+sources:
+  - https://sonlight.zendesk.com/hc/en-us/articles/360004198211-What-is-the-Scope-and-Sequence
+  - https://sonlight.zendesk.com/hc/en-us/articles/360004231591-What-s-the-difference-between-these-History-Bible-Literature-packages
+  - https://cathyduffyreviews.com/homeschool-reviews-core-curricula/unit-studies-all-in-one-programs/all-in-one-programs/sonlight-curriculum
+  - https://www.sonlight.com/homeschool/subjects/history-bible-literature/scope-and-sequence   # confirmed via search results; direct fetch blocked (403)

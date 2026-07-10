@@ -1,0 +1,25 @@
+id: iew-structure-and-style
+name: "Institute for Excellence in Writing (IEW) — Structure and Style (Structure and Style for Students)"
+publisher: "Institute for Excellence in Writing (IEW)"
+subjects: [writing]
+stages: [grammar, logic, rhetoric]   # Level A gr 3-5, Level B gr 6-8, Level C gr 9+
+philosophy_affinity: [classical-trivium, eclectic]
+format: [video-course, streaming, dvd, student-binder-and-packet, teacher-manual]
+pace: "1 video lesson per week across a 24-week course; daily written assignments between lessons (IEW lesson-planning guidance: roughly 1-2 months per structural unit, units 1-9 over a school year)"
+entry_age: 8   # Level A Year 1 targets students reading at a 3rd-5th grade level
+typical_completion_time: "24 weeks per level-year (Year 1 and Year 2 available at each level)"
+public_scope_and_sequence_url: "https://iew.com/sss-info"
+typical_price_range: "USD $35 (student binder + packet only, Christianbook) up to $289 (Premier package with Forever Streaming, Christianbook); Basic video packages priced between — exact Basic price not verified"
+known_pairings:
+  - "Fix It! Grammar (IEW's own companion grammar program, designed to run alongside)"
+  - "IEW theme-based writing lessons (same Structure and Style method applied to themed units)"
+known_conflicts:
+  - "IEW keyword-outline method and required stylistic 'dress-ups'/checklists conflict with Charlotte Mason pure oral-narration philosophy; CM purists commonly delay or adapt it"
+  - "Redundant if run concurrently with another full composition program (e.g., Writing With Ease/Writing With Skill) at the same level"
+philosophy_notes: "IEW's structured keyword outlines and mandatory stylistic checklists sit in tension with Charlotte Mason's free narration, so it reads as classical-adjacent skill training rather than a Mason-aligned program."
+sources:
+  - "https://iew.com/sss-info"
+  - "https://iew.com/sss-a"
+  - "https://iew.com/structure-and-style-for-students-year-1-level-a-basic-forever-streaming-or-dvd"
+  - "https://iew.com/support/resource/resource-articles/lesson-planning"
+  - "https://www.christianbook.com/structure-students-level-a-premier-package/andrew-pudewa/9781623415273/pd/415305"

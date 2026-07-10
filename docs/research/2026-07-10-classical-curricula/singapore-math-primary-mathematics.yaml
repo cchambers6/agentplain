@@ -1,0 +1,23 @@
+id: singapore-math-primary-mathematics
+name: Singapore Math Primary Mathematics
+publisher: Singapore Math Inc.
+subjects: [math]
+stages: [grammar, logic]                     # K-6 (edition-dependent); logic-stage onset in grades 5-6
+philosophy_affinity: [charlotte-mason, classical-trivium, eclectic]
+format: [textbook, workbook, mastery]
+pace: "4-5 sessions per week; each grade splits into A and B semester books (publisher publishes pacing guides per edition)"
+entry_age: "5 (kindergarten in the 2022 Edition; U.S. Edition starts at grade 1, with Earlybird Kindergarten as the K on-ramp)"
+typical_completion_time: "1 grade level (A + B books) per school year"
+public_scope_and_sequence_url: https://www.singaporemath.com/pages/scopes-sequences   # verified 2026-07-10; S&S PDFs for U.S., Standards, Common Core, and 2022 editions
+typical_price_range: "~$80-135 per grade-year in the 2022 Edition (student books/workbooks $13.60 each, Home Instructor's Guide $25.50, Teacher's Guide $58.00 — publisher store, verified)"
+known_pairings:
+  - beast-academy: "deep problem-solving supplement on top of PM's efficient CPA mastery spine — both are mastery-family, so sequencing does not clash"
+  - life-of-fred: "light narrative enrichment for story-hungry kids without disturbing the PM sequence"
+known_conflicts:
+  - saxon-math: "mastery-vs-spiral conflict — PM's concrete-pictorial-abstract mastery units and Saxon's incremental spiral review model the subject in incompatible ways within one year"
+philosophy_notes: "Strong Charlotte Mason fit — short focused lessons and a concrete-pictorial-abstract progression mirror CM's concrete-to-abstract, short-lesson principles."
+sources:
+  - https://www.singaporemath.com/pages/scopes-sequences                      # verified via WebFetch 2026-07-10
+  - https://www.singaporemath.com/pages/primary-mathematics-for-homeschool    # verified via WebFetch 2026-07-10 (three homeschool editions; pacing guides referenced)
+  - https://www.singaporemath.com/collections/primary-mathematics-2022-edition  # verified via WebFetch 2026-07-10 (component prices)
+# NOTE: multiple concurrent editions (U.S., Standards, Common Core, 2022) have different S&S and grade spans — pin the edition when matching families.

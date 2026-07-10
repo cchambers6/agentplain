@@ -1,0 +1,23 @@
+id: apologia-elementary-science
+name: Apologia Elementary Science (Young Explorer Series, "Exploring Creation with...")
+publisher: Apologia Educational Ministries
+subjects: [science]
+stages: [grammar]
+philosophy_affinity: [charlotte-mason, classical, christian]
+format: [textbook, workbook, mastery]  # immersion approach — one topic studied deeply per year; notebooking journals; optional audiobook/video
+pace: 2 lessons/week (suggested daily schedule, ~28 weeks per course)
+entry_age: 5  # publisher states grades K-6, ages 5-11, multi-age family learning
+typical_completion_time: one book = one school year (~28 weeks at 2 days/week)
+public_scope_and_sequence_url: https://www.apologia.com/curriculum-scope/
+typical_price_range: "$70-$94 per course Build-Your-Own set (textbook + notebooking journal); ~$364 retail for seven-textbook set"
+known_pairings:
+  - Apologia Notebooking Journals (regular and Junior versions for multi-age use)
+  - Charlotte Mason-style narration and notebooking practices (the journals are built around them)
+known_conflicts:
+  - Explicitly young-earth creationist / Biblical worldview — a worldview mismatch for secular families or those preferring neutral texts like Real Science-4-Kids or Elemental Science
+philosophy_notes: Strong Charlotte Mason crossover despite its textbook format — conversational "living book"-style prose, narration prompts, and notebooking journals map closely to CM methods, though CM purists note it is still a single-author textbook rather than true living books.
+sources:
+  - https://www.apologia.com/elementary-science-for-homeschool/
+  - https://www.apologia.com/curriculum-scope/
+  - https://cathyduffyreviews.com/homeschool-reviews-core-curricula/science/science-unit-studies/apologia-s-exploring-creation-series-elementary-grades
+  - https://setonbooks.com/science/1315-exploring-creation-young-explorers-seven-book-set.html

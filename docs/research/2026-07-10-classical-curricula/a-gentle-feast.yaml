@@ -1,0 +1,42 @@
+id: a-gentle-feast
+name: A Gentle Feast
+publisher: A Gentle Feast (founder Julie Ross)
+subjects:
+  - bible / scripture-memory (Morning Time)
+  - american-history
+  - british-world-history
+  - ancient-history
+  - geography
+  - literature
+  - natural-history
+  - science (family science + high-school sciences)
+  - language-arts (separate course)
+  - foreign-language
+  - shakespeare
+  - enrichment (art, music, poetry — separate course)
+stages:
+  - form-1 (roughly grades 1-3)
+  - form-2 (roughly grades 4-6)
+  - form-3 (roughly grades 7-9)
+  - form-4 (roughly grades 10-12)   # product page states plans cover grades 1-12
+philosophy_affinity: [charlotte-mason]
+format:
+  - living-book
+  - digital-lesson-plans (editable spreadsheets, lifetime access)
+  - online-membership (The Feast Table)
+  - printable-resources
+pace: "36 weeks of lesson plans per cycle year, with 4-day or 5-day week options; four-course 'feast' day structure (Morning Time, Language Arts, Main Subjects, Enrichment); 4-year history cycle (Cycles 1-4)"
+entry_age: "grade 1 (~age 6) for Form 1; multi-age family teaching from the same cycle"
+typical_completion_time: "one school year (36 weeks) per cycle year; full history rotation is a 4-year cycle"
+public_scope_and_sequence_url: https://agentlefeast.com/product/cycle-1-basic-online-resources-bundle/
+typical_price_range: "$127 per Legacy Cycle Base Curriculum (digital, grades 1-12, one cycle year); Morning Time, Language Arts, and Enrichment courses sold separately; Feast Table membership pricing not publicly listed on the pages reviewed"
+known_pairings:
+  - "a separate math program is required — the Base Curriculum explicitly covers 'all the subjects for grades 1-12 except for Math'"
+  - "Living Book Press reprints — LBP organizes its shop by A Gentle Feast Cycle (Cycles 1-4)"
+known_conflicts:
+  - "AGF is a complete multi-subject CM plan — running it alongside AmblesideOnline, SCM family plans, or a full boxed classical core double-schedules the day"
+philosophy_notes: "A Christian, family-combined Charlotte Mason curriculum built by Julie Ross around a four-course 'feast' metaphor — literature-rich, Bible-integrated, and designed so all children learn from the same living-book cycle."
+sources:
+  - https://agentlefeast.com/
+  - https://agentlefeast.com/product/cycle-1-basic-online-resources-bundle/
+  - https://agentlefeast.com/about/

@@ -1,0 +1,24 @@
+id: rightstart-mathematics
+name: RightStart Mathematics (RS2, second edition)
+publisher: Activities for Learning, Inc.
+subjects: [math]
+stages: [grammar, logic]                     # Levels A-H, roughly K-8
+philosophy_affinity: [charlotte-mason, eclectic]
+format: [manipulative-heavy, mastery, workbook]
+pace: "daily scripted lessons, 4-5 per week across a 36-week year (lesson counts vary by level; publisher publishes TOC/objectives per level)"
+entry_age: "4-5 (Level A, kindergarten; program uses letter levels rather than grades)"
+typical_completion_time: "1 level per school year"
+public_scope_and_sequence_url: https://rightstartmath.com/resources/sample-lessons/   # verified 2026-07-10; per-level Objectives + Table of Contents + sample-lesson PDFs for RS2 Levels A-H
+typical_price_range: null
+known_pairings:
+  - life-of-fred: "narrative enrichment; LoF's story format complements RightStart's oral, game-based lessons without adding worksheet load"
+known_conflicts:
+  - saxon-math: "mastery/strategy-vs-spiral conflict — RightStart teaches number strategies to mastery via the AL abacus while Saxon spirals procedures with heavy written review"
+  - math-u-see: "competing manipulative mental models — the fives-grouped AL (Cotter) abacus and MUS base-10 integer blocks build different number visualizations; running both confuses the imagery"
+philosophy_notes: "Very strong Charlotte Mason fit — short, oral, game-and-manipulative lessons with minimal worksheets embody CM's short-lesson, concrete-to-abstract ideal."
+sources:
+  - https://rightstartmath.com/resources/sample-lessons/   # verified via WebFetch 2026-07-10 (objectives/TOC downloads per level)
+  - https://rightstartmath.com/our-curriculum/             # verified via WebFetch 2026-07-10 (publisher = Activities for Learning, Inc.; Cotter/AL abacus centerpiece; levels not grades)
+  - https://rightstartmath.com/wp-content/uploads/2019/12/RS2-Level-H-TOC-and-Lessons.pdf
+# NOTE: typical_price_range is null — store.rightstartmath.com product pages returned 404 to the fetcher on 2026-07-10, so no publisher price was verified. Book bundles and the RS2 Math Set (manipulatives) are sold separately.
+# NOTE: format classification — RightStart is strategy/mastery-oriented with built-in daily review; it is not a strict single-topic mastery program like MUS.

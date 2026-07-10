@@ -1,0 +1,21 @@
+id: the-ordinary-parents-guide-to-teaching-reading
+name: The Ordinary Parent's Guide to Teaching Reading
+publisher: Well-Trained Mind Press (Jessie Wise & Sara Buffington; Revised Edition 2022)
+subjects: [reading]
+stages: [early-years, grammar]
+philosophy_affinity: [classical-trivium, eclectic]
+format: [textbook, mastery]
+pace: "231 scripted lessons using a 'Two Review and One New' cycle; no fixed lessons/week prescribed, typically taught in short daily sessions"
+entry_age: "~4 (reviewers place it PreK-grade 5; authors suggest starting before kindergarten if possible; also used remedially)"
+typical_completion_time: "multiple years for the full 231 lessons, taking a student from zero to roughly a fourth-grade reading level"
+public_scope_and_sequence_url: null   # welltrainedmind.com product pages block automated verification (HTTP 403); progression (vowel/consonant sounds -> blends -> digraphs -> letter patterns -> sentences/paragraphs) confirmed via retailer listing
+typical_price_range: "Revised Edition: Instructor Book $37.95 retail + Student Book sold separately (~$18-$28 each in print; PDFs $28.95/$19.95)"
+known_pairings:
+  - "Well-Trained Mind Press language-arts lineup (First Language Lessons, Writing With Ease) from the same publisher; requires simple letter tiles/magnet board, compatible with tiles owned for other programs"
+known_conflicts:
+  - "Redundant to run alongside another complete phonics program such as All About Reading or Phonics Pathways; pick one as the primary decoding spine"
+philosophy_notes: "Scripted, explicit phonics in short daily sittings is compatible with Charlotte Mason pacing, but the program is drill-based with no living-book or narration component."
+sources:
+  - https://www.christianbook.com/ordinary-parents-guide-teaching-reading-instructor/jessie-wise/9781952469251/pd/469253
+  - https://cathyduffyreviews.com/homeschool-reviews-core-curricula/phonics-reading/phonics-reading-programs/the-ordinary-parents-guide-to-teaching-reading
+  - https://welltrainedmind.com/p/opg-original-ed/   # existence confirmed via search listing; direct fetch returned HTTP 403

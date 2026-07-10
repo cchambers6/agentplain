@@ -1,0 +1,1306 @@
+[
+  {
+    "id": "a-gentle-feast",
+    "name": "A Gentle Feast",
+    "publisher": "A Gentle Feast (founder Julie Ross)",
+    "subjects": [
+      "bible / scripture-memory (Morning Time)",
+      "american-history",
+      "british-world-history",
+      "ancient-history",
+      "geography",
+      "literature",
+      "natural-history",
+      "science (family science + high-school sciences)",
+      "language-arts (separate course)",
+      "foreign-language",
+      "shakespeare",
+      "enrichment (art, music, poetry — separate course)"
+    ],
+    "stages": [
+      "form-1 (roughly grades 1-3)",
+      "form-2 (roughly grades 4-6)",
+      "form-3 (roughly grades 7-9)",
+      "form-4 (roughly grades 10-12)"
+    ],
+    "philosophyAffinity": [
+      "charlotte-mason"
+    ],
+    "format": [
+      "living-book",
+      "digital-lesson-plans (editable spreadsheets, lifetime access)",
+      "online-membership (The Feast Table)",
+      "printable-resources"
+    ],
+    "pace": "36 weeks of lesson plans per cycle year, with 4-day or 5-day week options; four-course 'feast' day structure (Morning Time, Language Arts, Main Subjects, Enrichment); 4-year history cycle (Cycles 1-4)",
+    "entryAge": "grade 1 (~age 6) for Form 1; multi-age family teaching from the same cycle",
+    "scopeSequenceUrl": "https://agentlefeast.com/product/cycle-1-basic-online-resources-bundle/",
+    "knownPairings": [
+      "a separate math program is required — the Base Curriculum explicitly covers 'all the subjects for grades 1-12 except for Math'",
+      "Living Book Press reprints — LBP organizes its shop by A Gentle Feast Cycle (Cycles 1-4)"
+    ],
+    "knownConflicts": [
+      "AGF is a complete multi-subject CM plan — running it alongside AmblesideOnline, SCM family plans, or a full boxed classical core double-schedules the day"
+    ],
+    "philosophyNotes": "A Christian, family-combined Charlotte Mason curriculum built by Julie Ross around a four-course 'feast' metaphor — literature-rich, Bible-integrated, and designed so all children learn from the same living-book cycle."
+  },
+  {
+    "id": "all-about-reading",
+    "name": "All About Reading",
+    "publisher": "All About Learning Press",
+    "subjects": [
+      "reading"
+    ],
+    "stages": [
+      "early-years",
+      "grammar"
+    ],
+    "philosophyAffinity": [
+      "charlotte-mason",
+      "classical-trivium",
+      "eclectic"
+    ],
+    "format": [
+      "manipulative-heavy",
+      "mastery"
+    ],
+    "pace": "about 20 minutes per day of core instruction (publisher guidance); self-paced, mastery-based",
+    "entryAge": "~4 (Pre-reading level targets preschoolers; publisher states the program serves pre-readers through teens and adults)",
+    "scopeSequenceUrl": "https://www.allaboutlearningpress.com/scope-and-sequence/",
+    "knownPairings": [
+      "All About Spelling (same publisher, same Orton-Gillingham method; letter tiles are a shared one-time purchase covering AAR 1-4 and AAS 1-7)"
+    ],
+    "knownConflicts": [
+      "Running a second full Orton-Gillingham phonics program (e.g., a complete Explode the Code sequence or Phonics Pathways) simultaneously is redundant"
+    ],
+    "philosophyNotes": "Short, multisensory, mastery-paced lessons fit Charlotte Mason's short-lessons principle, though the scripted activity-book approach is more structured than CM purists prefer."
+  },
+  {
+    "id": "all-about-spelling",
+    "name": "All About Spelling",
+    "publisher": "All About Learning Press",
+    "subjects": [
+      "spelling"
+    ],
+    "stages": [
+      "grammar",
+      "logic"
+    ],
+    "philosophyAffinity": [
+      "charlotte-mason",
+      "classical-trivium",
+      "eclectic"
+    ],
+    "format": [
+      "manipulative-heavy",
+      "mastery"
+    ],
+    "pace": "approximately 20 minutes daily (publisher guidance); scripted, open-and-go, self-paced by mastery",
+    "entryAge": "~6 (publisher positions Levels 1-7 for elementary through middle school; mastery-based rather than grade-based)",
+    "scopeSequenceUrl": "https://www.allaboutlearningpress.com/scope-and-sequence/",
+    "knownPairings": [
+      "All About Reading (same publisher, same Orton-Gillingham method; shared letter-tile set covers both programs)"
+    ],
+    "knownConflicts": [
+      "Redundant with the spelling strand of any full language-arts program already teaching rule-based spelling; running two rule-explicit OG spelling programs at once duplicates effort"
+    ],
+    "philosophyNotes": "Its dictation-based practice loosely echoes Charlotte Mason's studied dictation, but explicit rule-drill via letter tiles is a different mechanism than CM's transcription-first approach."
+  },
+  {
+    "id": "ambleside-online",
+    "name": "AmblesideOnline (AO)",
+    "publisher": "AmblesideOnline Advisory (amblesideonline.org; volunteer advisory, non-commercial)",
+    "subjects": [
+      "bible",
+      "history",
+      "geography",
+      "literature",
+      "language-arts",
+      "science",
+      "nature-study",
+      "poetry",
+      "shakespeare",
+      "plutarch (citizenship)",
+      "picture-study",
+      "composer-study",
+      "hymn-study",
+      "foreign-language",
+      "handicrafts"
+    ],
+    "stages": [
+      "early-years (Year 0 / pre-6, informal)",
+      "elementary (Years 1-6)",
+      "middle (Years 7-8, incl. Year 3.5 and Pre-7 flex entry points)",
+      "high-school (Years 9-12)"
+    ],
+    "philosophyAffinity": [
+      "charlotte-mason"
+    ],
+    "format": [
+      "free-online-curriculum-plan",
+      "living-book",
+      "booklists",
+      "weekly-reading-schedules",
+      "many-scheduled-titles-free-online (public domain)"
+    ],
+    "pace": "36-week school year organized into 3 terms; short lessons; weekly reading assignments per Year; one AO Year per school year",
+    "entryAge": "Year 1 at about age 6 (site cites Charlotte Mason's rule that no child under six should be required to narrate); Year 0 is informal pre-6",
+    "scopeSequenceUrl": "https://www.amblesideonline.org/curriculum.php",
+    "knownPairings": [
+      "a separate math program of the family's choice — AO explicitly does not prescribe math ('all children should be working at their grade level in math and language arts regardless of which Year of AO they're doing')",
+      "Handbook of Nature Study (Anna Botsford Comstock) as the classic nature-study companion",
+      "Living Book Press reprints — LBP organizes its shop by AO Year (Years 1-12 incl. 3.5 and Pre-7)"
+    ],
+    "knownConflicts": [
+      "running a full boxed classical core (e.g., a Memoria Press full core) alongside AO double-schedules the day — AO is a complete multi-subject plan, not a supplement",
+      "other full CM plans (A Gentle Feast, Simply Charlotte Mason family plans) are alternatives to AO, not add-ons"
+    ],
+    "philosophyNotes": "The flagship free Charlotte Mason curriculum plan, designed to hew as closely as possible to the curriculum Mason used in her own PNEU schools — living books, narration, copywork, nature study, picture/composer study, and short lessons."
+  },
+  {
+    "id": "apologia-elementary-science",
+    "name": "Apologia Elementary Science (Young Explorer Series, \"Exploring Creation with...\")",
+    "publisher": "Apologia Educational Ministries",
+    "subjects": [
+      "science"
+    ],
+    "stages": [
+      "grammar"
+    ],
+    "philosophyAffinity": [
+      "charlotte-mason",
+      "classical",
+      "christian"
+    ],
+    "format": [
+      "textbook",
+      "workbook",
+      "mastery"
+    ],
+    "pace": "2 lessons/week (suggested daily schedule, ~28 weeks per course)",
+    "entryAge": 5,
+    "scopeSequenceUrl": "https://www.apologia.com/curriculum-scope/",
+    "knownPairings": [
+      "Apologia Notebooking Journals (regular and Junior versions for multi-age use)",
+      "Charlotte Mason-style narration and notebooking practices (the journals are built around them)"
+    ],
+    "knownConflicts": [
+      "Explicitly young-earth creationist / Biblical worldview — a worldview mismatch for secular families or those preferring neutral texts like Real Science-4-Kids or Elemental Science"
+    ],
+    "philosophyNotes": "Strong Charlotte Mason crossover despite its textbook format — conversational \"living book\"-style prose, narration prompts, and notebooking journals map closely to CM methods, though CM purists note it is still a single-author textbook rather than true living books."
+  },
+  {
+    "id": "beast-academy",
+    "name": "Beast Academy",
+    "publisher": "Art of Problem Solving (AoPS Incorporated)",
+    "subjects": [
+      "math"
+    ],
+    "stages": [
+      "grammar",
+      "logic"
+    ],
+    "philosophyAffinity": [
+      "eclectic"
+    ],
+    "format": [
+      "textbook",
+      "workbook",
+      "mastery"
+    ],
+    "pace": "4 units (A-D) per level per 36-week year (~9 weeks per unit); publisher sequence documents give the recommended Guide/Practice/online ordering",
+    "entryAge": "6 (Level 1)",
+    "scopeSequenceUrl": "https://beastacademy.com/resources/planning",
+    "knownPairings": [
+      {
+        "singapore-math-primary-mathematics": "BA as the deep problem-solving layer over PM's efficient mastery spine — a common combo since both are mastery-family"
+      }
+    ],
+    "knownConflicts": [
+      {
+        "saxon-math": "mastery/discovery-vs-spiral conflict — BA's puzzle-driven depth-first chapters clash with Saxon's incremental spiral drill within one year"
+      },
+      {
+        "rod-staff-math": "pedagogical opposites — BA's discovery problem-solving vs Rod & Staff's drill-and-memorization; pairing frustrates both methods"
+      }
+    ],
+    "philosophyNotes": "Mixed Charlotte Mason fit — the comic-book Guide narratives are engaging and living-book-adjacent, but long, hard problem sets exceed CM's short-lesson ideal for young children."
+  },
+  {
+    "id": "beautiful-feet-books",
+    "name": "Beautiful Feet Books — History Through Literature",
+    "publisher": "Beautiful Feet Books",
+    "subjects": [
+      "history",
+      "geography"
+    ],
+    "stages": [
+      "grammar",
+      "logic",
+      "rhetoric"
+    ],
+    "philosophyAffinity": [
+      "charlotte-mason",
+      "eclectic"
+    ],
+    "format": [
+      "living-book"
+    ],
+    "pace": "2-3 lessons/week for a 1-year study (Early American K-3 guide: 94 lessons; or 1-2 lessons/week stretched over 2 years)",
+    "entryAge": 5,
+    "scopeSequenceUrl": "https://www.bfbooks.com/Early-Am-History-Primary-Study-Guide",
+    "knownPairings": [
+      "Any standalone math/science program — BFB covers only humanities strands",
+      "Charlotte Mason narration/notebooking routines — guides are built around discussion"
+    ],
+    "knownConflicts": [
+      "Workbook-heavy textbook programs (e.g., Abeka) — opposing living-books philosophy",
+      "A second full history spine — literature packs already carry the history load"
+    ],
+    "philosophyNotes": "Built directly on living books, Socratic discussion, narration-style responses, and art appreciation, it is one of the closest commercial fits to Charlotte Mason's method available for history."
+  },
+  {
+    "id": "classical-conversations",
+    "name": "Classical Conversations",
+    "publisher": "Classical Conversations MultiMedia, Inc.",
+    "subjects": [
+      "latin",
+      "english-grammar",
+      "history",
+      "geography",
+      "science",
+      "math",
+      "timeline-memory-work",
+      "writing",
+      "literature",
+      "logic-debate",
+      "philosophy-theology",
+      "economics"
+    ],
+    "stages": [
+      "grammar",
+      "dialectic",
+      "rhetoric"
+    ],
+    "philosophyAffinity": [
+      "classical-trivium"
+    ],
+    "format": [
+      "community-day",
+      "in-person",
+      "parent-led-at-home"
+    ],
+    "pace": "One weekly in-person community day plus roughly four parent-led home days; Foundations/Essentials years are commonly 24 community weeks (community-reported), Challenge is two 15-week semesters (official).",
+    "entryAge": 4,
+    "scopeSequenceUrl": "https://classicalconversations.com/programs/",
+    "knownPairings": [
+      "Saxon Math or Math-U-See at home alongside Foundations memory work (common family practice)",
+      "IEW structure-and-style writing — built into Essentials via official IEW partnership",
+      "Challenge families commonly continue Saxon Math (community-reported; not verified on official page)"
+    ],
+    "knownConflicts": [
+      "The 3-year memory-work cycle fixes the history sequence to the community's current cycle — conflicts with running Story of the World or another chronological history spine out of cycle at home.",
+      "Fixed community-day calendar and enrollment-by-program constrain families who want subject-level à la carte choices; Challenge bundles all six seminar strands together."
+    ],
+    "philosophyNotes": "CC's recitation-and-drill grammar-stage method is squarely trivium-classical and sits in tension with Charlotte Mason's living-books, short-lesson, ideas-before-facts approach, though some CM families use Foundations memory work as a supplement."
+  },
+  {
+    "id": "elemental-science",
+    "name": "Elemental Science (Classical Science Series)",
+    "publisher": "Elemental Science",
+    "subjects": [
+      "science"
+    ],
+    "stages": [
+      "grammar",
+      "logic",
+      "rhetoric"
+    ],
+    "philosophyAffinity": [
+      "classical",
+      "charlotte-mason",
+      "secular"
+    ],
+    "format": [
+      "workbook",
+      "textbook"
+    ],
+    "pace": "2 or 5 days/week (both schedules included in Grammar Stage programs)",
+    "entryAge": 5,
+    "scopeSequenceUrl": "https://elementalscience.com/collections/classical-science",
+    "knownPairings": [
+      "Usborne/Kingfisher-style science encyclopedias as reading spines (book packages bundle them)",
+      "Sassafras Science (same publisher) for story-loving younger students"
+    ],
+    "knownConflicts": [
+      "Secular content — a mismatch for families wanting a Biblical worldview program like Apologia"
+    ],
+    "philosophyNotes": "Explicitly classical (endorsed by Susan Wise Bauer of The Well-Trained Mind) but deliberately incorporates Charlotte Mason elements — hands-on work, sketching, narration-style writing, and nature observation — making it a workable hybrid for CM-leaning families."
+  },
+  {
+    "id": "explode-the-code",
+    "name": "Explode the Code",
+    "publisher": "EPS Learning (Educators Publishing Service / EPS Operations, LLC)",
+    "subjects": [
+      "phonics"
+    ],
+    "stages": [
+      "early-years",
+      "grammar"
+    ],
+    "philosophyAffinity": [
+      "eclectic"
+    ],
+    "format": [
+      "workbook"
+    ],
+    "pace": null,
+    "entryAge": "~4 (primers Get Ready/Get Set/Go for the Code target PreK; core Books 1-8 span grades PreK-4)",
+    "scopeSequenceUrl": "https://epslearning.com/hubfs/eps-content/resources/explode-the-code/sample-lessons/SS-etc.pdf",
+    "knownPairings": [
+      "Commonly used as independent written practice alongside a teacher-led phonics program (e.g., The Ordinary Parent's Guide to Teaching Reading or All About Reading), since the workbooks reinforce rather than fully teach"
+    ],
+    "knownConflicts": [
+      "Running the full 14-book sequence alongside another complete Orton-Gillingham phonics program is redundant; most families use one as primary and the other as light supplement"
+    ],
+    "philosophyNotes": "Fill-in-the-blank workbook drill sits at odds with Charlotte Mason's aversion to busywork, so CM families tend to use it sparingly or skip it."
+  },
+  {
+    "id": "first-language-lessons",
+    "name": "First Language Lessons for the Well-Trained Mind",
+    "publisher": "Well-Trained Mind Press (formerly Peace Hill Press); author Jessie Wise",
+    "subjects": [
+      "grammar"
+    ],
+    "stages": [
+      "grammar"
+    ],
+    "philosophyAffinity": [
+      "classical-trivium",
+      "charlotte-mason"
+    ],
+    "format": [
+      "scripted-teacher-book",
+      "student-workbook",
+      "audio-companion"
+    ],
+    "pace": "roughly 3 lessons per week over a 36-week year (100 lessons each in Levels 1-2, 89 in Level 3, 85 in Level 4); lessons are short and largely oral in early levels",
+    "entryAge": 6,
+    "scopeSequenceUrl": "https://s3.us-east-1.amazonaws.com/samples.welltrainedmind.com/FLL_Samples/FLL1_sample.pdf",
+    "knownPairings": [
+      "Writing With Ease (Susan Wise Bauer — same author family, designed together; FLL grammar concepts are reinforced by WWE writing assignments)",
+      "The Ordinary Parent's Guide to Teaching Reading (same publisher, common grade-1 stack)"
+    ],
+    "knownConflicts": [
+      "Redundant alongside another full grammar program (e.g., Rod & Staff English) at the same grades",
+      "Scripted recitation and memorized definition chants feel over-repetitive to some Charlotte Mason purists despite the shared techniques"
+    ],
+    "philosophyNotes": "FLL's gentle oral lessons, copywork, narration, and poem memorization align closely with Charlotte Mason practice, though its scripted recitation of grammar definitions leans classical-trivium rather than pure Mason."
+  },
+  {
+    "id": "getting-started-with-latin",
+    "name": "Getting Started with Latin: Beginning Latin for Homeschoolers and Self-Taught Students of Any Age",
+    "publisher": "William E. Linney (Armfield Academic Press imprint)",
+    "subjects": [
+      "latin"
+    ],
+    "stages": [
+      "upper-elementary",
+      "middle",
+      "high-school",
+      "adult"
+    ],
+    "philosophyAffinity": [
+      "classical-trivium",
+      "minimalist-self-taught"
+    ],
+    "format": [
+      "single-self-contained-book",
+      "built-in-answer-key",
+      "free-web-audio",
+      "free-author-commentary-recordings",
+      "free-mobile-drill-app"
+    ],
+    "pace": "Self-paced; publisher math: 134 lessons at 5 lessons/week = ~27 weeks, at 10/week = ~13 weeks",
+    "entryAge": "No stated minimum — publisher positions it for 'students of any age' able to read independently",
+    "scopeSequenceUrl": "http://www.gettingstartedwithlatin.com/faq.html",
+    "knownPairings": [
+      "Getting Started with Latin -> Keep Going with Latin -> Linney's Latin Class (free online course through Gunnison & Harley's 'The First Year of Latin') — publisher-stated sequence",
+      "Commonly used as a gentle standalone Latin spine or as a pre-/co-program alongside any pronunciation track, since free recordings ship in BOTH classical and ecclesiastical styles",
+      "Sibling titles in the same method: Getting Started with Spanish / French / Greek etc."
+    ],
+    "knownConflicts": [
+      "None documented by publisher; dual-pronunciation recordings make it track-agnostic. Publisher's own FAQ flags coverage gaps vs a full high-school Latin 1 (no imperfect/perfect/future tenses, no numbers), so it cannot substitute 1:1 for a graded classical sequence like Memoria Forms or CAP Latin for Children"
+    ],
+    "philosophyNotes": "Its very short, mastery-based, one-concept-per-lesson format is closer in spirit to Charlotte Mason's short-lesson principle than Memoria-style drill, but it remains a grammar-translation method rather than Mason's oral-first language teaching."
+  },
+  {
+    "id": "handbook-of-nature-study",
+    "name": "Handbook of Nature-Study for Teachers and Parents",
+    "publisher": "Comstock Publishing Company (1911, Ithaca NY); modern reprints from Cornell University Press",
+    "subjects": [
+      "science"
+    ],
+    "stages": [
+      "grammar",
+      "logic"
+    ],
+    "philosophyAffinity": [
+      "charlotte-mason"
+    ],
+    "format": [
+      "living-book"
+    ],
+    "pace": null,
+    "entryAge": null,
+    "scopeSequenceUrl": "https://archive.org/details/handbookofnature00coms",
+    "knownPairings": [
+      "Ambleside Online nature study rotations (the de facto CM scheduling layer over Comstock's topics)",
+      "Nature Anatomy (Rothman) as the child-facing illustrated companion to this teacher reference",
+      "Charlotte Mason nature journals / notebooks"
+    ],
+    "knownConflicts": [
+      "Content is dated (1911) and regionally centered on the northeastern US — species lists and some science need supplementing for other regions and modern accuracy"
+    ],
+    "philosophyNotes": "The foundational text of the nature study movement and the single most-cited resource for Charlotte Mason nature study, which is a core pillar of CM science education."
+  },
+  {
+    "id": "iew-structure-and-style",
+    "name": "Institute for Excellence in Writing (IEW) — Structure and Style (Structure and Style for Students)",
+    "publisher": "Institute for Excellence in Writing (IEW)",
+    "subjects": [
+      "writing"
+    ],
+    "stages": [
+      "grammar",
+      "logic",
+      "rhetoric"
+    ],
+    "philosophyAffinity": [
+      "classical-trivium",
+      "eclectic"
+    ],
+    "format": [
+      "video-course",
+      "streaming",
+      "dvd",
+      "student-binder-and-packet",
+      "teacher-manual"
+    ],
+    "pace": "1 video lesson per week across a 24-week course; daily written assignments between lessons (IEW lesson-planning guidance: roughly 1-2 months per structural unit, units 1-9 over a school year)",
+    "entryAge": 8,
+    "scopeSequenceUrl": "https://iew.com/sss-info",
+    "knownPairings": [
+      "Fix It! Grammar (IEW's own companion grammar program, designed to run alongside)",
+      "IEW theme-based writing lessons (same Structure and Style method applied to themed units)"
+    ],
+    "knownConflicts": [
+      "IEW keyword-outline method and required stylistic 'dress-ups'/checklists conflict with Charlotte Mason pure oral-narration philosophy; CM purists commonly delay or adapt it",
+      "Redundant if run concurrently with another full composition program (e.g., Writing With Ease/Writing With Skill) at the same level"
+    ],
+    "philosophyNotes": "IEW's structured keyword outlines and mandatory stylistic checklists sit in tension with Charlotte Mason's free narration, so it reads as classical-adjacent skill training rather than a Mason-aligned program."
+  },
+  {
+    "id": "latin-for-children",
+    "name": "Latin for Children (Primers A, B, C)",
+    "publisher": "Classical Academic Press",
+    "subjects": [
+      "latin"
+    ],
+    "stages": [
+      "upper-elementary",
+      "middle"
+    ],
+    "philosophyAffinity": [
+      "classical-trivium"
+    ],
+    "format": [
+      "student-text",
+      "activity-book",
+      "answer-key",
+      "video-and-audio-lessons",
+      "chant-audio",
+      "online-practice",
+      "test-packet",
+      "history-reader"
+    ],
+    "pace": "Daily lessons of 20-25 minutes corresponding to a weekly chapter",
+    "entryAge": "9 (publisher: 'students as young as fourth graders'; Primer A grades 4-5, B grades 5-6, C grades 6-7)",
+    "scopeSequenceUrl": "https://classicalacademicpress.com/collections/latin-for-children",
+    "knownPairings": [
+      "Song School Latin -> Latin for Children Primer A (CAP sequence; SSL Book 2 explicitly pre-teaches 75 LFC-A words/grammar topics)",
+      "Latin for Children A -> B -> C -> Latin Alive! (CAP's upper-school continuation, referenced on CAP's Latin series pages)",
+      "History Reader supplements per primer for translation practice"
+    ],
+    "knownConflicts": [
+      "Ships chant audio in BOTH classical and ecclesiastical pronunciation — pick one track and stay on it; crossing over from/to Memoria's ecclesiastical-only sequence (Latina Christiana / First Form) mid-stream mixes pronunciation systems and duplicates grammar sequence",
+      "Grammar-chant intensity is heavier than gentle/CM approaches expect at age 9-10"
+    ],
+    "philosophyNotes": "The daily chant-and-drill mastery of declensions and conjugations from grade 4 is classic trivium grammar-stage pedagogy, well beyond Charlotte Mason's gentler, delayed and more oral approach to Latin, though the short 20-25 minute lessons echo Mason's short-lesson habit."
+  },
+  {
+    "id": "life-of-fred",
+    "name": "Life of Fred",
+    "publisher": "Polka Dot Publishing",
+    "subjects": [
+      "math"
+    ],
+    "stages": [
+      "grammar",
+      "logic",
+      "rhetoric"
+    ],
+    "philosophyAffinity": [
+      "charlotte-mason",
+      "eclectic"
+    ],
+    "format": [
+      "living-book",
+      "textbook",
+      "mastery"
+    ],
+    "pace": "self-paced narrative chapters (a chapter per sitting is common); publisher states Apples through Mineshaft (13 books) takes about 16-21 months total",
+    "entryAge": "6 (publisher: start anywhere between 1st and 4th grade depending on reading readiness; begin with Apples if addition facts are not yet cold)",
+    "scopeSequenceUrl": "https://lifeoffred.com/elementary.html",
+    "knownPairings": [
+      {
+        "math-u-see": "LoF narrative enrichment over a skill-drill mastery spine"
+      },
+      {
+        "saxon-math": "LoF is the classic 'story antidote' supplement to Saxon's dry spiral drill"
+      },
+      {
+        "rightstart-mathematics": "adds independent reading-based math to a parent-intensive program"
+      }
+    ],
+    "knownConflicts": [
+      {
+        "saxon-math": "as co-equal spines the mastery-style once-through narrative and Saxon's spiral review sequence contradict each other — use LoF as supplement, not parallel spine"
+      }
+    ],
+    "philosophyNotes": "Excellent Charlotte Mason fit — a genuine living-book approach with short story-driven lessons, though most families add a practice-heavy spine since built-in exercises ('Your Turn to Play') are sparse."
+  },
+  {
+    "id": "living-book-press",
+    "name": "Living Book Press",
+    "publisher": "Living Book Press (Australian family-run publisher; livingbookpress.com)",
+    "subjects": [
+      "literature",
+      "nature-study (incl. Handbook of Nature Study editions with new color images)",
+      "history",
+      "geography",
+      "biography",
+      "science",
+      "folk-tales-and-mythology",
+      "poetry",
+      "religion",
+      "charlotte-mason-source-texts (Home Education Series, 6 volumes)",
+      "handicraft",
+      "citizenship"
+    ],
+    "stages": [],
+    "philosophyAffinity": [
+      "charlotte-mason"
+    ],
+    "format": [
+      "living-book-reprints (transcribed and reformatted public-domain and licensed titles)",
+      "softcover",
+      "hardcover",
+      "ebook (2 free e-books offered monthly)",
+      "audiobook"
+    ],
+    "pace": null,
+    "entryAge": null,
+    "scopeSequenceUrl": "https://www.livingbookpress.com/subject/charlotte-mason/",
+    "knownPairings": [
+      "AmblesideOnline — LBP shop has per-Year catalog pages (Years 1-12 incl. 3.5 and Pre-7)",
+      "A Gentle Feast — per-Cycle catalog pages (Cycles 1-4)",
+      "Mater Amabilis, Sabbath Mood Homeschool, A Mind In The Light, The Children's Tradition, Schola Rosa, Living Heritage, Charlotte Mason Cottage Curriculum — all have dedicated LBP catalog mappings"
+    ],
+    "knownConflicts": [
+      "none as a program — it is a book supplier, not a schedule; only risk is duplicate purchases when a curriculum bundle already includes print books"
+    ],
+    "philosophyNotes": "Not a curriculum but the CM ecosystem's reprint house — an Australian homeschool-family publisher whose mission is 'making great quality reprints of living books affordable for everyone,' with its catalog explicitly organized around the CM plans (AO years, AGF cycles, etc.) that schedule its titles."
+  },
+  {
+    "id": "math-u-see",
+    "name": "Math-U-See",
+    "publisher": "Demme Learning",
+    "subjects": [
+      "math"
+    ],
+    "stages": [
+      "grammar",
+      "logic",
+      "rhetoric"
+    ],
+    "philosophyAffinity": [
+      "charlotte-mason",
+      "eclectic"
+    ],
+    "format": [
+      "mastery",
+      "manipulative-heavy",
+      "video",
+      "workbook"
+    ],
+    "pace": "~1 lesson per week over a 30-lesson level (each lesson spans multiple worksheet days); fits a 36-week year with review weeks",
+    "entryAge": "4-5 (Primer level; readiness-based — publisher gives interest-in-counting criteria rather than an age)",
+    "scopeSequenceUrl": "https://mathusee.com/products/math-u-see-curriculum/primer/",
+    "knownPairings": [
+      {
+        "life-of-fred": "story-based living-book enrichment alongside a skill-focused mastery spine"
+      }
+    ],
+    "knownConflicts": [
+      {
+        "saxon-math": "mastery-vs-spiral conflict — running MUS single-topic mastery levels alongside Saxon's incremental spiral in the same year gives the child two contradictory sequencing models"
+      },
+      {
+        "rightstart-mathematics": "competing manipulative mental models — MUS base-10 integer blocks vs RightStart's fives-grouped AL abacus teach different number-visualization strategies; mixing within a year muddies both"
+      }
+    ],
+    "philosophyNotes": "Good Charlotte Mason fit through short, concrete-to-abstract manipulative lessons, though the DVD/streaming video instruction substitutes for parent-led narration."
+  },
+  {
+    "id": "mystery-of-history",
+    "name": "The Mystery of History (Volumes I-IV)",
+    "publisher": "Bright Ideas Press",
+    "subjects": [
+      "history"
+    ],
+    "stages": [
+      "grammar",
+      "logic",
+      "rhetoric"
+    ],
+    "philosophyAffinity": [
+      "classical-trivium",
+      "eclectic"
+    ],
+    "format": [
+      "textbook",
+      "workbook"
+    ],
+    "pace": "3 lessons/week over 36 weeks (108 lessons in Vol I; 84 lessons in Vols III-IV)",
+    "entryAge": 5,
+    "scopeSequenceUrl": "https://brightideaspress.com/world-history/",
+    "knownPairings": [
+      "WonderMaps (Bright Ideas Press) — same-publisher map integration",
+      "Timeline/memory-card notebooking — Companion Guide is built around them"
+    ],
+    "knownConflicts": [
+      "Secular history spines — young-earth biblical framing is integral to the text",
+      "Story of the World — overlapping chronological spine; families pick one"
+    ],
+    "philosophyNotes": "Short narrative lessons read aloud well for multi-age Charlotte Mason families, but the pretest/quiz apparatus and explicit young-earth doctrinal framing go beyond what a strict CM home typically uses."
+  },
+  {
+    "id": "nature-anatomy",
+    "name": "Nature Anatomy: The Curious Parts and Pieces of the Natural World",
+    "publisher": "Storey Publishing (Hachette Book Group)",
+    "subjects": [
+      "science"
+    ],
+    "stages": [
+      "grammar",
+      "logic"
+    ],
+    "philosophyAffinity": [
+      "charlotte-mason"
+    ],
+    "format": [
+      "living-book"
+    ],
+    "pace": null,
+    "entryAge": null,
+    "scopeSequenceUrl": "https://www.hachettebookgroup.com/titles/julia-rothman/nature-anatomy/9781612122311/",
+    "knownPairings": [
+      "Nature Anatomy Notebook (companion sketchbook/activity book by the same author)",
+      "Handbook of Nature Study (Comstock) as the deeper teacher reference behind the same walks",
+      "Other Rothman Anatomy titles (Ocean Anatomy, Farm Anatomy, Food Anatomy, Wildlife Anatomy, Insect Anatomy) for extended rotations"
+    ],
+    "knownConflicts": [
+      "Not a standalone curriculum — families expecting lesson plans, experiments, or assessments must supply structure themselves or pair it with a formal program"
+    ],
+    "philosophyNotes": "Near-ideal Charlotte Mason material — a true living book whose hand-drawn illustrations and short narrative entries feed directly into CM nature journaling and outdoor observation."
+  },
+  {
+    "id": "phonics-pathways",
+    "name": "Phonics Pathways: Clear Steps to Easy Reading and Perfect Spelling (10th Edition)",
+    "publisher": "Jossey-Bass (an imprint of Wiley); originally self-published via Dorbooks",
+    "subjects": [
+      "phonics"
+    ],
+    "stages": [
+      "early-years",
+      "grammar"
+    ],
+    "philosophyAffinity": [
+      "classical-trivium",
+      "eclectic"
+    ],
+    "format": [
+      "textbook",
+      "mastery"
+    ],
+    "pace": null,
+    "entryAge": "~5 (designed for K-2 emergent readers; also used with adolescent/adult learners, ESL students, and students with dyslexia)",
+    "scopeSequenceUrl": null,
+    "knownPairings": [
+      "Standalone and complete for decoding; pairs with any separate spelling program despite covering spelling patterns itself"
+    ],
+    "knownConflicts": [
+      "Redundant to run simultaneously with another full systematic phonics program such as All About Reading or The Ordinary Parent's Guide to Teaching Reading"
+    ],
+    "philosophyNotes": "A single inexpensive book of very short, incremental lessons suits Charlotte Mason's short-lesson habit, though it is pure phonics drill with no living-book component."
+  },
+  {
+    "id": "prima-latina",
+    "name": "Prima Latina — Introduction to Christian Latin",
+    "publisher": "Memoria Press",
+    "subjects": [
+      "latin"
+    ],
+    "stages": [
+      "lower-elementary",
+      "elementary"
+    ],
+    "philosophyAffinity": [
+      "memoria",
+      "classical-trivium"
+    ],
+    "format": [
+      "workbook",
+      "teacher-manual",
+      "streaming-video-lessons",
+      "streaming-pronunciation-audio",
+      "digital-flashcards"
+    ],
+    "pace": "5 days/week, ~20 minutes/day (Memoria lesson plans schedule 5 days/week; instructional videos ~20 min per lesson)",
+    "entryAge": "7 (publisher lists Grades 1-4; Memoria guidance is to start once the child is a fluent reader, typically grade 2)",
+    "scopeSequenceUrl": "https://www.memoriapress.com/curriculum/latin/prima-latina/",
+    "knownPairings": [
+      "Prima Latina -> Latina Christiana -> First Form Latin (Memoria Press Latin sequence; product page states Prima Latina was built on Latina Christiana's format as its on-ramp)",
+      "Lingua Angelica (Memoria Press Latin hymn/song program; Prima Latina pronunciation audio includes select Lingua Angelica songs and four prayers)",
+      "Doubles as the parts-of-speech grammar program for the year in Memoria's cores"
+    ],
+    "knownConflicts": [
+      "Ecclesiastical (Christian) pronunciation track — switching mid-stream into Classical Academic Press's classical-pronunciation materials (or vice versa) forces a pronunciation relearn",
+      "Explicitly Christian content (prayers, hymns, e.g. the Sanctus) — a mismatch for families wanting secular Latin"
+    ],
+    "philosophyNotes": "Charlotte Mason taught foreign languages orally and gently in the early years, so Prima Latina's systematic daily vocabulary-and-grammar drill with memorized prayers is squarely Memoria-style classical pedagogy rather than Mason's, though its short 20-minute lessons keep it CM-tolerable as an add-on."
+  },
+  {
+    "id": "real-science-4-kids",
+    "name": "Real Science-4-Kids",
+    "publisher": "Gravitas Publications (founded by Rebecca W. Keller, PhD)",
+    "subjects": [
+      "science"
+    ],
+    "stages": [
+      "grammar",
+      "logic"
+    ],
+    "philosophyAffinity": [
+      "classical",
+      "worldview-neutral"
+    ],
+    "format": [
+      "textbook",
+      "workbook",
+      "mastery"
+    ],
+    "pace": "~1 chapter/week (22 chapters per book, fits one school year)",
+    "entryAge": 5,
+    "scopeSequenceUrl": "https://rs4k.com/",
+    "knownPairings": [
+      "RS4K Experiment & Activity Kits ($108-$218, sold by grade band)",
+      "Digital Reader Library supplementary science readers"
+    ],
+    "knownConflicts": [
+      "Deliberately worldview-neutral science — a mismatch for families wanting explicitly creationist framing (Apologia) and occasionally criticized from both faith-based and strictly secular directions for its neutrality",
+      "Notably higher price point than most elementary homeschool science options"
+    ],
+    "philosophyNotes": "Weak Charlotte Mason fit — a structured, textbook-and-workbook mastery program with real lab work rather than living books or nature study, appealing more to classical and STEM-focused families."
+  },
+  {
+    "id": "rightstart-mathematics",
+    "name": "RightStart Mathematics (RS2, second edition)",
+    "publisher": "Activities for Learning, Inc.",
+    "subjects": [
+      "math"
+    ],
+    "stages": [
+      "grammar",
+      "logic"
+    ],
+    "philosophyAffinity": [
+      "charlotte-mason",
+      "eclectic"
+    ],
+    "format": [
+      "manipulative-heavy",
+      "mastery",
+      "workbook"
+    ],
+    "pace": "daily scripted lessons, 4-5 per week across a 36-week year (lesson counts vary by level; publisher publishes TOC/objectives per level)",
+    "entryAge": "4-5 (Level A, kindergarten; program uses letter levels rather than grades)",
+    "scopeSequenceUrl": "https://rightstartmath.com/resources/sample-lessons/",
+    "knownPairings": [
+      {
+        "life-of-fred": "narrative enrichment; LoF's story format complements RightStart's oral, game-based lessons without adding worksheet load"
+      }
+    ],
+    "knownConflicts": [
+      {
+        "saxon-math": "mastery/strategy-vs-spiral conflict — RightStart teaches number strategies to mastery via the AL abacus while Saxon spirals procedures with heavy written review"
+      },
+      {
+        "math-u-see": "competing manipulative mental models — the fives-grouped AL (Cotter) abacus and MUS base-10 integer blocks build different number visualizations; running both confuses the imagery"
+      }
+    ],
+    "philosophyNotes": "Very strong Charlotte Mason fit — short, oral, game-and-manipulative lessons with minimal worksheets embody CM's short-lesson, concrete-to-abstract ideal."
+  },
+  {
+    "id": "rod-and-staff-english",
+    "name": "Rod & Staff English (Building Christian English series)",
+    "publisher": "Rod and Staff Publishers",
+    "subjects": [
+      "grammar",
+      "writing"
+    ],
+    "stages": [
+      "grammar",
+      "logic",
+      "rhetoric"
+    ],
+    "philosophyAffinity": [
+      "memoria",
+      "classical-trivium",
+      "eclectic"
+    ],
+    "format": [
+      "hardcover-student-text",
+      "teacher-edition",
+      "test-booklet",
+      "worksheets"
+    ],
+    "pace": "daily lessons ~5 days/week for a full school year; grades 4-5 designed for approximately 120 minutes of class time per week",
+    "entryAge": 7,
+    "scopeSequenceUrl": "https://info.milestonebooks.com/rod-and-staff/english/",
+    "knownPairings": [
+      "Memoria Press cores (Memoria Press sells and schedules Rod & Staff English as its grammar spine)",
+      "Often paired with a separate composition program, since its acknowledged strength is systematic grammar and diagramming"
+    ],
+    "knownConflicts": [
+      "Heavy daily written drill conflicts with Charlotte Mason short-lessons philosophy; CM users typically do much of it orally or use it selectively",
+      "Pervasive Anabaptist/Biblical content in exercises makes it a non-starter for secular homeschoolers"
+    ],
+    "philosophyNotes": "Rod & Staff's rigorous textbook drill and overtly Anabaptist content are far from Charlotte Mason's short narration-based lessons, so CM families who use it typically cherry-pick the grammar and diagramming only."
+  },
+  {
+    "id": "rod-staff-math",
+    "name": "Rod & Staff Math (Mathematics for Christian Living series)",
+    "publisher": "Rod and Staff Publishers, Inc.",
+    "subjects": [
+      "math"
+    ],
+    "stages": [
+      "grammar",
+      "logic"
+    ],
+    "philosophyAffinity": [
+      "memoria",
+      "eclectic"
+    ],
+    "format": [
+      "workbook",
+      "textbook",
+      "mastery"
+    ],
+    "pace": "5 lessons per week (daily lessons across a full school year; grades 1-2 are consumable workbooks, grades 3+ hardcover texts)",
+    "entryAge": "6 (grade 1; no kindergarten level)",
+    "scopeSequenceUrl": null,
+    "knownPairings": [
+      {
+        "life-of-fred": "narrative warmth and real-world story context on top of R&S's austere drill spine"
+      }
+    ],
+    "knownConflicts": [
+      {
+        "saxon-math": "mastery-vs-spiral conflict — R&S teaches one operation continuously over weeks to mastery, the opposite of Saxon's distributed spiral; running both duplicates review load with contradictory sequencing"
+      },
+      {
+        "beast-academy": "drill-and-memorization vs discovery problem-solving; pedagogical opposites in the same year"
+      }
+    ],
+    "philosophyNotes": "Weak-to-moderate Charlotte Mason fit — concrete and incremental but drill-heavy and visually austere, so CM homes typically shorten the written work to keep lessons brief."
+  },
+  {
+    "id": "saxon-math",
+    "name": "Saxon Math (Homeschool editions)",
+    "publisher": "Saxon Publishers / Houghton Mifflin Harcourt (HMH)",
+    "subjects": [
+      "math"
+    ],
+    "stages": [
+      "grammar",
+      "logic",
+      "rhetoric"
+    ],
+    "philosophyAffinity": [
+      "classical-trivium",
+      "eclectic"
+    ],
+    "format": [
+      "textbook",
+      "workbook",
+      "spiral"
+    ],
+    "pace": "4-5 lessons per week (~120-140 lessons per level plus investigations/tests) over a 36-week year",
+    "entryAge": "5 (Saxon K)",
+    "scopeSequenceUrl": null,
+    "knownPairings": [
+      {
+        "life-of-fred": "narrative living-book supplement that offsets Saxon's dry incremental drill"
+      }
+    ],
+    "knownConflicts": [
+      {
+        "math-u-see": "spiral-vs-mastery conflict — Saxon's distributed incremental review directly contradicts MUS's one-topic-per-level mastery sequencing within the same year"
+      },
+      {
+        "rightstart-mathematics": "spiral procedural drill vs RightStart's strategy-first mastery approach; combining in one year sends conflicting messages about how to work a problem"
+      }
+    ],
+    "philosophyNotes": "Weak Charlotte Mason fit — long lesson-plus-30-problem review sets run against the CM short-lesson ideal, though the predictable rhythm suits structure-loving homes."
+  },
+  {
+    "id": "simply-charlotte-mason",
+    "name": "Simply Charlotte Mason (SCM)",
+    "publisher": "Simply Charlotte Mason, LLC (simplycharlottemason.com)",
+    "subjects": [
+      "bible (Story of God and His People, 4 volumes)",
+      {
+        "history (A Pageant of History": "Ancient / Middle Ages / Early Modern / Modern)"
+      },
+      "geography (This Beautiful Earth, 4 regional volumes)",
+      "scripture-memory",
+      "picture-study (3 artists/year)",
+      "music-study (3 composers/year)",
+      "hymn-study (6 hymns/year)",
+      "handicrafts-and-art",
+      "nature-study (weekly)",
+      "poetry (1 poet/year)",
+      "foreign-language",
+      "habits-and-character",
+      "character-studies (Shakespeare + Plutarch, grades 4-12)",
+      "math (SCM's own Elementary Arithmetic series grades 1-6 + Practical Geometry; Pre-Algebra onward outsourced)",
+      "science (Living Science courses; labeled high-school courses gr 9-12)",
+      "language-arts (reading, handwriting/copywork, spelling via studied dictation, composition)"
+    ],
+    "stages": [
+      "preschool-kindergarten (informal, PreK-K guide)",
+      "elementary (grades 1-6)",
+      "middle (grades 7-8)",
+      "high-school (grades 9-12)"
+    ],
+    "philosophyAffinity": [
+      "charlotte-mason"
+    ],
+    "format": [
+      "living-book",
+      "open-and-go-lesson-plan-books (print and ebook)",
+      "individual-subject-guides",
+      "free-online-curriculum-guide (planning charts + per-grade recommendations)",
+      "online-planning-tool (CM Organizer)"
+    ],
+    "pace": "family-style topic subjects taught together with older students assigned deeper books; skill subjects (math, science, language arts) at each student's own pace; free curriculum guide lays out per-grade weekly schedule charts; pre-planned 'Charlotte Mason Homeschool Plans' years available",
+    "entryAge": "formal lessons from grade 1 (~age 6); Preschool/Kindergarten stage is informal (informal math activities, letter sounds, outdoor play)",
+    "scopeSequenceUrl": "https://simplycharlottemason.com/planning/curriculum-guide/overview-chart/",
+    "knownPairings": [
+      "upper-level math (Pre-Algebra through Calculus) is outsourced to a separate math program; SCM only publishes its own arithmetic series through the elementary years",
+      "SCM guides are modular — families commonly pair individual SCM subject guides with other CM plans",
+      "Living Book Press and similar living-book publishers supply many scheduled titles"
+    ],
+    "knownConflicts": [
+      "SCM's full family plan is a complete CM curriculum — running it alongside AmblesideOnline, A Gentle Feast, or a full boxed classical core (e.g., Memoria full cores) double-schedules the day"
+    ],
+    "philosophyNotes": "The most productized Charlotte Mason exemplar — a Christian, family-combined CM curriculum sold as open-and-go individual subject guides plus a free online planning guide, trading AO's DIY scheduling for pre-built lesson plans."
+  },
+  {
+    "id": "singapore-math-primary-mathematics",
+    "name": "Singapore Math Primary Mathematics",
+    "publisher": "Singapore Math Inc.",
+    "subjects": [
+      "math"
+    ],
+    "stages": [
+      "grammar",
+      "logic"
+    ],
+    "philosophyAffinity": [
+      "charlotte-mason",
+      "classical-trivium",
+      "eclectic"
+    ],
+    "format": [
+      "textbook",
+      "workbook",
+      "mastery"
+    ],
+    "pace": "4-5 sessions per week; each grade splits into A and B semester books (publisher publishes pacing guides per edition)",
+    "entryAge": "5 (kindergarten in the 2022 Edition; U.S. Edition starts at grade 1, with Earlybird Kindergarten as the K on-ramp)",
+    "scopeSequenceUrl": "https://www.singaporemath.com/pages/scopes-sequences",
+    "knownPairings": [
+      {
+        "beast-academy": "deep problem-solving supplement on top of PM's efficient CPA mastery spine — both are mastery-family, so sequencing does not clash"
+      },
+      {
+        "life-of-fred": "light narrative enrichment for story-hungry kids without disturbing the PM sequence"
+      }
+    ],
+    "knownConflicts": [
+      {
+        "saxon-math": "mastery-vs-spiral conflict — PM's concrete-pictorial-abstract mastery units and Saxon's incremental spiral review model the subject in incompatible ways within one year"
+      }
+    ],
+    "philosophyNotes": "Strong Charlotte Mason fit — short focused lessons and a concrete-pictorial-abstract progression mirror CM's concrete-to-abstract, short-lesson principles."
+  },
+  {
+    "id": "song-school-latin",
+    "name": "Song School Latin (Books 1 & 2)",
+    "publisher": "Classical Academic Press",
+    "subjects": [
+      "latin"
+    ],
+    "stages": [
+      "early-elementary",
+      "lower-elementary"
+    ],
+    "philosophyAffinity": [
+      "classical-trivium"
+    ],
+    "format": [
+      "consumable-workbook",
+      "songs-and-chants-audio",
+      "teacher-guide",
+      "instructional-video",
+      "online-practice",
+      "flashcard-games"
+    ],
+    "pace": "1 chapter/week across a school year (Book 1: 31 weekly lessons incl. review chapters, 30 songs/chants)",
+    "entryAge": "6 (Book 1 grades 1-2, reading age 6-8; Book 2 grades 2-3; kindergarten use common per retailer listings)",
+    "scopeSequenceUrl": "https://classicalacademicpress.com/pages/series-song-school-latin",
+    "knownPairings": [
+      "Song School Latin Book 1 -> Book 2 -> Latin for Children Primer A (CAP sequence; Book 2 product page states it will 'more than prepare students for... Latin for Children Primer A' and pre-teaches 75 of its words/grammar topics)",
+      "Song School Greek / Song School Spanish (sibling CAP early-language series, same format)"
+    ],
+    "knownConflicts": [
+      "Publisher supplies BOTH classical and ecclesiastical audio, so families must pick one track early; mixing with Memoria Press's ecclesiastical-only track mid-stream creates pronunciation whiplash if the classical audio was used",
+      "Song/game-heavy gentle approach — families wanting rigorous grammar-first drill (Memoria style) often find it too light and skip straight to a form-based program"
+    ],
+    "philosophyNotes": "Its playful, oral, song-driven exposure to Latin at ages 6-8 is arguably the most Charlotte Mason-compatible entry in classical Latin publishing, since Mason favored gentle oral language work over early grammar drill."
+  },
+  {
+    "id": "sonlight-hbl",
+    "name": "Sonlight History / Bible / Literature (HBL) Programs",
+    "publisher": "Sonlight Curriculum",
+    "subjects": [
+      "history",
+      "bible",
+      "literature"
+    ],
+    "stages": [
+      "grammar",
+      "logic",
+      "rhetoric"
+    ],
+    "philosophyAffinity": [
+      "charlotte-mason",
+      "eclectic"
+    ],
+    "format": [
+      "living-book"
+    ],
+    "pace": "4-day or 5-day weekly schedules; Instructor's Guide provides 36 weekly lesson plans per level",
+    "entryAge": 5,
+    "scopeSequenceUrl": "https://sonlight.zendesk.com/hc/en-us/articles/360004198211-What-is-the-Scope-and-Sequence",
+    "knownPairings": [
+      "Math-U-See / Singapore Math — Sonlight sells math alongside; HBL includes none",
+      "Sonlight Science and Language Arts — same-catalog coordinated scheduling"
+    ],
+    "knownConflicts": [
+      "Story of the World or Mystery of History as spines — HBL is already a complete history core",
+      "Secular-only households — Bible study is woven through every HBL level"
+    ],
+    "philosophyNotes": "Its living-books reading lists and heavy read-aloud rhythm feel deeply Charlotte Mason, though the scripted Instructor's Guide and comprehension questions are more structured than pure CM narration."
+  },
+  {
+    "id": "story-of-the-world",
+    "name": "The Story of the World, History for the Classical Child (Volumes 1-4)",
+    "publisher": "Well-Trained Mind Press (formerly Peace Hill Press)",
+    "subjects": [
+      "history"
+    ],
+    "stages": [
+      "grammar",
+      "logic"
+    ],
+    "philosophyAffinity": [
+      "classical-trivium",
+      "charlotte-mason"
+    ],
+    "format": [
+      "living-book",
+      "workbook"
+    ],
+    "pace": "~1 chapter/week (42 chapters per volume fill one school year; Activity Book turns each volume into a full-year history + geography course)",
+    "entryAge": 6,
+    "scopeSequenceUrl": "https://s3.amazonaws.com/downloads.peacehillpress.com/pdfs/samples/sotw1absample.pdf",
+    "knownPairings": [
+      "The Well-Trained Mind parent manual — designed as its history spine",
+      "Usborne/Kingfisher history encyclopedias — Activity Book cross-references them",
+      "First Language Lessons / Writing With Ease — same-publisher grammar-stage stack"
+    ],
+    "knownConflicts": [
+      "Mystery of History — duplicate chronological world-history spine",
+      "Abeka/BJU textbook history — clashing narrative-vs-textbook approach"
+    ],
+    "philosophyNotes": "Narrative storytelling with built-in narration and read-aloud rhythm makes it a natural history spine for a Charlotte Mason home, which can simply skip the workbook-style activity pages."
+  },
+  {
+    "id": "the-ordinary-parents-guide-to-teaching-reading",
+    "name": "The Ordinary Parent's Guide to Teaching Reading",
+    "publisher": "Well-Trained Mind Press (Jessie Wise & Sara Buffington; Revised Edition 2022)",
+    "subjects": [
+      "reading"
+    ],
+    "stages": [
+      "early-years",
+      "grammar"
+    ],
+    "philosophyAffinity": [
+      "classical-trivium",
+      "eclectic"
+    ],
+    "format": [
+      "textbook",
+      "mastery"
+    ],
+    "pace": "231 scripted lessons using a 'Two Review and One New' cycle; no fixed lessons/week prescribed, typically taught in short daily sessions",
+    "entryAge": "~4 (reviewers place it PreK-grade 5; authors suggest starting before kindergarten if possible; also used remedially)",
+    "scopeSequenceUrl": null,
+    "knownPairings": [
+      "Well-Trained Mind Press language-arts lineup (First Language Lessons, Writing With Ease) from the same publisher; requires simple letter tiles/magnet board, compatible with tiles owned for other programs"
+    ],
+    "knownConflicts": [
+      "Redundant to run alongside another complete phonics program such as All About Reading or Phonics Pathways; pick one as the primary decoding spine"
+    ],
+    "philosophyNotes": "Scripted, explicit phonics in short daily sittings is compatible with Charlotte Mason pacing, but the program is drill-based with no living-book or narration component."
+  },
+  {
+    "id": "the-reading-lesson",
+    "name": "The Reading Lesson: Teach Your Child to Read in 20 Easy Lessons",
+    "publisher": "Mountcastle Company (Michael Levin, MD & Charan Langton, MS; first published 1998)",
+    "subjects": [
+      "reading"
+    ],
+    "stages": [
+      "early-years"
+    ],
+    "philosophyAffinity": [
+      "charlotte-mason",
+      "eclectic"
+    ],
+    "format": [
+      "textbook",
+      "mastery"
+    ],
+    "pace": "about 15 minutes of study per day; each of the 20 lessons takes one to two weeks depending on the child's age",
+    "entryAge": "3 (publisher targets ages 3-8, most commonly ages 3-7)",
+    "scopeSequenceUrl": null,
+    "knownPairings": [
+      "Scheduled as the reading spine in Heart of Dakota's early programs (Heart of Dakota sells a companion teacher's guide); same publisher also offers The Verbal Math Lesson series"
+    ],
+    "knownConflicts": [
+      "Uses a phonics-plus-keyword-recognition hybrid, so it conflicts with running a strict Orton-Gillingham program (e.g., All About Reading) simultaneously and is disfavored by phonics-only purists"
+    ],
+    "philosophyNotes": "Gentle 15-minute daily lessons for very young children align well with Charlotte Mason's short-lessons principle, though its keyword-recognition element departs from pure phonics methods CM-classical hybrids often prefer."
+  },
+  {
+    "id": "well-trained-mind-academy",
+    "name": "Well-Trained Mind Academy",
+    "publisher": "Well-Trained Mind Academy (founded by Susan Wise Bauer; sister to Well-Trained Mind Press)",
+    "subjects": [
+      "history",
+      "literature",
+      "math",
+      "science",
+      "social-science",
+      "study-skills",
+      "writing-grammar",
+      "fine-arts",
+      "health-physical-fitness",
+      "world-languages"
+    ],
+    "stages": [
+      "logic",
+      "rhetoric"
+    ],
+    "philosophyAffinity": [
+      "classical-trivium"
+    ],
+    "format": [
+      "online",
+      "live-classes",
+      "recorded-lecture-option"
+    ],
+    "pace": "À la carte per-course enrollment on a standard academic calendar (full-year or one-semester courses); live interactive online class meetings with instructor grading, plus independent homework between sessions. No weekly community-day model.",
+    "entryAge": "~10 (grades 5-12 per welltrainedmind.com; official catalog centers on middle and high school)",
+    "scopeSequenceUrl": "https://www.wtmacademy.com/courses/",
+    "knownPairings": [
+      "The Well-Trained Mind book as the at-home master plan, with WTMA classes outsourcing selected subjects",
+      "Well-Trained Mind Press curricula (e.g., Story of the World, First Language Lessons, Writing With Ease/Skill) for younger siblings or non-WTMA subjects",
+      "WTMA-designated textbooks sold through Well-Trained Mind Press"
+    ],
+    "knownConflicts": [
+      "Fixed live class meeting times constrain family schedules and time zones (delayed-lecture sections mitigate this).",
+      "À la carte classes are not a complete boxed program — families must assemble remaining subjects themselves, and per-course pricing scales steeply for a full load."
+    ],
+    "philosophyNotes": "The Well-Trained Mind's literature-rich, history-cycle neoclassical approach is closer in texture to Charlotte Mason's living-books style than memory-drill programs, but its structured rigor, formal outlining, and stage-based trivium framing still diverge from CM's short-lesson, ideas-first pedagogy."
+  },
+  {
+    "id": "writing-with-ease",
+    "name": "Writing With Ease (The Complete Writer series)",
+    "publisher": "Well-Trained Mind Press (formerly Peace Hill Press); author Susan Wise Bauer",
+    "subjects": [
+      "writing"
+    ],
+    "stages": [
+      "grammar"
+    ],
+    "philosophyAffinity": [
+      "classical-trivium",
+      "charlotte-mason"
+    ],
+    "format": [
+      "instructor-text",
+      "student-workbooks",
+      "student-pages"
+    ],
+    "pace": "4 days per week over a 36-week year (days 1 and 3 copywork, days 2 and 4 narration; dictation added as levels progress)",
+    "entryAge": 6,
+    "scopeSequenceUrl": "https://s3.us-east-1.amazonaws.com/samples.welltrainedmind.com/WWE_Samples/WWE1_REV_Complete_sample.pdf",
+    "knownPairings": [
+      "First Language Lessons (Jessie Wise — same author family, lessons cross-coordinated so grammar concepts are reinforced by WWE assignments)",
+      "Writing With Skill (same series, the designed continuation for grades 5-8)"
+    ],
+    "knownConflicts": [
+      "Redundant alongside a full Charlotte Mason language-arts program that already schedules copywork/narration/dictation",
+      "Philosophy conflict with programs pushing early original composition (e.g., IEW keyword-outline writing at the same ages) — WWE deliberately delays original composition until fundamentals are automatic"
+    ],
+    "philosophyNotes": "WWE's copywork-narration-dictation progression IS essentially Charlotte Mason's own language-arts method packaged as an open-and-go classical program, making its CM fit near-perfect."
+  }
+]

@@ -1,0 +1,24 @@
+id: real-science-4-kids
+name: Real Science-4-Kids
+publisher: Gravitas Publications (founded by Rebecca W. Keller, PhD)
+subjects: [science]
+stages: [grammar, logic]
+philosophy_affinity: [classical, worldview-neutral]
+format: [textbook, workbook, mastery]  # full-color hardcover student texts + lab workbooks + teacher guides; atoms-first framework across chemistry, biology, physics, geology, astronomy
+pace: ~1 chapter/week (22 chapters per book, fits one school year)
+entry_age: 5  # K-2 Teaching Dashboards for early years; Books 1-4 elementary, Books 5-7 middle school
+typical_completion_time: one book/level per school year (22 chapters)
+public_scope_and_sequence_url: https://rs4k.com/  # homepage links the "Curricula Map"; no standalone verified S&S URL
+typical_price_range: "$44-$48 per student/teacher page set; $184-$215 per 3-book print trio; $549-$599 complete level sets; Teaching Dashboards $169 (18-month access)"
+known_pairings:
+  - RS4K Experiment & Activity Kits ($108-$218, sold by grade band)
+  - Digital Reader Library supplementary science readers
+known_conflicts:
+  - Deliberately worldview-neutral science — a mismatch for families wanting explicitly creationist framing (Apologia) and occasionally criticized from both faith-based and strictly secular directions for its neutrality
+  - Notably higher price point than most elementary homeschool science options
+philosophy_notes: Weak Charlotte Mason fit — a structured, textbook-and-workbook mastery program with real lab work rather than living books or nature study, appealing more to classical and STEM-focused families.
+sources:
+  - https://rs4k.com/
+  - https://rs4k.com/collections/all
+  - https://en.wikipedia.org/wiki/Rebecca_W._Keller
+  - https://www.rainbowresource.com/real-science-4-kids-gravitas-publications

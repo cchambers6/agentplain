@@ -1,0 +1,24 @@
+id: beast-academy
+name: Beast Academy
+publisher: Art of Problem Solving (AoPS Incorporated)
+subjects: [math]
+stages: [grammar, logic]                     # Levels 1-5, ages 6-13; Levels 4-5 cover many middle-grades standards
+philosophy_affinity: [eclectic]
+format: [textbook, workbook, mastery]
+pace: "4 units (A-D) per level per 36-week year (~9 weeks per unit); publisher sequence documents give the recommended Guide/Practice/online ordering"
+entry_age: "6 (Level 1)"
+typical_completion_time: "1 level (4 units) per school year"
+public_scope_and_sequence_url: https://beastacademy.com/resources/planning   # verified 2026-07-10; downloadable sequence documents, chapter overviews, and standards charts for all 5 levels
+typical_price_range: "~$120-140/year for books (4 unit sets at roughly $30-35 each, retailer-reported); Beast Academy Online subscription priced separately (exact price not verified — rendered client-side on the enroll page)"
+known_pairings:
+  - singapore-math-primary-mathematics: "BA as the deep problem-solving layer over PM's efficient mastery spine — a common combo since both are mastery-family"
+known_conflicts:
+  - saxon-math: "mastery/discovery-vs-spiral conflict — BA's puzzle-driven depth-first chapters clash with Saxon's incremental spiral drill within one year"
+  - rod-staff-math: "pedagogical opposites — BA's discovery problem-solving vs Rod & Staff's drill-and-memorization; pairing frustrates both methods"
+philosophy_notes: "Mixed Charlotte Mason fit — the comic-book Guide narratives are engaging and living-book-adjacent, but long, hard problem sets exceed CM's short-lesson ideal for young children."
+sources:
+  - https://beastacademy.com/resources/planning   # verified via WebFetch 2026-07-10 (sequence docs, all 5 levels)
+  - https://beastacademy.com/faq/books
+  - https://artofproblemsolving.com/store/list/beast-academy
+# NOTE: BA runs roughly a year ahead of typical US grade level ("advanced math"); placement below nominal grade is normal and should not be treated as remediation.
+# NOTE: online subscription pricing could not be verified (beastacademy.com/online/enroll renders prices via JS); do not quote a number.

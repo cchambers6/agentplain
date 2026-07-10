@@ -1,0 +1,26 @@
+id: beautiful-feet-books
+name: Beautiful Feet Books — History Through Literature
+publisher: Beautiful Feet Books
+subjects: [history, geography]
+stages: [grammar, logic, rhetoric]   # course packs span K-3, 4-6, 7-9, and 11-12 (Modern U.S. and World History)
+philosophy_affinity: [charlotte-mason, eclectic]
+format: [living-book]   # curated literature packs of real books + Teacher Guides with discussion questions, notebooking, art appreciation
+pace: "2-3 lessons/week for a 1-year study (Early American K-3 guide: 94 lessons; or 1-2 lessons/week stretched over 2 years)"
+entry_age: 5   # Early American History primary course starts at kindergarten
+typical_completion_time: "1 school year per course pack (flexible pacing allows 2 years for primary courses)"
+# Verified via WebFetch 2026-07-10: publisher's Early American History K-3 Teacher Guide page loads and offers
+# a free downloadable scope & sequence document plus a teacher guide sample. Course-level (not whole-catalog) page.
+public_scope_and_sequence_url: https://www.bfbooks.com/Early-Am-History-Primary-Study-Guide
+typical_price_range: "USD $29.95-34.95 per Teacher Guide; ~$229-342 for a full literature pack (Early American K-3 jumbo pack $269.95 with 23 books, guide, and notebook)"
+known_pairings:
+  - "Any standalone math/science program — BFB covers only humanities strands"
+  - "Charlotte Mason narration/notebooking routines — guides are built around discussion"
+known_conflicts:
+  - "Workbook-heavy textbook programs (e.g., Abeka) — opposing living-books philosophy"
+  - "A second full history spine — literature packs already carry the history load"
+philosophy_notes: "Built directly on living books, Socratic discussion, narration-style responses, and art appreciation, it is one of the closest commercial fits to Charlotte Mason's method available for history."
+sources:
+  - https://www.bfbooks.com/Early-Am-History-Primary-Study-Guide
+  - https://www.bfbooks.com/Early-American-History-Primary-Jumbo-Pack
+  - https://www.bfbooks.com/Early-American-History-7-9-Pack   # located via search; grade-band coverage
+  - https://www.bfbooks.com/Modern-US-and-World-History-Pack   # located via search; 11-12 course, 1850-2000

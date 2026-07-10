@@ -1,0 +1,25 @@
+id: rod-and-staff-english
+name: "Rod & Staff English (Building Christian English series)"
+publisher: "Rod and Staff Publishers"
+subjects: [grammar, writing]
+stages: [grammar, logic, rhetoric]   # grades 2-10; per-grade titles: Preparing to Build (2), Beginning Wisely (3), Building With Diligence (4), Following the Plan (5), Progressing With Courage (6), Building Securely (7), Preparing for Usefulness (8), Communicating Effectively Books 1-2 (9-10)
+philosophy_affinity: [memoria, classical-trivium, eclectic]   # traditional/Anabaptist rather than classical by design, but Memoria Press packages it in its cores
+format: [hardcover-student-text, teacher-edition, test-booklet, worksheets]   # student texts non-consumable
+pace: "daily lessons ~5 days/week for a full school year; grades 4-5 designed for approximately 120 minutes of class time per week"
+entry_age: 7   # series proper begins at grade 2 (Preparing to Build)
+typical_completion_time: "one school year per grade level; spiral design allows entry at any grade without gaps"
+public_scope_and_sequence_url: "https://info.milestonebooks.com/rod-and-staff/english/"   # authorized distributor overview; Rod and Staff Publishers has minimal direct web presence
+typical_price_range: "USD ~$8-$30 per component; complete grade set roughly $45-$60 (e.g., Grade 2 complete set $56.10 at Milestone Books)"
+known_pairings:
+  - "Memoria Press cores (Memoria Press sells and schedules Rod & Staff English as its grammar spine)"
+  - "Often paired with a separate composition program, since its acknowledged strength is systematic grammar and diagramming"
+known_conflicts:
+  - "Heavy daily written drill conflicts with Charlotte Mason short-lessons philosophy; CM users typically do much of it orally or use it selectively"
+  - "Pervasive Anabaptist/Biblical content in exercises makes it a non-starter for secular homeschoolers"
+philosophy_notes: "Rod & Staff's rigorous textbook drill and overtly Anabaptist content are far from Charlotte Mason's short narration-based lessons, so CM families who use it typically cherry-pick the grammar and diagramming only."
+sources:
+  - "https://info.milestonebooks.com/rod-and-staff/english/"
+  - "https://www.milestonebooks.com/list/Building_Christian_English_Series/"
+  - "https://www.rodstaff.com/rod-and-staff-english.html"
+  - "https://cathyduffyreviews.com/homeschool-reviews-core-curricula/composition-and-grammar/graded-language-arts-curricula/building-christian-english-series"
+  - "https://www.memoriapress.com/curriculum/writing-and-english-grammar/rod-staff-grade-8-english-set/"

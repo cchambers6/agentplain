@@ -1,0 +1,24 @@
+id: writing-with-ease
+name: "Writing With Ease (The Complete Writer series)"
+publisher: "Well-Trained Mind Press (formerly Peace Hill Press); author Susan Wise Bauer"
+subjects: [writing]
+stages: [grammar]   # grades/levels 1-4
+philosophy_affinity: [classical-trivium, charlotte-mason]
+format: [instructor-text, student-workbooks, student-pages]
+pace: "4 days per week over a 36-week year (days 1 and 3 copywork, days 2 and 4 narration; dictation added as levels progress)"
+entry_age: 6   # Level 1 targets grade 1
+typical_completion_time: "one 36-week school year per level; 4 levels total"
+public_scope_and_sequence_url: "https://s3.us-east-1.amazonaws.com/samples.welltrainedmind.com/WWE_Samples/WWE1_REV_Complete_sample.pdf"
+typical_price_range: "USD $29.95 (Strong Fundamentals instructor text covering all 4 levels), ~$32-35 per level workbook, ~$11.95 student pages only"
+known_pairings:
+  - "First Language Lessons (Jessie Wise — same author family, lessons cross-coordinated so grammar concepts are reinforced by WWE assignments)"
+  - "Writing With Skill (same series, the designed continuation for grades 5-8)"
+known_conflicts:
+  - "Redundant alongside a full Charlotte Mason language-arts program that already schedules copywork/narration/dictation"
+  - "Philosophy conflict with programs pushing early original composition (e.g., IEW keyword-outline writing at the same ages) — WWE deliberately delays original composition until fundamentals are automatic"
+philosophy_notes: "WWE's copywork-narration-dictation progression IS essentially Charlotte Mason's own language-arts method packaged as an open-and-go classical program, making its CM fit near-perfect."
+sources:
+  - "https://welltrainedmind.com/c/series/writing-with-ease/"   # publisher series page (blocks bot fetch, publicly accessible in browser)
+  - "https://susanwisebauer.com/writing-with-ease-strong-fundamentals/"
+  - "https://s3.us-east-1.amazonaws.com/samples.welltrainedmind.com/WWE_Samples/WWE1_REV_Complete_sample.pdf"
+  - "https://s3.us-east-1.amazonaws.com/samples.welltrainedmind.com/Article_Documents/WWE_WWS_2025_Recommendations.pdf"

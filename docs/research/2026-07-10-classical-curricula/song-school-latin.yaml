@@ -1,0 +1,23 @@
+id: song-school-latin
+name: Song School Latin (Books 1 & 2)
+publisher: Classical Academic Press
+subjects: [latin]
+stages: [early-elementary, lower-elementary]
+philosophy_affinity: [classical-trivium]
+format: [consumable-workbook, songs-and-chants-audio, teacher-guide, instructional-video, online-practice, flashcard-games]
+pace: "1 chapter/week across a school year (Book 1: 31 weekly lessons incl. review chapters, 30 songs/chants)"
+entry_age: "6 (Book 1 grades 1-2, reading age 6-8; Book 2 grades 2-3; kindergarten use common per retailer listings)"
+typical_completion_time: "1 school year per book (2 years for Books 1+2)"
+public_scope_and_sequence_url: https://classicalacademicpress.com/pages/series-song-school-latin
+typical_price_range: "$29.95 (Book 1 student edition) to ~$112-124 (full program bundle per book; Book 2 Program $111.95 sale / $123.80 list as of 2026-07)"
+known_pairings:
+  - "Song School Latin Book 1 -> Book 2 -> Latin for Children Primer A (CAP sequence; Book 2 product page states it will 'more than prepare students for... Latin for Children Primer A' and pre-teaches 75 of its words/grammar topics)"
+  - "Song School Greek / Song School Spanish (sibling CAP early-language series, same format)"
+known_conflicts:
+  - "Publisher supplies BOTH classical and ecclesiastical audio, so families must pick one track early; mixing with Memoria Press's ecclesiastical-only track mid-stream creates pronunciation whiplash if the classical audio was used"
+  - "Song/game-heavy gentle approach — families wanting rigorous grammar-first drill (Memoria style) often find it too light and skip straight to a form-based program"
+philosophy_notes: "Its playful, oral, song-driven exposure to Latin at ages 6-8 is arguably the most Charlotte Mason-compatible entry in classical Latin publishing, since Mason favored gentle oral language work over early grammar drill."
+sources:
+  - https://classicalacademicpress.com/pages/series-song-school-latin   # verified via WebFetch 2026-07-10; includes downloadable suggested schedule + both pronunciation audio sets
+  - https://classicalacademicpress.com/products/song-school-latin-book-1-student-edition   # verified via WebFetch 2026-07-10 ($29.95, grades 1-2, 31 weekly lessons)
+  - https://classicalacademicpress.com/products/song-school-latin-book-2-program-1   # verified via WebFetch 2026-07-10 (grades 2-3, $111.95/$123.80, LFC-prep claim)

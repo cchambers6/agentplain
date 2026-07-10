@@ -1,0 +1,23 @@
+id: elemental-science
+name: Elemental Science (Classical Science Series)
+publisher: Elemental Science
+subjects: [science]
+stages: [grammar, logic, rhetoric]
+philosophy_affinity: [classical, charlotte-mason, secular]
+format: [workbook, textbook]  # teacher guide + student workbook built around encyclopedia reading spines, weekly experiments, and notebooking; Sassafras sister series is living-book/story-based
+pace: 2 or 5 days/week (both schedules included in Grammar Stage programs)
+entry_age: 5  # Intro to Science for K; Biology starts 1st grade
+typical_completion_time: one discipline (biology, earth science & astronomy, chemistry, physics) per school year, cycled through grammar then logic stage
+public_scope_and_sequence_url: https://elementalscience.com/collections/classical-science
+typical_price_range: "$31-$35 printed teacher/student combo; $66-$102 book packages; experiment kits $43-$81; eBooks $20-$27"
+known_pairings:
+  - Usborne/Kingfisher-style science encyclopedias as reading spines (book packages bundle them)
+  - Sassafras Science (same publisher) for story-loving younger students
+known_conflicts:
+  - Secular content — a mismatch for families wanting a Biblical worldview program like Apologia
+philosophy_notes: Explicitly classical (endorsed by Susan Wise Bauer of The Well-Trained Mind) but deliberately incorporates Charlotte Mason elements — hands-on work, sketching, narration-style writing, and nature observation — making it a workable hybrid for CM-leaning families.
+sources:
+  - https://elementalscience.com/
+  - https://elementalscience.com/collections/classical-science
+  - https://www.rainbowresource.com/elemental-science
+  - https://cathyduffyreviews.com/ (Cathy Duffy Top Pick designation cited on publisher site)

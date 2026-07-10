@@ -1,0 +1,98 @@
+id: classical-conversations
+name: Classical Conversations
+publisher: Classical Conversations MultiMedia, Inc.
+subjects:
+  - latin
+  - english-grammar
+  - history
+  - geography
+  - science
+  - math
+  - timeline-memory-work
+  - writing            # Essentials strand, IEW-based
+  - literature         # Challenge
+  - logic-debate       # Challenge
+  - philosophy-theology # Challenge (Christian worldview throughout)
+  - economics          # Challenge
+stages:
+  - grammar    # Foundations
+  - dialectic  # Essentials bridge -> Challenge A/B
+  - rhetoric   # Challenge I-IV
+programs:
+  - name: Foundations
+    ages: "4-12 (official listing: Age 4+)"
+    structure: >-
+      Weekly community-day morning session with a parent tutor: memory work
+      across seven subjects (Latin, English grammar, history, science, math,
+      geography, timeline) plus fine arts and science projects; content rotates
+      through three yearly cycles (Cycle 1 ancient world / Cycle 2
+      pre-Reformation-to-modern / Cycle 3 home-country history), one cycle per
+      year for three years; remaining weekdays are parent-led at home.
+      Community-day hour count and the commonly cited 24-week year are not
+      published on the official program page (24 weeks is community-site
+      reported).
+  - name: Essentials
+    ages: "9-12 (official listing: Age 9+)"
+    structure: >-
+      Weekly two-hour tutor-led community session (official) covering English
+      grammar (parts of speech, diagramming, analysis), structure-and-style
+      writing through the Institute for Excellence in Writing (IEW), and
+      arithmetic speed drills; commonly scheduled the same day as Foundations,
+      in the afternoon (community-reported, not stated on official page).
+  - name: Challenge
+    ages: "12+ overall; Challenge A 12+, B 13+, I 14+, II 15+, III 16+, IV 17+"
+    structure: >-
+      Weekly community day across two 15-week semesters per year (official);
+      each semester carries six seminars of academic content spanning
+      science, math, philosophy, theology, history, literature, and economics;
+      community time is used for discussion and skills practice rather than
+      lecture, with weekly coursework completed at home. Full-day format is
+      widely reported by communities but hours are not published on the
+      official program page.
+philosophy_affinity: [classical-trivium]
+format:
+  - community-day
+  - in-person
+  - parent-led-at-home
+pace: >-
+  One weekly in-person community day plus roughly four parent-led home days;
+  Foundations/Essentials years are commonly 24 community weeks
+  (community-reported), Challenge is two 15-week semesters (official).
+entry_age: 4
+typical_completion_time: >-
+  One academic year per program year: Foundations = 3 rotating annual cycles
+  (repeatable across ages 4-12); Essentials = up to 3 years; Challenge = six
+  sequential year-long levels (A, B, I-IV).
+public_scope_and_sequence_url: https://classicalconversations.com/programs/
+typical_price_range: >-
+  Community-set, not published centrally (informational third-party estimates,
+  2025-26): Foundations ~$375-450/yr, Essentials ~$385-475/yr, Challenge
+  ~$485-595/yr per student, plus registration ($30-85/family or student),
+  supply/facility fees ($20-50+), and materials (~$100-250 Foundations,
+  ~$200-300 Essentials, ~$400-700+ Challenge).
+known_pairings:
+  - Saxon Math or Math-U-See at home alongside Foundations memory work (common family practice)
+  - IEW structure-and-style writing — built into Essentials via official IEW partnership
+  - Challenge families commonly continue Saxon Math (community-reported; not verified on official page)
+known_conflicts:
+  - >-
+    The 3-year memory-work cycle fixes the history sequence to the community's
+    current cycle — conflicts with running Story of the World or another
+    chronological history spine out of cycle at home.
+  - >-
+    Fixed community-day calendar and enrollment-by-program constrain families
+    who want subject-level à la carte choices; Challenge bundles all six
+    seminar strands together.
+philosophy_notes: >-
+  CC's recitation-and-drill grammar-stage method is squarely trivium-classical
+  and sits in tension with Charlotte Mason's living-books, short-lesson,
+  ideas-before-facts approach, though some CM families use Foundations
+  memory work as a supplement.
+sources:
+  - https://classicalconversations.com/programs/
+  - https://classicalconversations.com/programs/foundations/
+  - https://classicalconversations.com/programs/essentials/
+  - https://classicalconversations.com/programs/challenge/
+  - https://homeschoolpicks.com/curriculum-reviews/classical-conversations-review-guide/  # community-day flow, 24-week year (third-party)
+  - https://eatonacademic.com/classical-conversations-homeschool-curriculum-a-comprehensive-guide  # 2025-26 cost estimates (third-party)
+  - https://thethriftycouple.com/how-much-does-classical-conversations-cost-detailed-fees-and-tuition-breakdown/  # fee breakdown (third-party)

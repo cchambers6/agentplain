@@ -1,1 +1,7 @@
-[]
+[
+  {
+    "path": "chiron/lib/philosophies/charlotte-mason/citations.ts",
+    "pattern": "^—$",
+    "reason": "VE em-dash count only. This file quotes PNEU printed time-table cells verbatim (time ranges like 9.0—9.20 use em-dashes in the source) and Mason's own dashed prose; the dashes are quoted primary-source notation, not our copy. Word rules A–D still apply."
+  }
+]

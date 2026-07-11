@@ -76,8 +76,8 @@ every word before it moves, which is the only way a service
 standard survives volume.
 
 We're early and I'll say so plainly: no named customers yet. For a
-firm setting its stack now, that's leverage — three months free, a
-weekly call with me, and first say in what gets built.
+firm setting its stack now, that works in your favor — three months
+free, a weekly call with me, and first say in what gets built.
 
 Worth a 20-minute call?
 

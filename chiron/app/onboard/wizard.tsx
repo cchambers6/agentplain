@@ -165,10 +165,14 @@ export default function OnboardWizard() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
     });
-    setBusy(false);
     if (res.ok) {
-      router.push("/today");
+      // Kick off the Integrator so /plan has a drafted week to land on;
+      // /plan degrades to a "Draft our week" button if this fails.
+      await fetch("/api/agents/integrator", { method: "POST" }).catch(() => null);
+      setBusy(false);
+      router.push("/plan");
     } else {
+      setBusy(false);
       const data = await res.json().catch(() => null);
       setError(data?.error ?? "Something went wrong saving your setup.");
     }

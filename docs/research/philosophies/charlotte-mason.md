@@ -1,5 +1,11 @@
 # Charlotte Mason — Philosophy Pack (Chiron)
 
+> **Superseded as the machine-usable pack.** The runtime pack now lives at
+> `chiron/lib/philosophies/charlotte-mason/` (typed TS modules + generated
+> `pack.json`, ≥40 verbatim-checked citations, `npm run pack:verify` gate).
+> This document remains as the M1 research artifact; agents load the runtime
+> pack, not this file.
+
 Machine-usable pack spec for the Charlotte Mason (CM) philosophy. All claims are grounded in
 Mason's public-domain *Home Education* series (6 volumes, 1886–1923), hosted in full at
 AmblesideOnline, and in the original PNEU (Parents' National Educational Union) school

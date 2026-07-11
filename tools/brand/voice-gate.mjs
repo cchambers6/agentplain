@@ -83,6 +83,8 @@ function buildCodeSurfaceFiles() {
     join(REPO_ROOT, "app", "(product)"),
     join(REPO_ROOT, "components"),
     join(REPO_ROOT, "lib", "verticals"),
+    // Chiron philosophy packs surface verbatim in parent-facing reasoning traces.
+    join(REPO_ROOT, "chiron", "lib", "philosophies"),
   ];
   const plaino = walk(join(REPO_ROOT, "lib", "plaino"), /^(?!.*\.test\.).*\.tsx?$/);
   const emailTemplates = [

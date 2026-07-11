@@ -1,0 +1,1503 @@
+{
+  "id": "charlotte-mason",
+  "name": "Charlotte Mason",
+  "founder": "Charlotte M. Mason (1842–1923)",
+  "version": 2,
+  "core_texts": [
+    {
+      "title": "Home Education",
+      "volume_number": 1,
+      "year": 1886,
+      "public_domain": true,
+      "canonical_url": "https://www.amblesideonline.org/cm/vol1"
+    },
+    {
+      "title": "Parents and Children",
+      "volume_number": 2,
+      "year": 1896,
+      "public_domain": true,
+      "canonical_url": "https://www.amblesideonline.org/cm/vol2"
+    },
+    {
+      "title": "School Education",
+      "volume_number": 3,
+      "year": 1904,
+      "public_domain": true,
+      "canonical_url": "https://www.amblesideonline.org/cm/vol3"
+    },
+    {
+      "title": "Ourselves",
+      "volume_number": 4,
+      "year": 1904,
+      "public_domain": true,
+      "canonical_url": "https://www.amblesideonline.org/cm/vol4"
+    },
+    {
+      "title": "Formation of Character",
+      "volume_number": 5,
+      "year": 1906,
+      "public_domain": true,
+      "canonical_url": "https://www.amblesideonline.org/cm/vol5"
+    },
+    {
+      "title": "Towards a Philosophy of Education",
+      "volume_number": 6,
+      "year": 1923,
+      "public_domain": true,
+      "canonical_url": "https://www.amblesideonline.org/cm/vol6"
+    }
+  ],
+  "first_principles": [
+    {
+      "text": "Children are born persons — a complete person now, owed real ideas and real books, never a vessel to fill or a project to manage.",
+      "basis": "mason",
+      "cite": [
+        "vol6-born-persons"
+      ]
+    },
+    {
+      "text": "Education is an atmosphere, a discipline, a life: the real home environment, the steady formation of habits, and living ideas are the only three instruments the educator has.",
+      "basis": "mason",
+      "cite": [
+        "vol6-atmosphere-discipline-life",
+        "vol3-atmosphere"
+      ]
+    },
+    {
+      "text": "Education is the science of relations — the child's business is to form firsthand relationships with the natural world, books, and people, so the curriculum is generous and wide.",
+      "basis": "mason",
+      "cite": [
+        "vol6-science-of-relations",
+        "vol6-mind-feeds-on-ideas",
+        "vol3-wide-curriculum"
+      ]
+    },
+    {
+      "text": "There is no education but self-education: what the child digs out and tells back is what they own. The teacher spreads the feast and gets out of the way.",
+      "basis": "mason",
+      "cite": [
+        "vol6-self-education",
+        "vol6-act-of-knowing"
+      ]
+    },
+    {
+      "text": "The habit of attention is the master habit; every short lesson is itself attention training.",
+      "basis": "mason",
+      "cite": [
+        "vol1-habit-of-attention",
+        "vol1-short-lessons"
+      ]
+    },
+    {
+      "text": "Older students are taught the way of the will and the way of reason — self-management by turning the thoughts, and a just suspicion of one's own too-confident conclusions.",
+      "basis": "mason",
+      "cite": [
+        "vol6-way-of-will"
+      ]
+    }
+  ],
+  "lesson_shape": {
+    "max_block_minutes_by_age": {
+      "5": 0,
+      "6": 15,
+      "7": 20,
+      "8": 20,
+      "9": 20,
+      "10": 30,
+      "11": 30,
+      "12": 30,
+      "13": 40,
+      "14": 45,
+      "15": 45,
+      "16": 45,
+      "17": 45,
+      "18": 45
+    },
+    "variety_rule": "Alternate kinds of effort. A demanding, abstract lesson (arithmetic, grammar, a foreign language) is followed by an inspirational or physical one (poetry, singing, drill, drawing, handwork). Never schedule two abstract lessons back-to-back for the same child; the change of subject is what keeps attention fresh through a short morning. [pneu-alternation, vol1-habit-of-attention]",
+    "subject_order": [
+      {
+        "slot": 1,
+        "kind": "disciplinary",
+        "examples": [
+          "Bible lesson with narration",
+          "arithmetic"
+        ],
+        "note": "The hardest attention work goes first, while the child is freshest; the Bible lesson holds first place in Mason's own curriculum. [vol6-bible]"
+      },
+      {
+        "slot": 2,
+        "kind": "inspirational",
+        "examples": [
+          "reading from a living book, then narration",
+          "poetry"
+        ],
+        "note": "Story-shaped work follows number work — a change of effort, not a break."
+      },
+      {
+        "slot": 3,
+        "kind": "physical",
+        "examples": [
+          "drill",
+          "dancing",
+          "play outside",
+          "singing"
+        ],
+        "note": "Movement between book lessons is on the original PNEU time-tables, not our addition."
+      },
+      {
+        "slot": 4,
+        "kind": "disciplinary",
+        "examples": [
+          "copywork or dictation",
+          "foreign language"
+        ],
+        "note": "A second short stretch of exact work, ended while execution is still careful."
+      },
+      {
+        "slot": 5,
+        "kind": "inspirational",
+        "examples": [
+          "history or geography reading with narration",
+          "natural history"
+        ],
+        "note": "The morning closes on reading and telling-back, not on drill."
+      }
+    ],
+    "stage_notes": {
+      "grammar": "Ages ~6–9 (Mason's Form I). Lessons 10–20 minutes, all narration oral, reading lessons short, writing limited to a few perfectly-formed letters or words [vol1-copywork-perfect-letters]. Mornings end by about 11:30; the afternoon belongs to outdoor life and handwork.",
+      "logic": "Ages ~10–13 (Forms II–III). Lessons 20–30 minutes, written narration begins and gradually joins oral telling, prepared dictation replaces simple transcription [vol1-dictation], and the child starts keeping his own written record of work.",
+      "rhetoric": "Ages ~14+ (Forms IV–VI). Lessons 40–45 minutes, narration is mostly written and essay-shaped, the reading load is heavy and the single reading still holds — the discipline never relaxes into re-reading and cramming."
+    },
+    "forms": [
+      {
+        "form": "Form I",
+        "ages": "6–9",
+        "app_stage": "grammar",
+        "typical_lesson_minutes": "10–20"
+      },
+      {
+        "form": "Form II",
+        "ages": "9–12",
+        "app_stage": "logic",
+        "typical_lesson_minutes": "20–30"
+      },
+      {
+        "form": "Forms III–IV",
+        "ages": "12–15",
+        "app_stage": "logic",
+        "typical_lesson_minutes": "30–45"
+      },
+      {
+        "form": "Forms V–VI",
+        "ages": "15–18",
+        "app_stage": "rhetoric",
+        "typical_lesson_minutes": "~40–45"
+      }
+    ]
+  },
+  "daily_question_style": "narration",
+  "narration": {
+    "grammar_stage_prompt": "Ask them to tell back what they heard or read — one reading, their own words, no interruptions and no leading questions while they tell it.",
+    "logic_stage_prompt": "Ask them to explain what they understood and why it went the way it did — the telling should start reaching for causes and connections, and some of it now belongs on paper.",
+    "rhetoric_stage_prompt": "Ask them to take a position on what they read — argue for or against it, weigh the author's case, connect it to something else they know. Written, essay-shaped narration is the norm at this stage.",
+    "quality_signals": [
+      "specific detail recalled without prompting (names, sequence, the odd vivid particular)",
+      "the child's own wording and sentence rhythm, not the book's phrasing recited",
+      "events told in order, with the connective tissue — because, so, but — supplied by the child",
+      "an unprompted connection to prior reading or their own experience",
+      "vocabulary from the book used naturally in the telling",
+      "opinions or questions volunteered after the telling ends"
+    ],
+    "anti_signals": [
+      "parroting — stretches of the book's exact sentences given back verbatim",
+      "generic summary that would fit any chapter ('they went somewhere and stuff happened')",
+      "needing the passage re-read before being able to tell anything",
+      "answering only direct questions, offering nothing freely",
+      "telling that shrinks week over week — a sign the readings are too long or the book is wrong for the child"
+    ],
+    "rules": [
+      {
+        "rule": "One reading only. The passage is read a single time and the child tells it back; re-reading teaches the child not to attend the first time.",
+        "basis": "mason",
+        "cite": [
+          "vol1-single-reading"
+        ]
+      },
+      {
+        "rule": "Narration begins as a required practice at six. Before six, a child narrates only when they choose to.",
+        "basis": "mason",
+        "cite": [
+          "vol1-narration-from-six",
+          "vol1-art-of-narrating"
+        ]
+      },
+      {
+        "rule": "Narration is oral through roughly age nine, then written narration is added gradually; it never fully replaces telling aloud.",
+        "basis": "mason",
+        "cite": [
+          "vol6-written-narration"
+        ]
+      },
+      {
+        "rule": "Do not interrupt a narration to correct facts or grammar. Notes on gaps wait until the telling is finished, and most are left for the next reading to fix.",
+        "basis": "mason",
+        "cite": [
+          "vol1-art-of-narrating"
+        ]
+      },
+      {
+        "rule": "Narration replaces comprehension questions, quizzes, and multiple-choice review entirely. The child's own act of telling is the act of knowing.",
+        "basis": "mason",
+        "cite": [
+          "vol6-act-of-knowing"
+        ]
+      },
+      {
+        "rule": "The debrief scores attention and telling-back quality, not pages completed — a rich narration on a short reading beats a thin one on a long reading.",
+        "basis": "mason",
+        "cite": [
+          "vol1-attention-quality",
+          "vol6-act-of-knowing"
+        ]
+      },
+      {
+        "rule": "Quality signals above are our operationalization of Mason's descriptions of good telling, written for model-update extraction. They are consistent with her examples but the list itself is ours.",
+        "basis": "modern-application",
+        "cite": [
+          "vol1-art-of-narrating"
+        ]
+      }
+    ]
+  },
+  "good_day_definition": "A good day is one in which every short lesson got the child's full attention and ended with a genuine telling-back, and the child still had free afternoon hours out of doors — not the day the most material was covered. Attention and narration quality are the measure, never pages completed. [vol1-attention-quality, vol1-short-lessons, pneu-afternoons]",
+  "weekly_rhythms": [
+    {
+      "activity": "nature_walk",
+      "label": "Nature walk",
+      "cadence": "1/week (plus daily outdoor time)",
+      "typical_day": "midweek or Friday afternoon",
+      "duration": "30–60 min of focused observation inside a longer outing",
+      "applies_from": "grammar",
+      "technique": "A real walk, in every season and most weather. The parent points little and asks much: the child looks first, then tells what was seen. Finds go into the nature notebook afterward, by the child's own hand. [vol1-out-of-doors, vol1-winter-walks, vol1-nature-notebook]",
+      "cite": [
+        "vol1-out-of-doors",
+        "vol1-winter-walks",
+        "vol1-nature-notebook"
+      ]
+    },
+    {
+      "activity": "picture_study",
+      "label": "Picture study",
+      "cadence": "1/week, one artist per term (about six pictures a term)",
+      "typical_day": "any morning, as an inspirational block",
+      "duration": "10–15 min",
+      "applies_from": "grammar",
+      "technique": "The child studies one reproduction quietly until they can see it with the eyes shut, then the picture is turned over and they describe it from memory — narration for the eye. No lecture on the artist first. [vol6-picture-study]",
+      "cite": [
+        "vol6-picture-study"
+      ]
+    },
+    {
+      "activity": "composer_study",
+      "label": "Composer study",
+      "cadence": "1/week focused listening; the same composer all term",
+      "typical_day": "any morning, paired against an abstract block",
+      "duration": "10–15 min",
+      "applies_from": "grammar",
+      "technique": "One composer's works played and re-played across the term so the ear learns the voice. Listening first; facts about the composer stay brief and second. [vol6-composer-study]",
+      "cite": [
+        "vol6-composer-study"
+      ]
+    },
+    {
+      "activity": "hymn_study",
+      "label": "Hymn and folk song",
+      "cadence": "1/week practice; singing also appears in daily slots",
+      "typical_day": "any morning, as a light block between heavy ones",
+      "duration": "10 min",
+      "applies_from": "grammar",
+      "technique": "One hymn and one folk song learned per term by singing them often, not by drilling verses. Singing doubles as the change-of-effort between two book lessons. [pneu-alternation]",
+      "cite": [
+        "pneu-alternation"
+      ]
+    },
+    {
+      "activity": "poetry_recitation",
+      "label": "Poetry and recitation",
+      "cadence": "short daily slots on the PNEU time-tables",
+      "typical_day": "daily",
+      "duration": "5–10 min",
+      "applies_from": "grammar",
+      "technique": "Poems are learned by hearing them read beautifully and often — not assigned as memorization homework. Recitation is telling a poem as if it were the child's own. [pneu-lesson-lengths]",
+      "cite": [
+        "pneu-lesson-lengths"
+      ]
+    },
+    {
+      "activity": "shakespeare",
+      "label": "Shakespeare",
+      "cadence": "1/week, roughly a play per term",
+      "typical_day": "a longer inspirational block",
+      "duration": "20–45 min by stage",
+      "applies_from": "logic",
+      "technique": "Read the play itself — aloud, parts shared around — and narrate scene by scene. Retellings (Lamb's Tales) serve Form I; the real text belongs to Form II and up. [vol6-shakespeare]",
+      "cite": [
+        "vol6-shakespeare"
+      ]
+    },
+    {
+      "activity": "handicrafts",
+      "label": "Handicrafts",
+      "cadence": "afternoon practice, several times a week",
+      "typical_day": "afternoons",
+      "duration": "30–60 min",
+      "applies_from": "grammar",
+      "technique": "Real, useful work held to an adult standard of finish — no make-and-throw-away crafts. See handicrafts.ts for the four principles and the age ladder. [vol1-handicraft-points]",
+      "cite": [
+        "vol1-handicraft-points",
+        "pneu-afternoons"
+      ]
+    },
+    {
+      "activity": "habit_training_focus",
+      "label": "Habit focus",
+      "cadence": "one habit at a time, sustained for about six weeks",
+      "typical_day": null,
+      "duration": null,
+      "applies_from": "grammar",
+      "technique": "Not a scheduled subject — a background focus the parent holds. The planner's job is only to surface the current habit in the morning brief and ask about it in the debrief. See habit-formation.ts. [vol1-one-habit-at-a-time]",
+      "cite": [
+        "vol1-one-habit-at-a-time"
+      ]
+    }
+  ],
+  "daily_rhythm": {
+    "morning_lessons_only": true,
+    "school_start": "9:00",
+    "morning_end_by_stage": {
+      "grammar": "~11:30 [pneu-start-times]",
+      "logic": "~12:30 [pneu-start-times]",
+      "rhetoric": "~13:00 [pneu-start-times]"
+    },
+    "afternoon": "No book lessons after the midday meal. The afternoon belongs to outdoor time, the nature walk, handicrafts held to a real standard of finish, and free play. A planner that backfills the afternoon with leftover lessons is breaking the method, not flexing it. [vol6-afternoon-work, pneu-afternoons]",
+    "term_structure": "Three terms of roughly twelve weeks. Each term carries its own artist, composer, and hymn selections, and ends in an examination week whose questions are answered by narration — a record of what the child can tell, not a ranked score. [terms-three-per-year, vol6-exams-by-narration]",
+    "ordering_rules": [
+      "The morning is a sequence of short blocks, each ended on time even mid-lesson — the cap trains attention. [vol1-short-lessons]",
+      "Alternate disciplinary, inspirational, and physical work; no two abstract subjects touch. [pneu-alternation]",
+      "Movement (drill, dancing, outdoor play) and singing sit between book lessons on the original time-tables. [pneu-alternation]",
+      "Reading-and-narration blocks and writing blocks alternate so the same faculty is never worked twice running.",
+      "Unfinished work rolls to its next scheduled slot. Nothing extends a block past its cap to finish a page."
+    ]
+  },
+  "scheduling_notes": "Mornings carry all the demanding work, as a run of short, varied, hard-capped blocks from 9:00; afternoons are structurally free for outdoor life, the nature walk, and handicrafts — never book lessons. Habit training is background, not a subject block. Three terms of about twelve weeks shape the year, each with its own artist, composer, and hymn, closing in an exam week answered by narration.",
+  "living_books": {
+    "criteria": [
+      {
+        "text": "Written by an author who knows and loves the subject — a work with the 'imaginative grasp' and 'touch of originality' that, in Mason's own line, distinguish a book from a text-book.",
+        "basis": "mason",
+        "cite": [
+          "vol6-textbook-criticism",
+          "vol6-literary-form"
+        ]
+      },
+      {
+        "text": "Literary in form: whole, well-made prose that carries ideas, because the mind feeds on ideas and refuses dry summary.",
+        "basis": "mason",
+        "cite": [
+          "vol6-literary-form",
+          "vol6-mind-feeds-on-ideas"
+        ]
+      },
+      {
+        "text": "Narrative-driven and concrete — persons, places, and particulars rather than abstract survey. A child can narrate a story; nobody can narrate a bullet list.",
+        "basis": "mason",
+        "cite": [
+          "vol6-mind-feeds-on-ideas"
+        ]
+      },
+      {
+        "text": "Vocabulary and sentence structure a step above the child — books the child grows into, never books that talk down.",
+        "basis": "mason",
+        "cite": [
+          "vol1-twaddle"
+        ]
+      },
+      {
+        "text": "Worth a single attentive reading: dense enough that the one-reading rule is a fair test, rich enough to reward it.",
+        "basis": "modern-application",
+        "cite": [
+          "vol1-single-reading"
+        ]
+      }
+    ],
+    "twaddle_signals": [
+      {
+        "text": "Dumbed-down retellings and diluted 'reading-level' versions of real books.",
+        "basis": "mason",
+        "cite": [
+          "vol1-twaddle"
+        ]
+      },
+      {
+        "text": "A condescending, goody-goody tone — writing at children instead of for them.",
+        "basis": "mason",
+        "cite": [
+          "vol1-twaddle"
+        ]
+      },
+      {
+        "text": "Text-book compilations of predigested facts — the ideas boiled out, no single mind on the page.",
+        "basis": "mason",
+        "cite": [
+          "vol6-textbook-criticism"
+        ]
+      },
+      {
+        "text": "Busywork wrappers — fill-in-the-blank workbooks and recognition drill standing in for the child's own telling.",
+        "basis": "mason",
+        "cite": [
+          "vol6-act-of-knowing"
+        ]
+      },
+      {
+        "text": "Reward-bait framing: stickers, points, and prizes doing the work that the book itself should do.",
+        "basis": "mason",
+        "cite": [
+          "vol6-no-prizes"
+        ]
+      }
+    ],
+    "qualifying_examples": [
+      "Robinson Crusoe (Defoe)",
+      "The Pilgrim's Progress (Bunyan)",
+      "Just So Stories and The Jungle Book (Kipling)",
+      "Tales from Shakespeare (Lamb) — Form I; the plays themselves from Form II",
+      "Plutarch's Lives (North's or Dryden's translation)",
+      "The Handbook of Nature Study (Comstock) — the parent's reference, not a child's textbook"
+    ],
+    "disqualified_shapes": [
+      "graded readers built from controlled word lists",
+      "textbook survey chapters ending in review questions",
+      "abridgments that keep the plot and lose the prose",
+      "workbook pages as the primary contact with a subject"
+    ]
+  },
+  "nature_study": {
+    "weekly_walk": {
+      "cadence": "at least 1/week as a focused observation outing",
+      "duration": "30–60 min of deliberate looking inside a longer afternoon out",
+      "parent_role": "Set the children looking, then stand back. The parent names less and asks more; identification can wait, attention cannot. The walk is not a lecture route.",
+      "cite": [
+        "vol1-out-of-doors",
+        "vol1-sight-seeing"
+      ]
+    },
+    "daily_outdoor_time": {
+      "rule": "Young children spend hours out of doors daily whenever it can be managed — Mason asks for entire afternoons outside for the under-nines, in winter as well as summer. The planner protects this time; it never backfills it with lessons.",
+      "cite": [
+        "vol1-outdoor-hours",
+        "vol1-out-of-doors",
+        "vol1-winter-walks"
+      ]
+    },
+    "nature_notebook": {
+      "purpose": "The child's own first-hand record of what they have actually seen — a growing personal relationship with the natural world, not an assignment log.",
+      "technique": "The child draws or brush-paints the find from the thing itself (Mason's word is 'brush drawings'; the dry-brush technique is later PNEU practice), adds the date and place, and writes what they observed. Entries follow real encounters; nothing is entered secondhand from a book.",
+      "materials": [
+        "a blank notebook",
+        "watercolors and brush",
+        "pencil"
+      ],
+      "never_graded": "The notebook is the child's own. Mason leaves it 'to his own initiative' — it is not corrected, marked, or graded; the parent may admire it, and that is all.",
+      "cite": [
+        "vol1-nature-notebook"
+      ]
+    },
+    "seasonal_focus": {
+      "spring": "nests, buds, blossom sequence, returning birds, tadpoles",
+      "summer": "wildflowers, insects, pond life, long light for evening walks",
+      "autumn": "seeds and fruits, leaf change, fungi, migration, harvest",
+      "winter": "tree silhouettes and bark, tracks, winter birds, weather itself — the walk continues in cold and wet, dressed for it"
+    },
+    "observation_games": [
+      {
+        "name": "sight-seeing",
+        "how": "Send the child to look carefully at a defined patch — a hedgerow, a tree, a stretch of stream — and come back and tell everything they saw. Narration for the out-of-doors.",
+        "cite": [
+          "vol1-sight-seeing"
+        ]
+      },
+      {
+        "name": "picture-painting",
+        "how": "Have the child look at a landscape until they hold it, then shut their eyes and describe the whole scene from the mind's eye.",
+        "cite": [
+          "vol1-sight-seeing"
+        ]
+      }
+    ],
+    "handbook": "Handbook of Nature Study (Anna Botsford Comstock, public domain) — the standard parent's reference for identifying and following up finds."
+  },
+  "handicrafts": {
+    "afternoon_practice": "Handwork lives in the free afternoon, several sessions a week, unhurried. One craft is carried long enough to reach real competence before the next is introduced — the handicraft equivalent of one habit at a time.",
+    "principles": [
+      {
+        "text": "No futilities: children should not be set to make throwaway novelties (Mason names pea-and-stick work); the thing made should be of use.",
+        "basis": "mason",
+        "cite": [
+          "vol1-handicraft-points"
+        ]
+      },
+      {
+        "text": "Each craft is taught slowly, step by step, with care.",
+        "basis": "mason",
+        "cite": [
+          "vol1-handicraft-points"
+        ]
+      },
+      {
+        "text": "Slipshod work is not allowed; a piece is finished to the best the child can do or done again.",
+        "basis": "mason",
+        "cite": [
+          "vol1-handicraft-points"
+        ]
+      },
+      {
+        "text": "The work stays within the child's compass — hard enough to stretch, never so hard that careful execution is impossible.",
+        "basis": "mason",
+        "cite": [
+          "vol1-handicraft-points"
+        ]
+      }
+    ],
+    "age_appropriate": {
+      "6": [
+        "simple sewing (large stitches, real cloth)",
+        "clay modeling",
+        "paper folding and weaving"
+      ],
+      "8": [
+        "knitting",
+        "basketry",
+        "cardboard sloyd (ruled, cut, glued boxes and models)"
+      ],
+      "10": [
+        "cross-stitch and embroidery",
+        "simple woodwork",
+        "gardening a real bed"
+      ],
+      "12": [
+        "carpentry with tools",
+        "leather work",
+        "cooking and bread-making"
+      ],
+      "14": [
+        "fine woodwork or carving",
+        "garment sewing from a pattern",
+        "bookbinding"
+      ],
+      "16": [
+        "a sustained craft of the student's own choosing, carried to genuine skill"
+      ]
+    },
+    "cite": [
+      "vol1-handicraft-points",
+      "pneu-handicrafts-named",
+      "pneu-afternoons"
+    ]
+  },
+  "habit_formation": {
+    "principle": "Work on one habit at a time, and keep at it until the new way is the easy way. Habit does the heavy lifting of education: what is made automatic no longer costs the child (or the parent) a daily battle of will. [vol1-habit-ten-natures, vol1-one-habit-at-a-time]",
+    "duration": "about six weeks of sustained focus per habit (Mason: 'the work of a few weeks' [vol1-habit-few-weeks]), and never let a lapse pass unnoticed in that window — one indulged exception undoes weeks of setting.",
+    "method": [
+      {
+        "text": "Pick the single habit, tell the child plainly what the new way is, and secure their own buy-in — habit training works with the child, not on them.",
+        "basis": "mason",
+        "cite": [
+          "vol1-one-habit-at-a-time"
+        ]
+      },
+      {
+        "text": "Arrange the environment so the right act is easy and the lapse is unlikely, especially in the first days.",
+        "basis": "mason",
+        "cite": [
+          "vol1-one-habit-at-a-time"
+        ]
+      },
+      {
+        "text": "Watchfulness without nagging: when a lapse is coming, a look or a quiet word before the failure beats a scolding after it. Constant verbal reminders teach the child to wait for reminders.",
+        "basis": "mason",
+        "cite": [
+          "vol1-habit-tact-not-nagging"
+        ]
+      },
+      {
+        "text": "Do not relax when the habit seems formed — the tail end of the window, when everything looks won, is when habits are lost.",
+        "basis": "mason",
+        "cite": [
+          "vol1-one-habit-at-a-time"
+        ]
+      }
+    ],
+    "starter_habits": [
+      {
+        "habit": "attention",
+        "why": "The master habit — every short lesson is itself attention training, so this one is always first for a new-to-Mason family.",
+        "cite": [
+          "vol1-habit-of-attention"
+        ]
+      },
+      {
+        "habit": "perfect execution",
+        "why": "Best-effort finish on small tasks: six careful letters over a page of careless ones. Pairs naturally with copywork.",
+        "cite": [
+          "vol1-copywork-perfect-letters"
+        ]
+      },
+      {
+        "habit": "prompt obedience",
+        "why": "Doing the asked thing at the first asking — a classic first habit for a peaceable home schoolroom.",
+        "cite": [
+          "vol1-one-habit-at-a-time"
+        ]
+      },
+      {
+        "habit": "truthfulness",
+        "why": "Exactness in telling — no exaggeration or careless statement — trained the same watchful way as any other habit.",
+        "cite": [
+          "vol1-habit-ten-natures"
+        ]
+      },
+      {
+        "habit": "order",
+        "why": "Things returned to their places, work laid out before it begins — a habit that pays the parent back daily.",
+        "cite": [
+          "vol1-habit-ten-natures"
+        ]
+      }
+    ],
+    "parent_role": "The parent is the habit's keeper [vol5-habit-case]. The child supplies the doing; the parent supplies the unbroken noticing. Chiron's part is only to keep the current habit in view — named in the morning brief, asked after in the debrief, reviewed in the Friday report — and to suggest when six good weeks have earned a graduation.",
+    "scheduling": "Habit training is background, not a subject. It never takes a lesson block; it colors how existing blocks run (e.g. an attention focus shortens lessons rather than adding one).",
+    "cite": [
+      "vol1-habit-ten-natures",
+      "vol1-one-habit-at-a-time",
+      "vol1-habit-tact-not-nagging"
+    ]
+  },
+  "assessment": {
+    "triad": "atmosphere / discipline / life",
+    "triad_explained": {
+      "atmosphere": "The child is educated by the real life of the home — its honesty, its conversation, its standards — not by a staged child-world [vol6-no-child-environment]. Check: does the week feel like family life with lessons in it, or like school theater staged at home?",
+      "discipline": "The habits are doing the carrying [vol1-habit-ten-natures]. Check: is attention holding through short lessons, is work finished carefully, is the current habit focus gaining ground without daily battles?",
+      "life": "The mind is being fed on living ideas. Check: do narrations come back rich and personal, do book characters and outdoor finds show up in the child's free talk and play?"
+    },
+    "signals_of_health": [
+      {
+        "text": "Narrations are full, particular, and increasingly in the child's own voice.",
+        "basis": "mason",
+        "cite": [
+          "vol1-art-of-narrating",
+          "vol6-act-of-knowing"
+        ]
+      },
+      {
+        "text": "Short lessons end with attention still fresh — the child comes willingly to the next block.",
+        "basis": "mason",
+        "cite": [
+          "vol1-short-lessons",
+          "vol1-habit-of-attention"
+        ]
+      },
+      {
+        "text": "The nature notebook grows by the child's own wish, not by assignment pressure.",
+        "basis": "mason",
+        "cite": [
+          "vol1-nature-notebook"
+        ]
+      },
+      {
+        "text": "Books and outdoor finds surface in unprompted talk — the feast is being eaten, relations are forming.",
+        "basis": "mason",
+        "cite": [
+          "vol6-science-of-relations"
+        ]
+      },
+      {
+        "text": "The afternoon stays free and full — outdoor hours and handwork happening, not squeezed out by rollover lessons.",
+        "basis": "pneu-practice",
+        "cite": [
+          "pneu-afternoons",
+          "vol1-outdoor-hours"
+        ]
+      }
+    ],
+    "signals_of_drift": [
+      {
+        "text": "Lessons stretching past their caps 'to finish' — coverage creeping in as the measure of a day.",
+        "basis": "mason",
+        "cite": [
+          "vol1-short-lessons",
+          "vol1-attention-quality"
+        ]
+      },
+      {
+        "text": "Narrations shrinking toward one-word answers, or passages needing a second reading — attention is being untrained.",
+        "basis": "mason",
+        "cite": [
+          "vol1-single-reading",
+          "vol1-habit-of-attention"
+        ]
+      },
+      {
+        "text": "Rewards, points, or prizes creeping in to buy compliance the material should be earning.",
+        "basis": "mason",
+        "cite": [
+          "vol6-no-prizes"
+        ]
+      },
+      {
+        "text": "Several habits under correction at once — which in practice means none are being formed.",
+        "basis": "mason",
+        "cite": [
+          "vol1-one-habit-at-a-time"
+        ]
+      },
+      {
+        "text": "The nature walk and afternoon outdoor time quietly disappearing week over week.",
+        "basis": "pneu-practice",
+        "cite": [
+          "pneu-afternoons",
+          "vol1-out-of-doors"
+        ]
+      }
+    ],
+    "exam_practice": {
+      "rule": "Term-end examinations are narration prompts answered from the term's reading — a record of what the child can tell, meant to encourage. Nothing is ranked, curved, or scored against other children.",
+      "cite": [
+        "vol6-exams-by-narration"
+      ]
+    },
+    "cite": [
+      "vol6-atmosphere-discipline-life"
+    ]
+  },
+  "interpretation_notes": [
+    {
+      "rule_ref": "lesson_shape.stage_notes",
+      "note": "Mason organized children into Forms (I–VI), not the trivium stages this app uses. The grammar/logic/rhetoric keys are our bridge to the app's Stage type; the Form-to-age bands underneath are hers, via PNEU practice [pneu-forms-ages]."
+    },
+    {
+      "rule_ref": "lesson_shape.max_block_minutes_by_age",
+      "note": "Under eight, the 20-minute ceiling is Mason's own. The per-age steps above that interpolate the printed PNEU per-Form lesson lengths onto single ages, and ages 17–18 extend the Form V–VI band — both are our application, kept because the Integrator needs an integer per age."
+    },
+    {
+      "rule_ref": "habit_formation.duration",
+      "note": "Mason says forming a good habit is 'the work of a few weeks' and names no fixed number. 'About six weeks' is our planning default chosen to honor her warnings against stopping early; treat it as a floor for focus, not a guarantee of formation."
+    },
+    {
+      "rule_ref": "narration.quality_signals",
+      "note": "The quality/anti-signal lists operationalize her descriptions of good and bad telling for model-update extraction. Consistent with her examples; the list itself is ours."
+    },
+    {
+      "rule_ref": "handicrafts.age_appropriate",
+      "note": "The craft names come from PNEU programme practice; their exact age placement is our application of her 'within their compass' rule."
+    },
+    {
+      "rule_ref": "weekly_rhythms",
+      "note": "'One composer per term' and 'one Shakespeare play per term' are PNEU Parents' Union School programme practice. Vol VI confirms the termly music programme and Shakespeare-by-Form-II, but the per-term formulas come from the programmes, not her prose."
+    },
+    {
+      "rule_ref": "nature_study.seasonal_focus",
+      "note": "Mason insists on year-round outdoor life; the specific per-season observation menus are our suggestions in that spirit."
+    }
+  ],
+  "citations": [
+    {
+      "id": "vol1-lessons-at-six",
+      "rule_refs": [
+        "lesson_shape.max_block_minutes_by_age"
+      ],
+      "source": "Home Education",
+      "volume": 1,
+      "chapter": "Part II 'Out-of-Door Life for the Children', §I 'A Growing Time'",
+      "page_range": "p. 43",
+      "quote": "perhaps a mother's first duty to her children is to secure for them a quiet growing time, a full six years of passive receptive life, the waking part of it spent for the most part out in the fresh air.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason",
+      "note": "Grounds the 0-minutes cap at age five: the first six years are out-of-door life and informal habit-forming, not scheduled lesson blocks."
+    },
+    {
+      "id": "vol1-short-lessons",
+      "rule_refs": [
+        "lesson_shape.max_block_minutes_by_age",
+        "good_day_definition",
+        "daily_rhythm.ordering_rules"
+      ],
+      "source": "Home Education",
+      "volume": 1,
+      "chapter": "Part IV, §I 'The Habit of Attention'",
+      "page_range": "p. 142",
+      "quote": "Again, the lessons are short, seldom more than twenty minutes in length for children under eight; and this, for two or three reasons.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason"
+    },
+    {
+      "id": "vol1-attention-quality",
+      "rule_refs": [
+        "good_day_definition",
+        "narration.rules",
+        "assessment.signals_of_drift"
+      ],
+      "source": "Home Education",
+      "volume": 1,
+      "chapter": "Part IV, §I 'The Habit of Attention'",
+      "page_range": "p. 142",
+      "quote": "The sense that there is not much time for his sums or his reading, keeps the child's wits on the alert and helps to fix his attention.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason"
+    },
+    {
+      "id": "vol1-habit-of-attention",
+      "rule_refs": [
+        "first_principles",
+        "habit_formation.starter_habits",
+        "lesson_shape.variety_rule"
+      ],
+      "source": "Home Education",
+      "volume": 1,
+      "chapter": "Part IV, §I 'The Habit of Attention'",
+      "page_range": "p. 137",
+      "quote": "First, we put the habit of Attention, because the highest intellectual gifts depend for their value upon the measure in which their owner has cultivated the habit of attention.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason"
+    },
+    {
+      "id": "vol1-habit-ten-natures",
+      "rule_refs": [
+        "habit_formation.principle",
+        "assessment.triad_explained.discipline"
+      ],
+      "source": "Home Education",
+      "volume": 1,
+      "chapter": "Part III 'Habit Is Ten Natures', §I 'Education Based Upon Natural Law'",
+      "page_range": "p. 97",
+      "quote": "How habit, in the hands of the mother, is as his wheel to the potter, his knife to the carver—the instrument by means of which she turns out the design she has already conceived in her brain.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason",
+      "note": "The proverb 'Habit is ten natures' itself is one Mason reports hearing preached (p. 98) and adopts as a working maxim; this passage is her own statement of the doctrine."
+    },
+    {
+      "id": "vol1-one-habit-at-a-time",
+      "rule_refs": [
+        "habit_formation.method",
+        "weekly_rhythms",
+        "assessment.signals_of_drift"
+      ],
+      "source": "Home Education",
+      "volume": 1,
+      "chapter": "Part III 'Habit Is Ten Natures', §IX (closing pages)",
+      "page_range": "p. 136",
+      "quote": "The mother devotes herself to the formation of one habit at a time, doing no more than keep watch over those already formed.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason"
+    },
+    {
+      "id": "vol1-habit-few-weeks",
+      "rule_refs": [
+        "habit_formation.duration"
+      ],
+      "source": "Home Education",
+      "volume": 1,
+      "chapter": "Part III, §VII 'The Forming of a Habit—‘Shut the Door After You’'",
+      "page_range": "p. 121",
+      "quote": "To form a good habit is the work of a few weeks; to guard it is a work of incessant, but by no means anxious care.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason",
+      "note": "Mason names no fixed number of weeks; the pack's six-week planning default is a labeled modern application (see interpretation_notes)."
+    },
+    {
+      "id": "vol1-habit-tact-not-nagging",
+      "rule_refs": [
+        "habit_formation.method"
+      ],
+      "source": "Home Education",
+      "volume": 1,
+      "chapter": "Part III, §VII 'The Forming of a Habit—‘Shut the Door After You’'",
+      "page_range": "p. 122",
+      "quote": "Tact, watchfulness, and persistence are the qualities she must cultivate in herself; and, with these, she will be astonished at the readiness with which the child picks up the new habit.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason"
+    },
+    {
+      "id": "vol1-art-of-narrating",
+      "rule_refs": [
+        "narration.rules",
+        "narration.quality_signals",
+        "assessment.signals_of_health"
+      ],
+      "source": "Home Education",
+      "volume": 1,
+      "chapter": "Part V, §IX 'The Art of Narrating'",
+      "page_range": "p. 231",
+      "quote": "Narrating is an art, like poetry-making or painting, because it is there, in every child's mind, waiting to be discovered, and is not the result of any process of disciplinary education.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason"
+    },
+    {
+      "id": "vol1-narration-from-six",
+      "rule_refs": [
+        "narration.rules"
+      ],
+      "source": "Home Education",
+      "volume": 1,
+      "chapter": "Part V, §IX 'The Art of Narrating'",
+      "page_range": "p. 231",
+      "quote": "Until he is six, let Bobbie narrate only when and what he has a mind to. He must not be called upon to tell anything.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason"
+    },
+    {
+      "id": "vol1-single-reading",
+      "rule_refs": [
+        "narration.rules",
+        "living_books.criteria",
+        "assessment.signals_of_drift"
+      ],
+      "source": "Home Education",
+      "volume": 1,
+      "chapter": "Part V, §VIII (on reading; 'Slipshod Habits; Inattention')",
+      "page_range": "pp. 229–230",
+      "quote": "If a child is not able to narrate what he has read once, let him not get the notion that he may, or that he must, read it again.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason"
+    },
+    {
+      "id": "vol1-copywork-perfect-letters",
+      "rule_refs": [
+        "lesson_shape.stage_notes.grammar",
+        "habit_formation.starter_habits"
+      ],
+      "source": "Home Education",
+      "volume": 1,
+      "chapter": "Part IV, on the habit of perfect execution",
+      "page_range": "p. 160",
+      "quote": "Set him six strokes to copy; let him, not bring a slateful, but six perfect strokes, at regular distances and at regular slopes.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason"
+    },
+    {
+      "id": "vol1-dictation",
+      "rule_refs": [
+        "lesson_shape.stage_notes.logic"
+      ],
+      "source": "Home Education",
+      "volume": 1,
+      "chapter": "Part V, §XII 'Spelling and Dictation' ('Steps of a Dictation Lesson')",
+      "page_range": "pp. 241–242",
+      "quote": "Dictation lessons, conducted in some such way as the following, usually result in good spelling. A child of eight or nine prepares a paragraph, older children a page, or two or three pages.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason"
+    },
+    {
+      "id": "vol1-twaddle",
+      "rule_refs": [
+        "living_books.criteria",
+        "living_books.twaddle_signals"
+      ],
+      "source": "Home Education",
+      "volume": 1,
+      "chapter": "Part V 'Lessons as Instruments of Education' (on children's books)",
+      "page_range": "p. 176",
+      "quote": "had his reading been the sort of diluted twaddle which is commonly thrust upon children, it would have been impossible for him to cite passages a week, much less some two score years, after the reading.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason"
+    },
+    {
+      "id": "vol1-out-of-doors",
+      "rule_refs": [
+        "nature_study.weekly_walk",
+        "nature_study.daily_outdoor_time",
+        "weekly_rhythms"
+      ],
+      "source": "Home Education",
+      "volume": 1,
+      "chapter": "Part II 'Out-of-Door Life for the Children', §I 'A Growing Time'",
+      "page_range": "p. 42",
+      "quote": "They who know what it is to have fevered skin and throbbing brain deliciously soothed by the cool touch of the air are inclined to make a new rule of life, Never be within doors when you can rightly be without.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason"
+    },
+    {
+      "id": "vol1-outdoor-hours",
+      "rule_refs": [
+        "nature_study.daily_outdoor_time",
+        "assessment.signals_of_health"
+      ],
+      "source": "Home Education",
+      "volume": 1,
+      "chapter": "Part II, §I 'A Growing Time' ('Possibilities of a Day in the Open')",
+      "page_range": "p. 44",
+      "quote": "And long hours they should be; not two, but four, five, or six hours they should have on every tolerably fine day, from April till October.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason"
+    },
+    {
+      "id": "vol1-winter-walks",
+      "rule_refs": [
+        "nature_study.daily_outdoor_time",
+        "weekly_rhythms"
+      ],
+      "source": "Home Education",
+      "volume": 1,
+      "chapter": "Part II, §XII 'Walks in Bad Weather'",
+      "page_range": "pp. 85–86",
+      "quote": "Winter walks, too, whether in town or country, give great opportunities for cultivating the habit of attention.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason",
+      "note": "The section opens by arguing winter and wet-weather outings are 'really more important' than summer ones (p. 85)."
+    },
+    {
+      "id": "vol1-sight-seeing",
+      "rule_refs": [
+        "nature_study.observation_games",
+        "nature_study.weekly_walk"
+      ],
+      "source": "Home Education",
+      "volume": 1,
+      "chapter": "Part II, §II 'Sight-Seeing'",
+      "page_range": "pp. 45–46",
+      "quote": "while wits are fresh and eyes are keen, she sends them off on an exploring expedition—Who can see the most, and tell the most, about yonder hillock?",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason",
+      "note": "The companion 'picture-painting' exercise (describing a scene from memory with eyes shut) follows in §III."
+    },
+    {
+      "id": "vol1-nature-notebook",
+      "rule_refs": [
+        "nature_study.nature_notebook",
+        "assessment.signals_of_health",
+        "weekly_rhythms"
+      ],
+      "source": "Home Education",
+      "volume": 1,
+      "chapter": "Part II, §III ('Nature Diaries')",
+      "page_range": "pp. 54–55",
+      "quote": "As soon as he is able to keep it himself, a nature-diary is a source of delight to a child. Every day's walk gives him something to enter.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason",
+      "note": "The never-graded rule is hers too: 'his nature diary should be left to his own initiative' (p. 55). The same pages name brush-drawing paper as the notebook's medium."
+    },
+    {
+      "id": "vol1-handicraft-points",
+      "rule_refs": [
+        "handicrafts.principles",
+        "weekly_rhythms"
+      ],
+      "source": "Home Education",
+      "volume": 1,
+      "chapter": "Part V (closing section, 'Handicrafts and Drills')",
+      "page_range": "pp. 315–316",
+      "quote": "(a) that they should not be employed in making futilities such as pea and stick work, paper mats, and the like; (b) that they should be taught slowly and carefully what they are to do; (c) that slipshod work should not be allowed; (d) and that, therefore, the children's work should be kept well within their compass.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason"
+    },
+    {
+      "id": "vol3-atmosphere",
+      "rule_refs": [
+        "first_principles"
+      ],
+      "source": "School Education",
+      "volume": 3,
+      "chapter": "Ch. 14 'A Master-Thought'",
+      "page_range": "p. 148",
+      "quote": "Some of my readers will know the Parents' Union motto, 'Education is an atmosphere, a discipline, a life,' especially well in the neat diagrammatic form in which it appears on the covers of our Library books.",
+      "url": "https://www.amblesideonline.org/cm/vol3",
+      "basis": "mason"
+    },
+    {
+      "id": "vol3-wide-curriculum",
+      "rule_refs": [
+        "first_principles"
+      ],
+      "source": "School Education",
+      "volume": 3,
+      "chapter": "Ch. 22 'Suggestions Toward a Curriculum, Pt III'",
+      "page_range": "p. 246",
+      "quote": "the essential step in any reform of public schools should come in the shape of due preparation upon a wide curriculum, dealt with intelligently, between the ages of six and twelve.",
+      "url": "https://www.amblesideonline.org/cm/vol3",
+      "basis": "mason"
+    },
+    {
+      "id": "vol5-habit-case",
+      "rule_refs": [
+        "habit_formation.parent_role"
+      ],
+      "source": "Formation of Character",
+      "volume": 5,
+      "chapter": "Part I, §IV 'Dorothy Elmore's Achievement'",
+      "page_range": "p. 61",
+      "quote": "a contrary habit is set up, diverting the thoughts into some quite new channel. Keep the thoughts running briskly in the new channel, and, behold, the old connections are broken.",
+      "url": "https://www.amblesideonline.org/cm/vol5",
+      "basis": "mason",
+      "note": "Vol V's case narratives show the parent as the habit's keeper in practice: the cure runs on the mother's watchful diversion, not on scolding after the fact."
+    },
+    {
+      "id": "vol6-born-persons",
+      "rule_refs": [
+        "first_principles"
+      ],
+      "source": "Towards a Philosophy of Education",
+      "volume": 6,
+      "chapter": "Book I, Ch. 1 'Self-Education'",
+      "page_range": "p. 29",
+      "quote": "\"Children are born persons,\" is the first article of the educational credo in question.",
+      "url": "https://www.amblesideonline.org/cm/vol6",
+      "basis": "mason",
+      "note": "Also principle 1 of the volume's opening 'Short Synopsis'."
+    },
+    {
+      "id": "vol6-atmosphere-discipline-life",
+      "rule_refs": [
+        "first_principles",
+        "assessment.triad",
+        "assessment.triad_explained"
+      ],
+      "source": "Towards a Philosophy of Education",
+      "volume": 6,
+      "chapter": "Book I, Ch. 6 'Three Instruments of Education'",
+      "page_range": "p. 94",
+      "quote": "we can allow ourselves but three educational instruments—the atmosphere of environment, the discipline of habit and the presentation of living ideas. Our motto is,—'Education is an atmosphere, a discipline, a life.'",
+      "url": "https://www.amblesideonline.org/cm/vol6",
+      "basis": "mason"
+    },
+    {
+      "id": "vol6-no-child-environment",
+      "rule_refs": [
+        "assessment.triad_explained.atmosphere"
+      ],
+      "source": "Towards a Philosophy of Education",
+      "volume": 6,
+      "chapter": "Book I, Ch. 6 'Three Instruments of Education'",
+      "page_range": "p. 94",
+      "quote": "we do not mean that a child should be isolated in what may be called a 'child environment' specially adapted and prepared. It stultifies a child to bring down his world to the 'child's' level.",
+      "url": "https://www.amblesideonline.org/cm/vol6",
+      "basis": "mason"
+    },
+    {
+      "id": "vol6-mind-feeds-on-ideas",
+      "rule_refs": [
+        "first_principles",
+        "living_books.criteria"
+      ],
+      "source": "Towards a Philosophy of Education",
+      "volume": 6,
+      "chapter": "Book I, Ch. 6 'Three Instruments of Education'",
+      "page_range": "pp. 111–112",
+      "quote": "The mind feeds on ideas and therefore children should have a generous curriculum.",
+      "url": "https://www.amblesideonline.org/cm/vol6",
+      "basis": "mason"
+    },
+    {
+      "id": "vol6-literary-form",
+      "rule_refs": [
+        "living_books.criteria"
+      ],
+      "source": "Towards a Philosophy of Education",
+      "volume": 6,
+      "chapter": "Introduction",
+      "page_range": "p. 15",
+      "quote": "it has a natural preference for literary form; given a more or less literary presentation, the curiosity of the mind is enormous and embraces a vast variety of subjects.",
+      "url": "https://www.amblesideonline.org/cm/vol6",
+      "basis": "mason",
+      "note": "'It' is 'the mind' — Mason is summarizing what her school results showed about all children's minds."
+    },
+    {
+      "id": "vol6-textbook-criticism",
+      "rule_refs": [
+        "living_books.criteria",
+        "living_books.twaddle_signals"
+      ],
+      "source": "Towards a Philosophy of Education",
+      "volume": 6,
+      "chapter": "Book II, Ch. 2 'A Liberal Education in Secondary Schools'",
+      "page_range": "pp. 271–272",
+      "quote": "confine ourselves as far as possible to works with the imaginative grasp, the touch of originality, which distinguish a book from a text-book.",
+      "url": "https://www.amblesideonline.org/cm/vol6",
+      "basis": "mason"
+    },
+    {
+      "id": "vol6-act-of-knowing",
+      "rule_refs": [
+        "narration.rules",
+        "living_books.twaddle_signals",
+        "assessment.signals_of_health"
+      ],
+      "source": "Towards a Philosophy of Education",
+      "volume": 6,
+      "chapter": "Book II, Ch. 2 'A Liberal Education in Secondary Schools'",
+      "page_range": "p. 271",
+      "quote": "information does not become knowledge unless a child perform the 'act of knowing' without the intervention of another personality.",
+      "url": "https://www.amblesideonline.org/cm/vol6",
+      "basis": "mason"
+    },
+    {
+      "id": "vol6-self-education",
+      "rule_refs": [
+        "first_principles"
+      ],
+      "source": "Towards a Philosophy of Education",
+      "volume": 6,
+      "chapter": "Book I, Ch. 1 'Self-Education'",
+      "page_range": "p. 26",
+      "quote": "therefore, there is no education but self-education, and as soon as a young child begins his education he does so as a student. Our business is to give him mind-stuff, and both quality and quantity are essential.",
+      "url": "https://www.amblesideonline.org/cm/vol6",
+      "basis": "mason"
+    },
+    {
+      "id": "vol6-science-of-relations",
+      "rule_refs": [
+        "first_principles",
+        "assessment.signals_of_health"
+      ],
+      "source": "Towards a Philosophy of Education",
+      "volume": 6,
+      "chapter": "Book I, Ch. 10 'The Curriculum'",
+      "page_range": "p. 154",
+      "quote": "'Education is the Science of Relations'; that is, a child has natural relations with a vast number of things and thoughts: so we train him upon physical exercises, nature lore, handicrafts, science and art, and upon many living books, for we know that our business is not to teach him all about anything.",
+      "url": "https://www.amblesideonline.org/cm/vol6",
+      "basis": "mason"
+    },
+    {
+      "id": "vol6-way-of-will",
+      "rule_refs": [
+        "first_principles"
+      ],
+      "source": "Towards a Philosophy of Education",
+      "volume": 6,
+      "chapter": "Book I, Ch. 8 'The Way of the Will'",
+      "page_range": "p. 128",
+      "quote": "We may offer to children two guides to moral and intellectual self-management which we may call 'the Way of the Will' and 'the Way of the Reason.'",
+      "url": "https://www.amblesideonline.org/cm/vol6",
+      "basis": "mason"
+    },
+    {
+      "id": "vol6-written-narration",
+      "rule_refs": [
+        "narration.rules",
+        "lesson_shape.stage_notes.logic"
+      ],
+      "source": "Towards a Philosophy of Education",
+      "volume": 6,
+      "chapter": "'A Short Synopsis' (principle 14) and Book I, Ch. 10",
+      "page_range": "p. xxx (synopsis); p. 182",
+      "quote": "As knowledge is not assimilated until it is reproduced, children should 'tell back' after a single reading or hearing: or should write on some part of what they have read.",
+      "url": "https://www.amblesideonline.org/cm/vol6",
+      "basis": "mason",
+      "note": "The oral-first boundary is hers too: Form I books are 'narrated by them until they are well in their tenth year' (p. 182); written narration grows from there."
+    },
+    {
+      "id": "vol6-exams-by-narration",
+      "rule_refs": [
+        "assessment.exam_practice",
+        "daily_rhythm.term_structure"
+      ],
+      "source": "Towards a Philosophy of Education",
+      "volume": 6,
+      "chapter": "Introduction",
+      "page_range": "p. 6",
+      "quote": "the reading is tested by narration, or by writing on a test passage. When the terminal examination is at hand so much ground has been covered that revision is out of the question; what the children have read they know.",
+      "url": "https://www.amblesideonline.org/cm/vol6",
+      "basis": "mason"
+    },
+    {
+      "id": "vol6-no-prizes",
+      "rule_refs": [
+        "living_books.twaddle_signals",
+        "assessment.signals_of_drift"
+      ],
+      "source": "Towards a Philosophy of Education",
+      "volume": 6,
+      "chapter": "Introduction (results summary, item h)",
+      "page_range": "p. 7",
+      "quote": "Marks, prizes, places, rewards, punishments, praise, blame, or other inducements are not necessary to secure attention, which is voluntary, immediate and surprisingly perfect.",
+      "url": "https://www.amblesideonline.org/cm/vol6",
+      "basis": "mason"
+    },
+    {
+      "id": "vol6-picture-study",
+      "rule_refs": [
+        "weekly_rhythms"
+      ],
+      "source": "Towards a Philosophy of Education",
+      "volume": 6,
+      "chapter": "Book I, Ch. 10 'The Curriculum', Section III (Art)",
+      "page_range": "p. 214",
+      "quote": "the little pictures are studied one at a time; that is, children learn, not merely to see a picture but to look at it, taking in every detail. Then the picture is turned over and the children tell what they have seen.",
+      "url": "https://www.amblesideonline.org/cm/vol6",
+      "basis": "mason",
+      "note": "One artist per term is on the same page: 'reproductions of the work of some single artist, term by term.'"
+    },
+    {
+      "id": "vol6-composer-study",
+      "rule_refs": [
+        "weekly_rhythms"
+      ],
+      "source": "Towards a Philosophy of Education",
+      "volume": 6,
+      "chapter": "Book I, Ch. 10, 'Musical Appreciation' (Mrs. Glover, quoted by Mason)",
+      "page_range": "pp. 217–218",
+      "quote": "Musical Appreciation, of course, has nothing to do with playing the piano.",
+      "url": "https://www.amblesideonline.org/cm/vol6",
+      "basis": "mason",
+      "note": "The one-composer-per-term formula is programme practice, stated verbatim in a Parents' Review account of a PNEU school: 'The P.N.E.U. curriculum has one of the great composers down for study each term' (Moore, 'Examinations and the P.N.E.U.', hosted at charlottemasonpoetry.org)."
+    },
+    {
+      "id": "vol6-shakespeare",
+      "rule_refs": [
+        "weekly_rhythms"
+      ],
+      "source": "Towards a Philosophy of Education",
+      "volume": 6,
+      "chapter": "Book I, Ch. 10 'The Curriculum', Section II (Literature)",
+      "page_range": "p. 182",
+      "quote": "Their power to understand, visualise, and 'tell' a play of Shakespeare from nine years old and onwards is very surprising.",
+      "url": "https://www.amblesideonline.org/cm/vol6",
+      "basis": "mason",
+      "note": "Grounds the pack's Shakespeare-from-Form-II placement (real text from ~9; retellings before that)."
+    },
+    {
+      "id": "vol6-afternoon-work",
+      "rule_refs": [
+        "daily_rhythm.morning_lessons_only",
+        "daily_rhythm.afternoon"
+      ],
+      "source": "Towards a Philosophy of Education",
+      "volume": 6,
+      "chapter": "Introduction",
+      "page_range": "p. 9",
+      "quote": "All intellectual work is done in the hours of morning school, and the afternoons are given to field nature studies, drawing, handicrafts, etc.",
+      "url": "https://www.amblesideonline.org/cm/vol6",
+      "basis": "mason"
+    },
+    {
+      "id": "vol6-bible",
+      "rule_refs": [
+        "lesson_shape.subject_order"
+      ],
+      "source": "Towards a Philosophy of Education",
+      "volume": 6,
+      "chapter": "Book I, Ch. 10 'The Curriculum', Section I 'The Knowledge of God'",
+      "page_range": "p. 158",
+      "quote": "Of the three sorts of knowledge proper to a child, the knowledge of God, of man, and of the universe,—the knowledge of God ranks first in importance, is indispensable, and most happy-making.",
+      "url": "https://www.amblesideonline.org/cm/vol6",
+      "basis": "mason",
+      "note": "The PNEU time-tables place the Bible lesson in the opening 9.0–9.20 block on most days, matching this ranking in practice."
+    },
+    {
+      "id": "pneu-start-times",
+      "rule_refs": [
+        "daily_rhythm.school_start",
+        "daily_rhythm.morning_end_by_stage"
+      ],
+      "source": "PNEU Parents' Union School time-tables (Franklin 1900/1908; 'A Liberal Education for All', PNEU 1928)",
+      "volume": null,
+      "chapter": "Printed time-tables, Forms I–VI",
+      "page_range": null,
+      "quote": "Form I's printed table opens '9.0—9.20, Old Testament' and its last row is '11.20—11.30'; Form II runs to '11.30—12.0'; Forms III–IV to '12.15—12.45'; Forms V–VI to '12.15—1.0'.",
+      "url": "https://charlottemasonpoetry.org/parents-union-school-time-tables/",
+      "basis": "pneu-practice",
+      "note": "The quoted times are verbatim table cells from the harmonized PUS time-tables; the pack's per-stage morning-end estimates round these printed end times."
+    },
+    {
+      "id": "pneu-lesson-lengths",
+      "rule_refs": [
+        "lesson_shape.max_block_minutes_by_age",
+        "lesson_shape.forms",
+        "weekly_rhythms"
+      ],
+      "source": "The Parents' Review, 'Examinations and the P.N.E.U.' (A. V. C. Moore, Wavertree PNEU Preparatory School), with the printed PUS time-tables",
+      "volume": null,
+      "chapter": "PR article; printed time-tables, Forms I–VI",
+      "page_range": null,
+      "quote": "The answer is that the periods of work are short, never longer than half an hour.",
+      "url": "https://charlottemasonpoetry.org/examinations-and-the-pneu/",
+      "basis": "pneu-practice",
+      "note": "The printed tables give the per-Form bands the pack interpolates: Form I blocks of 10–20 min ('9.0—9.20', '11.10—11.20'), Form II arithmetic '9.20—9.50', Forms V–VI blocks up to 45 min ('11.0—11.45'). See parents-union-school-time-tables at the same site."
+    },
+    {
+      "id": "pneu-alternation",
+      "rule_refs": [
+        "lesson_shape.variety_rule",
+        "daily_rhythm.ordering_rules",
+        "weekly_rhythms"
+      ],
+      "source": "Home Education (doctrine); PNEU time-tables (printed practice)",
+      "volume": 1,
+      "chapter": "Part IV, §I 'The Habit of Attention'",
+      "page_range": "p. 142",
+      "quote": "if the lessons be judiciously alternated—sums first, say, while the brain is quite fresh; then writing, or reading—some more or less mechanical exercise, by way of a rest… a 'thinking' lesson first, and a 'painstaking' lesson to follow.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason",
+      "note": "The printed Form I table embodies it: Number at 10.0–10.20 is followed by Drill or Dancing at 10.20–10.35, then Play or Drill, before the next book lesson (parents-union-school-time-tables, charlottemasonpoetry.org)."
+    },
+    {
+      "id": "pneu-afternoons",
+      "rule_refs": [
+        "daily_rhythm.afternoon",
+        "good_day_definition",
+        "assessment.signals_of_health"
+      ],
+      "source": "PNEU Parents' Union School time-tables; Towards a Philosophy of Education",
+      "volume": 6,
+      "chapter": "Printed time-tables (no afternoon blocks); Vol VI Introduction",
+      "page_range": "p. 9",
+      "quote": "All intellectual work is done in the hours of morning school, and the afternoons are given to field nature studies, drawing, handicrafts, etc.",
+      "url": "https://charlottemasonpoetry.org/parents-union-school-time-tables/",
+      "basis": "pneu-practice",
+      "note": "No form's printed table contains any block after the midday close (11.30 for Form I, 1.0 for Forms V–VI); the quote is Mason describing that same school practice in Vol VI."
+    },
+    {
+      "id": "pneu-handicrafts-named",
+      "rule_refs": [
+        "handicrafts.age_appropriate"
+      ],
+      "source": "Home Education (named crafts); PNEU time-tables (standing Handicrafts and Sloyd slots)",
+      "volume": 1,
+      "chapter": "Part V (closing section, 'Handicrafts and Drills')",
+      "page_range": "p. 315",
+      "quote": "The Handicrafts best fitted for children under nine seem to me to be chair-caning, carton-work, basket-work, Smyrna rugs, Japanese curtains, carving in cork, samplers on coarse canvas showing a variety of stitches, easy needlework, knitting (big needles and wool), etc.",
+      "url": "https://www.amblesideonline.org/cm/vol1",
+      "basis": "mason",
+      "note": "The printed Form I table carries standing Handicrafts blocks (e.g. 10.0–10.20), and cardboard sloyd appears in PUS practice; the pack's exact age ladder is a labeled modern application."
+    },
+    {
+      "id": "pneu-forms-ages",
+      "rule_refs": [
+        "lesson_shape.forms",
+        "lesson_shape.stage_notes"
+      ],
+      "source": "PUS Form structure (editorial correspondence table in the AmblesideOnline hosted Vol VI; age ranges per PUS programmes)",
+      "volume": null,
+      "chapter": "Hosted Vol VI, editorial note at p. 218",
+      "page_range": null,
+      "quote": "Form I (roughly grades 1-3): IB (age 6), IA (age 7-9). Form II (roughly grades 4-6): IIB (age 9), IIA (age 10-12). Form III and IV (roughly grades 7-9). Form V and VI (roughly grades 10-12).",
+      "url": "https://www.amblesideonline.org/cm/vol6",
+      "basis": "pneu-practice",
+      "note": "The quote is AmblesideOnline's editorial gloss embedded in the hosted text, not Mason's prose; the underlying age bands match those printed in the PUS programmes (cf. the source notes on the charlottemasonpoetry time-tables page)."
+    },
+    {
+      "id": "terms-three-per-year",
+      "rule_refs": [
+        "daily_rhythm.term_structure",
+        "scheduling_notes"
+      ],
+      "source": "PUS Programme 94 (printed programme, Armitt Collection scan, Internet Archive)",
+      "volume": null,
+      "chapter": "Programme cover, autumn term 1922",
+      "page_range": null,
+      "quote": "Programme 094 and Examination. Parents' National Educational Union. The Parents' Union School. September to December, 1922. (January to March, 1923, in the Dominions.)",
+      "url": "https://archive.org/details/BoxCM14FileCMC96p094",
+      "basis": "pneu-practice",
+      "note": "Three terms a year follows from the numbering: PUS Term 1 programmes date to 1892 (AmblesideOnline's PNEU programme index), so 94 programmes across ~31 school years is exactly three per year; the September-to-December span shows the ~12-week term length."
+    }
+  ]
+}

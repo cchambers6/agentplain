@@ -12,7 +12,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "catalog:build": "node scripts/build-catalog.mjs",
     "pack:build": "tsx scripts/build-cm-pack.ts",
-    "pack:verify": "tsx scripts/verify-cm-pack.ts"
+    "pack:verify": "tsx scripts/verify-cm-pack.ts",
+    "philosophies:build": "node scripts/build-philosophies.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -31,6 +31,7 @@ model Family {
 
   children        Child[]
   curricula       Curriculum[]
+  integrationMaps IntegrationMap[]
   weeklyPlans     WeeklyPlan[]
   dailyLogs       DailyLog[]
   compliance      ComplianceRecord[]
@@ -79,7 +80,29 @@ model Curriculum {
   @@index([familyId])
 }
 
-// --- M2 fills these -------------------------------------------------------
+// --- M2 -------------------------------------------------------------------
+
+model IntegrationMap {
+  id          String   @id @default(cuid())
+  workspaceId String
+  familyId    String
+  family      Family   @relation(fields: [familyId], references: [id])
+  /// The full IntegrationMap JSON, validated against the Zod shape in
+  /// lib/agents/integrator/schema.ts before every write. Curriculum
+  /// references are id + unit/lesson identifiers — never content.
+  content           Json
+  philosophyPackRef String // e.g. "charlotte-mason@v1"
+  curriculaRefs     Json // [{id, name}] snapshot of the curricula integrated
+  /// Parent answers to conflicts_surfaced / parent_review_required items:
+  /// [{item, decision, decidedAt}] — appended by /api/plan/confirm.
+  parentDecisions Json     @default("[]")
+  generatedBy     String // agent label, e.g. "chiron-integrator" (internal)
+  generatedAt     DateTime @default(now())
+  revision        Int      @default(1)
+
+  @@index([familyId, revision])
+  @@index([workspaceId])
+}
 
 model WeeklyPlan {
   id          String    @id @default(cuid())
@@ -87,6 +110,8 @@ model WeeklyPlan {
   familyId    String
   family      Family    @relation(fields: [familyId], references: [id])
   weekStart   DateTime // Monday of the plan week
+  /// 2-3 sentences in Chiron's voice: WHY this week looks the way it does.
+  vision      String    @default("")
   status      String    @default("planned") // planned | active | replanned | completed
   /// Headmaster rationale rows: [{change, evidence, sourceLogIds}]
   rationale   Json      @default("[]")
@@ -103,8 +128,10 @@ model DayPlan {
   weeklyPlanId String
   weeklyPlan   WeeklyPlan @relation(fields: [weeklyPlanId], references: [id])
   date         DateTime
-  /// Blocks reference curricula by id + lesson ordinal — never content:
-  /// [{ childId, curriculumId, unitOrdinal, lessonOrdinal, estMinutes, note }]
+  /// Validated PlanBlock rows (lib/agents/integrator/schema.ts) — curricula
+  /// referenced by id + lesson identifier, never content:
+  /// [{ subject, curriculum_ref, lesson_ref, duration_est, activity,
+  ///    philosophy_note, kind, combine_group }]
   blocks       Json       @default("[]")
   status       String     @default("planned") // planned | done | partial | skipped
 

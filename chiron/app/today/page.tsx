@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentParentEmail } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -20,9 +21,17 @@ export default async function TodayPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col px-6 py-10">
       <header className="border-b border-walnut/20 pb-6">
-        <h1 className="font-serif text-3xl">
-          Today with {child?.name ?? "your child"}
-        </h1>
+        <div className="flex items-baseline justify-between gap-4">
+          <h1 className="font-serif text-3xl">
+            Today with {child?.name ?? "your child"}
+          </h1>
+          <Link
+            href="/plan"
+            className="text-sm text-walnut underline-offset-4 hover:underline"
+          >
+            This week&rsquo;s plan
+          </Link>
+        </div>
         <p className="mt-2 text-walnut">
           {family.curricula.map((c) => c.name).join(" · ")}
         </p>

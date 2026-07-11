@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "catalog:build": "node scripts/build-catalog.mjs"
+    "catalog:build": "node scripts/build-catalog.mjs",
+    "philosophies:build": "node scripts/build-philosophies.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

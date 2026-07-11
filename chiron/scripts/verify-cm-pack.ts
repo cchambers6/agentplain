@@ -84,7 +84,8 @@ function collectCites(node: unknown): void {
 collectCites(charlotteMasonPack);
 walkStrings(charlotteMasonPack, (s) => {
   for (const m of s.matchAll(/\b(?:vol[1-6]|pneu|terms)-[a-z][a-z0-9-]*\b/g)) {
-    referenced.add(m[0]);
+    // "pneu-practice" is a RuleBasis enum value, not a citation id.
+    if (m[0] !== "pneu-practice") referenced.add(m[0]);
   }
 });
 for (const id of referenced) {

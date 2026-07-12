@@ -13,12 +13,16 @@ import assert from 'node:assert/strict';
 import type { Prisma } from '@prisma/client';
 import type { EmailProvider, SendEmailRequest } from '@/lib/email';
 import {
+  businessDaysSince,
+  FIRST_WEEK_NOTE_SENT_ACTION,
   sendWeeklyReportForWorkspace,
   WEEKLY_REPORT_SENT_ACTION,
 } from './weekly-report';
 
 const WS = '11111111-1111-1111-1111-111111111111';
 const NOW = new Date('2026-06-12T12:00:00.000Z');
+/** Long before NOW — clears the first-full-week gate for the legacy cases. */
+const ESTABLISHED_CREATED_AT = new Date('2026-01-05T00:00:00.000Z');
 
 interface FakeOpts {
   weeklyReportEnabled?: boolean;
@@ -26,6 +30,9 @@ interface FakeOpts {
   subscriptionStatus?: string;
   setupDeactivatedAt?: Date | null;
   alreadySentForDate?: string | null;
+  createdAt?: Date;
+  firstReportMode?: string | null;
+  alreadyNotedForDate?: string | null;
 }
 
 function fakeSystemContext(opts: FakeOpts) {
@@ -37,9 +44,11 @@ function fakeSystemContext(opts: FakeOpts) {
         name: 'Acme Realty',
         vertical: 'REAL_ESTATE',
         closureStatus: 'ACTIVE',
+        createdAt: opts.createdAt ?? ESTABLISHED_CREATED_AT,
         setupDeactivatedAt: opts.setupDeactivatedAt ?? null,
         preference: {
           weeklyReportEnabled: opts.weeklyReportEnabled ?? true,
+          firstReportMode: opts.firstReportMode ?? null,
         },
         memberships:
           opts.brokerEmail === null
@@ -58,11 +67,25 @@ function fakeSystemContext(opts: FakeOpts) {
       count: async () => 0,
     },
     auditLog: {
-      findFirst: async (args: { where?: { targetId?: string } }) =>
-        opts.alreadySentForDate &&
-        args.where?.targetId === opts.alreadySentForDate
-          ? { id: 'existing' }
-          : null,
+      findFirst: async (args: {
+        where?: { action?: string; targetId?: string };
+      }) => {
+        if (
+          args.where?.action === FIRST_WEEK_NOTE_SENT_ACTION &&
+          opts.alreadyNotedForDate &&
+          args.where?.targetId === opts.alreadyNotedForDate
+        ) {
+          return { id: 'existing-note' };
+        }
+        if (
+          args.where?.action !== FIRST_WEEK_NOTE_SENT_ACTION &&
+          opts.alreadySentForDate &&
+          args.where?.targetId === opts.alreadySentForDate
+        ) {
+          return { id: 'existing' };
+        }
+        return null;
+      },
       create: async (args: { data: Record<string, unknown> }) => {
         auditCreates.push(args.data);
         return { id: 'new' };
@@ -196,5 +219,125 @@ describe('sendWeeklyReportForWorkspace', () => {
     );
     assert.ok(sendAudit, 'expected a weekly_report.sent audit row');
     assert.equal(sendAudit?.targetId, '2026-06-07');
+  });
+});
+
+// ── First-full-week gate (pilot dry-run 2026-07-11, P0-2) ─────────────────────
+//
+// Canonical pilot calendar: partner activates Monday 2026-07-06, the report
+// cron fires Friday 2026-07-10. The prior Mon–Sun window (Jun 29 – Jul 5,
+// forDate 2026-07-05) predates the workspace entirely — the "quiet week"
+// body must never render against it.
+
+const MONDAY_ACTIVATION = new Date('2026-07-06T13:00:00.000Z');
+const FIRST_FRIDAY = new Date('2026-07-10T12:00:00.000Z');
+const FIRST_FRIDAY_FOR_DATE = '2026-07-05';
+
+describe('sendWeeklyReportForWorkspace — first-full-week gate', () => {
+  it('businessDaysSince pins the gate edges', () => {
+    // Monday activation → same-week Friday: Tue+Wed+Thu+Fri = 4 (< 5, gated).
+    assert.equal(businessDaysSince(MONDAY_ACTIVATION, FIRST_FRIDAY), 4);
+    // Monday activation → NEXT Friday: 9 (≥ 5, real report sends).
+    assert.equal(
+      businessDaysSince(MONDAY_ACTIVATION, new Date('2026-07-17T12:00:00.000Z')),
+      9,
+    );
+  });
+
+  it("mode 'note' (default): sends the first-week note, never the quiet-week body", async () => {
+    const { systemContext, auditCreates } = fakeSystemContext({
+      createdAt: MONDAY_ACTIVATION,
+    });
+    const { provider, sent } = recordingEmail();
+    const res = await sendWeeklyReportForWorkspace({
+      workspaceId: WS,
+      now: FIRST_FRIDAY,
+      systemContext,
+      email: provider,
+      appOrigin: 'https://app.agentplain.com',
+    });
+
+    assert.equal(res.sent, true);
+    assert.equal(res.firstWeekNote, true);
+    assert.equal(res.forDate, FIRST_FRIDAY_FOR_DATE);
+    assert.equal(sent.length, 1);
+
+    const msg = sent[0];
+    assert.equal(msg.to, 'owner@acme.test');
+    assert.match(msg.subject, /first full report/);
+    assert.equal(msg.tags?.kind, 'weekly_report_first_week_note');
+    // The quiet-week report copy must not appear anywhere in the note.
+    for (const body of [msg.subject, msg.text, msg.html]) {
+      assert.ok(!/was quiet/i.test(body), 'quiet-week body must never render');
+      assert.ok(!/kept watch/i.test(body), 'quiet-week subject must never render');
+    }
+    // Unsubscribe compliance carries over from the report stream.
+    assert.ok(msg.headers?.['List-Unsubscribe']?.includes('/api/reports/weekly/unsubscribe'));
+
+    // Audited under its own action so next Friday's REAL report is untouched.
+    const noteAudit = auditCreates.find(
+      (a) => a.action === FIRST_WEEK_NOTE_SENT_ACTION,
+    );
+    assert.ok(noteAudit, 'expected a first_week_note audit row');
+    assert.equal(noteAudit?.targetId, FIRST_FRIDAY_FOR_DATE);
+    assert.ok(
+      !auditCreates.some((a) => a.action === WEEKLY_REPORT_SENT_ACTION),
+      'no weekly_report.sent row for a first-week note',
+    );
+  });
+
+  it("mode 'delay': sends nothing until the first full week completes", async () => {
+    const { systemContext, auditCreates } = fakeSystemContext({
+      createdAt: MONDAY_ACTIVATION,
+      firstReportMode: 'delay',
+    });
+    const { provider, sent } = recordingEmail();
+    const res = await sendWeeklyReportForWorkspace({
+      workspaceId: WS,
+      now: FIRST_FRIDAY,
+      systemContext,
+      email: provider,
+      appOrigin: 'https://app.agentplain.com',
+    });
+    assert.equal(res.sent, false);
+    assert.equal(res.skipped, 'first_week_pending');
+    assert.equal(sent.length, 0);
+    assert.equal(auditCreates.length, 0);
+  });
+
+  it('the note is idempotent — a same-week cron retry no-ops', async () => {
+    const { systemContext } = fakeSystemContext({
+      createdAt: MONDAY_ACTIVATION,
+      alreadyNotedForDate: FIRST_FRIDAY_FOR_DATE,
+    });
+    const { provider, sent } = recordingEmail();
+    const res = await sendWeeklyReportForWorkspace({
+      workspaceId: WS,
+      now: FIRST_FRIDAY,
+      systemContext,
+      email: provider,
+      appOrigin: 'https://app.agentplain.com',
+    });
+    assert.equal(res.sent, false);
+    assert.equal(res.skipped, 'already_sent');
+    assert.equal(sent.length, 0);
+  });
+
+  it('an established workspace still gets the real report (gate passes)', async () => {
+    const { systemContext } = fakeSystemContext({
+      createdAt: ESTABLISHED_CREATED_AT,
+    });
+    const { provider, sent } = recordingEmail();
+    const res = await sendWeeklyReportForWorkspace({
+      workspaceId: WS,
+      now: FIRST_FRIDAY,
+      systemContext,
+      email: provider,
+      appOrigin: 'https://app.agentplain.com',
+    });
+    assert.equal(res.sent, true);
+    assert.equal(res.firstWeekNote, undefined);
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0].tags?.kind, 'weekly_report');
   });
 });

@@ -75,6 +75,12 @@ export interface RunFubSyncSweepArgs {
     reason?: string;
   }>;
   isInstalled?: (workspaceId: string, vertical: Vertical) => Promise<boolean>;
+  /** When set, the sweep runs for THIS workspace only. The connect route
+   *  fires the trigger event with a workspaceId so the first triage runs
+   *  the moment the key verifies instead of waiting for the hourly cron
+   *  (pilot dry-run 2026-07-11, P0-4 — the Day-1 call's "watch the first
+   *  fire land, live" beat dead-aired more often than not). */
+  onlyWorkspaceId?: string;
   now?: Date;
 }
 
@@ -82,7 +88,10 @@ export async function runFubSyncSweep(
   args: RunFubSyncSweepArgs = {},
 ): Promise<FubSyncSweepResult> {
   const listCandidates = args.listCandidates ?? defaultListCandidates;
-  const candidates = await listCandidates();
+  const allCandidates = await listCandidates();
+  const candidates = args.onlyWorkspaceId
+    ? allCandidates.filter((ws) => ws.id === args.onlyWorkspaceId)
+    : allCandidates;
 
   const result: FubSyncSweepResult = {
     workspacesConsidered: candidates.length,
@@ -269,7 +278,7 @@ export const followUpBossSyncSweepFn = inngest.createFunction(
       { event: FOLLOW_UP_BOSS_SYNC_TRIGGER_EVENT },
     ],
   },
-  async () =>
+  async ({ event }) =>
     runWithDisableGate(FOLLOW_UP_BOSS_SYNC_FUNCTION_ID, () =>
       withCronMonitor(
         {
@@ -286,8 +295,21 @@ export const followUpBossSyncSweepFn = inngest.createFunction(
                 boundary: 'inngest',
                 function_id: FOLLOW_UP_BOSS_SYNC_FUNCTION_ID,
               });
-              logger.info('follow-up-boss sync started');
-              const out = await runFubSyncSweep();
+              // The connect route sends the trigger event with a
+              // workspaceId — scope the run to it so the first triage
+              // lands seconds after key-verify. Cron fires carry no data
+              // and sweep everything, exactly as before.
+              const eventData = (
+                event as unknown as { data?: { workspaceId?: unknown } }
+              )?.data;
+              const onlyWorkspaceId =
+                typeof eventData?.workspaceId === 'string'
+                  ? eventData.workspaceId
+                  : undefined;
+              logger.info('follow-up-boss sync started', {
+                scoped_workspace: onlyWorkspaceId ?? null,
+              });
+              const out = await runFubSyncSweep({ onlyWorkspaceId });
               logger.info('follow-up-boss sync finished', {
                 considered: out.workspacesConsidered,
                 synced: out.workspacesSyncedSuccessfully,

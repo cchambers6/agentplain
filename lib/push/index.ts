@@ -12,3 +12,8 @@ export {
   listEnabledDevicesForUsers,
 } from "./devices";
 export { notifyApprovalQueued } from "./notify";
+export type {
+  NotifyApprovalInput,
+  NotifyApprovalDeps,
+  NotifyApprovalResult,
+} from "./notify";

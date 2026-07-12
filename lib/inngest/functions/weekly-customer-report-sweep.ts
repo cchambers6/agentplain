@@ -50,7 +50,11 @@ export interface WeeklyReportSweepResult {
   skippedBillingPaused: number;
   skippedNoRecipient: number;
   skippedAlreadySent: number;
+  /** Workspaces in their first partial week with firstReportMode='delay'. */
+  skippedFirstWeekPending: number;
   emptyWeekEmails: number;
+  /** First-week notes sent in place of a report (firstReportMode='note'). */
+  firstWeekNotesSent: number;
   failures: Array<{ workspaceId: string; reason: string }>;
 }
 
@@ -83,7 +87,9 @@ export async function runWeeklyReportSweep(
     skippedBillingPaused: 0,
     skippedNoRecipient: 0,
     skippedAlreadySent: 0,
+    skippedFirstWeekPending: 0,
     emptyWeekEmails: 0,
+    firstWeekNotesSent: 0,
     failures: [],
   };
 
@@ -93,6 +99,7 @@ export async function runWeeklyReportSweep(
       if (res.sent) {
         result.emailsSent += 1;
         if (res.wasEmpty) result.emptyWeekEmails += 1;
+        if (res.firstWeekNote) result.firstWeekNotesSent += 1;
         continue;
       }
       switch (res.skipped) {
@@ -107,6 +114,9 @@ export async function runWeeklyReportSweep(
           break;
         case 'already_sent':
           result.skippedAlreadySent += 1;
+          break;
+        case 'first_week_pending':
+          result.skippedFirstWeekPending += 1;
           break;
         default:
           break;
@@ -170,6 +180,8 @@ export const weeklyCustomerReportSweepFn = inngest.createFunction(
                 considered: out.workspacesConsidered,
                 emails_sent: out.emailsSent,
                 empty_week_emails: out.emptyWeekEmails,
+                first_week_notes_sent: out.firstWeekNotesSent,
+                skipped_first_week_pending: out.skippedFirstWeekPending,
                 skipped_opted_out: out.skippedOptedOut,
                 skipped_billing_paused: out.skippedBillingPaused,
                 skipped_no_recipient: out.skippedNoRecipient,

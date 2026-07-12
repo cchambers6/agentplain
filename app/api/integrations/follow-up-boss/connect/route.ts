@@ -24,6 +24,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireWorkspaceMember } from '@/lib/auth';
 import { withSystemContext } from '@/lib/db';
+import { inngest } from '@/lib/inngest/client';
+import { FOLLOW_UP_BOSS_SYNC_TRIGGER_EVENT } from '@/lib/inngest/functions/follow-up-boss-sync-sweep';
 import { encrypt, isEncryptionConfigured } from '@/lib/security/encryption';
 import { FUB_API_BASE } from '@/lib/integrations/follow-up-boss-mcp/server';
 
@@ -172,6 +174,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       },
     });
   });
+
+  // Connect-time first sync (pilot dry-run 2026-07-11, P0-4). The key just
+  // verified — fire the sweep's trigger event scoped to this workspace so
+  // the first lead triage lands in seconds, not at the top of the hour.
+  // Best-effort: a queue blip must not fail the connect the key already
+  // earned; the hourly cron remains the backstop.
+  try {
+    await inngest.send({
+      name: FOLLOW_UP_BOSS_SYNC_TRIGGER_EVENT,
+      data: { workspaceId: body.workspaceId },
+    });
+  } catch {
+    // The hourly cron covers this workspace on its next fire.
+  }
 
   return NextResponse.json({ ok: true, accountId, accountEmail });
 }

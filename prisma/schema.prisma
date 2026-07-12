@@ -2024,6 +2024,24 @@ model WorkspacePreference {
   /// any workspace that opted out. Per-workspace switch (the report is a
   /// workspace-level ROI summary, not a per-user setting).
   weeklyReportEnabled Boolean   @default(true)
+  /// How approval-ready notifications reach the broker-owner by EMAIL.
+  /// 'always' (default) = email the moment a draft lands, day or night —
+  /// the after-hours ping is the sold premise; the owner chooses whether
+  /// to glance at their phone or read it over morning coffee.
+  /// 'business_hours' = immediate email only 8am–6pm ET weekdays; drafts
+  /// that land outside that window arrive in the weekday-morning digest.
+  /// 'digest' = no immediate email; one weekday-morning summary of what
+  /// is waiting. Mobile push (when the app ships) fires in every mode.
+  /// Read by lib/push/notify.ts + the approval-digest sweep.
+  approvalEmailMode   String    @default("always")
+  /// First weekly report behavior for a workspace that has not yet had a
+  /// full business week (5+ business days before the reporting Friday).
+  /// 'note' (default) = send a short first-week note saying the first
+  /// full report arrives next Friday. 'delay' = send nothing until the
+  /// first full week completes. Either way the "quiet week" body never
+  /// renders against a pre-activation week. Read by
+  /// lib/reports/weekly-report.ts.
+  firstReportMode     String    @default("note")
   /// Customer-controlled chat-retention window in DAYS, workspace-wide.
   /// NULL = KEEP FOR ACCOUNT LIFETIME (the default — Plaino keeps chat so he
   /// stays a good partner). A finite value is an OPT-IN auto-purge window the

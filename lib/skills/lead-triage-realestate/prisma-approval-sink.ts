@@ -31,6 +31,8 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { withRls } from '../../db/rls';
 import { SKILL_DISCIPLINE } from '../../disciplines/skill-mapping';
+import { recordSavedTime } from '../../guarantee/saved-time';
+import { notifyApprovalQueued, type NotifyApprovalInput } from '../../push';
 import { encryptPayloadForWrite } from '../../security/payload-crypto';
 import { skillError, skillOk, type SkillResult } from '../types';
 import type { TriagedLead } from './types';
@@ -40,8 +42,15 @@ import type { TriagedLead } from './types';
 export const LEAD_TRIAGE_AGENT_SLUG = 'lead-triage-realestate';
 
 /** Synthetic ref-table — the triaged lead lives in-memory; we use the
- *  lead id as the refId so the audit can correlate triage runs. */
+ *  lead id as the refId so the audit can correlate triage runs. Also the
+ *  saved-time ledger's sourceTable: together with the lead id (which
+ *  carries the FUB person id, e.g. `fub-12345`) it is the idempotency
+ *  key, so a webhook replay or re-sweep never double-counts minutes. */
 export const LEAD_TRIAGE_REF_TABLE = 'LeadTriageProposal';
+
+/** The sink is real-estate-specific — the calibration table resolves
+ *  minutes per vertical through this slug. */
+export const LEAD_TRIAGE_VERTICAL_SLUG = 'real-estate';
 
 export interface LeadTriageSinkArgs {
   workspaceId: string;
@@ -56,6 +65,28 @@ export interface LeadTriageApprovalSink {
 export interface PrismaLeadTriageApprovalSinkOptions {
   client?: PrismaClient;
   tx?: Prisma.TransactionClient;
+  /**
+   * Approval-ready notifier (pilot dry-run 2026-07-11, P0-1 — this sink
+   * never notified, so the after-hours "a reply is drafted and waiting"
+   * promise was structurally undeliverable on the CRM path). Defaults to
+   * `notifyApprovalQueued` on the committed (withRls) path. On the
+   * caller-supplied-tx path the DEFAULT stays silent — the transaction
+   * has not committed, and announcing uncommitted work could race a
+   * rollback (same reasoning as persist-artifacts). Inject explicitly to
+   * notify there or to record calls in tests; pass null to disable (the
+   * demo seed does — a seed run must not email the demo owner).
+   */
+  notify?: ((input: NotifyApprovalInput) => Promise<unknown>) | null;
+  /**
+   * Saved-time ledger crediting (pilot dry-run 2026-07-11, P0-3 — the
+   * production lead-triage path wrote ZERO ledger rows; only the inbox
+   * chain and the demo seed's hand-credits did). Default true: each NEW
+   * approval row credits `lead-enrichment`, plus `drafted-email` when a
+   * first-touch draft exists — exactly what the demo seed credits by
+   * hand. The seed passes false and keeps its hand-credits (it backdates
+   * `occurredAt` across the demo week, which the sink cannot).
+   */
+  creditSavedTime?: boolean;
 }
 
 export class PrismaLeadTriageApprovalSink implements LeadTriageApprovalSink {
@@ -100,6 +131,16 @@ export class PrismaLeadTriageApprovalSink implements LeadTriageApprovalSink {
           data: row,
           select: { id: true },
         });
+        // Same-tx saved-time credit so tests (and any future tx caller)
+        // see the ledger rows land atomically with the approval row.
+        await this.creditSavedTime(args, this.options.tx);
+        // Default notify stays silent here — the caller's tx has not
+        // committed. An injected notifier (tests) still fires.
+        if (this.options.notify) {
+          await Promise.resolve(
+            this.options.notify({ workspaceId: args.workspaceId, count: 1 }),
+          ).catch(() => undefined);
+        }
         return skillOk({ sinkId: created.id });
       }
       const ctx = {
@@ -135,6 +176,24 @@ export class PrismaLeadTriageApprovalSink implements LeadTriageApprovalSink {
       if (id.startsWith('skip:')) {
         return skillOk({ sinkId: id.slice('skip:'.length), skippedDuplicate: true });
       }
+      // The write has committed. Post-commit side effects, both
+      // best-effort — a credit or notification failure must never
+      // surface as a sink error for work that already landed:
+      //   1. Saved-time ledger credit (P0-3) — idempotent via the
+      //      (workspace, sourceTable, sourceId, actionType) unique key.
+      //   2. Approval-ready notification (P0-1) — email + push, so the
+      //      partner hears "a reply is drafted and waiting" without
+      //      Conner bridging the gap by hand.
+      await this.creditSavedTime(args).catch(() => undefined);
+      const notify =
+        this.options.notify === undefined
+          ? notifyApprovalQueued
+          : this.options.notify;
+      if (notify) {
+        await Promise.resolve(
+          notify({ workspaceId: args.workspaceId, count: 1 }),
+        ).catch(() => undefined);
+      }
       return skillOk({ sinkId: id });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -143,6 +202,52 @@ export class PrismaLeadTriageApprovalSink implements LeadTriageApprovalSink {
         `PrismaLeadTriageApprovalSink failed to persist lead ${args.triaged.leadId}: ${message}`,
       );
     }
+  }
+
+  /**
+   * Credit the trial-guarantee ledger for one NEWLY-staged lead: the
+   * enrichment work always, the first-touch draft when one exists —
+   * mirroring what the demo seed credits by hand (pilot dry-run
+   * 2026-07-11, P0-3). The lead id (`fub-<personId>` on the FUB path) is
+   * the dedupe source, so a webhook replay or hourly re-sweep never
+   * double-counts. Skipped for duplicate approval rows (the credit
+   * already happened when the row first landed) and when the caller
+   * opted out via `creditSavedTime: false`.
+   */
+  private async creditSavedTime(
+    args: LeadTriageSinkArgs,
+    tx?: Prisma.TransactionClient,
+  ): Promise<void> {
+    if (this.options.creditSavedTime === false) return;
+    const source = {
+      table: LEAD_TRIAGE_REF_TABLE,
+      id: args.triaged.leadId,
+    };
+    const credit = async () => {
+      await recordSavedTime({
+        workspaceId: args.workspaceId,
+        actionType: 'lead-enrichment',
+        verticalSlug: LEAD_TRIAGE_VERTICAL_SLUG,
+        source,
+        client: tx,
+      });
+      if (args.triaged.firstTouchDraft) {
+        await recordSavedTime({
+          workspaceId: args.workspaceId,
+          actionType: 'drafted-email',
+          verticalSlug: LEAD_TRIAGE_VERTICAL_SLUG,
+          source,
+          client: tx,
+        });
+      }
+    };
+    if (tx) {
+      // In-tx path: let a failure propagate to the caller's transaction —
+      // the caller owns commit semantics.
+      await credit();
+      return;
+    }
+    await credit();
   }
 }
 

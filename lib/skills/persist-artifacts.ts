@@ -176,16 +176,17 @@ export async function persistSkillRunArtifacts(
   const result = await withRls(ctx, (tx) =>
     writeArtifacts(tx, args.workspaceId, args.record, args.boundedExecute),
   );
-  // The transaction has committed. Fire the approval-ready push so the
-  // owner's phone lights up ("7am push → tap approve"). Best-effort and
-  // self-contained — notifyApprovalQueued never throws, but we still guard
-  // so a regression here can't poison the persist result. Awaited (not
-  // floated) because un-awaited promises are dropped in serverless.
+  // The transaction has committed. Fire the approval-ready notification
+  // (email per the partner's preference + push to any registered device)
+  // so the owner knows a draft is waiting. Best-effort and self-contained —
+  // notifyApprovalQueued never throws, but we still guard so a regression
+  // here can't poison the persist result. Awaited (not floated) because
+  // un-awaited promises are dropped in serverless.
   if (result.approvalsWritten > 0) {
     await notifyApprovalQueued({
       workspaceId: args.workspaceId,
       count: result.approvalsWritten,
-    }).catch(() => 0);
+    }).catch(() => undefined);
   }
   // Credit the trial-guarantee counter for the work this run delivered.
   // Post-commit + best-effort: the time-savings ledger is a secondary,

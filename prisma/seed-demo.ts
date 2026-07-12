@@ -165,7 +165,16 @@ async function main(): Promise<void> {
   );
 
   // ── 4a. Overnight leads → PENDING cards via the production sink ───────
-  const sink = new PrismaLeadTriageApprovalSink();
+  // notify: null — a seed run must not email the demo owner "a reply is
+  // drafted and waiting". creditSavedTime: false — step 5 below hand-
+  // credits the SAME actions with backdated `occurredAt` spread across the
+  // demo week (the sink would stamp everything "now", flattening the demo
+  // timeline). In production the sink credits + notifies by default; the
+  // seed is the one caller that opts out of both.
+  const sink = new PrismaLeadTriageApprovalSink({
+    notify: null,
+    creditSavedTime: false,
+  });
   for (const lead of leads.overnight) {
     const triaged = byLeadId.get(lead.id);
     if (!triaged) throw new Error(`overnight lead not triaged: ${lead.id}`);

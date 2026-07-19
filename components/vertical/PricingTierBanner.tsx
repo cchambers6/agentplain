@@ -1,6 +1,10 @@
 import Link from "next/link";
 import Section from "@/components/Section";
 import {
+  MONEY_BACK_GUARANTEE_DAYS,
+  trialPeriodDaysForVertical,
+} from "@/lib/billing/facts";
+import {
   TIER_TAGLINE,
   tierDisplayName,
   tierLadderBands,
@@ -29,9 +33,21 @@ import type { VerticalTier } from "@/lib/verticals/types";
 // `regular` and `max` — so `tierDisplayName(tier)` accepts either and
 // the type cast is a documentation cast, not a runtime conversion.
 
-export default function PricingTierBanner({ tier }: { tier?: VerticalTier }) {
+export default function PricingTierBanner({
+  tier,
+  verticalSlug,
+}: {
+  tier?: VerticalTier;
+  /**
+   * Vertical slug for trial-length resolution — CPA + Law carry the extended
+   * trial per `lib/billing/facts.ts` (`trialPeriodDaysForVertical`). Optional
+   * for back-compat; omitted falls back to the default trial length.
+   */
+  verticalSlug?: string;
+}) {
   const resolvedTier: TierName = (tier ?? "regular") as TierName;
   const displayName = tierDisplayName(resolvedTier);
+  const trialDays = trialPeriodDaysForVertical(verticalSlug ?? "");
 
   if (resolvedTier === "max") {
     return (
@@ -80,6 +96,16 @@ export default function PricingTierBanner({ tier }: { tier?: VerticalTier }) {
             </Link>
           </div>
         </div>
+        <div className="mt-8 max-w-3xl border-t border-rule pt-6">
+          <p className="text-[15px] leading-relaxed text-ink-soft">
+            Every agentplain subscription is month-to-month, with a {trialDays}
+            -day free trial (card at signup) and a {MONEY_BACK_GUARANTEE_DAYS}
+            -day money-back guarantee on the first charge —{" "}
+            <Link href="/guarantee" className="text-ink underline">
+              how the guarantee works →
+            </Link>
+          </p>
+        </div>
       </Section>
     );
   }
@@ -102,8 +128,8 @@ export default function PricingTierBanner({ tier }: { tier?: VerticalTier }) {
       }
       intro={
         resolvedTier === "plus"
-          ? `Per seat, month-to-month. Priority support + quarterly async check-in with your service team. 7-day free trial, card at signup; cancel any time.`
-          : "Per seat, month-to-month. Standard managed AI ops + onboarding bundled in. 7-day free trial, card at signup; cancel any time."
+          ? `Per seat, month-to-month. Priority support + quarterly async check-in with your service team. ${trialDays}-day free trial, card at signup; cancel any time.`
+          : `Per seat, month-to-month. Standard managed AI ops + onboarding bundled in. ${trialDays}-day free trial, card at signup; cancel any time.`
       }
     >
       <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-5">
@@ -124,6 +150,13 @@ export default function PricingTierBanner({ tier }: { tier?: VerticalTier }) {
 
       <div className="mt-8 max-w-3xl border-t border-rule pt-6">
         <p className="text-[15px] leading-relaxed text-ink-soft">
+          Backed by a {MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on
+          your first charge —{" "}
+          <Link href="/guarantee" className="text-ink underline">
+            how the guarantee works →
+          </Link>
+        </p>
+        <p className="mt-3 text-[15px] leading-relaxed text-ink-soft">
           Need higher-intensity service, multi-state ops, white-label, or a
           dedicated team?{" "}
           <Link href="/custom?type=max" className="text-ink underline">

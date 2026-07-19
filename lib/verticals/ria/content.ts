@@ -1,4 +1,8 @@
 import type { VerticalContent } from "../types";
+import {
+  TRIAL_PERIOD_DAYS,
+  MONEY_BACK_GUARANTEE_DAYS,
+} from "../../billing/facts";
 
 // Source: `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 (financial
 // advisors / RIAs, 1–10 advisor, composite 33).
@@ -44,7 +48,7 @@ export const ria: VerticalContent = {
     },
     {
       q: "How much does agentplain cost for an RIA?",
-      a: "RIAs are recommended at the Max tier — an ad-hoc service partnership quoted to your engagement and sold sales-led rather than by self-checkout, because the stakes per draft warrant a named partner and a weekly cadence. Every agentplain tier is month-to-month with the first month free; Max is quoted to scope.",
+      a: `RIAs are recommended at the Max tier — an ad-hoc service partnership quoted to your engagement and sold sales-led rather than by self-checkout, because the stakes per draft warrant a named partner and a weekly cadence. Every agentplain subscription is month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on the first charge. Max engagements are quoted to scope.`,
     },
     {
       q: "Does the fleet send anything to clients on its own?",

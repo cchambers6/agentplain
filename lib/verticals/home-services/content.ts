@@ -1,4 +1,8 @@
 import type { VerticalContent } from "../types";
+import {
+  TRIAL_PERIOD_DAYS,
+  MONEY_BACK_GUARANTEE_DAYS,
+} from "../../billing/facts";
 
 // Source: `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3 (roofing
 // composite 34, the recommended trades pick) and §4 (trades-cluster
@@ -44,7 +48,7 @@ export const homeServices: VerticalContent = {
     },
     {
       q: "How much does agentplain cost for a trades operation?",
-      a: "Home services is recommended at the Partner tier — a named service partner with a weekly review cadence — $299 per seat per month for a solo operator, sliding to $199 per seat at scale. Every tier is per seat, month-to-month, with the first month free, and you can cancel anytime.",
+      a: `Home services is recommended at the Partner tier — priority support and a quarterly async check-in with your service team — $299 per seat per month for a solo operator, sliding to $199 per seat at scale. Every tier is per seat and month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
     },
     {
       q: "Does the fleet send anything to homeowners or insurers on its own?",
@@ -298,7 +302,7 @@ export const homeServices: VerticalContent = {
     citation:
       "Supplement-savings claim cited verbatim from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3. Pricing per `project_stripe_both_surfaces.md` (Partner tier per 2026-05-15 ratification; per-seat ladder $299→$199 with 4 hrs/mo of named-service-partner time included). ROI band per `project_pricing_value_anchor.md`.",
     violationAvoidance:
-      "Customer outreach — appointment texts, follow-ups, review requests — falls squarely under the TCPA, where statutory damages run $500 per text and up to $1,500 for willful violations, with no statutory cap (47 U.S.C. §227). A single non-consented blast to a few hundred numbers is six-figure exposure, which is exactly why agentplain does not auto-send: the fleet drafts the message and a person reviews and approves it before it sends, so a TCPA-violating text never goes out by machine. That avoided exposure is value the 14x–21x hours math doesn't count — and the one promise an auto-dialer competitor structurally cannot make.",
+      "Customer outreach — appointment texts, follow-ups, review requests — falls squarely under the TCPA, where statutory damages run $500 per text and up to $1,500 for willful violations, with no statutory cap (47 U.S.C. §227). A single non-consented blast to a few hundred numbers is six-figure exposure, which is exactly why agentplain does not auto-send: the fleet drafts the message and a person reviews and approves it before it sends, so a TCPA-violating text never goes out by machine. That avoided exposure is value the 14x–21x hours math doesn't count, and the one promise an auto-dialer competitor structurally cannot make.",
   },
 
   claims: {

@@ -10,6 +10,7 @@ import {
 import Section from "@/components/Section";
 import VerticalHero from "@/components/vertical/VerticalHero";
 import VerticalDirectAnswer from "@/components/vertical/VerticalDirectAnswer";
+import KillerWorkflowShowcase from "@/components/vertical/KillerWorkflowShowcase";
 import ValueLoopExample from "@/components/vertical/ValueLoopExample";
 import VerticalHowItWorks from "@/components/vertical/VerticalHowItWorks";
 import JtbdTables from "@/components/vertical/JtbdTables";
@@ -116,6 +117,10 @@ export default function VerticalPage({
       {content.directAnswer ? (
         <VerticalDirectAnswer name={content.name} answer={content.directAnswer} />
       ) : null}
+      {/* The named killer workflow, played live by the product's own demo
+          runtime (sample data, deterministic). Renders only on the four live
+          verticals with an authored story; returns null elsewhere. */}
+      <KillerWorkflowShowcase slug={content.slug} />
       {content.valueLoopExample ? (
         <ValueLoopExample
           example={content.valueLoopExample}
@@ -137,7 +142,7 @@ export default function VerticalPage({
           money away from <span className="foil">the people they serve</span>.
         </p>
       </Section>
-      <PricingTierBanner tier={content.tier} />
+      <PricingTierBanner tier={content.tier} verticalSlug={content.slug} />
       <IntegrationsList integrations={content.integrations} />
       {content.verticalFaq && content.verticalFaq.length > 0 ? (
         <VerticalFaq name={content.name} items={content.verticalFaq} />

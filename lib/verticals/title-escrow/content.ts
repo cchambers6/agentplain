@@ -1,4 +1,8 @@
 import type { VerticalContent } from "../types";
+import {
+  TRIAL_PERIOD_DAYS,
+  MONEY_BACK_GUARANTEE_DAYS,
+} from "../../billing/facts";
 
 // Source: `b2b_vertical_opportunity_analysis_2026-04-27.md` roadmap note +
 // `agentplain_positioning.md` listing title/escrow as adjacent.
@@ -32,7 +36,7 @@ export const titleEscrow: VerticalContent = {
     },
     {
       q: "How much does agentplain cost for a title shop?",
-      a: "Title & escrow is recommended at the Regular tier — $199 per seat per month for a solo operator, sliding to $99 per seat at 50+ seats. Every tier is per seat, month-to-month, with the first month free, and you can cancel anytime.",
+      a: `Title & escrow is recommended at the Regular tier — $199 per seat per month for a solo operator, sliding to $99 per seat at 50+ seats. Every tier is per seat and month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
     },
     {
       q: "Does the fleet send anything on its own?",
@@ -261,9 +265,9 @@ export const titleEscrow: VerticalContent = {
     math:
       "Average closer handles 30–50 files/month. File-intake automation saves ~45 minutes/file. 40 files × 0.75 hours × $40/hr × 12 months = $14,400/yr per closer. Closing-prep automation saves another ~30 minutes/file = ~$9,600/yr — total ~$24k/yr (~$2,000/mo) per closer. Solo case: against the Regular-tier solo seat ($199/mo) = ~10x ROI. At-scale case: same per-closer value against the 50-seat-band price ($99/mo) = ~20x. Multi-closer title/escrow offices typically see the at-scale economics.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (Regular tier per the 2026-05-15 three-tier ratification — Regular is the default entry path; title/escrow operations wanting named-service-partner reserved time can step up to Partner ($299→$199/seat), and high-intensity multi-state closing engagements route to Max (quote-based)). ROI band per `project_pricing_value_anchor.md` (Regular-tier value $2,900–$10,600/mo per seat). Time-per-file estimates pending primary-research validation — flagged in capability inbox. Closer compensation midpoint based on US BLS 2024 SOC 13-2072 (loan officers and related) — flagged as operator-modeled.",
+      "Pricing per `project_stripe_both_surfaces.md` (Regular tier per the 2026-05-15 three-tier ratification — Regular is the default entry path; title/escrow operations wanting named-service-partner reserved time can step up to Partner ($299→$199/seat), and high-intensity multi-state closing engagements route to Max (quote-based)). ROI band per `project_pricing_value_anchor.md` (Regular-tier value $2,900–$10,600/mo per seat). Time-per-file estimates pending primary-research validation (flagged in capability inbox). Closer compensation midpoint based on US BLS 2024 SOC 13-2072, loan officers and related (flagged as operator-modeled).",
     violationAvoidance:
-      "Closing and settlement communications are governed by ALTA Best Practices and CFPB enforcement of RESPA — a referral-fee or unearned-fee implication carries RESPA §8 exposure ($10,000 criminal plus CFPB civil penalties reaching $1,443,275 for knowing violations, 2025 inflation-adjusted), and an ALTA pillar finding can cost the lender relationships the office runs on. The fleet drafts settlement correspondence and a closer approves before send, so a RESPA-implicating line never reaches a borrower or lender. That avoided penalty — and the kept lender relationship — is value the 10x–20x hours math doesn't price, and an auto-send tool can't guarantee it.",
+      "Closing and settlement communications are governed by ALTA Best Practices and CFPB enforcement of RESPA — a referral-fee or unearned-fee implication carries RESPA §8 exposure ($10,000 criminal plus CFPB civil penalties reaching $1,443,275 for knowing violations, 2025 inflation-adjusted), and an ALTA pillar finding can cost the lender relationships the office runs on. The fleet drafts settlement correspondence and a closer approves before send, so a RESPA-implicating line never reaches a borrower or lender. That avoided penalty, and the kept lender relationship, is value the 10x–20x hours math doesn't price — and an auto-send tool can't guarantee it.",
   },
 
   claims: {

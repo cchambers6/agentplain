@@ -1,3 +1,8 @@
+import {
+  TRIAL_PERIOD_DAYS,
+  MONEY_BACK_GUARANTEE_DAYS,
+} from "../billing/facts";
+
 // Comparison registry — "agentplain vs {alternative}" pages.
 //
 // AEO (answer-engine optimization) intent: when someone asks an AI answer
@@ -120,7 +125,7 @@ const REGISTRY: Record<string, Comparison> = {
       { dimension: "Who maintains it", alternative: "You or your engineer, indefinitely", agentplain: "Your service partner" },
       { dimension: "Vertical workflows", alternative: "You design and test each one", agentplain: "Pre-built per vertical, counsel-reviewed corpus" },
       { dimension: "Integrations", alternative: "You wire each tool yourself", agentplain: "Connected on the /integrations page" },
-      { dimension: "Cost shape", alternative: "Variable model-API usage", agentplain: "Flat per-seat monthly, first month free" },
+      { dimension: "Cost shape", alternative: "Variable model-API usage", agentplain: `Flat per-seat monthly, ${TRIAL_PERIOD_DAYS}-day free trial` },
       { dimension: "Compliance + guardrails", alternative: "You build the checks", agentplain: "Per-vertical corpus + draft-then-approve loop" },
     ],
     chooseAlternativeIf:
@@ -134,7 +139,7 @@ const REGISTRY: Record<string, Comparison> = {
       },
       {
         q: "What does agentplain cost compared with building it?",
-        a: "Building it yourself costs engineering time plus variable model-API usage. agentplain is a flat per-seat subscription — $99 to $299 depending on tier — with the first month free, month-to-month. You trade variable build-and-maintain cost for a predictable, run-for-you fee.",
+        a: `Building it yourself costs engineering time plus variable model-API usage. agentplain is a flat per-seat subscription — $99 to $299 depending on tier — month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee. You trade variable build-and-maintain cost for a predictable, run-for-you fee.`,
       },
       { q: "Does the fleet send anything on its own?", a: NO_OUTBOUND_ANSWER },
     ],
@@ -235,7 +240,7 @@ const REGISTRY: Record<string, Comparison> = {
       },
       {
         q: "How much does agentplain cost compared with an assistant?",
-        a: "An assistant is a salary plus benefits and overhead. agentplain is a flat per-seat subscription — $99 to $299 depending on tier — month-to-month with the first month free.",
+        a: `An assistant is a salary plus benefits and overhead. agentplain is a flat per-seat subscription — $99 to $299 depending on tier — month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee.`,
       },
     ],
   },
@@ -268,7 +273,7 @@ const REGISTRY: Record<string, Comparison> = {
       { dimension: "Engagement", alternative: "Project or retainer", agentplain: "Flat per-seat subscription" },
       { dimension: "Best at", alternative: "Bespoke strategy, creative, one-offs", agentplain: "Recurring operational work at scale" },
       { dimension: "Where the work lives", alternative: "Often the agency's systems", agentplain: "Inside your own tools; you own it" },
-      { dimension: "Cost shape", alternative: "Retainer / project fees", agentplain: "Flat per-seat monthly, first month free" },
+      { dimension: "Cost shape", alternative: "Retainer / project fees", agentplain: `Flat per-seat monthly, ${TRIAL_PERIOD_DAYS}-day free trial` },
       { dimension: "Availability", alternative: "Scoped engagements", agentplain: "Runs in the background every day" },
     ],
     chooseAlternativeIf:

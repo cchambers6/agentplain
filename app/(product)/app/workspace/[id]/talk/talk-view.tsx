@@ -124,7 +124,8 @@ export function ChatBubble({
   const isPlaino = message.role === "plaino";
   const speaker = isPlaino ? "Plaino" : "You";
   return (
-    <li>
+    // id is the anchor target for memory's "· from chat" links (#msg-<id>).
+    <li id={`msg-${message.id}`} className="scroll-mt-24">
       <div className="mb-2 flex items-center gap-2 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
         {isPlaino ? <PlainoMark size={16} /> : null}
         <span>{speaker}</span>

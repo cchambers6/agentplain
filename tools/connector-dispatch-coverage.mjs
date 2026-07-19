@@ -31,14 +31,31 @@ import { dirname, join, resolve } from 'node:path';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const MARKETPLACE = join(ROOT, 'lib', 'integrations', 'marketplace.ts');
+const INTEGRATION_DETAIL_PAGE = join(
+  ROOT,
+  'app',
+  '(product)',
+  'app',
+  'workspace',
+  '[id]',
+  'integrations',
+  '[integrationId]',
+  'page.tsx',
+);
 
 /**
- * Parse marketplace entries into { slug, status } pairs. Within each entry
- * object `mcpEndpointTemplate` always appears before `status`, and no template
- * appears between an entry's template and its status — so "the next status
- * after each template" reliably pairs to the same entry.
+ * Parse marketplace entries into { id, slug, status, connectMode } records.
+ * Within each entry object `id` appears first and `mcpEndpointTemplate`
+ * appears before `status`, and no template appears between an entry's
+ * template and its status — so "the last id before each template" and "the
+ * next status after each template" reliably pair to the same entry.
+ * `connectMode` has no fixed position, so it is searched within the entry's
+ * span (template → next entry's id).
  */
 function parseEntries(src) {
+  const idMatches = [...src.matchAll(/^\s{4}id: '([a-z0-9-]+)',$/gm)].map(
+    (m) => ({ index: m.index, id: m[1] }),
+  );
   const entries = [];
   const templateRe = /mcpEndpointTemplate:\s*'([^']+)'/g;
   const statusRe = /status:\s*'(available|coming-soon|beta)'/g;
@@ -51,9 +68,36 @@ function parseEntries(src) {
     // slug = the path segment after `/api/integrations/`
     const slugMatch = template.match(/\/api\/integrations\/([^/]+)\//);
     if (!slugMatch) continue;
-    entries.push({ slug: slugMatch[1], status: s[1], template });
+    const entryId =
+      idMatches.filter((i) => i.index < m.index).at(-1)?.id ?? null;
+    const entryEnd =
+      idMatches.find((i) => i.index > m.index)?.index ?? src.length;
+    const connectMode = /connectMode: '([a-z-]+)'/.exec(
+      src.slice(m.index, entryEnd),
+    )?.[1];
+    entries.push({
+      id: entryId,
+      slug: slugMatch[1],
+      status: s[1],
+      connectMode: connectMode ?? null,
+      template,
+    });
   }
   return entries;
+}
+
+/**
+ * Parse the `API_KEY_CONNECT_URL` map on the integration detail page. Its own
+ * doc comment promises every value exists as a Next route — this makes that
+ * promise a gate instead of a comment (the boldtrail entry violated it
+ * silently until 2026-07-19).
+ */
+function parseApiKeyConnectUrls(src) {
+  const block = /const API_KEY_CONNECT_URL[^=]*=\s*\{([\s\S]*?)\};/.exec(src);
+  if (!block) return null;
+  return [...block[1].matchAll(/['"]?([a-z0-9-]+)['"]?:\s*['"]([^'"]+)['"]/g)].map(
+    (m) => ({ id: m[1], url: m[2] }),
+  );
 }
 
 function main() {
@@ -81,9 +125,58 @@ function main() {
     }
   }
 
+  // Invariant B — an `available` api-key connector MUST have a connect route,
+  // or the paste-key form either 404s on submit or (when its
+  // API_KEY_CONNECT_URL entry is absent) never renders: "available" +
+  // unconnectable, the silent-dead-end class audit-2026-07-02 dept-5 flagged.
+  const missingConnect = [];
+  for (const entry of available) {
+    if (entry.connectMode !== 'api-key' || entry.id === null) continue;
+    const connectRoute = join(ROOT, 'app', 'api', 'integrations', entry.id, 'connect', 'route.ts');
+    if (!existsSync(connectRoute)) {
+      missingConnect.push({ id: entry.id, expected: `app/api/integrations/${entry.id}/connect/route.ts` });
+    }
+  }
+
+  // Invariant C — every entry in the detail page's API_KEY_CONNECT_URL map
+  // MUST resolve to a real connect route (the map's own documented contract).
+  const staleConnectUrls = [];
+  if (!existsSync(INTEGRATION_DETAIL_PAGE)) {
+    console.error(`❌ connector-dispatch-coverage: cannot find ${INTEGRATION_DETAIL_PAGE}`);
+    process.exit(2);
+  }
+  const pageSrc = readFileSync(INTEGRATION_DETAIL_PAGE, 'utf8');
+  const connectUrls = parseApiKeyConnectUrls(pageSrc);
+  if (connectUrls === null || connectUrls.length === 0) {
+    console.error('❌ connector-dispatch-coverage: parsed zero API_KEY_CONNECT_URL entries — parser or page drift.');
+    process.exit(2);
+  }
+  for (const { id, url } of connectUrls) {
+    const rel = url.replace(/^\//, '').split('/');
+    const routePath = join(ROOT, 'app', ...rel, 'route.ts');
+    if (!existsSync(routePath)) {
+      staleConnectUrls.push({ id, expected: `app/${url.replace(/^\//, '')}/route.ts` });
+    }
+  }
+
   console.log(
-    `connector-dispatch-coverage: ${entries.length} catalog entries, ${available.length} available, ${covered.length} with a dispatch route.`,
+    `connector-dispatch-coverage: ${entries.length} catalog entries, ${available.length} available, ${covered.length} with a dispatch route, ${connectUrls.length} api-key connect URLs checked.`,
   );
+
+  if (missingConnect.length > 0 || staleConnectUrls.length > 0) {
+    console.error('');
+    for (const { id, expected } of missingConnect) {
+      console.error(`❌ ${id} is status:"available" with connectMode:"api-key" but has no connect route. Add: ${expected}`);
+    }
+    for (const { id, expected } of staleConnectUrls) {
+      console.error(`❌ API_KEY_CONNECT_URL["${id}"] points at a route that does not exist: ${expected}`);
+    }
+    console.error('');
+    console.error('   An api-key connector the catalog advertises as connectable must have a live');
+    console.error('   connect route, and the detail page map must never point at a missing one —');
+    console.error('   otherwise the paste-key form 404s or never renders ("available" + unconnectable).');
+    process.exit(1);
+  }
 
   if (missing.length > 0) {
     console.error('');

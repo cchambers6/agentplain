@@ -22,11 +22,14 @@ import { BuildiumConnectForm } from "./BuildiumConnectForm";
 
 /** Wave-4 — map of `entry.id` → the POST endpoint that validates +
  *  persists an API-key credential. Each entry here MUST exist as a
- *  Next route under `app/api/integrations/<id>/connect/route.ts`. */
+ *  Next route under `app/api/integrations/<id>/connect/route.ts` —
+ *  enforced by `tools/connector-dispatch-coverage.mjs`. BoldTrail is
+ *  deliberately absent: its MCP server is still a scaffold with no
+ *  real upstream, so its connect route (and this entry) land together
+ *  when it flips `available`. */
 const API_KEY_CONNECT_URL: Record<string, string> = {
   "follow-up-boss": "/api/integrations/follow-up-boss/connect",
   sierra: "/api/integrations/sierra/connect",
-  boldtrail: "/api/integrations/boldtrail/connect",
 };
 
 /** Help text shown under each connector's API-key form. The value tells
@@ -36,8 +39,6 @@ const API_KEY_HELP_TEXT: Record<string, string> = {
     "Paste your key from Follow Up Boss → My Profile → API Key. Your service partner validates it with FUB before saving.",
   sierra:
     "Paste your key from Sierra Interactive → Settings → API Access. Your service partner validates it with Sierra before saving.",
-  boldtrail:
-    "Paste your key from BoldTrail → Settings → API. Your service partner validates it with BoldTrail before saving.",
 };
 
 interface PageProps {

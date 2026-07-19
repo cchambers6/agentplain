@@ -8,6 +8,7 @@ import { requireWorkspaceMember } from "@/lib/auth";
 import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
 import { withRls } from "@/lib/db";
 import { servicePartnerForWorkspace } from "@/lib/onboarding/service-partner";
+import { RemoveWindowButton } from "./RemoveWindowButton";
 import { ScheduleWindowForm } from "./ScheduleWindowForm";
 import { SettingAffects } from "../SettingAffects";
 
@@ -100,8 +101,14 @@ export default async function ScheduleSettingsPage({ params }: PageProps) {
               <ApHairlineRow
                 key={w.id}
                 right={
-                  <span className="font-mono text-[11px] uppercase text-mute">
-                    {w.workspaceTimezone}
+                  <span className="flex items-center gap-3">
+                    <span className="font-mono text-[11px] uppercase text-mute">
+                      {w.workspaceTimezone}
+                    </span>
+                    <RemoveWindowButton
+                      workspaceId={workspaceId}
+                      skillSlug={w.skillSlug}
+                    />
                   </span>
                 }
               >

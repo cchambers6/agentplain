@@ -9,7 +9,7 @@ Four rules run against all customer surfaces (marketing pages, product app, comp
 | Rule | Description | Surfaces |
 |------|-------------|---------|
 | **R1 — Vendor names** | LLM vendor names (Claude, Anthropic, ChatGPT, OpenAI, GPT-N) must not appear in rendered customer copy | All customer surfaces + OG/SVG files |
-| **R2 — Placeholder text** | `PLACEHOLDER` and `awaiting real asset` must not ship in brand assets or ap/ components | `public/brand/` + `components/ui/ap/` |
+| **R2 — Placeholder / stand-in text** | `PLACEHOLDER`, `awaiting real asset`, `lorem ipsum`, `FPO`, `coming soon`, and wireframe dimension annotations (`600 × 400`) must not ship in any public asset | ALL of `public/` (every fetchable file, widened 2026-07-19) + `components/ui/ap/` |
 | **R3 — Token drift** | Hex colors must be in the canonical token set; deprecated `#8C8478` always flagged; `rounded-*` and `shadow-*` Tailwind classes are square-corner violations | All customer surfaces + email templates |
 | **R4 — Banned words** | Marketing buzzwords (`SMB`, `seamless`, `leverage`, `synergy`, `disruptive`, `revolutionary`, `next-gen`, `cutting-edge`, `supercharge`, `knowledge workers`) must not appear in rendered copy | All customer surfaces |
 
@@ -116,14 +116,19 @@ git commit -m "chore(brand): shrink gate baseline — fixed R3 #8C8478 email vio
 
 The baseline count must decrease or stay flat on a fix PR. If it increases, the PR is introducing new violations.
 
-## Wiring into pre-push (planned)
+## Where the gate is enforced
 
-The gate is not yet wired into `.husky/pre-push` because in-flight waves A1–C still contain existing violations tracked in the baseline. Once those waves merge and the baseline count reaches zero, wire it:
+Three stages, no single point of bypass. The gate needs no configuration or env vars — pure Node built-ins, safe to run anywhere.
 
-```bash
-# .husky/pre-push  (add after existing checks)
-node tools/brand/brand-gate.mjs || exit 1
-```
+| Stage | Trigger | Can it be bypassed? |
+|-------|---------|---------------------|
+| `.husky/pre-push` (Layer 1.5) | every local `git push` | yes — `HUSKY=0`, or fleet REST pushes never run hooks |
+| `.github/workflows/brand-gate.yml` | every PR + push to main | only by merging a red PR |
+| `npm run build` preflight | every Vercel deploy | no — a violation fails the build before `next build` runs |
+
+The build-script stage is the true launch gate: Vercel deploys on push regardless of GitHub check status, so only a build-time failure actually stops a labeled stand-in from reaching prod. (Added 2026-07-19; the pre-push wiring landed 2026-06-11 with PRs #227–#234.)
+
+**R2 is ratcheted to zero and must stay there.** Never `--baseline` an R2 violation away — fix or delete the asset. New scene slots go through `tools/brand/gen-placeholder-scenes.mjs` / `gen-vertical-scenes.mjs` so they ship as finished prairie-motif compositions, never labeled wireframes.
 
 ## How the rules map to brand standards
 

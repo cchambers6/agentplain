@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && node scripts/prisma-migrate-gate.mjs && next build",
+    "build": "prisma generate && node scripts/prisma-migrate-gate.mjs && node tools/brand/brand-gate.mjs && next build",
     "build:no-migrate": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",

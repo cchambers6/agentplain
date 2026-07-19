@@ -214,3 +214,32 @@ There is no runtime component; stopping the loop cannot affect the product.
   customer surface) + memory/data/loop/, voice-gate first. A bad pass is a
   `git revert` + governor re-queue — cheap by design. The system's own
   docs/prompts/schema still change via reviewed PRs like this one.
+
+## Runner requirements (2026-07-19 incident — read before scheduling the governor anywhere)
+
+The governor was deployed 2026-07-03 as `agentplain-loop-heartbeat` on the
+fleet Cowork desktop scheduler and ticked every 30 minutes for ~17 days with
+**zero committed effect** — `state.yaml` on main still reads `pass_number: 1`,
+`last_tick_at: null`. Verified 2026-07-19 (fleet WORKING_STATE 12:09Z tick +
+independent re-derivation; full audit: `docs/ops/ship-pipeline-audit-2026-07-19.md`).
+Three compounding causes:
+
+1. **Runner cannot dispatch** — no `start_code_task`/session-list tools in
+   that environment (dormancy mode 2 of `scheduled-task-liveness`).
+2. **Runner cannot write state** — its repo mount (`C:\agentplain`) is pinned
+   to `plan/production-growth-2026-06-03`, which predates this subtree; main
+   is readable only via the object store (`git show origin/main:<path>`),
+   writable not at all.
+3. **Deployed task text drifted from spec** — the scheduled task carried v2
+   text (L1/L2-only, with a "stop after 2026-07-07" branch that v3 explicitly
+   forbids). Task text is generated FROM this runbook; regenerate it when the
+   spec changes, and diff deployed text against spec when auditing.
+
+Hard rule going forward: **do not schedule the governor in a runner that has
+not passed the mode-2 acceptance test** (one manual pass from that exact
+environment proving state-read, dispatch, and state-write). A governor in an
+incapable runner is worse than none: it burns a session per tick and its
+`enabled: true` + fresh `nextRunAt` read as "live" to every auditor who does
+not check `last_tick_at`. Liveness is judged ONLY by `lastRunAt`/`last_tick_at`
+— see the fourth dormancy mode added to `scheduled-task-liveness` (prompt file
+deleted → scheduler silently no-ops, `nextRunAt` keeps refreshing).

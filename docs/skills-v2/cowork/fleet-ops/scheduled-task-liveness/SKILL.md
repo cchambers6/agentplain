@@ -23,9 +23,23 @@ The subtle one: the task fires, reads state, triages… and **cannot start work*
 
 Auto-fire logged "fired 0, $0 spent" honestly for six consecutive runs — but "0 eligible" and "seeder dead" produce **identical run reports**; the queue seeder had in fact stopped feeding while manual audits were surfacing 11+ P0s (`docs/kaizen/2026-07-02/10-fleet-ops.md` friction-7, win-4). **Check:** every consumer with a feeder gets a feeder-health line in its report ("queue last grew at T"); N consecutive zero-fires with a stale feeder is an alert, not a no-op.
 
+## Mode 4 — registered but prompt file deleted (silent no-op with a fresh `nextRunAt`)
+
+Found 2026-07-19: `dispatch-journal-daily-sweep` sat `enabled: true` with a valid cron and a
+forward-dated `nextRunAt` for **65 days** while firing nothing — its `SKILL.md` had been
+deleted from disk (~2026-05-15) and the scheduler silently no-ops a task whose `filePath`
+does not resolve, while still refreshing `nextRunAt` on every cycle. Every field except
+`lastRunAt` looks healthy. **Check:** three-way `lastRunAt` (absent = never ran · stale
+relative to cron = stopped · fresh = healthy) **plus** the task's prompt file exists at its
+registered `filePath`. Related instrument: the scheduler's `recordedSkips` (in
+`scheduled-tasks.json`) logs `global_limit`/`per_task_limit` skips — a task can also lose
+individual fires to concurrency caps without being dead; skips are visible there, never in
+`lastRunAt`. (Full incident: `docs/ops/ship-pipeline-audit-2026-07-19.md`.)
+
 ## Rules
 
 - **Liveness is proven by a fire, not by design docs.** "First manual pass verified" is the acceptance test.
+- **`enabled: true` + fresh `nextRunAt` prove nothing** — `nextRunAt` is computed from cron, not history. Only `lastRunAt` (or `last_tick_at` in the state store) carries run evidence.
 - **Graceful degradation still fails the autonomy bar** — the file-bridge fallback was good engineering and still left the loop human-gated for 17 days. Surface degraded mode loudly; don't let it become the steady state.
 - **Every tick writes `last_tick_at`** — the canary that separates "conductor down" from "nothing eligible" ([[heartbeat-governor]]).
 

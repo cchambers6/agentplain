@@ -80,7 +80,7 @@ The Drafting, Document Chase, Discovery Review, Status Updater, and Milestone Bi
 
 ### How to present tiers
 
-"For law firms we route through Max engagements — quote-based, not a fixed per-seat price. The reason is that privilege-aware depth, ABA Model Rule 1.6 compliance corpus, multi-jurisdiction packs, and the dedicated service management that law firms need are a different service intensity than the standard tier. The Partner tier — $299 per seat, sliding to $199 — is the floor the quote starts from; the Max overlay accounts for the service intensity on top of that.
+"For law firms we route through Max engagements — quote-based, not a fixed per-seat price. The reason is that privilege-aware depth, ABA Model Rule 1.6 compliance corpus, multi-jurisdiction packs, and the dedicated service management that law firms need are a different service intensity than the standard tier. The Partner tier ($299 per seat, sliding to $199) is the floor the quote starts from; the Max overlay accounts for the service intensity on top of that.
 
 The right starting point is a scoping conversation where we understand your practice area mix, the jurisdiction footprint, and your integration state. From there we put together a specific engagement proposal."
 
@@ -103,7 +103,7 @@ That is the hours math. The harder number to put in a spreadsheet is the malprac
 ## 5. Top 10 Objections + Responses
 
 ### 1. "Isn't this just ChatGPT?"
-"ChatGPT is a general tool. You prompt it, review the output, and integrate it yourself into your workflow. For a law firm, that means you are the integration layer — deciding what context to give it, whether the output is privilege-safe, and how to get it into Clio or your document system. agentplain is the service that runs that for your firm: agents configured for legal workflows, connected to your practice-management system, running on a schedule, and producing privilege-aware drafts for attorney review. We are built on Claude — same underlying model family — but we do the configuration, the wiring, the privilege corpus, and the maintenance. You do not write a single prompt."
+"ChatGPT is a general tool. You prompt it, review the output, and integrate it yourself into your workflow. For a law firm, that means you are the integration layer — deciding what context to give it, whether the output is privilege-safe, and how to get it into Clio or your document system. agentplain is the service that runs that for your firm: agents configured for legal workflows, connected to your practice-management system, running on a schedule, and producing privilege-aware drafts for attorney review. We are built on Claude, same underlying model family, but we do the configuration, the wiring, the privilege corpus, and the maintenance. You do not write a single prompt."
 
 ### 2. "We do not trust AI with client matters."
 "That is the right instinct and the right place to start. Nothing in agentplain goes to a client, opposing counsel, or a court without attorney approval. Every draft lands in a review tray. You read it, edit it, decide whether to send it. If you reject a draft, nothing happens. The fleet also never asserts a legal conclusion — every substantive claim that requires attorney judgment carries a merge field. The trust question is whether the drafts are useful enough to be worth reviewing. The 14-day trial is the answer to that question."
@@ -269,7 +269,7 @@ The most reliable re-open triggers for law firms:
 - The Clio MCP landing in Q1 2027.
 
 Message for the integration re-open:
-"Hi [Name] — the Clio integration we discussed is now live. The things that were Setting Up when we spoke — matter-state-driven status updates, drafting context from your matter files, document-chase from Clio Connect — are now running. Worth a fresh look?"
+"Hi [Name] — the Clio integration we discussed is now live. The things that were Setting Up when we spoke (matter-state-driven status updates, drafting context from your matter files, document-chase from Clio Connect) are now running. Worth a fresh look?"
 
 Message for a staffing-gap re-open:
 "Hi [Name] — I saw that [associate name] recently left the firm. The intake conflict screen and the first-pass drafting capability are the things that tend to matter most when a firm is temporarily short-staffed on associates. If it is useful to talk now, I am happy to set up a call."

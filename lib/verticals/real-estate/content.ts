@@ -53,7 +53,7 @@ export const realEstate: VerticalContent = {
       job: "Runs listing intake and keeps every new listing's follow-up moving.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your transaction system is connected.",
+        "Setting up — comes online once your transaction system is connected.",
     },
     {
       slug: "realty-buyer-inquiry-router",
@@ -82,7 +82,7 @@ export const realEstate: VerticalContent = {
       job: "Dedupes, normalizes, and surfaces stale records in the CRM.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your CRM is connected.",
+        "Setting up — comes online once your CRM is connected.",
     },
     {
       slug: "realty-production-reporter",
@@ -90,7 +90,7 @@ export const realEstate: VerticalContent = {
       job: "Drafts the production read against MLS and the workspace median.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your MLS feed is connected.",
+        "Setting up — comes online once your MLS feed is connected.",
     },
     {
       slug: "realty-recruiter-assistant",
@@ -98,7 +98,7 @@ export const realEstate: VerticalContent = {
       job: "Drafts recruiting outreach with one substantiated production reference.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online alongside the Production Reporter's data.",
+        "Setting up — comes online alongside the Production Reporter's data.",
     },
     {
       // Chief of Staff — horizontal capability bound to the

@@ -33,7 +33,7 @@ Different work, same shape: the fleet drafts, a licensed human approves and send
 
 **Now the invitation.**
 
-We want a handful of early firms — one per vertical — to go deeper with us as **design partners**. You'd get hands-on setup and a direct line to shape what the fleet drafts next. In return, when it's working and you're glad to, we'd ask to tell your story — with your approval on every word before anything is published, and a clean opt-out at any point. No invented numbers, no put-words-in-your-mouth. Just an honest account of what changed, in your voice.
+We want a handful of early firms — one per vertical — to go deeper with us as **design partners**. You'd get hands-on setup and a direct line to shape what the fleet drafts next. In return, when it's working and you're glad to, we'd ask to tell your story. You approve every word before anything is published, and you can opt out cleanly at any point. No invented numbers, no put-words-in-your-mouth. Just an honest account of what changed, in your voice.
 
 If that's you — if you'd like to be one of the firms this product is built around — reply to this email or talk to a service partner.
 

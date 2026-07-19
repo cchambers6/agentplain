@@ -349,7 +349,7 @@ function Submit({ tier }: { tier: Exclude<Selection, "max"> }) {
   return (
     <ApHeritageButton variant="primary" type="submit" disabled={pending}>
       {pending
-        ? "rooting your workspace…"
+        ? "setting up your workspace…"
         : `begin with us — ${tierDisplayName(tier)} workspace`}
     </ApHeritageButton>
   );

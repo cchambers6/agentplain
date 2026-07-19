@@ -43,7 +43,7 @@ That's not a discipline problem. It's a time problem. You're running the work AN
 
 Plaino is your service partner inside agentplain — one calm, named presence across your whole workspace. Plaino doesn't replace your crew or your phone. Plaino does the back-office follow-up that takes your time away from the customers in front of you.
 
-**Estimate Followup — live today.** Plaino walks every open estimate and sorts each one by where it sits after you sent it: *fresh*, *soft-nudge*, *check-in*, *last-call*, or *cold*. For each one, Plaino drafts the homeowner-facing nudge that fits that stage — a light touch on a fresh bid, a firmer note as it ages. Cold estimates don't get another email; they roll up into a single handoff to your rep with a phone-call ask, because by then a person should pick up the phone. Every draft lands in your approval queue with your name on it. You read it, you send it. Price and schedule are always left to you to fill in — Plaino never quotes a number.
+**Estimate Followup — live today.** Plaino walks every open estimate and sorts each one by where it sits after you sent it: *fresh*, *soft-nudge*, *check-in*, *last-call*, or *cold*. For each one, Plaino drafts the homeowner-facing nudge that fits that stage: a light touch on a fresh bid, a firmer note as it ages. Cold estimates don't get another email; they roll up into a single handoff to your rep with a phone-call ask, because by then a person should pick up the phone. Every draft lands in your approval queue with your name on it. You read it, you send it. Price and schedule are always left to you to fill in — Plaino never quotes a number.
 
 **The fleet, working from email on day one.** The moment you connect your inbox, the rest of the fleet starts:
 

@@ -251,7 +251,7 @@ export const general: VerticalContent = {
     planned: [
       { name: "Google Calendar", category: "Calendar" },
       {
-        name: "Generic CRM webhook receiver",
+        name: "Generic CRM connection",
         category: "Catch-all",
         note: "For tools outside the ten named verticals' integration roadmap",
       },

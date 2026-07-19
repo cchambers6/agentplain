@@ -21,7 +21,7 @@ import type { CostModel } from '../sourcing';
 
 /** Functional category of a we-bring service. */
 export type WeBringCategory =
-  | 'LLM'
+  | 'Reasoning'
   | 'Embeddings'
   | 'Email'
   | 'Voice'
@@ -72,10 +72,10 @@ export const TWILIO_METER_EVENT_ENV_KEY = 'STRIPE_TWILIO_METER_EVENT_NAME';
 export const WE_BRING_SERVICES: WeBringService[] = [
   {
     id: 'anthropic-llm',
-    name: 'Claude (reasoning)',
-    category: 'LLM',
+    name: 'Reasoning & drafting',
+    category: 'Reasoning',
     description:
-      'The reasoning that drafts your replies, triages your inbox, and runs your workflows. We hold the Anthropic account; you never see an API bill.',
+      'The reasoning that drafts your replies, triages your inbox, and runs your workflows. We run the account behind it; you never see an API bill.',
     costModel: 'included',
     meterUnit: 'tokens',
     // No hard cap — protected by the per-workspace token budget instead. The
@@ -122,7 +122,7 @@ export const WE_BRING_SERVICES: WeBringService[] = [
     name: 'Phone & voice minutes',
     category: 'Telephony',
     description:
-      'Outbound and inbound call minutes and the phone numbers that carry them. We own the Twilio account; the metered usage passes through onto your invoice at cost.',
+      'Outbound and inbound call minutes and the phone numbers that carry them. We own the carrier account; the metered usage passes through onto your invoice at cost.',
     costModel: 'pass-through',
     meterUnit: 'minutes',
     fairUseCap: null, // pass-through: you pay for what you use, nothing to cap

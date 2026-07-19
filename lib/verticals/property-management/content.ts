@@ -57,7 +57,7 @@ export const propertyManagement: VerticalContent = {
       job: "Routes maintenance to the right vendor by trade and zone with an access window.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your property-mgmt platform (AppFolio / Buildium / Propertyware) is connected with the vendor + zone directory.",
+        "Setting up — comes online once your property-mgmt platform (AppFolio / Buildium / Propertyware) is connected with the vendor + zone directory.",
     },
     {
       slug: "pm-lease-renewal",
@@ -65,7 +65,7 @@ export const propertyManagement: VerticalContent = {
       job: "Runs the 90/60/30-day renewal cadence with market-rent context attached.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your property-mgmt platform is connected for lease expirations and a market-rent feed.",
+        "Setting up — comes online once your property-mgmt platform is connected for lease expirations and a market-rent feed.",
     },
     {
       slug: "pm-collections",
@@ -86,7 +86,7 @@ export const propertyManagement: VerticalContent = {
       job: "Drafts the monthly per-owner report for the principal to send.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your property-mgmt platform and accounting stack are connected.",
+        "Setting up — comes online once your property-mgmt platform and accounting stack are connected.",
     },
     {
       slug: "pm-application-screening",
@@ -94,7 +94,7 @@ export const propertyManagement: VerticalContent = {
       job: "Normalizes applications against policy and drafts the approve/deny letter.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your screening provider (TransUnion SmartMove / RentPrep) is connected.",
+        "Setting up — comes online once your screening provider (TransUnion SmartMove / RentPrep) is connected.",
     },
     {
       slug: "pm-books-recon",
@@ -102,7 +102,7 @@ export const propertyManagement: VerticalContent = {
       job: "Drafts the owner-draw and trust-account reconciliation for review.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your trust-account ledger is connected.",
+        "Setting up — comes online once your trust-account ledger is connected.",
     },
     {
       // Horizontal chief-of-staff capability — proposals only, no execution.

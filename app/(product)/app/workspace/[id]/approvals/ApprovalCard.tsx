@@ -106,7 +106,7 @@ export function ConfidenceChip({ view }: { view: ConfidenceView }) {
       className={`inline-flex items-center gap-1.5 border px-2 py-0.5 font-mono text-[10px] tracking-eyebrow uppercase ${tone.chip}`}
       title={view.percent !== undefined ? `${view.percent}% confidence` : undefined}
     >
-      <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${tone.dot}`} />
+      <span aria-hidden className={`h-1.5 w-1.5 ${tone.dot}`} />
       {view.label}
       {view.percent !== undefined ? (
         <span className="opacity-70">· {view.percent}%</span>

@@ -27,9 +27,9 @@ seniority Owner / Partner / Director. **Landing URL:** https://agentplain.com/re
 3. `It drafts. You sign. Nothing leaves without you. Roughly $5,300/mo of coordination time back — about 26× the cost of a seat.` — 122
 
 ### Headlines (≤70)
-1. `Overnight drafts, ready to approve by 6:30am. You change one number and send.` — 76 → use `Drafts ready by 6:30am. You change one number and send.` — 54
-2. `Done-for-you AI for brokerages — the fleet drafts, you approve every send` — 72 → use `Done-for-you AI for brokerages. You approve every send.` — 54
-3. `A Fair-Housing scan flags risky listing phrasing before a person approves` — 72 → use `Fair-Housing scan flags risk before a person approves` — 52
+1. `Overnight drafts, ready to approve by 6:30am. You change one number and send.` — 76 → use `Drafts ready by 6:30am. You change one number and send.` (54)
+2. `Done-for-you AI for brokerages — the fleet drafts, you approve every send` (72) → use `Done-for-you AI for brokerages. You approve every send.` (54)
+3. `A Fair-Housing scan flags risky listing phrasing before a person approves` (72) → use `Fair-Housing scan flags risk before a person approves` — 52
 
 ---
 
@@ -46,7 +46,7 @@ layer QuickBooks / AICPA groups. **Landing URL:** https://agentplain.com/cpa **T
 3. `It drafts. You sign. Roughly $42,000 a year per staff seat in reclaimed tax-season hours. Nothing files on its own.` — 113
 
 ### Headlines (≤70)
-1. `The fleet drafted all 23 reminders. A partner reviewed 19 in 35 minutes.` — 71 → use `The fleet drafts the chase. A CPA reviews and signs.` — 51
+1. `The fleet drafted all 23 reminders. A partner reviewed 19 in 35 minutes.` (71) → use `The fleet drafts the chase. A CPA reviews and signs.` — 51
 2. `Done-for-you AI for accounting firms — a CPA signs, never a bot` — 62
 3. `Month-end close, doc chase, finance pulse — drafted to your queue` — 64
 
@@ -67,7 +67,7 @@ company size 1–50; seniority Owner / Partner / Director; exclude students, par
 
 ### Headlines (≤70)
 1. `The conflict screen runs in seconds. An attorney approves every draft.` — 69
-2. `Done-for-you AI for law firms — nothing sent or filed without your name` — 71 → use `Done-for-you AI for law firms. Nothing filed without you.` — 56
+2. `Done-for-you AI for law firms — nothing sent or filed without your name` (71) → use `Done-for-you AI for law firms. Nothing filed without you.` (56)
 3. `~$150,000/yr reclaimed at a 3-attorney firm. Talk to a service partner.` — 70
 
 ---
@@ -86,7 +86,7 @@ Partner ($199/seat). **Trial:** 7-day. **CTA button:** Sign Up.
 3. `It drafts. You sign. We never auto-text, so a non-consented blast never goes out by machine. Storm-heavy roofers reclaim $50,000+/yr.` — 131
 
 ### Headlines (≤70)
-1. `The fleet drafts the follow-up at the right stage. You approve and send.` — 71 → use `The fleet drafts the follow-up. You approve and send.` — 53
+1. `The fleet drafts the follow-up at the right stage. You approve and send.` (71) → use `The fleet drafts the follow-up. You approve and send.` — 53
 2. `Done-for-you office help for trades shops — you approve every send` — 65
 3. `We never auto-text. The one promise an auto-dialer can't make.` — 62
 
@@ -104,8 +104,8 @@ Practice Manager / CCO (small RIA); Financial Services / Investment Management; 
 
 ### Intro text (≤150, shown before "see more")
 1. `The quarterly client letters take a week of your evenings. Each one needs to sound like you and stay on the right side of the Marketing Rule.` — 139
-2. `The fleet drafts each letter overnight and leaves every dollar figure as a blank for you to fill. A Marketing Rule corpus flags it first.` — 134
-3. `It drafts. You sign. Nothing files as an advertisement on its own. The 2024 SEC sweeps settled $60k–$325k per adviser — we made the draft unable to make the claim.` — 161 → use `It drafts. You sign. Nothing files on its own. We built the draft so it never makes the claim — you do, with the number in front of you.` — 134
+2. `The fleet drafts each letter overnight and leaves every dollar figure as a blank for you to fill. A Marketing Rule corpus flags it first.` (134)
+3. `It drafts. You sign. Nothing files as an advertisement on its own. The 2024 SEC sweeps settled $60k–$325k per adviser — we made the draft unable to make the claim.` (161) → use `It drafts. You sign. Nothing files on its own. We built the draft so it never makes the claim — you do, with the number in front of you.` (134)
 
 ### Headlines (≤70)
 1. `Quarterly letters drafted overnight. Every number stays yours to fill.` — 69

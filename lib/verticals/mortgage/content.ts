@@ -75,7 +75,7 @@ export const mortgage: VerticalContent = {
       job: "Drafts a borrower status note on every milestone for the LO to send.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your LOS milestones webhook is connected.",
+        "Setting up — comes online once your LOS is connected for live milestone updates.",
     },
     {
       slug: "mortgage-pre-qual",
@@ -83,7 +83,7 @@ export const mortgage: VerticalContent = {
       job: "Pulls pricing and AUS eligibility to draft a pre-qual letter in minutes.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once Optimal Blue and DU / LP are connected.",
+        "Setting up — comes online once Optimal Blue and DU / LP are connected.",
     },
     {
       slug: "mortgage-conditions",
@@ -91,7 +91,7 @@ export const mortgage: VerticalContent = {
       job: "Translates UW conditions into a borrower note and the doc list to clear them.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your LOS conditions feed is connected.",
+        "Setting up — comes online once your LOS conditions feed is connected.",
     },
     {
       slug: "mortgage-vendor-coordination",
@@ -99,7 +99,7 @@ export const mortgage: VerticalContent = {
       job: "Orders appraisal and title, tracks status, and flags slipping files.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once appraisal-management and title vendor portals are connected.",
+        "Setting up — comes online once appraisal-management and title vendor portals are connected.",
     },
     {
       slug: "mortgage-production-reporter",
@@ -107,7 +107,7 @@ export const mortgage: VerticalContent = {
       job: "Drafts the weekly LO production read against plan.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your LOS pipeline export is connected.",
+        "Setting up — comes online once your LOS pipeline export is connected.",
     },
     {
       // Horizontal chief-of-staff capability — proposals only, no execution.

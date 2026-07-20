@@ -13,10 +13,12 @@ If a pass produces decisions, it gets this block. Without it, agents drift audie
 ## RATIFIED FRAME — standing decisions. Do not re-litigate.
 
 ### Model default
-- [As of 2026-07-08: Opus 4.8 default for code-task sessions; Sonnet for mechanical
-  plumbing; Haiku for conductor ticks; Fable only on explicit ask. Refresh from the
-  latest feedback_* model memory — this fact changes; if two same-day memories
-  conflict, flag it, don't pick.]
+- [As of 2026-07-19: Fable (`claude-fable-5`) default for all judgment work —
+  Max-plan-included at 50% share, no longer scarce. Sonnet for mechanical scoped
+  work (merges, config, script runs); Haiku for triage/watchdog/conductor ticks;
+  Opus 4.8 only for genuinely-1M-context or Fable-unavailable. In doubt → Fable.
+  Refresh from the latest feedback_* model memory — this fact changes; if two
+  same-day memories conflict, flag it, don't pick.]
 
 ### Biggest lever this week
 - [the single lever — e.g. "the first 5 GA-RE design-partner sends and the replies
@@ -64,4 +66,4 @@ If a pass produces decisions, it gets this block. Without it, agents drift audie
 
 ## Origin
 
-The "Ratified frame" block opening every 2026-07 orchestrator pass (`docs/ceo/2026-07-02/`, `docs/departments/2026-07-03/*`, `docs/loop/prompts/TRACKS.md`); kill list per `docs/kills/2026-07-03/RATIFIED.md` (seven kills, #3 overridden); model default per `feedback_back_to_opus_2026_07_08`.
+The "Ratified frame" block opening every 2026-07 orchestrator pass (`docs/ceo/2026-07-02/`, `docs/departments/2026-07-03/*`, `docs/loop/prompts/TRACKS.md`); kill list per `docs/kills/2026-07-03/RATIFIED.md` (seven kills, #3 overridden); model default per `feedback_fable_is_max_default_2026_07_19` + `project_model_routing_plan_2026_07_19` (superseding `feedback_back_to_opus_2026_07_08`).

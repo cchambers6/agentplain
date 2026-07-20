@@ -6,9 +6,11 @@ conducted by a 30-minute Haiku governor.** Nine tracks share one queue by
 weighted rotation. **Profitability is the loop's objective, not its stop
 condition** — every pass must end in a design decision, a merge-ready fix
 spec, or a specific action that makes the business more profitable; the loop
-itself never stops. There is no calendar stop either: when the Fable
-plan-included window closes (2026-07-07), Conner switches the `pass_model`
-knob — the model changes, the loop does not. No weekly cron anywhere.
+itself never stops. There is no calendar stop either: `pass_model` is a knob,
+not a stop. Model routing per the 2026-07-19 ratified plan
+(`project_model_routing_plan_2026_07_19`): Fable (`claude-fable-5`) for
+passes, Haiku for governor ticks, Sonnet for mechanical between-pass steps.
+No weekly cron anywhere.
 
 ## The layers at a glance
 
@@ -79,7 +81,7 @@ Drop into `create_scheduled_task`:
   "schedule": "*/30 * * * *",
   "timezone": "UTC",
   "cwd": "C:\\agentplain",
-  "model": "claude-haiku-4-5",
+  "model": "claude-haiku-4-5-20251001",
   "prompt": "You are the loop governor. Execute docs/loop/prompts/L3-haiku-heartbeat.md exactly — read it, then follow its decision tree top to bottom, first matching branch only. Work against memory/data/loop/state.yaml (schema v3) on a fresh pull of main. The loop runs forever — it has no stop condition; profitability is the objective passes design toward, not a gate, and pausing is Conner's operator action, never yours. Launch passes on the model named by pass_model in state.yaml. Commit state.yaml changes directly to main with message 'loop: governor tick'.",
   "allowed_tools": ["Read", "Edit", "Write", "Bash", "list_code_tasks", "start_code_task", "stop_code_task"],
   "max_runtime_minutes": 10
@@ -127,12 +129,27 @@ work; the rotation simply skips it until a pass on another track (usually
 CEO or chief-of-staff) files new items for it via `corrective_nudges` or its
 own follow-up rights.
 
-## Model switch (the Jul 7 transition — a knob, not a stop)
+## Model routing (updated 2026-07-19 — still a knob, not a stop)
 
-The Fable plan-included window ends 2026-07-07
-(`reference_claude_fable_5_back_2026_06_28`). **The loop keeps running
-through it.** Conner picks one of two prepared moves (or leaves Fable on
-usage credits if the math says so):
+Ratified 2026-07-19 (`project_model_routing_plan_2026_07_19` +
+`feedback_fable_is_max_default_2026_07_19`): Fable is Max-plan-included at
+50% share — no longer scarce. The Jul-7 window-close contingency this section
+used to plan for is retired. The routing:
+
+- **Track passes:** `pass_model: claude-fable-5` — every pass is judgment
+  work (design decisions, fix specs), which routes to Fable by default.
+- **Governor ticks:** `claude-haiku-4-5-20251001` — deterministic branching,
+  triage tier.
+- **Mechanical between-pass steps** run outside the loop (merging pass
+  output, state repairs, config fixes): `claude-sonnet-5`.
+- **Opus 4.8** only for genuinely 1M-context passes or Fable-unavailable
+  fallback — rare.
+
+The knob semantics are unchanged — `pass_model` in state.yaml takes any model
+id and the governor reads it on the next fire. The two throttle moves below
+remain valid **operator** options if Conner ever wants to cut spend, but the
+default is Fable; downgrading on your own initiative to save a resource that
+is no longer scarce is exactly what the routing plan bans:
 
 - **Option A — switch the fleet model:** set `pass_model:
   claude-opus-4-8` in state.yaml (one line; the governor reads it on the
@@ -151,10 +168,8 @@ usage credits if the math says so):
   fresh at a few dollars a day while the mapping tracks hibernate with their
   queues intact. Un-pause any track to resume it; nothing is lost.
 
-Both options are reversible edits to state.yaml only. Never let the window
-closing stop the loop silently — if neither option is applied, passes keep
-firing on Fable at usage-credit rates, which is a spend decision Conner
-should make deliberately, not by default.
+Both options are reversible edits to state.yaml only, and both are Conner's
+moves — the loop itself never downgrades its own model.
 
 ## Operator controls (Conner only — the loop never stops itself)
 
@@ -173,7 +188,8 @@ There is no runtime component; stopping the loop cannot affect the product.
 
 ## Cost
 
-- **Track passes until Jul 7: $0 marginal** — plan-included Fable window.
+- **Track passes: plan-included** — Fable is Max-plan-included at 50% share
+  (2026-07-19, `feedback_fable_is_max_default_2026_07_19`).
   Token-equivalent value for calibration: ~$2.50–3.25 per journey map +
   ~$1.50–2.10 per L2 vertical at Fable card rates ($10/$50 per MTok); the
   new lens tracks (CEO, CoS, product-owner, tab/agent audits, business-model,
@@ -183,9 +199,9 @@ There is no runtime component; stopping the loop cannot affect the product.
 - **Governor**: ~48 ticks/day; each tick reads state.yaml + session list and
   writes a few lines (~5–15k in / <1k out on Haiku at $1/$5 per MTok) →
   **well under $1/day**, ~$15–20/month worst case with quality-gate ticks.
-- **After Jul 7**: per the Model switch section — ~$25–40/day for the full
-  9-track loop on Opus, a few dollars a day for Option B's strategic-only
-  mode.
+- **If throttled** (operator choice only, per the Model routing section):
+  ~$25–40/day for the full 9-track loop on Opus, a few dollars a day for
+  Option B's strategic-only mode.
 - Sanity caps: a pass emitting >100k output tokens or a governor tick that
   wants to read content files wholesale is misbehaving — kill and inspect.
 

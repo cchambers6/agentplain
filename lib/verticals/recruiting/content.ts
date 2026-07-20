@@ -1,4 +1,8 @@
 import type { VerticalContent } from "../types";
+import {
+  TRIAL_PERIOD_DAYS,
+  MONEY_BACK_GUARANTEE_DAYS,
+} from "../../billing/facts";
 
 // Source: realty-recruiter-assistant precedent in `realty_vertical_spec_v1_2026-05-03.md`
 // §2.2 (deferred-V1 recruiter shape) generalized to standalone recruiting
@@ -33,7 +37,7 @@ export const recruiting: VerticalContent = {
     },
     {
       q: "How much does agentplain cost for a recruiting firm?",
-      a: "Recruiting is recommended at the Regular tier — $199 per seat per month for a solo recruiter, sliding to $99 per seat at 50+ seats. Every tier is per seat, month-to-month, with the first month free, and you can cancel anytime.",
+      a: `Recruiting is recommended at the Regular tier — $199 per seat per month for a solo recruiter, sliding to $99 per seat at 50+ seats. Every tier is per seat and month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
     },
     {
       q: "Does the fleet send outreach to candidates on its own?",

@@ -1,3 +1,9 @@
+---
+name: design-quality-gate
+description: Reviews PRs touching customer-facing surfaces for brand-standard compliance and blocks merges below 4/5 on the customer-value bar.
+model: fable
+---
+
 # Design Quality Gate Agent
 
 ## Role

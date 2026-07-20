@@ -6,7 +6,9 @@ profitability — not to describe the business. One pass = one track's lens
 applied to one queue-item scope. The L3 governor picks the track by weighted
 rotation (see `L3-haiku-heartbeat.md` § STEP 2); this file defines what each
 track designs, where it writes, and what "done" looks like. Internal doc —
-model names allowed; nothing here ships to a customer surface.
+model names allowed; nothing here ships to a customer surface. Model routing:
+passes run on `pass_model` (`claude-fable-5` — judgment tier), governor on
+Haiku, per `project_model_routing_plan_2026_07_19`.
 
 **The deliverable rule (hard, every track):** the 2026-07-02 audit + kaizen +
 deep-dive cycle produced the analysis; the CEO Pass 1 kill list explicitly

@@ -38,6 +38,7 @@ For a sweep: loop `GET /pulls?state=open`, print one row per PR (number, mergeab
 - **PR body from a file** (`.pr-body-<slug>.md`, `fs.readFileSync`) — never shell-quote a multi-paragraph body.
 - **Token TTL ~1h** — a long pre-push gate can outlive the token; re-mint before the PR call (`docs/kaizen/2026-07-02/01-engineering.md` friction-8).
 - **Report the full clickable URL** (`https://github.com/<owner>/<repo>/pull/<n>`), never a bare `#n` (`feedback_always_link_prs`).
+- **Model: merge/PR sessions are mechanical scoped work → `claude-sonnet-5`** (`project_model_routing_plan_2026_07_19`); bounded to the brief, no exploration.
 
 ## Example invocation
 

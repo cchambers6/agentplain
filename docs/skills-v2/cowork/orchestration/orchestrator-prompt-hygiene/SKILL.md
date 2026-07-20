@@ -26,7 +26,7 @@ Each rule here is a recorded way a dispatched session produced nothing while loo
 3. Ready-for-review PR, full URL in the report ([[curl-per-pr-merge]], [[report-back]])
 4. Memory-inbox append block ([[librarian-inbox-rollup]])
 5. The ratified frame, when the pass decides anything ([[ratified-frame-preamble]])
-6. Model routing per the current default (as of 2026-07-08: Opus 4.8 default; Sonnet for mechanical plumbing; Haiku for conductor ticks; Fable only on explicit ask — `feedback_back_to_opus_2026_07_08`)
+6. Model routing per the current default (as of 2026-07-19: Fable `claude-fable-5` default for all judgment work — Max-plan-included, no longer scarce; Sonnet `claude-sonnet-5` for mechanical plumbing; Haiku `claude-haiku-4-5-20251001` for conductor ticks and triage; Opus 4.8 only for 1M-context or Fable-unavailable — `project_model_routing_plan_2026_07_19`, `feedback_fable_is_max_default_2026_07_19`)
 
 ## Example invocation
 

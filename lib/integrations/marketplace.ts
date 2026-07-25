@@ -158,7 +158,14 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     description:
       'Your service partner connects your Gmail to read, categorize, coordinate, schedule, and draft replies.',
     mcpEndpointTemplate: '/api/integrations/gmail-mcp/{workspaceId}',
-    scopes: ['gmail.readonly', 'gmail.modify', 'gmail.compose'],
+    // `gmail.modify` is the least-privilege scope that covers everything the
+    // MCP surface does: reads, drafts (users.drafts.create), label changes,
+    // archive, AND the approval-gated send behind /approvals. This list is
+    // what the OAuth start route actually REQUESTS (oauth-urls.ts passes it
+    // through verbatim) — keep it in lockstep with the tool surface. Grants
+    // made before 2026-07-19 carry `gmail.readonly` only; those workspaces
+    // reconnect once (prompt=consent re-grants) to unlock drafting.
+    scopes: ['https://www.googleapis.com/auth/gmail.modify'],
     oauthConfigKey: 'GMAIL_OAUTH',
     status: 'available',
     providerKey: 'GOOGLE',
@@ -166,6 +173,30 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     // is the operations spine; sales follow-ups, customer-success checks,
     // and marketing reply drafts all sit on top of it.
     disciplines: ['operations', 'sales-enablement', 'customer-success', 'marketing'],
+    verticalRelevance: 'all',
+  },
+  {
+    id: 'google-calendar',
+    name: 'Google Calendar',
+    category: 'Calendar',
+    description:
+      'Your service partner reads your calendar to find open time, proposes meeting slots, and puts confirmed appointments on the books — every new or changed event waits for your approval.',
+    mcpEndpointTemplate: '/api/integrations/google-calendar-mcp/{workspaceId}',
+    // Reuses the Gmail Google OAuth app + the SAME `GOOGLE` credential row
+    // (one Google account powers Gmail + Drive + Calendar; scopes merge via
+    // include_granted_scopes). `calendar.events` covers event create/update/
+    // cancel — all approval-gated; `calendar.readonly` covers the calendar
+    // list + free/busy reads the scheduler runs ungated.
+    scopes: [
+      'https://www.googleapis.com/auth/calendar.events',
+      'https://www.googleapis.com/auth/calendar.readonly',
+    ],
+    oauthConfigKey: 'GOOGLE_OAUTH',
+    status: 'available',
+    providerKey: 'GOOGLE',
+    // Scheduling is the operations spine's second surface after the inbox —
+    // sales books discovery calls, customer-success books check-ins.
+    disciplines: ['operations', 'sales-enablement', 'customer-success'],
     verticalRelevance: 'all',
   },
   {
@@ -184,6 +215,26 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     status: 'available',
     providerKey: 'M365',
     disciplines: ['operations', 'sales-enablement', 'customer-success', 'marketing'],
+    verticalRelevance: 'all',
+  },
+  {
+    id: 'outlook-calendar',
+    name: 'Outlook Calendar',
+    category: 'Calendar',
+    description:
+      'Your service partner reads your calendar to find open time, proposes meeting slots, and puts confirmed appointments on the books — every new or changed event waits for your approval.',
+    mcpEndpointTemplate: '/api/integrations/outlook-calendar-mcp/{workspaceId}',
+    // Shares the Outlook Entra OAuth app + the SAME `M365` credential row
+    // (incremental consent merges Calendars.ReadWrite onto an existing mail
+    // grant). Rides the shared /api/integrations/microsoft/oauth/callback
+    // like Teams/OneDrive/Excel. Calendars.ReadWrite covers the reads plus
+    // the approval-gated create/update/cancel; free/busy derives from
+    // calendarView `showAs`, so no extra shared-calendar scope is requested.
+    scopes: ['Calendars.ReadWrite', 'offline_access'],
+    oauthConfigKey: 'MICROSOFT_OAUTH',
+    status: 'available',
+    providerKey: 'M365',
+    disciplines: ['operations', 'sales-enablement', 'customer-success'],
     verticalRelevance: 'all',
   },
   {

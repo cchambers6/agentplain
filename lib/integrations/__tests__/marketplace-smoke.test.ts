@@ -71,6 +71,10 @@ import {
   type ExcelMcpServer,
 } from '@/lib/integrations/excel-mcp';
 import { buildOutlookCalendarMcpServer } from '@/lib/integrations/outlook-calendar-mcp';
+import {
+  InMemoryConnectorApprovalGate,
+  InMemoryConnectorActionAuditSink,
+} from '@/lib/integrations/approval';
 
 import {
   TEST_WORKSPACE_ID,
@@ -336,6 +340,11 @@ const ADAPTERS_BY_ID = new Map(ADAPTERS.map((a) => [a.id, a]));
 // counts them as covered (not silently deferred).
 const COVERED_IN_WAVE_2 = new Set(['docusign', 'quickbooks', 'slack']);
 
+// Calendar connectors take the same dispatch contract (plus the approval-gate
+// + scheduling value loop) in `marketplace-smoke-calendar.test.ts`, and each
+// carries its own `write-actions.test.ts` for grant-by-grant gate coverage.
+const COVERED_IN_CALENDAR_SUITE = new Set(['google-calendar', 'outlook-calendar']);
+
 // Connectors that are `available` but still awaiting a fixture + real-data
 // leg. NOTE: `hubspot` is available but ships no JSON-RPC dispatch surface
 // (no HUBSPOT_TOOLS / namespace / route); it is consumed via its typed
@@ -386,7 +395,13 @@ describe('Marketplace MCP contract', () => {
   it('every available connector is either covered or explicitly deferred', () => {
     const uncovered = available
       .map((e) => e.id)
-      .filter((id) => !ADAPTERS_BY_ID.has(id) && !DEFERRED.has(id) && !COVERED_IN_WAVE_2.has(id));
+      .filter(
+        (id) =>
+          !ADAPTERS_BY_ID.has(id) &&
+          !DEFERRED.has(id) &&
+          !COVERED_IN_WAVE_2.has(id) &&
+          !COVERED_IN_CALENDAR_SUITE.has(id),
+      );
     assert.deepEqual(
       uncovered,
       [],
@@ -462,22 +477,33 @@ function runContract(entry: MarketplaceEntry, adapter: SmokeAdapter): void {
   });
 }
 
-// ── Calendar: the wave-1 spec named "M365 Calendar" as the 4th connector,
-// but the catalog has NO calendar entry, and `outlook-calendar-mcp` is
-// read-only BY DESIGN (no get_event / propose_event — that would violate
-// `project_no_outbound_architecture.md`). Rather than invent a connector or
-// a send-shaped tool, we pin the read-only contract as tested truth and
-// guard against a calendar connector silently appearing without coverage.
+// ── Calendar: the scheduling wave (2026-07) promoted BOTH calendar
+// connectors to `available` marketplace entries with approval-gated write
+// tools (book / reschedule / update / cancel) — the no-outbound guarantee
+// moved from "the methods don't exist" to "the methods are GATED at the
+// factory seam", the same wave-2 model Gmail's schedule_send uses. The full
+// dispatch contract + gate coverage lives in
+// `marketplace-smoke-calendar.test.ts`; grant-by-grant gate proofs live in
+// each connector's `write-actions.test.ts`. This block pins the promotion so
+// a catalog regression (entry vanishing, or a THIRD calendar id appearing
+// without coverage) fails loudly here.
 
-describe('outlook-calendar-mcp — read-only contract (not yet a marketplace entry)', () => {
-  it('is intentionally NOT an available marketplace connector yet', () => {
+describe('calendar connectors — marketplace promotion pinned', () => {
+  it('google-calendar and outlook-calendar are available catalog entries', () => {
     const ids = listIntegrations()
       .filter((e) => e.status === 'available')
       .map((e) => e.id);
-    for (const candidate of ['outlook-calendar', 'm365-calendar', 'calendar']) {
+    for (const expected of ['google-calendar', 'outlook-calendar']) {
+      assert.ok(
+        ids.includes(expected),
+        `"${expected}" must stay an available marketplace entry (calendar suite covers it)`,
+      );
+    }
+    // No third calendar id may appear without joining the calendar suite.
+    for (const candidate of ['m365-calendar', 'calendar', 'gcal']) {
       assert.ok(
         !ids.includes(candidate),
-        `"${candidate}" became available — register it as a SmokeAdapter and give it a real-data leg`,
+        `"${candidate}" became available — add it to marketplace-smoke-calendar.test.ts`,
       );
     }
   });
@@ -499,17 +525,28 @@ describe('outlook-calendar-mcp — read-only contract (not yet a marketplace ent
     assert.equal(res.ok, false, 'an empty/inverted window is rejected');
   });
 
-  it('exposes no event-creation method (honors no-outbound architecture)', () => {
+  it('mutating methods exist but are approval-gated at the factory seam', async () => {
     const server = buildOutlookCalendarMcpServer({
       workspaceId: TEST_WORKSPACE_ID,
       preferTestImpl: true,
-    }) as unknown as Record<string, unknown>;
-    for (const forbidden of ['proposeEvent', 'createEvent', 'updateEvent', 'deleteEvent', 'sendInvite', 'getEvent']) {
-      assert.equal(
-        typeof server[forbidden],
-        'undefined',
-        `calendar server must not expose ${forbidden} (read-only by design)`,
-      );
-    }
+      // In-memory gate (unseeded) — deterministic refusal, no DB required.
+      deps: {
+        gate: new InMemoryConnectorApprovalGate(),
+        audit: new InMemoryConnectorActionAuditSink(),
+      },
+    });
+    // The factory MUST hand back a gated server — a mutation with no grant
+    // refuses with APPROVAL_REQUIRED before any vendor call.
+    const res = await server.bookMeeting({
+      summary: 'Smoke — must be gated',
+      start: '2026-06-05T15:00:00.000Z',
+      end: '2026-06-05T15:30:00.000Z',
+    });
+    assert.equal(res.ok, false, 'ungranted mutation is refused');
+    assert.equal(
+      res.ok === false && res.error.code,
+      'APPROVAL_REQUIRED',
+      'refusal is the approval gate, not a vendor error',
+    );
   });
 });

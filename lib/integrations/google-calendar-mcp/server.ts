@@ -11,9 +11,11 @@
  * and `lib/skills/gmail-fetcher.ts`). Skill code, route handlers, and
  * cron functions speak the MCP interface only.
  *
- * Per `project_no_outbound_architecture.md`: the tool surface is
- * READ-ONLY — no insert / update / delete. The scheduler proposes;
- * the customer's calendar performs the actual booking.
+ * Per `project_no_outbound_architecture.md`: every mutation on this surface
+ * (`bookMeeting`, `rescheduleMeeting`, `updateEvent`, `cancelEvent`) is
+ * approval-gated at the factory seam — the SDK calls below never run without
+ * a recorded operator approval. The reads (`listCalendars`, `listEvents`,
+ * `getEvent`, `findAvailability`, `proposeTimes`) pass through ungated.
  *
  * Per `feedback_cold_start_safe_agents.md`: `withClient` re-resolves the
  * credential on every call. No decrypted token lives on the instance.
@@ -23,9 +25,14 @@ import { google, type calendar_v3 } from 'googleapis';
 import { resolveCredential } from './auth';
 import type { DecryptedCredential } from '@/lib/integrations/types';
 import {
+  type CalendarDescriptor,
+  type CalendarEventDetailDto,
   type CalendarEventDto,
+  type GetEventInput,
+  type GetEventOutput,
   type GoogleCalendarMcpResult,
   type GoogleCalendarMcpServer,
+  type ListCalendarsOutput,
   type ListEventsInput,
   type ListEventsOutput,
   type ReadResourceInput,
@@ -39,9 +46,16 @@ import type {
   BookMeetingOutput,
   RescheduleMeetingInput,
   RescheduleMeetingOutput,
+  UpdateEventInput,
+  UpdateEventOutput,
+  CancelEventInput,
+  CancelEventOutput,
   FindAvailabilityInput,
   FindAvailabilityOutput,
+  ProposeTimesInput,
+  ProposeTimesOutput,
 } from './actions';
+import { computeProposals, validateProposeTimesInput } from './propose-times';
 
 const DEFAULT_MAX_RESULTS = 250;
 const MAX_PAGE_SIZE = 2500;
@@ -60,6 +74,26 @@ export class ProdGoogleCalendarMcpServer implements GoogleCalendarMcpServer {
   }
 
   // ── Tools ────────────────────────────────────────────────────────────
+
+  async listCalendars(): Promise<GoogleCalendarMcpResult<ListCalendarsOutput>> {
+    return this.withClient(async (client) => {
+      try {
+        const res = await client.calendarList.list({ maxResults: 250 });
+        const calendars: CalendarDescriptor[] = (res.data.items ?? [])
+          .filter((c) => Boolean(c.id))
+          .map((c) => ({
+            id: c.id ?? '',
+            title: c.summaryOverride ?? c.summary ?? '(untitled calendar)',
+            isPrimary: c.primary === true,
+            accessRole: c.accessRole ?? 'reader',
+            timezone: c.timeZone ?? null,
+          }));
+        return calendarOk({ calendars });
+      } catch (err) {
+        return mapGoogleApiError(err);
+      }
+    });
+  }
 
   async listEvents(
     input: ListEventsInput,
@@ -85,6 +119,49 @@ export class ProdGoogleCalendarMcpServer implements GoogleCalendarMcpServer {
       } catch (err) {
         return mapGoogleApiError(err);
       }
+    });
+  }
+
+  async getEvent(
+    input: GetEventInput,
+  ): Promise<GoogleCalendarMcpResult<GetEventOutput>> {
+    if (!input.eventId?.trim()) {
+      return calendarError('INVALID_ARGUMENT', 'getEvent requires an eventId');
+    }
+    const calendarId = input.calendarId?.trim() || 'primary';
+    return this.withClient(async (client) => {
+      try {
+        const res = await client.events.get({ calendarId, eventId: input.eventId });
+        const detail = parseGoogleEventDetail(res.data);
+        if (!detail) {
+          return calendarError(
+            'MALFORMED_RESPONSE',
+            'Google events.get returned an event without id or a discrete time window',
+          );
+        }
+        return calendarOk({ event: detail });
+      } catch (err) {
+        return mapGoogleApiError(err);
+      }
+    });
+  }
+
+  async proposeTimes(
+    input: ProposeTimesInput,
+  ): Promise<GoogleCalendarMcpResult<ProposeTimesOutput>> {
+    const validated = validateProposeTimesInput(input);
+    if (!validated.ok) return validated;
+    // One free/busy READ; the slot arithmetic is pure local computation
+    // (./propose-times.ts) so the test server + unit tests exercise the
+    // exact same proposal logic without a Google round-trip.
+    const availability = await this.findAvailability({
+      timeMin: input.timeMin,
+      timeMax: input.timeMax,
+      calendarIds: input.calendarIds,
+    });
+    if (!availability.ok) return availability;
+    return calendarOk({
+      proposals: computeProposals(validated.value, availability.value.busy),
     });
   }
 
@@ -233,6 +310,93 @@ export class ProdGoogleCalendarMcpServer implements GoogleCalendarMcpServer {
     });
   }
 
+  async updateEvent(
+    input: UpdateEventInput,
+  ): Promise<GoogleCalendarMcpResult<UpdateEventOutput>> {
+    if (!input.eventId?.trim()) {
+      return calendarError('INVALID_ARGUMENT', 'updateEvent requires an eventId');
+    }
+    const hasStart = input.start !== undefined;
+    const hasEnd = input.end !== undefined;
+    if (hasStart !== hasEnd) {
+      return calendarError(
+        'INVALID_ARGUMENT',
+        'updateEvent requires start and end together (or neither)',
+      );
+    }
+    let start: Date | undefined;
+    let end: Date | undefined;
+    if (hasStart && hasEnd) {
+      start = new Date(input.start as string);
+      end = new Date(input.end as string);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        return calendarError('INVALID_ARGUMENT', 'updateEvent requires ISO 8601 start + end');
+      }
+      if (end.getTime() <= start.getTime()) {
+        return calendarError('INVALID_ARGUMENT', 'updateEvent requires end strictly after start');
+      }
+    }
+    if (
+      input.summary === undefined &&
+      input.description === undefined &&
+      input.attendees === undefined &&
+      input.location === undefined &&
+      !hasStart
+    ) {
+      return calendarError('INVALID_ARGUMENT', 'updateEvent requires at least one field to change');
+    }
+    const calendarId = input.calendarId?.trim() || 'primary';
+
+    return this.withClient(async (client) => {
+      try {
+        const res = await client.events.patch({
+          calendarId,
+          eventId: input.eventId,
+          requestBody: {
+            ...(input.summary !== undefined ? { summary: input.summary } : {}),
+            ...(input.description !== undefined ? { description: input.description } : {}),
+            ...(input.location !== undefined ? { location: input.location } : {}),
+            ...(start && end
+              ? {
+                  start: { dateTime: start.toISOString() },
+                  end: { dateTime: end.toISOString() },
+                }
+              : {}),
+            ...(input.attendees !== undefined
+              ? { attendees: input.attendees.map((email) => ({ email })) }
+              : {}),
+          },
+        });
+        if (!res.data.id) {
+          return calendarError('MALFORMED_RESPONSE', 'Google events.patch returned no event id');
+        }
+        return calendarOk({
+          eventId: res.data.id,
+          htmlLink: res.data.htmlLink ?? undefined,
+        });
+      } catch (err) {
+        return mapGoogleApiError(err);
+      }
+    });
+  }
+
+  async cancelEvent(
+    input: CancelEventInput,
+  ): Promise<GoogleCalendarMcpResult<CancelEventOutput>> {
+    if (!input.eventId?.trim()) {
+      return calendarError('INVALID_ARGUMENT', 'cancelEvent requires an eventId');
+    }
+    const calendarId = input.calendarId?.trim() || 'primary';
+    return this.withClient(async (client) => {
+      try {
+        await client.events.delete({ calendarId, eventId: input.eventId });
+        return calendarOk({ eventId: input.eventId, cancelled: true as const });
+      } catch (err) {
+        return mapGoogleApiError(err);
+      }
+    });
+  }
+
   // ── Resources ────────────────────────────────────────────────────────
 
   async listResources(): Promise<
@@ -372,6 +536,42 @@ export function parseGoogleEvent(
     startUtc: startIso,
     endUtc: endIso,
     isBusy,
+  };
+}
+
+/**
+ * Map a Google `Event` to the full detail DTO `getEvent` returns. Same
+ * window rules as `parseGoogleEvent` (null when no id or no discrete time
+ * window), plus attendees/description/location for the approval-card +
+ * drafting path. Unlike the list parser, a CANCELLED event is returned (with
+ * `status: 'cancelled'`) — an explicit get-by-id should say what happened to
+ * the event, not pretend it never existed.
+ */
+export function parseGoogleEventDetail(
+  evt: calendar_v3.Schema$Event,
+): CalendarEventDetailDto | null {
+  if (!evt.id) return null;
+  const startIso = readIsoInstant(evt.start);
+  const endIso = readIsoInstant(evt.end);
+  if (!startIso || !endIso) return null;
+  const base: CalendarEventDto = {
+    id: evt.id,
+    title: evt.summary ?? '(untitled event)',
+    startUtc: startIso,
+    endUtc: endIso,
+    isBusy: (evt.transparency ?? 'opaque') !== 'transparent',
+  };
+  return {
+    ...base,
+    description: evt.description ?? null,
+    location: evt.location ?? null,
+    attendees: (evt.attendees ?? [])
+      .filter((a): a is calendar_v3.Schema$EventAttendee & { email: string } =>
+        Boolean(a.email),
+      )
+      .map((a) => ({ email: a.email, responseStatus: a.responseStatus ?? null })),
+    htmlLink: evt.htmlLink ?? null,
+    status: evt.status ?? null,
   };
 }
 

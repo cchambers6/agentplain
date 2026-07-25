@@ -148,7 +148,9 @@ export interface MessageAttachment {
 }
 
 export interface SearchThreadsInput {
-  query: string;
+  /** Gmail search-syntax query. OMIT to list the most recent threads
+   *  unfiltered — the same call then serves as the bare thread list. */
+  query?: string;
   maxResults?: number;
   pageToken?: string;
 }

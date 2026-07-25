@@ -159,16 +159,16 @@ export class ProdGmailMcpServer implements GmailMcpServer {
   async searchThreads(
     input: SearchThreadsInput,
   ): Promise<GmailMcpResult<SearchThreadsOutput>> {
-    if (!input.query || input.query.trim().length === 0) {
-      return gmailError('INVALID_ARGUMENT', 'searchThreads requires query');
-    }
     const validation = validateMaxResults(input.maxResults);
     if (!validation.ok) return validation;
     return this.withClient(async (client) => {
       try {
+        // `q` omitted ⇒ Gmail lists the most recent threads unfiltered —
+        // the bare thread list.
+        const query = input.query?.trim();
         const res = await client.users.threads.list({
           userId: 'me',
-          q: input.query,
+          ...(query ? { q: query } : {}),
           maxResults: validation.value,
           pageToken: input.pageToken,
         });

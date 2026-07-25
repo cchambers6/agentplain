@@ -69,7 +69,12 @@ export type {
   GoogleCalendarMcpError,
   GoogleCalendarMcpErrorCode,
   GoogleCalendarToolName,
+  CalendarDescriptor,
   CalendarEventDto,
+  CalendarEventDetailDto,
+  GetEventInput,
+  GetEventOutput,
+  ListCalendarsOutput,
   ListEventsInput,
   ListEventsOutput,
   ResourceDescriptor,
@@ -84,6 +89,7 @@ export {
 export {
   ProdGoogleCalendarMcpServer,
   parseGoogleEvent,
+  parseGoogleEventDetail,
 } from './server';
 export {
   TestGoogleCalendarMcpServer,
@@ -95,12 +101,25 @@ export {
   GOOGLE_CALENDAR_CONNECTOR,
   BOOK_MEETING,
   RESCHEDULE_MEETING,
+  UPDATE_EVENT,
+  CANCEL_EVENT,
   calendarAction,
   type WriteActionDescriptor,
   type BookMeetingInput,
   type BookMeetingOutput,
   type RescheduleMeetingInput,
   type RescheduleMeetingOutput,
+  type UpdateEventInput,
+  type UpdateEventOutput,
+  type CancelEventInput,
+  type CancelEventOutput,
   type FindAvailabilityInput,
   type FindAvailabilityOutput,
+  type ProposeTimesInput,
+  type ProposeTimesOutput,
 } from './actions';
+export {
+  GOOGLE_CALENDAR_NAMESPACE,
+  GOOGLE_CALENDAR_TOOLS,
+} from './tools';
+export { computeProposals, validateProposeTimesInput } from './propose-times';

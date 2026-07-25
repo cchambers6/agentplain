@@ -138,3 +138,19 @@ test('reads pass through the gate untouched', async () => {
   const labels = await server.listLabels();
   assert.equal(labels.ok, true);
 });
+
+test('searchThreads with no query lists recent threads (bare thread list)', async () => {
+  const { server } = setup();
+  const bare = await server.searchThreads({});
+  assert.equal(bare.ok, true);
+  assert.ok(bare.ok === true && Array.isArray(bare.value.threads), 'threads is an array');
+  // A query still filters — the same tool serves both shapes.
+  const filtered = await server.searchThreads({ query: 'from:nobody@example.invalid' });
+  assert.equal(filtered.ok, true);
+  if (bare.ok && filtered.ok) {
+    assert.ok(
+      filtered.value.threads.length <= bare.value.threads.length,
+      'a filtering query never returns more than the bare list',
+    );
+  }
+});

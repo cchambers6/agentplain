@@ -142,9 +142,6 @@ export class TestGmailMcpServer implements GmailMcpServer {
     input: SearchThreadsInput,
   ): Promise<GmailMcpResult<SearchThreadsOutput>> {
     this.calls.push({ method: 'searchThreads', args: input });
-    if (!input.query) {
-      return gmailError('INVALID_ARGUMENT', 'searchThreads requires query');
-    }
     const max = input.maxResults ?? 25;
     const byThread = new Map<string, FullMessage[]>();
     for (const m of this.messages.values()) {

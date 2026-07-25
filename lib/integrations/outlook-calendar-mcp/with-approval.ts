@@ -1,25 +1,25 @@
 /**
- * lib/integrations/google-calendar-mcp/with-approval.ts
+ * lib/integrations/outlook-calendar-mcp/with-approval.ts
  *
- * The Google Calendar approval gate — the connector-specific decorator that
+ * The Outlook Calendar approval gate — the connector-specific decorator that
  * forces EVERY mutating Calendar method through the shared connector approval
- * gate (`lib/integrations/approval`) before Google's REST API is touched.
- * Mirrors `hubspot-mcp/with-approval.ts`, built on the same generic gate so the
- * connectors share one fingerprint/persistence/audit core.
+ * gate (`lib/integrations/approval`) before Microsoft Graph is touched.
+ * Mirrors `google-calendar-mcp/with-approval.ts`, built on the same generic
+ * gate so the connectors share one fingerprint/persistence/audit core.
  *
  * Read methods pass straight through: `listCalendars`, `listEvents`,
- * `getEvent`, `findAvailability` (free/busy), and `proposeTimes` (slot
- * arithmetic over free/busy) mutate nothing. The mutations — `bookMeeting`
- * (events.insert, invites attendees), `rescheduleMeeting` (events.patch),
- * `updateEvent` (events.patch), and `cancelEvent` (events.delete, notifies
- * attendees) — are intercepted: a missing/invalid/expired grant returns
- * APPROVAL_REQUIRED and the Google call never happens; a valid grant lets the
- * call run and is audit-logged.
+ * `getEvent`, `findAvailability` (busy blocks from calendarView), and
+ * `proposeTimes` (slot arithmetic over free/busy) mutate nothing. The
+ * mutations — `bookMeeting` (POST /me/events, invites attendees),
+ * `rescheduleMeeting` (PATCH), `updateEvent` (PATCH), and `cancelEvent`
+ * (DELETE, Graph sends cancellations) — are intercepted: a missing/invalid/
+ * expired grant returns APPROVAL_REQUIRED and the Graph call never happens;
+ * a valid grant lets the call run and is audit-logged.
  *
- * Installed at the factory seam (`buildGoogleCalendarMcpServer`), so an ungated
- * Calendar server cannot be obtained.
+ * Installed at the factory seam (`buildOutlookCalendarMcpServer`), so an
+ * ungated Calendar server cannot be obtained.
  *
- * Result-type bridge: this connector uses its OWN `GoogleCalendarMcpResult<T>`,
+ * Result-type bridge: this connector uses its OWN `OutlookCalendarMcpResult<T>`,
  * which is STRUCTURALLY IDENTICAL to the generic `McpResult<T>` the gate speaks
  * — same `{ ok: true; value } | { ok: false; error }` union, and the
  * `APPROVAL_REQUIRED` code exists in both error unions. We therefore bridge with
@@ -36,11 +36,11 @@ import {
 import type {
   GetEventInput,
   GetEventOutput,
-  GoogleCalendarMcpResult,
-  GoogleCalendarMcpServer,
   ListCalendarsOutput,
   ListEventsInput,
   ListEventsOutput,
+  OutlookCalendarMcpResult,
+  OutlookCalendarMcpServer,
   ReadResourceInput,
   ReadResourceOutput,
   ResourceDescriptor,
@@ -67,19 +67,19 @@ import {
 } from './actions';
 
 /** Wrap a Calendar server so all mutating methods require an approved grant. */
-export function withGoogleCalendarApproval(
-  inner: GoogleCalendarMcpServer,
+export function withOutlookCalendarApproval(
+  inner: OutlookCalendarMcpServer,
   deps: ConnectorApprovalDeps,
-): GoogleCalendarMcpServer {
-  return new GatedGoogleCalendarMcpServer(inner, deps);
+): OutlookCalendarMcpServer {
+  return new GatedOutlookCalendarMcpServer(inner, deps);
 }
 
-class GatedGoogleCalendarMcpServer implements GoogleCalendarMcpServer {
+class GatedOutlookCalendarMcpServer implements OutlookCalendarMcpServer {
   readonly name: string;
   readonly workspaceId: string;
 
   constructor(
-    private readonly inner: GoogleCalendarMcpServer,
+    private readonly inner: OutlookCalendarMcpServer,
     private readonly deps: ConnectorApprovalDeps,
   ) {
     this.name = inner.name;
@@ -88,52 +88,52 @@ class GatedGoogleCalendarMcpServer implements GoogleCalendarMcpServer {
 
   /**
    * Run a mutating method through the shared gate. The gate speaks the generic
-   * `McpResult<T>`; this connector speaks `GoogleCalendarMcpResult<T>`. The two
+   * `McpResult<T>`; this connector speaks `OutlookCalendarMcpResult<T>`. The two
    * are the identical discriminated-union shape, so we cast the `execute`
    * Promise into the generic type going in and cast the result back coming out.
    * Both casts are identity casts (no data is reshaped at runtime).
    */
   private async gate<T>(
     action: GatedAction,
-    execute: () => Promise<GoogleCalendarMcpResult<T>>,
-  ): Promise<GoogleCalendarMcpResult<T>> {
+    execute: () => Promise<OutlookCalendarMcpResult<T>>,
+  ): Promise<OutlookCalendarMcpResult<T>> {
     const result = await gateAndRun({
       gate: this.deps.gate,
       audit: this.deps.audit,
       workspaceId: this.workspaceId,
       action,
-      // Identical-shape cast: GoogleCalendarMcpResult<T> ≅ McpResult<T>.
+      // Identical-shape cast: OutlookCalendarMcpResult<T> ≅ McpResult<T>.
       execute: execute as unknown as () => Promise<McpResult<T>>,
     });
     // Identical-shape cast back to the connector's own result type.
-    return result as unknown as GoogleCalendarMcpResult<T>;
+    return result as unknown as OutlookCalendarMcpResult<T>;
   }
 
   // ── Reads: straight pass-through (no mutation) ─────────────────────────
 
-  listCalendars(): Promise<GoogleCalendarMcpResult<ListCalendarsOutput>> {
+  listCalendars(): Promise<OutlookCalendarMcpResult<ListCalendarsOutput>> {
     return this.inner.listCalendars();
   }
 
   listEvents(
     input: ListEventsInput,
-  ): Promise<GoogleCalendarMcpResult<ListEventsOutput>> {
+  ): Promise<OutlookCalendarMcpResult<ListEventsOutput>> {
     return this.inner.listEvents(input);
   }
 
-  getEvent(input: GetEventInput): Promise<GoogleCalendarMcpResult<GetEventOutput>> {
+  getEvent(input: GetEventInput): Promise<OutlookCalendarMcpResult<GetEventOutput>> {
     return this.inner.getEvent(input);
   }
 
   findAvailability(
     input: FindAvailabilityInput,
-  ): Promise<GoogleCalendarMcpResult<FindAvailabilityOutput>> {
+  ): Promise<OutlookCalendarMcpResult<FindAvailabilityOutput>> {
     return this.inner.findAvailability(input);
   }
 
   proposeTimes(
     input: ProposeTimesInput,
-  ): Promise<GoogleCalendarMcpResult<ProposeTimesOutput>> {
+  ): Promise<OutlookCalendarMcpResult<ProposeTimesOutput>> {
     return this.inner.proposeTimes(input);
   }
 
@@ -141,7 +141,7 @@ class GatedGoogleCalendarMcpServer implements GoogleCalendarMcpServer {
 
   bookMeeting(
     input: BookMeetingInput,
-  ): Promise<GoogleCalendarMcpResult<BookMeetingOutput>> {
+  ): Promise<OutlookCalendarMcpResult<BookMeetingOutput>> {
     return this.gate(calendarAction(BOOK_MEETING, input), () =>
       this.inner.bookMeeting(input),
     );
@@ -149,7 +149,7 @@ class GatedGoogleCalendarMcpServer implements GoogleCalendarMcpServer {
 
   rescheduleMeeting(
     input: RescheduleMeetingInput,
-  ): Promise<GoogleCalendarMcpResult<RescheduleMeetingOutput>> {
+  ): Promise<OutlookCalendarMcpResult<RescheduleMeetingOutput>> {
     return this.gate(calendarAction(RESCHEDULE_MEETING, input), () =>
       this.inner.rescheduleMeeting(input),
     );
@@ -157,7 +157,7 @@ class GatedGoogleCalendarMcpServer implements GoogleCalendarMcpServer {
 
   updateEvent(
     input: UpdateEventInput,
-  ): Promise<GoogleCalendarMcpResult<UpdateEventOutput>> {
+  ): Promise<OutlookCalendarMcpResult<UpdateEventOutput>> {
     return this.gate(calendarAction(UPDATE_EVENT, input), () =>
       this.inner.updateEvent(input),
     );
@@ -165,7 +165,7 @@ class GatedGoogleCalendarMcpServer implements GoogleCalendarMcpServer {
 
   cancelEvent(
     input: CancelEventInput,
-  ): Promise<GoogleCalendarMcpResult<CancelEventOutput>> {
+  ): Promise<OutlookCalendarMcpResult<CancelEventOutput>> {
     return this.gate(calendarAction(CANCEL_EVENT, input), () =>
       this.inner.cancelEvent(input),
     );
@@ -173,13 +173,13 @@ class GatedGoogleCalendarMcpServer implements GoogleCalendarMcpServer {
 
   // ── Resources: pass-through ────────────────────────────────────────────
 
-  listResources(): Promise<GoogleCalendarMcpResult<ResourceDescriptor[]>> {
+  listResources(): Promise<OutlookCalendarMcpResult<ResourceDescriptor[]>> {
     return this.inner.listResources();
   }
 
   readResource(
     input: ReadResourceInput,
-  ): Promise<GoogleCalendarMcpResult<ReadResourceOutput>> {
+  ): Promise<OutlookCalendarMcpResult<ReadResourceOutput>> {
     return this.inner.readResource(input);
   }
 }

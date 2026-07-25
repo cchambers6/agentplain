@@ -1,13 +1,14 @@
 /**
- * lib/integrations/google-calendar-mcp/write-actions.test.ts
+ * lib/integrations/outlook-calendar-mcp/write-actions.test.ts
  *
- * Smoke test for the Google Calendar write-action depth + approval gate. Builds
- * the server through the real factory (`buildGoogleCalendarMcpServer`) with an
- * injected in-memory gate + audit sink — exactly how production wires it, minus
- * the DB — so it proves the factory seam gates every mutation, that an approved
- * grant lets the (recording) call run, and that every fire is audit-logged.
- * `find_availability` (a free/busy READ) passes through ungated. No external API
- * is touched.
+ * Smoke test for the Outlook Calendar write-action depth + approval gate.
+ * Builds the server through the real factory (`buildOutlookCalendarMcpServer`)
+ * with an injected in-memory gate + audit sink — exactly how production wires
+ * it, minus the DB — so it proves the factory seam gates every mutation, that
+ * an approved grant lets the (recording) call run, and that every fire is
+ * audit-logged. The reads (`find_availability`, `propose_times`, `listEvents`,
+ * `getEvent`, `listCalendars`) pass through ungated. No external API is
+ * touched.
  */
 
 import { test } from 'node:test';
@@ -21,7 +22,7 @@ import {
   InMemoryConnectorApprovalGate,
   InMemoryConnectorActionAuditSink,
 } from '@/lib/integrations/approval';
-import { buildGoogleCalendarMcpServer } from './index';
+import { buildOutlookCalendarMcpServer } from './index';
 import {
   BOOK_MEETING,
   UPDATE_EVENT,
@@ -31,12 +32,12 @@ import {
   type UpdateEventInput,
   type CancelEventInput,
 } from './actions';
-import type { TestGoogleCalendarSeed } from './test-server';
+import type { TestOutlookCalendarSeed } from './test-server';
 
-function setup(testSeed?: TestGoogleCalendarSeed) {
+function setup(testSeed?: TestOutlookCalendarSeed) {
   const gate = new InMemoryConnectorApprovalGate();
   const audit = new InMemoryConnectorActionAuditSink();
-  const server = buildGoogleCalendarMcpServer({
+  const server = buildOutlookCalendarMcpServer({
     workspaceId: 'ws-1',
     deps: { gate, audit },
     testSeed,
@@ -47,7 +48,7 @@ function setup(testSeed?: TestGoogleCalendarSeed) {
 const T0 = '2026-07-01T15:00:00.000Z';
 const T1 = '2026-07-01T15:30:00.000Z';
 
-test('book_meeting is blocked without an approval — Google never called', async () => {
+test('book_meeting is blocked without an approval — Graph never called', async () => {
   const { server, audit } = setup();
   const res = await server.bookMeeting({
     summary: 'Listing walkthrough',
@@ -78,7 +79,7 @@ test('book_meeting runs once approved, and is audit-logged', async () => {
   assert.equal(res.ok, true);
   assert.equal(res.ok === true && typeof res.value.eventId, 'string');
   assert.equal(audit.entries.length, 1);
-  assert.equal(audit.entries[0].connector, 'google_calendar');
+  assert.equal(audit.entries[0].connector, 'outlook_calendar');
   assert.equal(audit.entries[0].action, 'book_meeting');
   assert.equal(audit.entries[0].outcome, 'ok');
   assert.equal(audit.entries[0].approvedByUserId, 'user-9');
@@ -116,27 +117,6 @@ test('reschedule_meeting is gated', async () => {
   assert.equal(res.ok, false);
   assert.equal(res.ok === false && res.error.code, 'APPROVAL_REQUIRED');
   assert.equal(audit.entries.length, 0);
-});
-
-test('find_availability (free/busy READ) passes through ungated', async () => {
-  const { server, audit } = setup();
-  const res = await server.findAvailability({
-    timeMin: T0,
-    timeMax: T1,
-  });
-  assert.equal(res.ok, true);
-  assert.equal(res.ok === true && Array.isArray(res.value.busy), true);
-  // A read must never produce an audit row.
-  assert.equal(audit.entries.length, 0);
-});
-
-test('listEvents passes through the gate untouched', async () => {
-  const { server } = setup();
-  const res = await server.listEvents({
-    from: new Date(T0),
-    to: new Date(T1),
-  });
-  assert.equal(res.ok, true);
 });
 
 test('update_event is gated, and runs once approved', async () => {
@@ -197,6 +177,18 @@ test('cancel_event is gated, and runs once approved', async () => {
   assert.equal(audit.entries.at(-1)?.action, 'cancel_event');
 });
 
+test('find_availability (free/busy READ) passes through ungated', async () => {
+  const { server, audit } = setup();
+  const res = await server.findAvailability({
+    timeMin: T0,
+    timeMax: T1,
+  });
+  assert.equal(res.ok, true);
+  assert.equal(res.ok === true && Array.isArray(res.value.busy), true);
+  // A read must never produce an audit row.
+  assert.equal(audit.entries.length, 0);
+});
+
 test('propose_times proposes around seeded busy blocks, ungated', async () => {
   const { server, audit } = setup({
     busy: [{ start: '2026-07-01T15:00:00.000Z', end: '2026-07-01T16:00:00.000Z' }],
@@ -217,13 +209,12 @@ test('propose_times proposes around seeded busy blocks, ungated', async () => {
   assert.equal(audit.entries.length, 0);
 });
 
-test('propose_times rejects an unknown timezone with INVALID_ARGUMENT', async () => {
+test('propose_times rejects a non-integer duration with INVALID_ARGUMENT', async () => {
   const { server } = setup();
   const res = await server.proposeTimes({
     timeMin: T0,
     timeMax: '2026-07-01T17:00:00.000Z',
-    durationMinutes: 30,
-    timezone: 'Mars/Olympus_Mons',
+    durationMinutes: 12.5,
   });
   assert.equal(res.ok, false);
   assert.equal(res.ok === false && res.error.code, 'INVALID_ARGUMENT');
@@ -232,7 +223,13 @@ test('propose_times rejects an unknown timezone with INVALID_ARGUMENT', async ()
 test('getEvent reads a seeded event; unknown id is NOT_FOUND', async () => {
   const { server } = setup({
     events: [
-      { id: 'evt-1', title: 'Inspection', startUtc: T0, endUtc: T1, isBusy: true },
+      {
+        id: 'evt-1',
+        title: 'Inspection',
+        startUtc: T0,
+        endUtc: T1,
+        isBusy: true,
+      },
     ],
   });
   const hit = await server.getEvent({ eventId: 'evt-1' });
@@ -243,9 +240,17 @@ test('getEvent reads a seeded event; unknown id is NOT_FOUND', async () => {
   assert.equal(miss.ok === false && miss.error.code, 'NOT_FOUND');
 });
 
-test('listCalendars passes through the gate untouched', async () => {
+test('listEvents + listCalendars pass through the gate untouched', async () => {
   const { server } = setup();
-  const res = await server.listCalendars();
-  assert.equal(res.ok, true);
-  assert.equal(res.ok === true && res.value.calendars[0]?.isPrimary, true);
+  const events = await server.listEvents({
+    from: new Date(T0),
+    to: new Date(T1),
+  });
+  assert.equal(events.ok, true);
+  const calendars = await server.listCalendars();
+  assert.equal(calendars.ok, true);
+  assert.equal(
+    calendars.ok === true && calendars.value.calendars[0]?.isPrimary,
+    true,
+  );
 });

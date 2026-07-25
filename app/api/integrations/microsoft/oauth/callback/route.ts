@@ -46,7 +46,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const OAUTH_STATE_COOKIE = "agentplain_oauth_state";
-const SUPPORTED_INTEGRATIONS = new Set(["teams", "onedrive", "excel"]);
+const SUPPORTED_INTEGRATIONS = new Set([
+  "teams",
+  "onedrive",
+  "excel",
+  "outlook-calendar",
+]);
 
 interface OAuthStateCookie {
   nonce: string;

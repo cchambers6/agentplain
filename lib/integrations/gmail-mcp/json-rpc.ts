@@ -53,7 +53,8 @@ const listMessagesArgsSchema = z.object({
 const getMessageArgsSchema = z.object({ messageId: z.string().min(1) });
 
 const searchThreadsArgsSchema = z.object({
-  query: z.string().min(1),
+  // Optional: omit to list the most recent threads unfiltered (bare list).
+  query: z.string().min(1).optional(),
   maxResults: z.number().int().positive().max(100).optional(),
   pageToken: z.string().optional(),
 });

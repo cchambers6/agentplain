@@ -1,35 +1,37 @@
 /**
- * lib/integrations/google-calendar-mcp/actions/index.ts
+ * lib/integrations/outlook-calendar-mcp/actions/index.ts
  *
- * The Google Calendar WRITE-ACTION surface — the per-action source of truth for
- * the mutating tools added in the write-action-depth wave. Each descriptor names
- * the action, its approval discipline, and a `summarize` that distills the input
- * into the canonical `detail` the approval gate fingerprints AND the operator
- * sees on the /approvals card.
+ * The Outlook Calendar WRITE-ACTION surface — the per-action source of truth
+ * for the mutating tools. Each descriptor names the action, its approval
+ * discipline, and a `summarize` that distills the input into the canonical
+ * `detail` the approval gate fingerprints AND the operator sees on the
+ * /approvals card.
  *
- * Mirrors `lib/integrations/hubspot-mcp/actions/index.ts`. The actual REST is
- * implemented on `ProdGoogleCalendarMcpServer` (server.ts); the gate decorator
+ * Mirrors `lib/integrations/google-calendar-mcp/actions/index.ts` — same
+ * action names, same input shapes — so the scheduler multiplexer composes
+ * either provider behind one write surface. The actual REST is implemented
+ * on `ProdOutlookCalendarMcpServer` (server.ts); the gate decorator
  * (with-approval.ts) reads these descriptors so the action name + detail used
  * for the fingerprint and the audit row are defined in exactly one place.
- * Nothing here calls Google — it's the gate-facing metadata.
+ * Nothing here calls Microsoft Graph — it's the gate-facing metadata.
  *
  * Per `project_no_outbound_architecture.md`: `book_meeting`,
  * `reschedule_meeting`, `update_event`, and `cancel_event` mutate the
  * customer's calendar (and notify attendees), so the gate is load-bearing —
- * none fires without a recorded human approval. `find_availability` (free/busy)
- * and `propose_times` (slot computation over free/busy) are READS — their I/O
- * types live here for symmetry but they are NOT gated (they pass through like
- * `listEvents`).
+ * none fires without a recorded human approval. `find_availability` (busy
+ * blocks from calendarView) and `propose_times` (slot computation over
+ * free/busy) are READS — their I/O types live here for symmetry but they are
+ * NOT gated (they pass through like `listEvents`).
  */
 
 import type { GatedAction } from '@/lib/integrations/approval';
 
-export const GOOGLE_CALENDAR_CONNECTOR = 'google_calendar';
+export const OUTLOOK_CALENDAR_CONNECTOR = 'outlook_calendar';
 
-// ── New write-action I/O types (GATED) ───────────────────────────────────────
+// ── Write-action I/O types (GATED) ───────────────────────────────────────────
 
 export interface BookMeetingInput {
-  /** Calendar to create the event on — defaults to `primary`. */
+  /** Calendar to create the event on — defaults to the primary calendar. */
   calendarId?: string;
   /** Event title. */
   summary: string;
@@ -50,7 +52,7 @@ export interface BookMeetingOutput {
 }
 
 export interface RescheduleMeetingInput {
-  /** Calendar the event lives on — defaults to `primary`. */
+  /** Calendar the event lives on — defaults to the primary calendar. */
   calendarId?: string;
   /** Id of the existing event to move. */
   eventId: string;
@@ -66,11 +68,11 @@ export interface RescheduleMeetingOutput {
 }
 
 export interface UpdateEventInput {
-  /** Calendar the event lives on — defaults to `primary`. */
+  /** Calendar the event lives on — defaults to the primary calendar. */
   calendarId?: string;
   /** Id of the existing event to update. */
   eventId: string;
-  /** New event title. Omitted fields are left untouched (events.patch). */
+  /** New event title. Omitted fields are left untouched (PATCH semantics). */
   summary?: string;
   /** New free-text description. */
   description?: string;
@@ -78,7 +80,7 @@ export interface UpdateEventInput {
   start?: string;
   /** New ISO 8601 end instant. Must be paired with `start`. */
   end?: string;
-  /** REPLACES the attendee list when present (Google patch semantics). */
+  /** REPLACES the attendee list when present (Graph PATCH semantics). */
   attendees?: string[];
   /** New location line. */
   location?: string;
@@ -91,9 +93,9 @@ export interface UpdateEventOutput {
 }
 
 export interface CancelEventInput {
-  /** Calendar the event lives on — defaults to `primary`. */
+  /** Calendar the event lives on — defaults to the primary calendar. */
   calendarId?: string;
-  /** Id of the event to cancel. Google notifies attendees on delete. */
+  /** Id of the event to cancel. Graph sends cancellations to attendees. */
   eventId: string;
   /** Approval token once the operator has approved this exact cancellation. */
   pendingApprovalId?: string;
@@ -106,15 +108,15 @@ export interface CancelEventOutput {
 // ── Read-action I/O types (UNGATED — free/busy query) ─────────────────────────
 
 export interface FindAvailabilityInput {
-  /** ISO 8601 lower bound of the free/busy window. */
+  /** ISO 8601 lower bound of the query window. */
   timeMin: string;
-  /** ISO 8601 upper bound of the free/busy window. */
+  /** ISO 8601 upper bound of the query window. */
   timeMax: string;
-  /** Calendars to query — defaults to `['primary']`. */
+  /** Calendar ids whose busy blocks to merge — defaults to the primary. */
   calendarIds?: string[];
 }
 export interface FindAvailabilityOutput {
-  /** Busy intervals across the queried calendars. */
+  /** Merged busy intervals across the queried calendars, ISO 8601. */
   busy: { start: string; end: string }[];
 }
 
@@ -125,7 +127,7 @@ export interface ProposeTimesInput {
   timeMax: string;
   /** Meeting length in minutes. */
   durationMinutes: number;
-  /** Calendars whose busy blocks constrain the slots — defaults `['primary']`. */
+  /** Calendars whose busy blocks constrain the slots — defaults primary. */
   calendarIds?: string[];
   /** Max slots to return, 1..20. Defaults to 5. */
   maxProposals?: number;
@@ -158,7 +160,7 @@ export function calendarAction<TInput extends { pendingApprovalId?: string }>(
   input: TInput,
 ): GatedAction {
   return {
-    connector: GOOGLE_CALENDAR_CONNECTOR,
+    connector: OUTLOOK_CALENDAR_CONNECTOR,
     action: descriptor.action,
     pendingApprovalId: input.pendingApprovalId,
     discipline: descriptor.discipline,

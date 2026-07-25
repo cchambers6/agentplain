@@ -49,9 +49,41 @@ export function buildAuthorizeUrl(args: BuildAuthorizeUrlArgs): string {
       "/api/auth/oauth/google/callback",
       args.origin,
     ).toString();
+    // Request exactly the scopes the marketplace entry lists (the catalog is
+    // the gate), plus the identity scopes the callback needs to read the
+    // account's `sub` + verified email from userinfo. Before 2026-07-19 this
+    // branch ignored `args.scopes` and requested gmail.readonly only, which
+    // made every write tool (draft/label/gated send) die at Google with
+    // insufficient-scope while the catalog advertised write access.
     return oauth.buildAuthorizationUrl({
       redirectUri,
       state: args.state,
+      scopes: withGoogleIdentityScopes(args.scopes),
+    });
+  }
+  if (args.integrationId === "google-calendar") {
+    // Calendar reuses the Gmail Google OAuth app but lands on its OWN callback
+    // (like Drive) so it never triggers the Gmail users.watch the
+    // /api/auth/oauth/google callback performs. Scopes merge with any
+    // already-granted Gmail/Drive scopes via include_granted_scopes — one
+    // Google account, one GOOGLE credential row, three connectors.
+    if (!args.googleClientId || !args.googleClientSecret) {
+      throw new Error(
+        "Google OAuth not configured. Set GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET.",
+      );
+    }
+    const oauth = new GoogleOAuth({
+      clientId: args.googleClientId,
+      clientSecret: args.googleClientSecret,
+    });
+    const redirectUri = new URL(
+      "/api/integrations/google-calendar/oauth/callback",
+      args.origin,
+    ).toString();
+    return oauth.buildAuthorizationUrl({
+      redirectUri,
+      state: args.state,
+      scopes: withGoogleIdentityScopes(args.scopes),
     });
   }
   if (args.integrationId === "google-drive") {
@@ -207,7 +239,8 @@ export function buildAuthorizeUrl(args: BuildAuthorizeUrlArgs): string {
   if (
     args.integrationId === "teams" ||
     args.integrationId === "onedrive" ||
-    args.integrationId === "excel"
+    args.integrationId === "excel" ||
+    args.integrationId === "outlook-calendar"
   ) {
     if (!args.microsoftClientId) {
       throw new Error(
@@ -227,6 +260,15 @@ export function buildAuthorizeUrl(args: BuildAuthorizeUrlArgs): string {
     });
   }
   throw new Error(`OAuth start not implemented for integration: ${args.integrationId}`);
+}
+
+/**
+ * Prepend the identity scopes every Google callback needs (userinfo `sub` +
+ * verified email) to a marketplace entry's vendor scopes. Marketplace entries
+ * stay vendor-scope-only; the identity plumbing is an OAuth-layer concern.
+ */
+function withGoogleIdentityScopes(scopes: string[]): string[] {
+  return [...new Set(["openid", "email", "profile", ...scopes])];
 }
 
 /**

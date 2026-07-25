@@ -279,7 +279,7 @@ function TierToggle({
             role="radio"
             aria-checked={isActive}
             onClick={() => onSelect(t)}
-            className={`flex-1 bg-paper px-4 py-3 text-left transition focus:outline-none ${
+            className={`min-h-[44px] flex-1 bg-paper px-4 py-3 text-left transition focus:outline-none ${
               isActive
                 ? "bg-paper-deep"
                 : "hover:bg-paper-deep focus-visible:bg-paper-deep"

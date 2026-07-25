@@ -80,7 +80,7 @@ export const FAQ_ITEMS: FAQItem[] = [
   },
   {
     q: "What data do you need access to?",
-    a: "OAuth into your email (Gmail, Outlook), file substrate (Google Drive, OneDrive), spreadsheets (Excel), e-signature (DocuSign), messaging (Slack, Teams), and accounting (QuickBooks Online): those connect tiles live on the /integrations page today. The vertical-specific feeds — MLS for real estate, AMS for insurance, LOS for mortgage, practice-management for CPA / law / RIA — sit on the per-vertical integration roadmap; your service partner sets up what's available with you on a call and runs the unbuilt ones by hand until those adapters land. The fleet reads what's needed for the task, drafts the response, and returns the draft to your review queue. We don't use your client list to train foundation models.",
+    a: "OAuth into your email (Gmail, Outlook), file substrate (Google Drive, OneDrive), spreadsheets (Excel), e-signature (DocuSign), messaging (Slack, Teams), and accounting (QuickBooks Online): those connect tiles live on the /integrations page today. The vertical-specific feeds — MLS for real estate, AMS for insurance, LOS for mortgage, practice-management for CPA / law / RIA — sit on the per-vertical integration roadmap; your service partner sets up what's available with you during install and runs the unbuilt ones by hand until those adapters land. The fleet reads what's needed for the task, drafts the response, and returns the draft to your review queue. We don't use your client list to train foundation models.",
   },
   {
     q: "How does pricing work?",

@@ -83,7 +83,7 @@ const whenToChoose = [
   {
     tier: "Regular",
     headline: "Standard service partnership.",
-    body: "Most local-business shops fit here. A service partner installs the fleet, runs a monthly review call, handles tuning between calls. Your day-to-day stays inside the workspace.",
+    body: "Most local-business shops fit here. A service partner installs the fleet, runs the monthly review, handles tuning between reviews over email and chat. Your day-to-day stays inside the workspace.",
     examples: [
       "Solo or small-team realtor / mortgage broker / CPA",
       "Steady weekly ops, predictable case mix",
@@ -203,7 +203,7 @@ export default function PricingPage() {
           <TierColumn
             name="Regular"
             tagline="Standard service partnership."
-            description="A service partner installs, runs a monthly review, tunes between calls. Day-to-day in the workspace you log into."
+            description="A service partner installs, runs a monthly review, tunes between reviews. Day-to-day in the workspace you log into."
             bands={regularBands}
             ctaLabel="Start free trial"
             ctaHref="/app/sign-up"

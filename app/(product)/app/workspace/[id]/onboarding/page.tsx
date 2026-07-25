@@ -171,7 +171,7 @@ export default async function OnboardingPage({ params }: PageProps) {
           <ApHeritageButton
             variant="primary"
             withArrow
-            href={`/app/workspace/${workspaceId}/approvals`}
+            href={`/app/workspace/${workspaceId}/welcome`}
           >
             review your first draft
           </ApHeritageButton>
@@ -363,10 +363,8 @@ export default async function OnboardingPage({ params }: PageProps) {
                 {currentStep === "set_preferences"
                   ? "save & start the first fire"
                   : currentStep === "first_fire_watch"
-                    ? "open workspace"
-                    : currentStep === "pick_skills"
-                      ? "looks right — continue"
-                      : "looks right — continue"}
+                    ? "see your first draft"
+                    : "looks right — continue"}
               </ApHeritageButton>
               {currentStep === "connect_integration" ? (
                 <button

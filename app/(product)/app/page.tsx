@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { ApHeritageButton } from "@/components/ui/ap";
 import {
   defaultWorkspaceIdFor,
   getCurrentSession,
@@ -29,9 +30,21 @@ export default async function AppRootPage() {
           account.
         </h1>
         <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
-          Reach out to your service partner at agentplain to be added
-          to a workspace.
+          Two ways forward: if your team already runs on agentplain, ask
+          the owner to add you from their Team page. Starting fresh? Set
+          up your own workspace — it takes about a minute.
         </p>
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <ApHeritageButton variant="primary" withArrow href="/app/sign-up">
+            set up a workspace
+          </ApHeritageButton>
+          <a
+            href="mailto:hello@agentplain.com"
+            className="text-sm text-mute underline-offset-4 hover:text-ink hover:underline"
+          >
+            or ask a human — a real person reads every note
+          </a>
+        </div>
       </div>
     </div>
   );

@@ -117,10 +117,34 @@ export function SignUpForm({
   }
 
   if (state.ok && state.notice) {
+    // Check-your-email is the one screen between the customer and their
+    // workspace. Name exactly what happens next and leave no dead end if
+    // the email doesn't show.
     return (
-      <p className="border border-rule bg-paper-deep p-4 text-[15px] leading-relaxed text-ink">
-        {state.notice}
-      </p>
+      <div className="space-y-4 border border-moss bg-paper p-5">
+        <p className="font-mono text-[11px] tracking-eyebrow uppercase text-moss">
+          workspace created — one step left
+        </p>
+        <p className="text-[15px] leading-relaxed text-ink">{state.notice}</p>
+        <ol className="space-y-1 border-t border-rule pt-4 text-[13px] leading-relaxed text-ink-soft">
+          <li>1. Open the email and tap the sign-in link.</li>
+          <li>
+            2. You land in your workspace — setup takes about three minutes.
+          </li>
+          <li>3. Your first draft is waiting at the end of it.</li>
+        </ol>
+        <p className="border-t border-rule pt-4 text-[13px] leading-relaxed text-mute">
+          No email after a minute or two? Check spam, or{" "}
+          <a href="/app/sign-in" className="text-ink underline">
+            request a fresh link from sign-in
+          </a>
+          . Still stuck?{" "}
+          <a href="mailto:hello@agentplain.com" className="text-ink underline">
+            email a human
+          </a>{" "}
+          — a real person reads every note.
+        </p>
+      </div>
     );
   }
 

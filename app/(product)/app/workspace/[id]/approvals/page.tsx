@@ -1,7 +1,11 @@
 import { requireWorkspaceMember } from "@/lib/auth";
 import { withRls } from "@/lib/db";
 import { decryptPayloadForRead } from "@/lib/security/payload-crypto";
-import { ApEyebrow, ApRootedEmptyState } from "@/components/ui/ap";
+import {
+  ApEyebrow,
+  ApHeritageButton,
+  ApRootedEmptyState,
+} from "@/components/ui/ap";
 import { asDisciplineId } from "@/lib/disciplines";
 import { renderApprovalPayload } from "./renderApprovalPayload";
 import { ApprovalsList, type ApprovalRow } from "./ApprovalsList";
@@ -27,7 +31,7 @@ export default async function ApprovalsPage({ params, searchParams }: PageProps)
   const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
   const ctx = { userId: member.userId, workspaceId, isOperator: false };
 
-  const [items, totalPending] = await withRls(ctx, (tx) =>
+  const [items, totalPending, onboarding] = await withRls(ctx, (tx) =>
     Promise.all([
       tx.workApprovalQueueItem.findMany({
         where: { workspaceId, status: "PENDING" },
@@ -37,8 +41,13 @@ export default async function ApprovalsPage({ params, searchParams }: PageProps)
       tx.workApprovalQueueItem.count({
         where: { workspaceId, status: "PENDING" },
       }),
+      tx.onboardingState.findUnique({
+        where: { workspaceId },
+        select: { completedAt: true },
+      }),
     ]),
   );
+  const onboardingComplete = onboarding?.completedAt != null;
 
   const rows: ApprovalRow[] = items.map((item) => ({
     id: item.id,
@@ -71,11 +80,31 @@ export default async function ApprovalsPage({ params, searchParams }: PageProps)
               work lands here as Plaino surfaces it.
             </p>
           ) : null}
-          <ApRootedEmptyState
-            scene="empty-approvals"
-            reality="Nothing waiting on you."
-            change="Plaino is sitting ready, fetching from your connected sources and herding work as it surfaces. New decisions land here as they cross your threshold."
-          />
+          {onboardingComplete ? (
+            <ApRootedEmptyState
+              scene="empty-approvals"
+              reality="Nothing waiting on you."
+              change="Plaino is sitting ready, fetching from your connected sources and herding work as it surfaces. New decisions land here as they cross your threshold."
+            />
+          ) : (
+            // Mid-onboarding empty queue is expected, not a void — the first
+            // draft lives on /welcome (deterministic, no connector needed).
+            // Never strand a brand-new customer on "nothing waiting on you."
+            <ApRootedEmptyState
+              scene="empty-approvals"
+              reality="Nothing here yet — your first draft is one step away."
+              change="Finish setup and Plaino drafts the first piece of work in front of you. Every draft your fleet produces lands in this queue for your yes."
+              cta={
+                <ApHeritageButton
+                  variant="secondary"
+                  withArrow
+                  href={`/app/workspace/${workspaceId}/onboarding`}
+                >
+                  finish setup — see your first draft
+                </ApHeritageButton>
+              }
+            />
+          )}
         </div>
       ) : (
         <>

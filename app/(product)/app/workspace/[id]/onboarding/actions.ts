@@ -228,7 +228,12 @@ export async function advanceOnboardingAction(
   }
 
   if (isFinalStep) {
-    redirect(`/app/workspace/${workspaceId}`);
+    // Land the customer on /welcome — the deterministic first-draft surface —
+    // not the bare dashboard. The welcome page's activation run is idempotent
+    // and LLM-free, so a draft is GUARANTEED to be waiting even when every
+    // picked skill skipped (no inbox connected yet). This closes the dead-end
+    // where "review your first draft" pointed at an empty approvals queue.
+    redirect(`/app/workspace/${workspaceId}/welcome`);
   } else {
     redirect(`/app/workspace/${workspaceId}/onboarding`);
   }

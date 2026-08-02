@@ -41,6 +41,7 @@ follow-up brought the build back to green.
 
 | Date | SHA | Reason | Follow-up |
 | --- | --- | --- | --- |
+| 2026-08-02 | 0b983a7 | `build:no-migrate` OOMs locally (heap-limit mark-compact at 8 GB `--max-old-space-size`; machine has 16 GB RAM, 12 GB also failed on 2026-07-25). Machine-only — same tree builds green on Vercel. | Verify Vercel production build goes green on this push; local repro tracked under the build-gate memory-ceiling follow-up. |
 | — | — | — | — |
 
 **Why not `git push --no-verify`.** `--no-verify` works too and remains

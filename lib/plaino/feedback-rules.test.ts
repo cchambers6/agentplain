@@ -8,9 +8,22 @@
  */
 
 import { describe, it } from 'node:test';
+import { buildProvenance } from '../provenance/types';
 import assert from 'node:assert/strict';
 
 import { RecordingMemoryStore } from './memory';
+
+/** Provenance for test writes through the memory door. The door validates
+ *  every block, so fixtures have to be honest too — a test that could pass
+ *  with a fake block would not be testing the door. */
+const TEST_MEMORY_PROVENANCE = buildProvenance({
+  sourceType: 'customer-chat',
+  origin: 'customer',
+  recordType: 'memory-entry',
+  sourceRef: 'ChatMessage:test-turn',
+  storedBy: 'plaino',
+  confidence: 1,
+});
 import {
   buildPreferenceMemoryBody,
   PREFERENCE_MEMORY_TITLE_PREFIX,
@@ -33,6 +46,7 @@ async function seedPref(
     title: `${PREFERENCE_MEMORY_TITLE_PREFIX}${scope}`,
     body: buildPreferenceMemoryBody({ scope, rule }),
     sourceChatMessageId: 'src',
+    provenance: TEST_MEMORY_PROVENANCE,
   });
 }
 
@@ -62,6 +76,7 @@ describe('readFeedbackRules — scope filtering', () => {
       title: 'Hand-typed preference',
       body: 'Use ASCII quotes in customer messages',
       sourceChatMessageId: 'src',
+      provenance: TEST_MEMORY_PROVENANCE,
     });
     const rules = await readFeedbackRules({
       memory,
@@ -85,6 +100,7 @@ describe('readFeedbackRules — scope filtering', () => {
         rule: 'this is a USER entry, should be ignored',
       }),
       sourceChatMessageId: 'src',
+      provenance: TEST_MEMORY_PROVENANCE,
     });
     const rules = await readFeedbackRules({
       memory,

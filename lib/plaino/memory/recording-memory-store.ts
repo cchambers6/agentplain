@@ -8,6 +8,11 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import {
+  assertProvenance,
+  buildProvenance,
+  type Provenance,
+} from '../../provenance/types';
 import type {
   IMemoryStore,
   MemoryEntry,
@@ -15,8 +20,19 @@ import type {
 } from './types';
 
 export interface RecordingMemoryStoreOptions {
-  /** Pre-seed entries (each gets a generated id + timestamps). */
-  seed?: Array<Omit<MemoryEntry, 'id' | 'createdAt' | 'updatedAt' | 'lastReadAt'>>;
+  /** Pre-seed entries (each gets a generated id + timestamps).
+   *
+   *  `provenance` is optional here and ONLY here: a seeded entry stands
+   *  in for a row that already existed before the test ran, including the
+   *  legacy rows production genuinely has. Omitting it yields null — the
+   *  same "we no longer know" a pre-2026-08 row carries. Every entry that
+   *  arrives through `upsert` still goes through the door. */
+  seed?: Array<
+    Omit<
+      MemoryEntry,
+      'id' | 'createdAt' | 'updatedAt' | 'lastReadAt' | 'provenance'
+    > & { provenance?: Provenance | null }
+  >;
 }
 
 export class RecordingMemoryStore implements IMemoryStore {
@@ -39,6 +55,7 @@ export class RecordingMemoryStore implements IMemoryStore {
           title: e.title,
           body: e.body,
           sourceChatMessageId: e.sourceChatMessageId,
+          provenance: e.provenance ?? null,
           pinned: e.pinned,
           createdAt: now,
           updatedAt: now,
@@ -81,9 +98,15 @@ export class RecordingMemoryStore implements IMemoryStore {
     title: string;
     body: string;
     sourceChatMessageId: string | null;
+    provenance: Provenance;
     now?: Date;
   }): Promise<MemoryEntry> {
     this.assertWorkspace(args.workspaceId);
+    // Same door as the Prisma impl. A fake that accepted writes the real
+    // store rejects would let a provenance-less caller pass its tests and
+    // fail in production — the two implementations must agree on refusal,
+    // not just on success.
+    const provenance = assertProvenance('memory-entry', args.provenance);
     const now = args.now ?? new Date();
     const normalizedTitle = args.title.trim();
     const existing = this.entries.find(
@@ -92,6 +115,9 @@ export class RecordingMemoryStore implements IMemoryStore {
     if (existing) {
       existing.body = args.body;
       existing.sourceChatMessageId = args.sourceChatMessageId;
+      // Re-stamped on update, mirroring the Prisma impl: the citation
+      // describes the write that put the current body here.
+      existing.provenance = provenance;
       existing.updatedAt = now;
       return existing;
     }
@@ -102,6 +128,7 @@ export class RecordingMemoryStore implements IMemoryStore {
       title: normalizedTitle,
       body: args.body,
       sourceChatMessageId: args.sourceChatMessageId,
+      provenance,
       pinned: false,
       createdAt: now,
       updatedAt: now,
@@ -137,6 +164,19 @@ export class RecordingMemoryStore implements IMemoryStore {
     if (!e) throw new Error(`RecordingMemoryStore: entry ${args.id} not found`);
     e.title = args.title.trim();
     e.body = args.body;
+    // The customer vouching for the fact in their own words — the one
+    // path that legitimately produces verified:true. Stamped here, never
+    // accepted from the caller.
+    e.provenance = buildProvenance({
+      sourceType: 'customer-edit',
+      origin: 'customer',
+      recordType: 'memory-entry',
+      sourceRef: `WorkspaceMemoryEntry:${args.id}`,
+      storedBy: 'customer',
+      confidence: 1,
+      verified: true,
+      now: args.now,
+    });
     e.updatedAt = args.now ?? new Date();
     return e;
   }

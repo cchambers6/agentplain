@@ -22,6 +22,7 @@
  */
 
 import { z } from 'zod';
+import type { Provenance } from '../../provenance/types';
 
 /**
  * Four discrete buckets for memory entries. Same shape as the global
@@ -51,6 +52,14 @@ export interface MemoryEntry {
   body: string;
   /** Optional pointer back to the ChatMessage where Plaino learned this. */
   sourceChatMessageId: string | null;
+  /**
+   * Where this fact came from (lib/provenance/types.ts). NULL means a
+   * LEGACY row written before 2026-08 — not "no source", but "we no
+   * longer know", and the memory page says nothing rather than guessing.
+   * Reads are lenient (invalid JSON → null, never a throw); WRITES go
+   * through `assertProvenance` and cannot skip it.
+   */
+  provenance: Provenance | null;
   /** Pinned entries are always included in the dispatcher prompt. */
   pinned: boolean;
   createdAt: Date;
@@ -147,6 +156,12 @@ export interface IMemoryStore {
    * normalizes titles so re-mentioning the same fact updates the body
    * + lastReadAt rather than creating a duplicate. Returns the resulting
    * MemoryEntry so the caller can link it to the source message.
+   *
+   * `provenance` is REQUIRED and validated at the seam — a memory entry
+   * the customer can read on their memory page has to be able to answer
+   * "where did you get that?", and the only way to guarantee that is to
+   * refuse the write without it. An update re-stamps the block, because
+   * the newest write is the one that put the current body there.
    */
   upsert(args: {
     workspaceId: string;
@@ -154,6 +169,7 @@ export interface IMemoryStore {
     title: string;
     body: string;
     sourceChatMessageId: string | null;
+    provenance: Provenance;
     now?: Date;
   }): Promise<MemoryEntry>;
 
@@ -173,6 +189,12 @@ export interface IMemoryStore {
    * Customer-driven edit. Title + body are mutable; kind is not (a
    * "move to a different bucket" workflow is "delete + recreate"). The
    * impl re-encrypts the body and bumps updatedAt.
+   *
+   * Provenance is NOT a parameter here: the impl stamps a fresh
+   * customer-edit block itself. A customer editing a fact is the customer
+   * vouching for it in their own words — confidence 1, verified true —
+   * and letting a caller pass some other block would let an agent's guess
+   * masquerade as the customer's own correction.
    */
   edit(args: {
     workspaceId: string;

@@ -22,6 +22,12 @@
 import type { Prisma } from '@prisma/client';
 import { withSystemContext as defaultWithSystemContext } from '../db';
 import type { SystemContextRunner } from '../billing/provisioning';
+import {
+  assertProvenance,
+  buildProvenance,
+  type Provenance,
+  type ProvenanceSourceType,
+} from '../provenance/types';
 import type { SkillRunOutcome } from '../skills/types';
 import {
   type GuaranteeActionType,
@@ -43,6 +49,14 @@ export interface RecordSavedTimeArgs {
   verticalSlug: string;
   /** Dedupe source so a re-run can't double-count. */
   source: SavedTimeSource;
+  /**
+   * Where this credit came from. REQUIRED — this ledger is the number we
+   * put in front of a customer at the Day-7 guarantee ("here is what we
+   * saved you"), and a minutes figure nobody can trace back to a piece of
+   * work is a number we have no right to show. `savedTimeProvenance`
+   * builds a block whose sourceRef agrees with the dedupe source.
+   */
+  provenance: Provenance;
   /** Pre-built transaction client. When omitted, opens a
    *  `withSystemContext` write (operator RLS) of its own. The runtime
    *  passes its post-commit context; tests pass a fake client. */
@@ -66,6 +80,9 @@ export interface RecordSavedTimeResult {
 export async function recordSavedTime(
   args: RecordSavedTimeArgs,
 ): Promise<RecordSavedTimeResult> {
+  // The door, before anything else: an untraceable credit never enters
+  // the ledger, so the Day-7 total is always the sum of citable work.
+  const provenance = assertProvenance('saved-time', args.provenance);
   const minutesSaved = minutesSavedFor(args.actionType, args.verticalSlug);
   const occurredAt = args.now ?? new Date();
   const data = {
@@ -76,6 +93,7 @@ export async function recordSavedTime(
     sourceTable: args.source.table,
     sourceId: args.source.id,
     occurredAt,
+    provenance: provenance as unknown as Prisma.InputJsonObject,
   } satisfies Prisma.TimeSavingsEntryUncheckedCreateInput;
 
   const write = async (tx: Prisma.TransactionClient): Promise<boolean> => {
@@ -91,6 +109,43 @@ export async function recordSavedTime(
     : await (args.systemContext ?? defaultWithSystemContext)((tx) => write(tx));
 
   return { recorded, minutesSaved };
+}
+
+/**
+ * Build the provenance block for a saved-time credit, keeping the
+ * citation and the dedupe key in lockstep — `sourceRef` is exactly
+ * `${source.table}:${source.id}`, so an auditor reading the block lands
+ * on the same artifact the idempotency guard keys on. Passing them
+ * separately would let the two drift and quietly make the ledger
+ * unverifiable.
+ *
+ * `origin: 'derived'` is the honest label: a minutes figure is not
+ * something the customer said or an agent concluded from content — it is
+ * COMPUTED, by applying the calibration table to work that happened.
+ * `confidence: 1` because the derivation is deterministic. `verified:
+ * false` because nobody has confirmed the calibration matches this
+ * customer's real minutes — that's what the Day-7 conversation is for.
+ */
+export function savedTimeProvenance(args: {
+  /** 'skill-run' when a skill did the work; 'webhook' when an inbound
+   *  event is the whole story; 'system' for seeds and backfills. */
+  sourceType: ProvenanceSourceType;
+  /** The same source the dedupe key uses. */
+  source: SavedTimeSource;
+  /** Skill / agent slug that earned the credit. */
+  storedBy: string;
+  now?: Date;
+}): Provenance {
+  return buildProvenance({
+    sourceType: args.sourceType,
+    origin: 'derived',
+    recordType: 'saved-time',
+    sourceRef: `${args.source.table}:${args.source.id}`,
+    storedBy: args.storedBy,
+    confidence: 1,
+    verified: false,
+    now: args.now,
+  });
 }
 
 // ── Aggregation (the counter + the Day-7 evaluation read this) ──────────

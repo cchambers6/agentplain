@@ -46,7 +46,10 @@ import {
   PrismaLeadTriageApprovalSink,
 } from '@/lib/skills/lead-triage-realestate/prisma-approval-sink';
 import type { TriagedLead } from '@/lib/skills/lead-triage-realestate/types';
-import { recordSavedTime } from '@/lib/guarantee/saved-time';
+import {
+  recordSavedTime,
+  savedTimeProvenance,
+} from '@/lib/guarantee/saved-time';
 import { createWorkApprovalItem } from '@/lib/approvals/create-item';
 import { buildProvenance } from '@/lib/provenance/types';
 import {
@@ -235,12 +238,25 @@ async function main(): Promise<void> {
   let ledgerMinutes = 0;
   for (const lead of leads.all) {
     const triaged = byLeadId.get(lead.id);
+    const source = { table: PEACHTREE_SAVED_TIME_TABLE, id: lead.id };
+    const occurredAt = new Date(lead.receivedAt.getTime() + 2 * MINUTE);
+    // 'system' / 'seed-demo', not 'skill-run': step 5 hand-credits these
+    // with backdated timestamps the sink cannot produce. Labelling them as
+    // skill output would make the demo week indistinguishable from real
+    // earned minutes in the ledger.
+    const provenance = savedTimeProvenance({
+      sourceType: 'system',
+      source,
+      storedBy: 'seed-demo',
+      now: occurredAt,
+    });
     const enriched = await recordSavedTime({
       workspaceId,
       actionType: 'lead-enrichment',
       verticalSlug: VERTICAL_SLUG,
-      source: { table: PEACHTREE_SAVED_TIME_TABLE, id: lead.id },
-      now: new Date(lead.receivedAt.getTime() + 2 * MINUTE),
+      source,
+      provenance,
+      now: occurredAt,
     });
     ledgerMinutes += enriched.minutesSaved;
     if (triaged?.firstTouchDraft) {
@@ -248,8 +264,9 @@ async function main(): Promise<void> {
         workspaceId,
         actionType: 'drafted-email',
         verticalSlug: VERTICAL_SLUG,
-        source: { table: PEACHTREE_SAVED_TIME_TABLE, id: lead.id },
-        now: new Date(lead.receivedAt.getTime() + 2 * MINUTE),
+        source,
+        provenance,
+        now: occurredAt,
       });
       ledgerMinutes += drafted.minutesSaved;
     }

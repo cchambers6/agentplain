@@ -12,6 +12,7 @@
  */
 
 import { describe, it } from 'node:test';
+import { buildProvenance } from '@/lib/provenance/types';
 import assert from 'node:assert/strict';
 
 import type { WebhookEvent, Workspace } from '@prisma/client';
@@ -21,6 +22,17 @@ import { TestLlmProvider } from '@/lib/llm/test-provider';
 import { skillOk, type SkillResult } from './types';
 import type { MessageFetcher, DraftPersister, ParsedMessage } from './types';
 import { runSkillChain } from './runner';
+
+/** Provenance for test writes through the memory door. The door validates
+ *  every block, so fixtures have to be honest too. */
+const TEST_MEMORY_PROVENANCE = buildProvenance({
+  sourceType: 'customer-chat',
+  origin: 'customer',
+  recordType: 'memory-entry',
+  sourceRef: 'ChatMessage:test-turn',
+  storedBy: 'plaino',
+  confidence: 1,
+});
 
 const WORKSPACE_ID = '00000000-0000-0000-0000-000000000111';
 
@@ -120,6 +132,7 @@ describe('runSkillChain — feedback rules wired into the LLM prompt', () => {
         rule: 'Treat any mention of MLS as urgent buyer interest',
       }),
       sourceChatMessageId: null,
+      provenance: TEST_MEMORY_PROVENANCE,
     });
     const llm = new TestLlmProvider();
     await runSkillChain({

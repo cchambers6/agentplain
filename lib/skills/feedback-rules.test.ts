@@ -19,11 +19,23 @@
  */
 
 import { describe, it } from 'node:test';
+import { buildProvenance } from '@/lib/provenance/types';
 import assert from 'node:assert/strict';
 
 import { RecordingMemoryStore } from '@/lib/plaino/memory/recording-memory-store';
 import { buildFeedbackRulesBlock, DEFAULT_RUNNER_SCOPES } from './feedback-rules';
 import { buildPreferenceMemoryBody } from '@/lib/plaino/preference-memory';
+
+/** Provenance for test writes through the memory door. The door validates
+ *  every block, so fixtures have to be honest too. */
+const TEST_MEMORY_PROVENANCE = buildProvenance({
+  sourceType: 'customer-chat',
+  origin: 'customer',
+  recordType: 'memory-entry',
+  sourceRef: 'ChatMessage:test-turn',
+  storedBy: 'plaino',
+  confidence: 1,
+});
 
 const WORKSPACE_ID = 'ws-feedback-rules-test-0001';
 
@@ -39,6 +51,7 @@ describe('buildFeedbackRulesBlock — happy path', () => {
         rule: 'Always flag mail from county clerks as high priority',
       }),
       sourceChatMessageId: null,
+      provenance: TEST_MEMORY_PROVENANCE,
     });
     const block = await buildFeedbackRulesBlock({
       memory,
@@ -63,6 +76,7 @@ describe('buildFeedbackRulesBlock — happy path', () => {
         rule: 'Never propose meetings before 10am ET',
       }),
       sourceChatMessageId: null,
+      provenance: TEST_MEMORY_PROVENANCE,
     });
     const block = await buildFeedbackRulesBlock({
       memory,
@@ -82,6 +96,7 @@ describe('buildFeedbackRulesBlock — happy path', () => {
         rule: 'Always flag drafts mentioning fair housing',
       }),
       sourceChatMessageId: null,
+      provenance: TEST_MEMORY_PROVENANCE,
     });
     const block = await buildFeedbackRulesBlock({
       memory,
@@ -111,6 +126,7 @@ describe('buildFeedbackRulesBlock — honesty seam', () => {
       title: 'house style',
       body: 'Use first names with vendors, never with clients',
       sourceChatMessageId: null,
+      provenance: TEST_MEMORY_PROVENANCE,
     });
     const block = await buildFeedbackRulesBlock({
       memory,
@@ -145,6 +161,7 @@ describe('finance scope (wave-5) — surfaces into finance-discipline skills', (
         rule: 'Always classify expenses over $5,000 as capital expenditure',
       }),
       sourceChatMessageId: null,
+      provenance: TEST_MEMORY_PROVENANCE,
     });
     // finance-discipline skills (finance-pulse, month-end-close,
     // invoice-chasing) pass scopes: ['finance'] when they call the
@@ -172,6 +189,7 @@ describe('finance scope (wave-5) — surfaces into finance-discipline skills', (
         rule: 'Always classify expenses over $5,000 as capital expenditure',
       }),
       sourceChatMessageId: null,
+      provenance: TEST_MEMORY_PROVENANCE,
     });
     const block = await buildFeedbackRulesBlock({
       memory,

@@ -10,10 +10,12 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Prisma } from '@prisma/client';
 import type { SkillRunOutcome } from '../skills/types';
+import { ProvenanceError } from '../provenance/types';
 import {
   guaranteeActionForOutcome,
   readSavedTimeSummary,
   recordSavedTime,
+  savedTimeProvenance,
 } from './saved-time';
 
 const WS = 'ws-1';
@@ -85,6 +87,11 @@ describe('recordSavedTime', () => {
       actionType: 'drafted-email',
       verticalSlug: 'real-estate',
       source: { table: 'WebhookEvent', id: 'evt-1' },
+      provenance: savedTimeProvenance({
+        sourceType: 'skill-run',
+        source: { table: 'WebhookEvent', id: 'evt-1' },
+        storedBy: 'inbox-triage-fleet',
+      }),
       client,
     });
     const b = await recordSavedTime({
@@ -92,6 +99,11 @@ describe('recordSavedTime', () => {
       actionType: 'meeting-scheduled',
       verticalSlug: 'real-estate',
       source: { table: 'WebhookEvent', id: 'evt-2' },
+      provenance: savedTimeProvenance({
+        sourceType: 'skill-run',
+        source: { table: 'WebhookEvent', id: 'evt-2' },
+        storedBy: 'inbox-triage-fleet',
+      }),
       client,
     });
     assert.equal(a.recorded, true);
@@ -108,6 +120,11 @@ describe('recordSavedTime', () => {
       actionType: 'drafted-email',
       verticalSlug: 'real-estate',
       source: { table: 'WebhookEvent', id: 'evt-1' },
+      provenance: savedTimeProvenance({
+        sourceType: 'skill-run',
+        source: { table: 'WebhookEvent', id: 'evt-1' },
+        storedBy: 'inbox-triage-fleet',
+      }),
       client,
     });
     const second = await recordSavedTime({
@@ -115,11 +132,90 @@ describe('recordSavedTime', () => {
       actionType: 'drafted-email',
       verticalSlug: 'real-estate',
       source: { table: 'WebhookEvent', id: 'evt-1' },
+      provenance: savedTimeProvenance({
+        sourceType: 'skill-run',
+        source: { table: 'WebhookEvent', id: 'evt-1' },
+        storedBy: 'inbox-triage-fleet',
+      }),
       client,
     });
     assert.equal(first.recorded, true);
     assert.equal(second.recorded, false);
     assert.equal(rows.length, 1, 'counter must not double-count a re-fire');
+  });
+
+  it('REJECTS a credit with no provenance — before touching the ledger', async () => {
+    const { rows, client } = fakeLedger();
+    await assert.rejects(
+      () =>
+        recordSavedTime({
+          workspaceId: WS,
+          actionType: 'drafted-email',
+          verticalSlug: 'real-estate',
+          source: { table: 'WebhookEvent', id: 'evt-1' },
+          // Hand-rolled and incomplete — the shape a caller produces when
+          // they wire a new credit path and fill the field in by hand.
+          provenance: { sourceType: 'skill-run' } as never,
+          client,
+        }),
+      ProvenanceError,
+    );
+    assert.equal(
+      rows.length,
+      0,
+      'an untraceable credit must never reach the Day-7 total',
+    );
+  });
+
+  it('REJECTS a block built for a different record type', async () => {
+    const { rows, client } = fakeLedger();
+    await assert.rejects(
+      () =>
+        recordSavedTime({
+          workspaceId: WS,
+          actionType: 'drafted-email',
+          verticalSlug: 'real-estate',
+          source: { table: 'WebhookEvent', id: 'evt-1' },
+          provenance: {
+            ...savedTimeProvenance({
+              sourceType: 'skill-run',
+              source: { table: 'WebhookEvent', id: 'evt-1' },
+              storedBy: 'inbox-triage-fleet',
+            }),
+            recordType: 'approval-item',
+          } as never,
+          client,
+        }),
+      /recordType mismatch/,
+    );
+    assert.equal(rows.length, 0);
+  });
+
+  it('persists the block, with sourceRef matching the dedupe key', async () => {
+    const { rows, client } = fakeLedger();
+    await recordSavedTime({
+      workspaceId: WS,
+      actionType: 'drafted-email',
+      verticalSlug: 'real-estate',
+      source: { table: 'WebhookEvent', id: 'evt-9' },
+      provenance: savedTimeProvenance({
+        sourceType: 'skill-run',
+        source: { table: 'WebhookEvent', id: 'evt-9' },
+        storedBy: 'inbox-triage-fleet',
+      }),
+      client,
+    });
+    const stored = (rows[0] as unknown as Record<string, never>)
+      .provenance as unknown as Record<string, unknown>;
+    assert.ok(stored, 'the credit must carry its citation into the row');
+    assert.equal(stored.recordType, 'saved-time');
+    assert.equal(stored.origin, 'derived');
+    assert.equal(
+      stored.sourceRef,
+      `${rows[0].sourceTable}:${rows[0].sourceId}`,
+      'citation and dedupe key must point at the same artifact',
+    );
+    assert.equal(stored.verified, false);
   });
 });
 
@@ -134,6 +230,11 @@ describe('readSavedTimeSummary', () => {
       actionType: 'drafted-email',
       verticalSlug: 'real-estate',
       source: { table: 'WebhookEvent', id: 'e1' },
+      provenance: savedTimeProvenance({
+        sourceType: 'skill-run',
+        source: { table: 'WebhookEvent', id: 'e1' },
+        storedBy: 'inbox-triage-fleet',
+      }),
       client,
       now,
     });
@@ -142,6 +243,11 @@ describe('readSavedTimeSummary', () => {
       actionType: 'meeting-scheduled',
       verticalSlug: 'real-estate',
       source: { table: 'WebhookEvent', id: 'e2' },
+      provenance: savedTimeProvenance({
+        sourceType: 'skill-run',
+        source: { table: 'WebhookEvent', id: 'e2' },
+        storedBy: 'inbox-triage-fleet',
+      }),
       client,
       now,
     });
@@ -151,6 +257,11 @@ describe('readSavedTimeSummary', () => {
       actionType: 'drafted-email',
       verticalSlug: 'real-estate',
       source: { table: 'WebhookEvent', id: 'e3' },
+      provenance: savedTimeProvenance({
+        sourceType: 'skill-run',
+        source: { table: 'WebhookEvent', id: 'e3' },
+        storedBy: 'inbox-triage-fleet',
+      }),
       client,
       now: tenDaysAgo,
     });

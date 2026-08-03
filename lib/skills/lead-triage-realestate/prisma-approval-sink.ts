@@ -35,7 +35,10 @@ import {
 } from '../../approvals/create-item';
 import { withRls } from '../../db/rls';
 import { SKILL_DISCIPLINE } from '../../disciplines/skill-mapping';
-import { recordSavedTime } from '../../guarantee/saved-time';
+import {
+  recordSavedTime,
+  savedTimeProvenance,
+} from '../../guarantee/saved-time';
 import { notifyApprovalQueued, type NotifyApprovalInput } from '../../push';
 import { encryptPayloadForWrite } from '../../security/payload-crypto';
 import { skillError, skillOk, type SkillResult } from '../types';
@@ -227,12 +230,21 @@ export class PrismaLeadTriageApprovalSink implements LeadTriageApprovalSink {
       table: LEAD_TRIAGE_REF_TABLE,
       id: args.triaged.leadId,
     };
+    // Both credits cite the same lead the approval row points at, stored
+    // by the triage skill that earned them — so the counter, the queue
+    // card and the ledger all trace to one artifact.
+    const provenance = savedTimeProvenance({
+      sourceType: 'skill-run',
+      source,
+      storedBy: LEAD_TRIAGE_AGENT_SLUG,
+    });
     const credit = async () => {
       await recordSavedTime({
         workspaceId: args.workspaceId,
         actionType: 'lead-enrichment',
         verticalSlug: LEAD_TRIAGE_VERTICAL_SLUG,
         source,
+        provenance,
         client: tx,
       });
       if (args.triaged.firstTouchDraft) {
@@ -241,6 +253,7 @@ export class PrismaLeadTriageApprovalSink implements LeadTriageApprovalSink {
           actionType: 'drafted-email',
           verticalSlug: LEAD_TRIAGE_VERTICAL_SLUG,
           source,
+          provenance,
           client: tx,
         });
       }

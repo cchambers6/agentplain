@@ -21,6 +21,7 @@
  */
 
 import { describe, it } from 'node:test';
+import { buildProvenance } from '../../provenance/types';
 import assert from 'node:assert/strict';
 
 import { runPlainoTurn } from '../dispatcher';
@@ -37,6 +38,18 @@ import type {
   LlmResult,
 } from '../../llm/types';
 import { llmOk } from '../../llm/types';
+
+/** Provenance for test writes through the memory door. The door validates
+ *  every block, so fixtures have to be honest too — a test that could pass
+ *  with a fake block would not be testing the door. */
+const TEST_MEMORY_PROVENANCE = buildProvenance({
+  sourceType: 'customer-chat',
+  origin: 'customer',
+  recordType: 'memory-entry',
+  sourceRef: 'ChatMessage:test-turn',
+  storedBy: 'plaino',
+  confidence: 1,
+});
 
 const WORKSPACE_ID = 'ws-dispatcher-mem-0001';
 
@@ -312,6 +325,7 @@ describe('dispatcher memory — workspace isolation', () => {
           title: 't',
           body: 'b',
           sourceChatMessageId: null,
+          provenance: TEST_MEMORY_PROVENANCE,
         }),
       /workspaceId mismatch/,
     );

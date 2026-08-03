@@ -12,11 +12,17 @@
 // leadCaptured=true so the drift sweep can separate converting conversations
 // from the rest. Best-effort — a flag failure never fails the capture.
 
+import type { Prisma } from "@prisma/client";
 import { withSystemContext } from "@/lib/db/rls";
 import {
   getConversationTurns,
   markConversationLeadCaptured,
 } from "@/lib/plaino/conversation-log";
+import {
+  assertProvenance,
+  buildProvenance,
+  type Provenance,
+} from "@/lib/provenance/types";
 import { leadCaptureSchema } from "./types";
 import type { LeadCaptureInput, LeadCaptureSubmitResult } from "./types";
 
@@ -63,10 +69,12 @@ export async function submitLeadCapture(
     }
   }
 
+  const provenance = buildLeadCaptureProvenance(input);
+
   let leadId: string;
   try {
     leadId = await withSystemContext(async (tx) => {
-      const row = await tx.leadCapture.create({
+      const row = await createLeadCaptureRow(tx, {
         data: {
           email: input.email,
           name: input.name ?? null,
@@ -77,7 +85,7 @@ export async function submitLeadCapture(
           conversationId: input.conversationId ?? null,
           askedAboutClaude,
         },
-        select: { id: true },
+        provenance,
       });
       return row.id;
     });
@@ -100,6 +108,62 @@ export async function submitLeadCapture(
   }
 
   return { ok: true, leadId };
+}
+
+/**
+ * Provenance for one captured lead.
+ *
+ * Every lead here is the PROSPECT typing their own details into the
+ * widget — that is `customer-chat` / `customer` origin at confidence 1,
+ * because nothing about the row was inferred. `verified: false` because
+ * nobody has confirmed the email is real or the intent is serious; that
+ * happens in operator triage at /operator/leads.
+ *
+ * The citation degrades honestly, best pointer first:
+ *   1. the conversation the lead came out of, when the widget linked one
+ *   2. the marketing route they submitted from
+ *   3. a bare marker — the form was posted with neither, and saying so
+ *      beats inventing a source.
+ */
+export function buildLeadCaptureProvenance(
+  input: Pick<LeadCaptureInput, "conversationId" | "sourcePage">,
+  now?: Date,
+): Provenance {
+  const sourceRef = input.conversationId
+    ? `PlainoConversation:${input.conversationId}`
+    : (input.sourcePage ?? "LeadCapture:direct");
+  return buildProvenance({
+    sourceType: "customer-chat",
+    origin: "customer",
+    recordType: "lead",
+    sourceRef,
+    storedBy: "plaino-widget",
+    confidence: 1,
+    verified: false,
+    now,
+  });
+}
+
+/**
+ * The LeadCapture write door. Exported (rather than inlined) so the
+ * rejection path is testable against a stub tx: a bad block must throw
+ * BEFORE the create, leaving no half-written lead behind.
+ */
+export async function createLeadCaptureRow(
+  tx: Prisma.TransactionClient,
+  args: {
+    data: Prisma.LeadCaptureUncheckedCreateInput;
+    provenance: Provenance;
+  },
+): Promise<{ id: string }> {
+  const provenance = assertProvenance("lead", args.provenance);
+  return tx.leadCapture.create({
+    data: {
+      ...args.data,
+      provenance: provenance as unknown as Prisma.InputJsonObject,
+    },
+    select: { id: true },
+  });
 }
 
 export { leadCaptureSchema } from "./types";

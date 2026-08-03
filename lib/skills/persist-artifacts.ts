@@ -54,6 +54,7 @@ import type { SkillRunRecord, SkillStepRecord, SkillRunOutcome } from './types';
 import {
   guaranteeActionForOutcome,
   recordSavedTime,
+  savedTimeProvenance,
 } from '@/lib/guarantee/saved-time';
 
 /**
@@ -218,11 +219,21 @@ async function recordRunSavedTime(
 ): Promise<void> {
   const actionType = guaranteeActionForOutcome(record.outcome);
   if (!actionType) return;
+  const source = { table: 'WebhookEvent', id: record.webhookEventId };
   await recordSavedTime({
     workspaceId,
     actionType,
     verticalSlug: record.verticalSlug,
-    source: { table: 'WebhookEvent', id: record.webhookEventId },
+    source,
+    // The credit is earned by the skill chain's run over this webhook
+    // event, attributed to the roster agent that owned the run (or the
+    // chain slug when none claims it) — the same attribution the
+    // handoff log and the approval row use, so the three agree.
+    provenance: savedTimeProvenance({
+      sourceType: 'skill-run',
+      source,
+      storedBy: resolveOwningAgentSlug(record) ?? SKILL_CHAIN_AGENT_SLUG,
+    }),
     client: opts?.client,
   });
 }

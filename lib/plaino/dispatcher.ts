@@ -39,6 +39,7 @@
 
 import { DISCIPLINE_IDS } from '../disciplines';
 import { getLlmProvider } from '../llm';
+import { buildProvenance } from '../provenance/types';
 import { MODEL_HAIKU } from '../llm/model-tiers';
 import {
   llmOk,
@@ -488,6 +489,20 @@ async function persistPreferenceMemory(
         rule: args.decision.preferenceRule,
       }),
       sourceChatMessageId: args.customerMessage.id,
+      // A preference rule is the customer stating how they want work done,
+      // in the turn we can point at. Confidence 1 — we are not inferring
+      // the rule, we are recording an instruction. verified stays false:
+      // the customer stated it, but has not re-read what we wrote down.
+      provenance: buildProvenance({
+        sourceType: 'customer-chat',
+        origin: 'customer',
+        recordType: 'memory-entry',
+        sourceRef: `ChatMessage:${args.customerMessage.id}`,
+        storedBy: 'plaino',
+        confidence: 1,
+        verified: false,
+        now: args.input.now,
+      }),
       now: args.input.now,
     });
     return entry.id;
@@ -948,6 +963,40 @@ async function persistProposedMemoryEntry(args: {
   proposed: ProposedMemoryEntry;
   defaultSource: string;
 }): Promise<void> {
+  // The honest split, and the whole point of the block:
+  //
+  //   - The extractor tied this to a specific turn → the CUSTOMER said it.
+  //     Cite that turn (the memory page links straight to it) at 0.9 —
+  //     high, but short of 1 because the extractor still paraphrased.
+  //   - No turn to point at → Plaino CONCLUDED it across the exchange.
+  //     That is an inference: 0.6, never verified, and the memory page
+  //     says "Plaino worked this out on its own — unconfirmed" out loud.
+  //
+  // Both land in the same list on the customer's memory page, so the
+  // difference has to live in the data, not in the reader's assumption.
+  const fromChat = args.proposed.sourceChatMessageId !== null;
+  const provenance = fromChat
+    ? buildProvenance({
+        sourceType: 'customer-chat',
+        origin: 'customer',
+        recordType: 'memory-entry',
+        sourceRef: `ChatMessage:${args.proposed.sourceChatMessageId}`,
+        storedBy: 'plaino',
+        confidence: 0.9,
+        verified: false,
+      })
+    : buildProvenance({
+        sourceType: 'agent-inference',
+        origin: 'agent',
+        recordType: 'memory-entry',
+        // The turn that triggered the write-back is the closest honest
+        // pointer we have — it says "this came out of this exchange",
+        // not "the customer said this here".
+        sourceRef: `ChatMessage:${args.defaultSource}`,
+        storedBy: 'plaino',
+        confidence: 0.6,
+        verified: false,
+      });
   await args.memory.upsert({
     workspaceId: args.workspaceId,
     kind: args.proposed.kind,
@@ -955,6 +1004,7 @@ async function persistProposedMemoryEntry(args: {
     body: args.proposed.body,
     sourceChatMessageId:
       args.proposed.sourceChatMessageId ?? args.defaultSource,
+    provenance,
   });
 }
 

@@ -18,6 +18,12 @@
 
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { withRls, type RlsContext } from '../../db/rls';
+import {
+  assertProvenance,
+  buildProvenance,
+  parseStoredProvenance,
+  type Provenance,
+} from '../../provenance/types';
 import { decrypt, encrypt } from '../../security/encryption';
 import {
   type IMemoryStore,
@@ -106,9 +112,13 @@ export class PrismaMemoryStore implements IMemoryStore {
     title: string;
     body: string;
     sourceChatMessageId: string | null;
+    provenance: Provenance;
     now?: Date;
   }): Promise<MemoryEntry> {
     this.assertWorkspace(args.workspaceId);
+    // The door, BEFORE the encrypt + the transaction: a caller who did
+    // not say where this fact came from gets a throw, not a row.
+    const provenance = assertProvenance('memory-entry', args.provenance);
     const ciphertext = encrypt(args.body);
     const normalizedTitle = args.title.trim();
     return withRls(
@@ -128,6 +138,10 @@ export class PrismaMemoryStore implements IMemoryStore {
             data: {
               body: ciphertext,
               sourceChatMessageId: args.sourceChatMessageId,
+              // Re-stamp on update: the citation must describe the write
+              // that put the CURRENT body here, not the first one. A
+              // stale block would cite a turn that no longer says this.
+              provenance: provenance as unknown as Prisma.InputJsonObject,
             },
           });
           return this.toEntry(updated);
@@ -139,6 +153,7 @@ export class PrismaMemoryStore implements IMemoryStore {
             title: normalizedTitle,
             body: ciphertext,
             sourceChatMessageId: args.sourceChatMessageId,
+            provenance: provenance as unknown as Prisma.InputJsonObject,
           },
         });
         return this.toEntry(created);
@@ -177,12 +192,30 @@ export class PrismaMemoryStore implements IMemoryStore {
     this.assertWorkspace(args.workspaceId);
     const ciphertext = encrypt(args.body);
     const normalizedTitle = args.title.trim();
+    // A customer editing a memory entry is the customer vouching for the
+    // fact in their own words — the one write path in the system that
+    // legitimately produces `verified: true`. Stamped here, not accepted
+    // from the caller, so nothing else can claim the customer said it.
+    const provenance = buildProvenance({
+      sourceType: 'customer-edit',
+      origin: 'customer',
+      recordType: 'memory-entry',
+      sourceRef: `WorkspaceMemoryEntry:${args.id}`,
+      storedBy: 'customer',
+      confidence: 1,
+      verified: true,
+      now: args.now,
+    });
     return withRls(
       this.ctx(),
       async (tx) => {
         const updated = await tx.workspaceMemoryEntry.update({
           where: { id: args.id },
-          data: { title: normalizedTitle, body: ciphertext },
+          data: {
+            title: normalizedTitle,
+            body: ciphertext,
+            provenance: provenance as unknown as Prisma.InputJsonObject,
+          },
         });
         return this.toEntry(updated);
       },
@@ -219,6 +252,7 @@ export class PrismaMemoryStore implements IMemoryStore {
     title: string;
     body: string;
     sourceChatMessageId: string | null;
+    provenance?: Prisma.JsonValue | null;
     pinned: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -231,6 +265,11 @@ export class PrismaMemoryStore implements IMemoryStore {
       title: row.title,
       body: decrypt(row.body),
       sourceChatMessageId: row.sourceChatMessageId,
+      // LENIENT on read, strict on write. A legacy row (NULL) or a block
+      // from some future shape we can't parse must never break the
+      // customer's memory page — it degrades to "no citation shown",
+      // which is honest. Only the write door throws.
+      provenance: parseStoredProvenance(row.provenance ?? null),
       pinned: row.pinned,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,

@@ -9,9 +9,22 @@
  */
 
 import { describe, it } from 'node:test';
+import { buildProvenance } from '../../provenance/types';
 import assert from 'node:assert/strict';
 
 import { RecordingMemoryStore } from './recording-memory-store';
+
+/** Provenance for test writes through the memory door. The door validates
+ *  every block, so fixtures have to be honest too — a test that could pass
+ *  with a fake block would not be testing the door. */
+const TEST_MEMORY_PROVENANCE = buildProvenance({
+  sourceType: 'customer-chat',
+  origin: 'customer',
+  recordType: 'memory-entry',
+  sourceRef: 'ChatMessage:test-turn',
+  storedBy: 'plaino',
+  confidence: 1,
+});
 
 const WORKSPACE_ID = 'ws-recording-mem-0001';
 
@@ -30,6 +43,7 @@ describe('RecordingMemoryStore — workspace isolation', () => {
           title: 't',
           body: 'b',
           sourceChatMessageId: null,
+          provenance: TEST_MEMORY_PROVENANCE,
         }),
       /workspaceId mismatch/,
     );
@@ -68,6 +82,7 @@ describe('RecordingMemoryStore — upsert + edit + pin + delete', () => {
       title: 'atlanta listing close date',
       body: 'targeted June 14.',
       sourceChatMessageId: 'msg-1',
+      provenance: TEST_MEMORY_PROVENANCE,
     });
     const b = await store.upsert({
       workspaceId: WORKSPACE_ID,
@@ -75,6 +90,7 @@ describe('RecordingMemoryStore — upsert + edit + pin + delete', () => {
       title: 'atlanta listing close date',
       body: 'pushed to June 21.',
       sourceChatMessageId: 'msg-2',
+      provenance: TEST_MEMORY_PROVENANCE,
     });
     assert.equal(a.id, b.id);
     assert.equal(b.body, 'pushed to June 21.');
@@ -89,6 +105,7 @@ describe('RecordingMemoryStore — upsert + edit + pin + delete', () => {
       title: 'preferred report format',
       body: 'bullets, no paragraphs.',
       sourceChatMessageId: null,
+      provenance: TEST_MEMORY_PROVENANCE,
     });
     const pinned = await store.setPinned({
       workspaceId: WORKSPACE_ID,
@@ -119,6 +136,7 @@ describe('RecordingMemoryStore — upsert + edit + pin + delete', () => {
       title: 'unpinned recent',
       body: 'x',
       sourceChatMessageId: null,
+      provenance: TEST_MEMORY_PROVENANCE,
     });
     await new Promise((r) => setTimeout(r, 5));
     const b = await store.upsert({
@@ -127,6 +145,7 @@ describe('RecordingMemoryStore — upsert + edit + pin + delete', () => {
       title: 'pinned old',
       body: 'y',
       sourceChatMessageId: null,
+      provenance: TEST_MEMORY_PROVENANCE,
     });
     await store.setPinned({
       workspaceId: WORKSPACE_ID,

@@ -980,6 +980,8 @@ model TimeSavingsEntry {
   sourceId     String
   occurredAt   DateTime  @default(now())
   createdAt    DateTime  @default(now())
+  /// Provenance block (lib/provenance/types.ts) — REQUIRED at the write door for all new rows; NULL only on rows written before 2026-08. Enforced by assertProvenance, not by the DB.
+  provenance   Json?
   workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, sourceTable, sourceId, actionType])
@@ -1197,6 +1199,8 @@ model WorkApprovalQueueItem {
   /// days is queued for wave 7; today an unattended head means the item
   /// sits until reassigned.
   requiredApproverUserId String?            @db.Uuid
+  /// Provenance block (lib/provenance/types.ts) — REQUIRED at the write door for all new rows; NULL only on rows written before 2026-08. Enforced by assertProvenance, not by the DB.
+  provenance             Json?
   workspace              Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   decidedBy              User?              @relation("DecidedBy", fields: [decidedByUserId], references: [id], onDelete: SetNull)
   requiredApprover       User?              @relation("WorkApprovalRequiredApprover", fields: [requiredApproverUserId], references: [id], onDelete: SetNull)
@@ -1802,6 +1806,8 @@ model LeadCapture {
   triagedByUserId String?          @db.Uuid
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
+  /// Provenance block (lib/provenance/types.ts) — REQUIRED at the write door for all new rows; NULL only on rows written before 2026-08. Enforced by assertProvenance, not by the DB.
+  provenance     Json?
 
   @@index([status, createdAt])
   @@index([createdAt])
@@ -2389,6 +2395,8 @@ model WorkspaceMemoryEntry {
   archivedRef         String?
   /// UTC instant the entry was offloaded to cold storage. NULL until COLD.
   archivedAt          DateTime?
+  /// Provenance block (lib/provenance/types.ts) — REQUIRED at the write door for all new rows; NULL only on rows written before 2026-08. Enforced by assertProvenance, not by the DB.
+  provenance          Json?
   workspace           Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   sourceChatMessage   ChatMessage?        @relation("MemoryFromChatMessage", fields: [sourceChatMessageId], references: [id], onDelete: SetNull)
 

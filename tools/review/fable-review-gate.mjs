@@ -219,6 +219,18 @@ export function isUnderReviewDir(filePath) {
 }
 
 /**
+ * Files whose ADDED LINES are exempt from the content rules: the whole docs/
+ * tree. Prose legitimately quotes `workspaceId`, `deleteMany(` and `DROP TABLE`
+ * when describing the system (audit reports, this gate's own norm doc, review
+ * docs). Documentation cannot erode an invariant — content rules target code.
+ * Path rules are unaffected: docs/ is not a gated path, and gated paths are
+ * matched on the file list, not through this predicate.
+ */
+export function isContentExempt(filePath) {
+  return normalizePath(filePath).startsWith("docs/");
+}
+
+/**
  * Parse a unified diff into added lines, per file.
  * Returns { byFile: Map<file, string[]>, text } where `text` is every added
  * line joined by newlines, EXCLUDING files matched by `exclude`.
@@ -455,11 +467,11 @@ function classifyPr(base) {
   // correctly ignored.
   const files = toLines(git(["diff", "--name-only", `${base}...HEAD`]));
 
-  // Added lines only, attributed to their file so that docs/reviews/** prose
-  // (which quotes `workspaceId`, `deleteMany(` and friends as guidance) cannot
-  // self-trigger the content rules.
+  // Added lines only, attributed to their file so that docs/** prose (which
+  // quotes `workspaceId`, `deleteMany(` and friends when describing the
+  // system) cannot self-trigger the content rules.
   const diff = git(["diff", "-U0", `${base}...HEAD`]);
-  const { text: addedLines } = parseAddedLines(diff, { exclude: isUnderReviewDir });
+  const { text: addedLines } = parseAddedLines(diff, { exclude: isContentExempt });
 
   return { files, result: classifyChange({ files, addedLines }) };
 }
@@ -530,7 +542,7 @@ function validateReviewDoc(path, base) {
         (f) => !isUnderReviewDir(f)
       );
       const diff = git(["diff", "-U0", `${sha}^`, sha], { allowFail: true }) ?? "";
-      const { text: added } = parseAddedLines(diff, { exclude: isUnderReviewDir });
+      const { text: added } = parseAddedLines(diff, { exclude: isContentExempt });
       const c = classifyChange({ files: changed, addedLines: added });
       if (c.gated) {
         const subject = (git(["log", "-1", "--format=%s", sha], { allowFail: true }) ?? "").trim();

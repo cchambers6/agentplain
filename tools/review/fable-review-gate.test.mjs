@@ -23,6 +23,7 @@ import {
   classifyChange,
   isReviewDoc,
   isUnderReviewDir,
+  isContentExempt,
   matchesGlob,
   missingSections,
   normalizePath,
@@ -206,6 +207,43 @@ test("parseAddedLines: review-doc prose alone cannot self-trigger the gate", () 
   const { text } = parseAddedLines(docOnly, { exclude: isUnderReviewDir });
   const r = classifyChange({ files: ["docs/reviews/2026-08-01-x.md"], addedLines: text });
   assert.equal(r.gated, false);
+});
+
+test("isContentExempt: the whole docs/ tree, and nothing outside it", () => {
+  assert.equal(isContentExempt("docs/reviews/2026-08-01-x.md"), true);
+  assert.equal(isContentExempt("docs/engineering/pre-merge-review-gate.md"), true);
+  assert.equal(isContentExempt("docs\\audits\\tenancy-audit.md"), true);
+  assert.equal(isContentExempt("lib/db/client.ts"), false);
+  assert.equal(isContentExempt("README.md"), false);
+});
+
+test("parseAddedLines: docs/** prose quoting gated terms cannot trigger the content rules", () => {
+  // An audit report describing tenancy scoping is documentation, not code.
+  const docsOnly = [
+    "diff --git a/docs/audits/tenancy-audit.md b/docs/audits/tenancy-audit.md",
+    "--- /dev/null",
+    "+++ b/docs/audits/tenancy-audit.md",
+    "@@ -0,0 +2 @@",
+    "+Every query is workspaceId-scoped.",
+    "+The cleanup cron calls deleteMany( with a workspace filter.",
+  ].join("\n");
+  const { text } = parseAddedLines(docsOnly, { exclude: isContentExempt });
+  const r = classifyChange({ files: ["docs/audits/tenancy-audit.md"], addedLines: text });
+  assert.equal(r.gated, false);
+});
+
+test("parseAddedLines: the docs/** exemption does not extend to code files", () => {
+  const codeDiff = [
+    "diff --git a/app/api/leads/route.ts b/app/api/leads/route.ts",
+    "--- a/app/api/leads/route.ts",
+    "+++ b/app/api/leads/route.ts",
+    "@@ -10,0 +11 @@",
+    "+  const rows = await db.lead.findMany({ where: { workspaceId } });",
+  ].join("\n");
+  const { text } = parseAddedLines(codeDiff, { exclude: isContentExempt });
+  const r = classifyChange({ files: ["app/api/leads/route.ts"], addedLines: text });
+  assert.equal(r.gated, true);
+  assert.equal(r.contentMatches[0].name, "workspaceId");
 });
 
 test("parseAddedLines: the +++ header line is not counted as content", () => {

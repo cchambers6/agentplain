@@ -54,8 +54,10 @@ A PR is gated when it touches any of these paths:
 …or when it **adds** a line containing any of: `workspaceId` (tenancy scoping is
 load-bearing wherever it appears), `deleteMany(`, `DROP TABLE`, `DROP COLUMN`
 (the SQL patterns match case-insensitively). Content rules look at added lines
-only, and ignore lines added under `docs/reviews/**` so that a review doc
-quoting these terms cannot trigger the gate on itself.
+only, and ignore lines added anywhere under `docs/**` — prose that quotes these
+terms while describing the system (audit reports, review docs, this document)
+cannot erode an invariant; content rules target code. Path rules are unaffected
+by this exemption.
 
 Everything else passes with an explicit "no review required" line in the CI log.
 The workflow has no `paths:` filter on purpose: a filtered job that never runs

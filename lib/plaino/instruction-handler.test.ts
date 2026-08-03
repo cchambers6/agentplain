@@ -10,7 +10,6 @@
  */
 
 import { describe, it } from 'node:test';
-import { buildProvenance } from '../provenance/types';
 import assert from 'node:assert/strict';
 
 import {
@@ -33,6 +32,7 @@ import type {
   LlmResult,
 } from '../llm/types';
 import { llmOk } from '../llm/types';
+import { buildProvenance } from '../provenance/types';
 
 /** Provenance for test writes through the memory door. The door validates
  *  every block, so fixtures have to be honest too — a test that could pass

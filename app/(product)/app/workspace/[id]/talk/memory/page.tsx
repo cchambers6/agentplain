@@ -7,6 +7,10 @@ import { requireWorkspaceMember } from "@/lib/auth/server";
 import { PrismaMemoryStore } from "@/lib/plaino";
 import type { MemoryEntry, MemoryKind } from "@/lib/plaino/memory";
 import { MEMORY_KINDS } from "@/lib/plaino/memory";
+import {
+  describeProvenance,
+  sourceChatMessageIdFromRef,
+} from "@/lib/provenance/describe";
 import { deleteAction, editAction, pinAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -103,14 +107,7 @@ function MemoryRow({ entry, workspaceId }: RowProps) {
       <div className="mb-2 flex items-center gap-2 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
         {entry.pinned ? <span className="text-forest">pinned</span> : null}
         <span>updated {formatTimestamp(entry.updatedAt)}</span>
-        {entry.sourceChatMessageId ? (
-          <a
-            href={`/app/workspace/${workspaceId}/talk#msg-${entry.sourceChatMessageId}`}
-            className="text-ink-soft underline-offset-4 hover:underline"
-          >
-            · from chat
-          </a>
-        ) : null}
+        <Citation entry={entry} workspaceId={workspaceId} />
       </div>
 
       <details>
@@ -184,6 +181,60 @@ function MemoryRow({ entry, workspaceId }: RowProps) {
   );
 }
 
+/**
+ * Where this fact came from, in the customer's words.
+ *
+ * The copy comes from `describeProvenance` — the only sanctioned
+ * translation of the stored block. Nothing on this page ever prints an
+ * enum value, a slug, or the word "provenance" (the ratified
+ * customer-vocab rule); the customer reads "you told Plaino this in chat"
+ * or "Plaino worked this out on its own — unconfirmed".
+ *
+ * Three states, all honest:
+ *   - block present + a chat turn to open  → the citation IS the link
+ *   - block present, nothing to link to    → plain text, no fake link
+ *   - LEGACY row (no block)                → exactly the old "· from
+ *     chat" behaviour. We know a source message id but not how the fact
+ *     got there, so we claim only what we actually know.
+ */
+function Citation({ entry, workspaceId }: RowProps) {
+  const turnHref = (id: string) =>
+    `/app/workspace/${workspaceId}/talk#msg-${id}`;
+
+  if (!entry.provenance) {
+    if (!entry.sourceChatMessageId) return null;
+    return (
+      <a
+        href={turnHref(entry.sourceChatMessageId)}
+        className="text-ink-soft underline-offset-4 hover:underline"
+      >
+        · from chat
+      </a>
+    );
+  }
+
+  const copy = describeProvenance(entry.provenance);
+  const capturedOn = formatDate(new Date(entry.provenance.capturedAt));
+  const linkId =
+    sourceChatMessageIdFromRef(entry.provenance) ?? entry.sourceChatMessageId;
+
+  if (!linkId) {
+    return (
+      <span className="text-ink-soft">
+        · {copy} · {capturedOn}
+      </span>
+    );
+  }
+  return (
+    <a
+      href={turnHref(linkId)}
+      className="text-ink-soft underline-offset-4 hover:underline"
+    >
+      · {copy} · {capturedOn}
+    </a>
+  );
+}
+
 function labelFor(kind: MemoryKind): string {
   switch (kind) {
     case "USER":
@@ -215,4 +266,11 @@ function formatTimestamp(date: Date): string {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+/** Day-level date for the citation — "you told Plaino this in chat ·
+ *  Jun 12". The minute a fact was captured is noise here; the day is
+ *  what a customer actually recognizes. */
+function formatDate(date: Date): string {
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }

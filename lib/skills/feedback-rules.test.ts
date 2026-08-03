@@ -19,12 +19,12 @@
  */
 
 import { describe, it } from 'node:test';
-import { buildProvenance } from '@/lib/provenance/types';
 import assert from 'node:assert/strict';
 
 import { RecordingMemoryStore } from '@/lib/plaino/memory/recording-memory-store';
 import { buildFeedbackRulesBlock, DEFAULT_RUNNER_SCOPES } from './feedback-rules';
 import { buildPreferenceMemoryBody } from '@/lib/plaino/preference-memory';
+import { buildProvenance } from '@/lib/provenance/types';
 
 /** Provenance for test writes through the memory door. The door validates
  *  every block, so fixtures have to be honest too. */

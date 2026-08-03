@@ -12,7 +12,6 @@
  */
 
 import { describe, it } from 'node:test';
-import { buildProvenance } from '@/lib/provenance/types';
 import assert from 'node:assert/strict';
 
 import type { WebhookEvent, Workspace } from '@prisma/client';
@@ -22,6 +21,7 @@ import { TestLlmProvider } from '@/lib/llm/test-provider';
 import { skillOk, type SkillResult } from './types';
 import type { MessageFetcher, DraftPersister, ParsedMessage } from './types';
 import { runSkillChain } from './runner';
+import { buildProvenance } from '@/lib/provenance/types';
 
 /** Provenance for test writes through the memory door. The door validates
  *  every block, so fixtures have to be honest too. */

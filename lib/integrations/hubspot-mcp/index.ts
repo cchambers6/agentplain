@@ -16,6 +16,7 @@ import { ProdHubspotMcpServer } from './server';
 import { RecordingHubspotMcpServer } from './test-server';
 import { withHubspotApproval } from './with-approval';
 import type { HubspotMcpServer } from './types';
+import { runHubspotSkill, HUBSPOT_SKILL_NAME, type HubspotSkill } from './skill/skill';
 
 /**
  * Build the HubSpot MCP server. Every mutating method is approval-gated at this
@@ -63,3 +64,39 @@ export type {
   CreateNoteInput,
   CreateNoteOutput,
 } from './types';
+
+// ── Chiron-style skill surface (additive; the legacy shape above is unchanged) ──
+// Runtime I/O contracts + a single parsed entry point. See
+// `docs/agents/skill-discipline-template-2026-08-01.md`.
+export {
+  runHubspotSkill,
+  HUBSPOT_SKILL_NAME,
+  type HubspotSkill,
+  type HubspotSkillDeps,
+} from './skill/skill';
+
+/**
+ * Build the skill over the factory-gated server for a workspace. Tests inject
+ * `deps` (in-memory gate + audit sink) exactly as they do for the server. There
+ * is deliberately no way to pass an ungated server in through this path.
+ * Defined here — beside the factory it closes over — so `skill/` never imports
+ * back through this barrel.
+ */
+export function buildHubspotSkill(args: {
+  workspaceId: string;
+  deps?: ConnectorApprovalDeps;
+}): HubspotSkill {
+  const server = buildHubspotMcpServer(args);
+  return {
+    name: HUBSPOT_SKILL_NAME,
+    run: (input: unknown) => runHubspotSkill(input, { server }),
+  };
+}
+export {
+  hubspotSkillInputSchema,
+  hubspotSkillOutputSchema,
+  HUBSPOT_SKILL_ACTIONS,
+  type HubspotSkillInput,
+  type HubspotSkillOutput,
+  type HubspotSkillAction,
+} from './skill/contracts';

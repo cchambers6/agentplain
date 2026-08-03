@@ -204,6 +204,16 @@ export interface DraftReply {
    *  stay in the operator queue rather than landing in the customer
    *  inbox where a hurried tap could send them. */
   persisted: boolean;
+  /** Set only on the pre-generation refusal path: the draft skill had
+   *  ZERO grounding (no customer context, no preferences, no thread
+   *  summary, no slots) and declined to generate. `body` is then an
+   *  operator-facing HOLD NOTE, not a sendable reply, and `confidence`
+   *  is 0 — below every persist threshold, so it can never reach Gmail
+   *  Drafts. Optional so every existing DraftReply consumer is
+   *  unaffected. See lib/plaino/missing-inputs.ts. */
+  held?: true;
+  /** The named gaps behind `held`. Absent on a real draft. */
+  missing?: import('../plaino/missing-inputs').MissingInput[];
 }
 
 /**

@@ -32,10 +32,16 @@ export async function sendPortalMessageAction(
     return { ok: false, error: "Your session has expired — open your portal link again." };
   }
 
+  // This surface opens the client's GENERAL thread — not scoped to any one
+  // matter. The same `caseId` rides into the turn context so the
+  // requirements check (checkPortalDraftInputs) sees the thread's real
+  // scope: a general thread never promised case facts, so it is exempt.
+  const caseId: string | null = null;
+
   const threadId = await ensurePortalThread({
     portalConfigId: ctx.brand.portalConfigId,
     clientId: ctx.signedIn.clientId,
-    caseId: null,
+    caseId,
   });
 
   const result = await runPortalChatTurn(
@@ -45,6 +51,7 @@ export async function sendPortalMessageAction(
       clientId: ctx.signedIn.clientId,
       clientEmail: ctx.signedIn.email,
       brandName: ctx.brand.brandName,
+      caseId,
       threadId,
     },
     body,
@@ -58,7 +65,10 @@ export async function sendPortalMessageAction(
       notice: `Thanks — your message is with the ${ctx.brand.brandName} team. You'll see their reply here.`,
     };
   }
-  // Degraded / draft-failed / empty all surface the same calm acknowledgment:
-  // the client's message WAS saved; only Plaino's auto-draft didn't run.
+  // Degraded / draft-failed / missing-inputs / empty all surface the same
+  // calm acknowledgment: the client's message WAS saved; only Plaino's
+  // auto-draft didn't run. MISSING_INPUTS additionally carries the named
+  // gaps — those are the owner's business and stay off this surface;
+  // runPortalChatTurn already logged them for ops.
   return { ok: true, notice: result.customerNotice };
 }

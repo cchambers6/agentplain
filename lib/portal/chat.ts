@@ -10,11 +10,21 @@
  *     deliveryStatus column can never leak an unapproved message.
  *
  *   - runPortalChatTurn(): the WRITE path. Persists the client's message,
- *     then — unless Plaino is resting (degraded mode) — drafts a reply and
+ *     then — unless Plaino is resting (degraded mode), or the thread has no
+ *     case facts to stand on (checkPortalDraftInputs) — drafts a reply and
  *     routes it through the owner-approval gate. The drafted reply is persisted
  *     PENDING_APPROVAL and is invisible to the client until the owner approves
  *     it on /approvals. Nothing reaches the client autonomously
  *     (project_no_outbound_architecture).
+ *
+ * Pre-generation requirements check (lib/plaino/missing-inputs.ts): a
+ * case-scoped thread whose case carries neither a title nor a status gives
+ * draftReply() ZERO facts about the matter — the model would still write a
+ * warm, specific-sounding reply on the owner's brand, to the owner's own
+ * client. We refuse instead: no model call, a structured report naming the
+ * gap for the owner, and the same calm acknowledgment to the client that
+ * DRAFT_FAILED already gives them. The client's message is persisted FIRST
+ * either way — a refusal must never cost them their words.
  *
  * Message bodies are AES-256-GCM v1 ciphertext at rest, same codec as
  * ChatMessage.body.
@@ -28,6 +38,15 @@ import {
 } from "@/lib/security/encryption";
 import { checkDegradedMode } from "@/lib/plaino/degraded-mode";
 import { getLlmProvider } from "@/lib/llm";
+import { getLogger } from "@/lib/observability/logger";
+import {
+  buildMissingInputsReport,
+  missingInputKeys,
+  MISSING_CASE_STATUS,
+  MISSING_CASE_TITLE,
+  type MissingInput,
+  type MissingInputReport,
+} from "@/lib/plaino/missing-inputs";
 import { PrismaPortalApprovalGate } from "./owner-approval-gate-prisma";
 import {
   isPortalMessageVisibleToClient,
@@ -133,6 +152,10 @@ export interface PortalChatContext {
   clientId: string;
   clientEmail: string;
   brandName: string;
+  /** The case this thread is scoped to, matching the `caseId` the caller
+   *  passed `ensurePortalThread`. NULL = a general thread, not about any
+   *  one matter, so the case-facts requirement below doesn't apply. */
+  caseId?: string | null;
   /** Optional case the thread is about — grounds Plaino's reply. */
   caseTitle?: string | null;
   caseStatus?: string | null;
@@ -141,9 +164,47 @@ export interface PortalChatContext {
 
 export type PortalChatTurnResult =
   | { ok: true; pendingApprovalId: string | null }
-  | { ok: false; reason: "DEGRADED" | "DRAFT_FAILED" | "EMPTY"; customerNotice: string };
+  | { ok: false; reason: "DEGRADED" | "DRAFT_FAILED" | "EMPTY"; customerNotice: string }
+  | {
+      ok: false;
+      reason: "MISSING_INPUTS";
+      /** Same calm acknowledgment the client gets on DRAFT_FAILED — they
+       *  never see the gap list. */
+      customerNotice: string;
+      /** For the OWNER's surface / the caller's ops log, not the client. */
+      missing: MissingInput[];
+    };
 
 const MAX_CLIENT_MESSAGE_CHARS = 8000;
+
+/**
+ * Pre-generation requirements check for the portal draft. Pure — no DB, no
+ * clock, no model call — so the policy is unit-testable on its own.
+ *
+ * Fires only when the thread is scoped to a case AND that case carries
+ * neither a title nor a status. In that state `draftReply()` composes its
+ * system prompt with an empty `caseLine`: the model gets the brand name,
+ * the conversation history, and nothing whatsoever about the matter the
+ * client is writing in about. It will still answer.
+ *
+ * Returns null (proceed to a real draft) in every other shape, including a
+ * caseless general thread — a general thread never promised case facts.
+ */
+export function checkPortalDraftInputs(
+  ctx: PortalChatContext,
+): MissingInputReport | null {
+  if (!ctx.caseId) return null;
+  const hasTitle = (ctx.caseTitle ?? "").trim().length > 0;
+  const hasStatus = (ctx.caseStatus ?? "").trim().length > 0;
+  // One of the two is enough to ground a reply. Both absent is the hollow
+  // case — refuse rather than generate.
+  if (hasTitle || hasStatus) return null;
+  return buildMissingInputsReport(
+    "PORTAL_CHAT",
+    [MISSING_CASE_TITLE, MISSING_CASE_STATUS],
+    { brandName: ctx.brandName },
+  );
+}
 
 /**
  * Run one client turn: persist the client's message, then draft + gate Plaino's
@@ -185,6 +246,28 @@ export async function runPortalChatTurn(
       },
     }),
   );
+
+  // 1.5 Requirements check. AFTER the persist above (the client's words are
+  //     never lost to a refusal) and BEFORE the model call (a refusal costs
+  //     nothing). The client hears the DRAFT_FAILED acknowledgment; the
+  //     named gap goes to the owner's log so someone can fix the case row.
+  const missingInputs = checkPortalDraftInputs(ctx);
+  if (missingInputs) {
+    getLogger().warn("portal.chat_missing_inputs", {
+      workspace_id: ctx.workspaceId,
+      portal_config_id: ctx.portalConfigId,
+      thread_id: ctx.threadId,
+      case_id: ctx.caseId ?? null,
+      missing: missingInputKeys(missingInputs),
+      operator_note: missingInputs.operatorNote,
+    });
+    return {
+      ok: false,
+      reason: "MISSING_INPUTS",
+      customerNotice: missingInputs.customerNotice,
+      missing: missingInputs.missing,
+    };
+  }
 
   // 2. Draft Plaino's reply from the visible history + case context.
   const history = await loadVisibleMessages({

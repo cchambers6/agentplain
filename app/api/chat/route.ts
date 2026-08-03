@@ -42,6 +42,8 @@ import {
   PLAINO_PAUSED_REPLY,
   PLAINO_TRANSIENT_REPLY,
 } from "@/lib/plaino/degraded-copy";
+import { missingInputKeys } from "@/lib/plaino/missing-inputs";
+import { checkSupportChatInputs } from "@/lib/plaino/support-chat-inputs";
 import { getLogger } from "@/lib/observability/logger";
 
 export const runtime = "nodejs";
@@ -173,9 +175,53 @@ async function handleSupport(input: ChatInput, req: Request) {
           where: { workspaceId, status: "PENDING" },
         }),
       ),
-      buildCapabilitySnapshot({ workspaceId, ctx }).catch(() => null),
+      loadCapabilitySnapshot({ workspaceId, ctx }),
       searchKnowledge(ctx, latestQuestion),
     ]);
+
+  // Pre-generation requirements check. A missing workspace row, or BOTH
+  // grounding loads failing, means the prompt below would be grounded in
+  // nothing while still reading as a complete prompt — and the model would
+  // answer it confidently. Refuse instead: no model call on this path.
+  const missingInputs = checkSupportChatInputs({
+    workspaceFound: !!workspace,
+    snapshotFailed: snapshot.failed,
+    knowledgeFailed: !knowledge.ok,
+  });
+  if (missingInputs) {
+    getLogger().warn("plaino.support_missing_inputs", {
+      workspace_id: workspaceId,
+      missing: missingInputKeys(missingInputs),
+    });
+    let refusedConversationId: string | null = input.conversationId ?? null;
+    try {
+      refusedConversationId = await persistConversation({
+        mode: "SUPPORT",
+        workspaceId,
+        sessionId: session.userId,
+        conversationId: refusedConversationId,
+        turns: appendReply(
+          input.messages,
+          missingInputs.customerNotice,
+          new Date().toISOString(),
+        ),
+      });
+    } catch {
+      // Best-effort log — never fail the customer's turn on a log write.
+    }
+    // Mirrors the degraded response shape exactly so the widget behaves
+    // identically: calm reply text + the email hand-off auto-expanded.
+    return NextResponse.json(
+      {
+        ok: true,
+        reply: missingInputs.customerNotice,
+        conversationId: refusedConversationId,
+        degraded: true,
+        expandLeadCapture: true,
+      },
+      { status: 200 },
+    );
+  }
 
   const verticalSlug = workspace
     ? verticalSlugFromEnum(workspace.vertical)
@@ -188,9 +234,11 @@ async function handleSupport(input: ChatInput, req: Request) {
     workspaceName: workspace?.name ?? "your workspace",
     verticalSlug,
     tierDisplayName: tier,
-    connectedIntegrations: (snapshot?.connectedIntegrations ?? []).map((i) => i.name),
+    connectedIntegrations: (snapshot.value?.connectedIntegrations ?? []).map(
+      (i) => i.name,
+    ),
     pendingApprovalsCount,
-    knowledge,
+    knowledge: knowledge.hits,
   });
 
   // Customer-facing READ by a paying customer → top tier (wave-8 calibration).
@@ -310,19 +358,38 @@ function degradedResponseExtras(
  */
 const WORKSPACE_JURISDICTIONS = ["GA", "US"];
 
+interface KnowledgeHit {
+  title: string;
+  body: string;
+  sourceUrl: string | null;
+  citation: string | null;
+  jurisdiction: string | null;
+}
+
+/**
+ * Knowledge lookup result. `ok` distinguishes the two shapes the caller
+ * must NOT conflate:
+ *
+ *   - `{ ok: true, hits: [] }` — the search ran and matched nothing. Fine:
+ *     the prompt's honest "I don't know yet" path covers it.
+ *   - `{ ok: false, hits: [] }` — the search did not run (store error,
+ *     thrown call, `!result.ok`). We don't know what we don't know, and
+ *     the requirements check treats it as a lost grounding input.
+ *
+ * The old code returned `[]` for both, which is exactly how a substrate
+ * outage turned into a confident, ungrounded answer.
+ */
+interface KnowledgeLookup {
+  ok: boolean;
+  hits: KnowledgeHit[];
+}
+
 async function searchKnowledge(
   ctx: { userId: string; workspaceId: string; isOperator: boolean },
   query: string,
-): Promise<
-  Array<{
-    title: string;
-    body: string;
-    sourceUrl: string | null;
-    citation: string | null;
-    jurisdiction: string | null;
-  }>
-> {
-  if (query.trim().length === 0) return [];
+): Promise<KnowledgeLookup> {
+  // An empty query is not a failure — there is simply nothing to look up.
+  if (query.trim().length === 0) return { ok: true, hits: [] };
   try {
     const store = getKnowledgeStore(ctx);
     const result = await store.search({
@@ -331,18 +398,42 @@ async function searchKnowledge(
       contextKinds: ["SKILL", "CUSTOMER", "VERTICAL", "COMPLIANCE"],
       jurisdictions: WORKSPACE_JURISDICTIONS,
     });
-    if (!result.ok) return [];
-    return result.value.map((hit) => ({
-      title: hit.title,
-      body: hit.body,
-      sourceUrl: hit.sourceUrl,
-      citation:
-        typeof hit.metadata?.citation === "string" ? (hit.metadata.citation as string) : null,
-      jurisdiction: hit.jurisdiction,
-    }));
+    if (!result.ok) return { ok: false, hits: [] };
+    return {
+      ok: true,
+      hits: result.value.map((hit) => ({
+        title: hit.title,
+        body: hit.body,
+        sourceUrl: hit.sourceUrl,
+        citation:
+          typeof hit.metadata?.citation === "string" ? (hit.metadata.citation as string) : null,
+        jurisdiction: hit.jurisdiction,
+      })),
+    };
   } catch {
-    // A substrate miss must not break the chat — Plaino just answers
-    // without grounding and leans on the honest "I don't know yet" path.
-    return [];
+    // A substrate miss must not break the chat — but it must not be
+    // indistinguishable from "nothing matched" either. Tag it and let the
+    // requirements check decide whether the turn can still be answered.
+    return { ok: false, hits: [] };
+  }
+}
+
+/**
+ * Capability snapshot load, with the failure recorded rather than erased.
+ * `value` stays null on failure (every downstream reader already handles
+ * null); `failed` is what tells the requirements check that null means
+ * "we couldn't look" and not "nothing is connected".
+ */
+async function loadCapabilitySnapshot(args: {
+  workspaceId: string;
+  ctx: { userId: string; workspaceId: string; isOperator: boolean };
+}): Promise<{
+  failed: boolean;
+  value: Awaited<ReturnType<typeof buildCapabilitySnapshot>> | null;
+}> {
+  try {
+    return { failed: false, value: await buildCapabilitySnapshot(args) };
+  } catch {
+    return { failed: true, value: null };
   }
 }

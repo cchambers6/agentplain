@@ -15,11 +15,31 @@
  * Per `feedback_no_silent_vendor_lock.md`: persistence goes through the
  * `DraftPersister` port; production wires the Gmail-API implementation,
  * tests inject a recording stub.
+ *
+ * Pre-generation requirements check (lib/plaino/missing-inputs.ts):
+ * before this skill existed a zero-grounding fire still called the model.
+ * With no customer-context snippets, no learned preferences, no thread
+ * summary and no proposed slots, the prompt reduces to "reply to this
+ * email" — and the model returns a fluent, confident, entirely invented
+ * reply that, above the persist threshold, lands in the broker's REAL
+ * Gmail Drafts one tap from send. So we check first and HOLD instead. The
+ * in-repo precedent is the `placeholder` tier in
+ * `./support-handler/skill.ts`: substrate below the floor produces a
+ * deterministic hold, never a fabricated answer, and makes no model call.
  */
 
 import { randomUUID } from 'node:crypto';
 import type { LlmProvider } from '../llm/types';
 import { MODEL_OPUS } from '../llm/model-tiers';
+import {
+  buildMissingInputsReport,
+  MISSING_CUSTOMER_CONTEXT,
+  MISSING_DRAFT_PREFERENCES,
+  MISSING_SCHEDULE,
+  MISSING_THREAD_SUMMARY,
+  type MissingInput,
+  type MissingInputReport,
+} from '../plaino/missing-inputs';
 import type { VerticalPromptBundle } from './prompts/index';
 import {
   DraftPersister,
@@ -48,6 +68,23 @@ export interface DraftSkillInput {
   persister: DraftPersister;
   /** Below this threshold, persist=false even on success. Default 0.5. */
   persistThreshold?: number;
+  /**
+   * What the caller inlined into the composed prompt bundle. The runner
+   * knows both of these at compose time; this skill cannot see them
+   * (they're baked into `prompts.draft` as opaque text), which is exactly
+   * why they have to be passed explicitly.
+   *
+   * OMITTED = the caller can't vouch either way, and the requirements
+   * check is skipped entirely. Never over-refuse on a caller's silence.
+   */
+  grounding?: DraftGrounding;
+}
+
+export interface DraftGrounding {
+  /** How many CUSTOMER-kind snippets were inlined. 0 = nothing on file. */
+  customerContextSnippetCount: number;
+  /** Did the workspace's preferences render into the draft prompt? */
+  preferencesPresent: boolean;
 }
 
 const DEFAULT_PERSIST_THRESHOLD = 0.5;
@@ -57,6 +94,11 @@ export class DraftSkill implements ISkill<DraftSkillInput, DraftReply> {
   constructor(private readonly llm: LlmProvider) {}
 
   async run(input: DraftSkillInput): Promise<SkillResult<DraftReply>> {
+    // Requirements check FIRST — the refusal path makes no model call and
+    // costs nothing.
+    const missing = checkDraftGrounding(input);
+    if (missing) return skillOk(buildHeldDraft(input, missing));
+
     const userPrompt = renderUserPrompt(input);
     const res = await this.llm.complete({
       system: input.prompts.draft,
@@ -132,6 +174,89 @@ export class DraftSkill implements ISkill<DraftSkillInput, DraftReply> {
       persisted: true,
     });
   }
+}
+
+// ── Pre-generation requirements check ───────────────────────────────────
+
+/**
+ * Returns a report when the draft would be composed on nothing, or null to
+ * proceed to the model. Pure.
+ *
+ * Refuses only on the TOTAL blank: no customer-context snippets AND no
+ * preferences AND no thread summary AND no proposed slots. Any single
+ * surviving input gives the model something real to write from, so a
+ * partially-grounded fire always proceeds — over-refusing would be its own
+ * bug. Skipped entirely when the caller passed no `grounding`.
+ */
+export function checkDraftGrounding(
+  input: DraftSkillInput,
+): MissingInputReport | null {
+  const g = input.grounding;
+  if (!g) return null;
+
+  const missing: MissingInput[] = [];
+  if (g.customerContextSnippetCount === 0) missing.push(MISSING_CUSTOMER_CONTEXT);
+  if (!g.preferencesPresent) missing.push(MISSING_DRAFT_PREFERENCES);
+  if (!(input.thread?.summary ?? '').trim()) missing.push(MISSING_THREAD_SUMMARY);
+  if ((input.schedule?.proposedSlots.length ?? 0) === 0) missing.push(MISSING_SCHEDULE);
+
+  // All four gone = the prompt is "reply to this email" and nothing more.
+  if (missing.length < 4) return null;
+  return buildMissingInputsReport('REPLY_DRAFT', missing);
+}
+
+/**
+ * The deterministic HOLD. Not a reply — an operator-facing note that says
+ * what Plaino would have needed.
+ *
+ * INVARIANT: `confidence` is 0, which is below `DEFAULT_PERSIST_THRESHOLD`
+ * and below any caller-supplied `persistThreshold` in [0, 1]. Combined
+ * with `persisted: false` / `providerDraftId: null` — set here, not
+ * derived — a held draft can never reach `persistDraft()`, so it can never
+ * reach the broker's Gmail Drafts where a hurried tap could send it.
+ */
+function buildHeldDraft(
+  input: DraftSkillInput,
+  report: MissingInputReport,
+): DraftReply {
+  return {
+    draftId: randomUUID(),
+    providerDraftId: null,
+    subject: replySubject(input.message.subject),
+    body: renderHoldNote(report),
+    // Tone is inert on a hold note — nothing here is customer-facing prose.
+    tone: 'casual',
+    confidence: 0,
+    persisted: false,
+    held: true,
+    missing: report.missing,
+  };
+}
+
+function replySubject(inboundSubject: string): string {
+  const s = inboundSubject.trim();
+  if (/^re:/i.test(s)) return s;
+  return `Re: ${s}`;
+}
+
+/**
+ * The hold note's body. Marked at the top so no operator skimming their
+ * queue could mistake it for a sendable reply, then the customer-vocabulary
+ * gap list, then the terse operator line.
+ */
+function renderHoldNote(report: MissingInputReport): string {
+  const lines: string[] = [];
+  lines.push('[HELD — this is a note to you, not a reply to send]');
+  lines.push('');
+  lines.push(report.customerNotice);
+  lines.push('');
+  lines.push('what he needed:');
+  for (const m of report.missing) {
+    lines.push(`  - ${m.label}`);
+  }
+  lines.push('');
+  lines.push(report.operatorNote);
+  return lines.join('\n');
 }
 
 function renderUserPrompt(input: DraftSkillInput): string {

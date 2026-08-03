@@ -165,6 +165,12 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
   let customerContextBlock = renderCustomerContextBlock(
     args.customerContext ?? [],
   );
+  // The draft skill can't see inside the composed prompt bundle — the
+  // snippets and preferences are baked into it as opaque text. Track the
+  // counts here so the draft's pre-generation requirements check has
+  // something honest to check. Kept in lockstep with the resolver refresh
+  // below.
+  let customerContextSnippetCount = (args.customerContext ?? []).length;
   // Read customer-set PREFERENCE rules from workspace memory and inline
   // them so the fleet honors what /talk taught it. Best-effort — a
   // memory read failure NEVER drops the loop. Empty rule set returns
@@ -234,6 +240,7 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
         `${newestMessage.subject}\n\n${newestMessage.bodyText}`,
       );
       customerContextBlock = renderCustomerContextBlock(refreshed);
+      customerContextSnippetCount = refreshed.length;
       prompts = composePromptBundle(basePrompts, {
         preferencesBlockForDraft,
         preferencesBlockForOther,
@@ -445,12 +452,21 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
     thread: coordRes.ok ? coordRes.value : undefined,
     schedule: outcome.scheduledProposal ?? undefined,
     persister: args.persister,
+    // What actually made it into the composed draft prompt. The draft
+    // skill refuses (holds, no LLM call) only when all four grounding
+    // inputs are absent — see checkDraftGrounding.
+    grounding: {
+      customerContextSnippetCount,
+      preferencesPresent: preferencesBlockForDraft.trim().length > 0,
+    },
   });
   steps.push({
     step: 'draft',
     ok: draftRes.ok,
     summary: draftRes.ok
-      ? `tone=${draftRes.value.tone} conf=${draftRes.value.confidence.toFixed(2)} persisted=${draftRes.value.persisted}`
+      ? draftRes.value.held
+        ? `held — no grounding (${(draftRes.value.missing ?? []).map((m) => m.key).join(', ')}); no LLM call`
+        : `tone=${draftRes.value.tone} conf=${draftRes.value.confidence.toFixed(2)} persisted=${draftRes.value.persisted}`
       : draftRes.error.message,
     durationMs: Date.now() - tDraft,
     errorCode: draftRes.ok ? undefined : draftRes.error.code,
@@ -472,7 +488,10 @@ export async function runSkillChain(args: RunChainArgs): Promise<RunChainResult>
   // property-management — as of 2026-05-22) do NOT emit a compliance-
   // check step: nothing meaningful ran, so the sentinel card stays
   // honestly rooting.
-  if (outcome.draft && !disabledDisciplines.has('legal')) {
+  // A HELD draft is an operator note, not customer-facing prose — there is
+  // no reply text to scan, so sentinel stays quiet rather than emitting a
+  // compliance-check step against our own hold copy.
+  if (outcome.draft && !outcome.draft.held && !disabledDisciplines.has('legal')) {
     const corpus = loadCorpusFor(prompts.verticalSlug);
     // Go-live gate: a vertical's corpus only fires live when ops has
     // cleared it (real-estate is baseline; mortgage/insurance/etc. require

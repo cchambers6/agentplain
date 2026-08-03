@@ -47,6 +47,8 @@ import {
 } from '@/lib/skills/lead-triage-realestate/prisma-approval-sink';
 import type { TriagedLead } from '@/lib/skills/lead-triage-realestate/types';
 import { recordSavedTime } from '@/lib/guarantee/saved-time';
+import { createWorkApprovalItem } from '@/lib/approvals/create-item';
+import { buildProvenance } from '@/lib/provenance/types';
 import {
   isDemoCredentialMetadata,
   PEACHTREE_AGENTS,
@@ -198,8 +200,14 @@ async function main(): Promise<void> {
     if (!triaged) throw new Error(`historical lead not triaged: ${lead.id}`);
     const row = buildLeadTriageApprovalRow(workspaceId, triaged);
     const proposedAt = new Date(lead.receivedAt.getTime() + 2 * MINUTE);
+    // sourceType 'system' / storedBy 'seed-demo': the seed writes these rows,
+    // not the lead-triage skill. Labelling them skill-run would make the demo
+    // dataset indistinguishable from real agent work in any later audit —
+    // exactly the kind of quiet fiction the provenance block exists to stop.
+    // verified stays false even though the row is APPROVED: the "approval"
+    // here is seeded history, not a decision a human actually made.
     await withSystemContext((tx) =>
-      tx.workApprovalQueueItem.create({
+      createWorkApprovalItem(tx, {
         data: {
           ...row,
           status: 'APPROVED',
@@ -209,6 +217,16 @@ async function main(): Promise<void> {
           decidedAt: new Date(proposedAt.getTime() + 47 * MINUTE),
           decidedByUserId: ownerId,
         },
+        provenance: buildProvenance({
+          sourceType: 'system',
+          origin: 'derived',
+          recordType: 'approval-item',
+          sourceRef: `${row.refTable}:${row.refId}`,
+          storedBy: 'seed-demo',
+          confidence: 1,
+          verified: false,
+          now: proposedAt,
+        }),
       }),
     );
   }

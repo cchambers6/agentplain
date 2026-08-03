@@ -18,6 +18,8 @@
 
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { withRls, type RlsContext } from '../db/rls';
+import { createWorkApprovalItem } from '../approvals/create-item';
+import { buildProvenance } from '../provenance/types';
 import { decrypt, encrypt } from '../security/encryption';
 import { encryptPayloadForWrite } from '../security/payload-crypto';
 import {
@@ -252,7 +254,12 @@ export class PrismaChatStore implements IChatStore {
     return withRls(
       this.ctx(),
       async (tx) => {
-        const created = await tx.workApprovalQueueItem.create({
+        // NOT skill-run: this row exists because the CUSTOMER asked for it,
+        // in their own words, in a chat turn we can point at. Attributing it
+        // to a skill would erase the person who actually asked. Confidence 1
+        // — the instruction text is quoted, not inferred; verified stays
+        // false because the operator's approval is the vouching act.
+        const created = await createWorkApprovalItem(tx, {
           data: {
             workspaceId: args.workspaceId,
             agentSlug: PLAINO_INSTRUCTION_AGENT_SLUG,
@@ -263,7 +270,15 @@ export class PrismaChatStore implements IChatStore {
             discipline: args.targetDiscipline,
             payload,
           },
-          select: { id: true },
+          provenance: buildProvenance({
+            sourceType: 'customer-chat',
+            origin: 'customer',
+            recordType: 'approval-item',
+            sourceRef: `ChatMessage:${args.sourceChatMessageId}`,
+            storedBy: PLAINO_INSTRUCTION_AGENT_SLUG,
+            confidence: 1,
+            verified: false,
+          }),
         });
         return created.id;
       },

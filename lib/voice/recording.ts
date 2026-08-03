@@ -25,6 +25,8 @@ import { createHash } from 'node:crypto';
 import type { Prisma, WorkApprovalKind } from '@prisma/client';
 import { mcpOk, mcpError, type McpResult } from '@/lib/integrations/mcp-core';
 import { withSystemContext } from '@/lib/db/rls';
+import { createWorkApprovalItem } from '@/lib/approvals/create-item';
+import { buildProvenance } from '@/lib/provenance/types';
 
 /**
  * An `APPROVAL_REQUIRED` result carrying the pending queue-item id as
@@ -210,18 +212,31 @@ export class PrismaVoiceRecordingConsentGate implements VoiceRecordingConsentGat
           existing.id,
         );
       }
-      const created = await tx.workApprovalQueueItem.create({
-        data: {
-          workspaceId,
-          agentSlug: AGENT_SLUG,
-          kind: KIND,
-          refTable: REF_TABLE,
-          refId: fingerprint,
-          discipline: DISCIPLINE,
-          status: 'PENDING',
-          payload: encryptPayloadForWrite(buildPayload(workspaceId, policy, fingerprint)),
-        },
-        select: { id: true },
+      // sourceType 'system', NOT 'skill-run': no skill produced this row.
+      // It is the platform asking the owner to opt in, derived from the
+      // workspace's own recording policy (the fingerprint IS that policy).
+      // Calling it skill output would credit an agent with work it did not do.
+      const row = {
+        workspaceId,
+        agentSlug: AGENT_SLUG,
+        kind: KIND,
+        refTable: REF_TABLE,
+        refId: fingerprint,
+        discipline: DISCIPLINE,
+        status: 'PENDING' as const,
+        payload: encryptPayloadForWrite(buildPayload(workspaceId, policy, fingerprint)),
+      };
+      const created = await createWorkApprovalItem(tx, {
+        data: row,
+        provenance: buildProvenance({
+          sourceType: 'system',
+          origin: 'derived',
+          recordType: 'approval-item',
+          sourceRef: `${REF_TABLE}:${fingerprint}`,
+          storedBy: AGENT_SLUG,
+          confidence: 1,
+          verified: false,
+        }),
       });
       return approvalRequired(
         'Call recording is off until you approve recording + retention for this workspace.',

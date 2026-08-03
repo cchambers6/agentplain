@@ -26,6 +26,10 @@
 
 import type { Prisma } from '@prisma/client';
 import type { ComplianceFlag } from '../agents/sentinel';
+import {
+  createWorkApprovalItem,
+  skillRunApprovalProvenance,
+} from '../approvals/create-item';
 import { withRls, type RlsContext } from '../db';
 import { notifyApprovalQueued } from '../push';
 import { encryptPayloadForWrite } from '../security/payload-crypto';
@@ -276,9 +280,17 @@ async function writeArtifacts(
         priorDecision: decision,
       });
     }
-    const created = await tx.workApprovalQueueItem.create({
-      data: { ...approval, ...decision },
-      select: { id: true },
+    // Provenance carries the run's OWN confidence rather than the door's
+    // 0.8 default — this seam knows the real number (the draft's or the
+    // office-admin classifier's), and passing it through is the difference
+    // between a citation and a shrug. Falls back to the default only when
+    // the outcome carried no honest number.
+    const approvalRow = { ...approval, ...decision };
+    const created = await createWorkApprovalItem(tx, {
+      data: approvalRow,
+      provenance: skillRunApprovalProvenance(approvalRow, {
+        confidence: extractConfidence(record.outcome),
+      }),
     });
     approvalId = created.id;
     approvalsWritten = 1;
@@ -299,9 +311,13 @@ async function writeArtifacts(
       severity: extractTopComplianceSeverity(record.outcome),
       tx,
     });
-    await tx.workApprovalQueueItem.create({
-      data: { ...complianceApproval, ...decision },
-      select: { id: true },
+    // The sentinel row cites the same webhook event, attributed to the
+    // sentinel slug — so an owner reading the flag can see it came from
+    // the scanner's pass over THIS draft, not from a separate opinion.
+    const complianceRow = { ...complianceApproval, ...decision };
+    await createWorkApprovalItem(tx, {
+      data: complianceRow,
+      provenance: skillRunApprovalProvenance(complianceRow),
     });
     approvalsWritten += 1;
   }

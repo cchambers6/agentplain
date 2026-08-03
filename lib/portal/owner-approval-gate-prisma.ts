@@ -20,6 +20,10 @@
 import type { Prisma } from "@prisma/client";
 import { withSystemContext } from "@/lib/db/rls";
 import {
+  createWorkApprovalItem,
+  skillRunApprovalProvenance,
+} from "@/lib/approvals/create-item";
+import {
   decryptPayloadForRead,
   encryptPayloadForWrite,
 } from "@/lib/security/payload-crypto";
@@ -132,18 +136,22 @@ export class PrismaPortalApprovalGate implements OwnerApprovalGate {
           existing.id,
         );
       }
-      const created = await tx.workApprovalQueueItem.create({
-        data: {
-          workspaceId,
-          agentSlug: AGENT_SLUG,
-          kind: KIND,
-          refTable: REF_TABLE,
-          refId: fingerprint,
-          discipline: DISCIPLINE,
-          status: "PENDING",
-          payload: encryptPayloadForWrite(buildPayload(action, fingerprint)),
-        },
-        select: { id: true },
+      const row = {
+        workspaceId,
+        agentSlug: AGENT_SLUG,
+        kind: KIND,
+        refTable: REF_TABLE,
+        refId: fingerprint,
+        discipline: DISCIPLINE,
+        status: "PENDING" as const,
+        payload: encryptPayloadForWrite(buildPayload(action, fingerprint)),
+      };
+      // confidence 1: the row records a specific drafted message,
+      // fingerprint-bound. The owner is deciding whether their client should
+      // see it — not whether we understood it.
+      const created = await createWorkApprovalItem(tx, {
+        data: row,
+        provenance: skillRunApprovalProvenance(row, { confidence: 1 }),
       });
       return approvalRequired(
         "This message to your client needs your approval before it's sent.",

@@ -21,6 +21,10 @@
 
 import type { WorkApprovalKind } from '@prisma/client';
 import { withSystemContext } from '@/lib/db/rls';
+import {
+  createWorkApprovalItem,
+  skillRunApprovalProvenance,
+} from '@/lib/approvals/create-item';
 import { encryptPayloadForWrite } from '@/lib/security/payload-crypto';
 import type { VoiceActionItem } from './types';
 
@@ -173,19 +177,25 @@ export interface VoiceActionPersistence {
 /** Default persistence: a PENDING approvals-queue row per action item. */
 export const prismaVoiceActionPersistence: VoiceActionPersistence = {
   async create(row) {
+    const data = {
+      workspaceId: row.workspaceId,
+      agentSlug: AGENT_SLUG,
+      kind: KIND,
+      refTable: REF_TABLE,
+      refId: row.refId,
+      discipline: DISCIPLINE,
+      status: 'PENDING' as const,
+      payload: encryptPayloadForWrite(row.payload),
+    };
+    // The item was EXTRACTED from a call transcript by the intelligence
+    // operators — agent work over source material, not something the caller
+    // stated as a task. The default 0.8 is the honest posture: extraction
+    // from speech is good, not certain, which is exactly why a human reviews
+    // it. `VoiceCall:<callSid>` points at the call it came from.
     return withSystemContext((tx) =>
-      tx.workApprovalQueueItem.create({
-        data: {
-          workspaceId: row.workspaceId,
-          agentSlug: AGENT_SLUG,
-          kind: KIND,
-          refTable: REF_TABLE,
-          refId: row.refId,
-          discipline: DISCIPLINE,
-          status: 'PENDING',
-          payload: encryptPayloadForWrite(row.payload),
-        },
-        select: { id: true },
+      createWorkApprovalItem(tx, {
+        data,
+        provenance: skillRunApprovalProvenance(data),
       }),
     );
   },

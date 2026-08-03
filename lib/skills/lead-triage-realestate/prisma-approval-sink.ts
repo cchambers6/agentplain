@@ -29,6 +29,10 @@
  */
 
 import type { Prisma, PrismaClient } from '@prisma/client';
+import {
+  createWorkApprovalItem,
+  skillRunApprovalProvenance,
+} from '../../approvals/create-item';
 import { withRls } from '../../db/rls';
 import { SKILL_DISCIPLINE } from '../../disciplines/skill-mapping';
 import { recordSavedTime } from '../../guarantee/saved-time';
@@ -127,9 +131,9 @@ export class PrismaLeadTriageApprovalSink implements LeadTriageApprovalSink {
           select: { id: true },
         });
         if (existing) return skillOk({ sinkId: existing.id, skippedDuplicate: true });
-        const created = await this.options.tx.workApprovalQueueItem.create({
+        const created = await createWorkApprovalItem(this.options.tx, {
           data: row,
-          select: { id: true },
+          provenance: skillRunApprovalProvenance(row),
         });
         // Same-tx saved-time credit so tests (and any future tx caller)
         // see the ledger rows land atomically with the approval row.
@@ -165,9 +169,9 @@ export class PrismaLeadTriageApprovalSink implements LeadTriageApprovalSink {
             select: { id: true },
           });
           if (existing) return `skip:${existing.id}`;
-          const created = await tx.workApprovalQueueItem.create({
+          const created = await createWorkApprovalItem(tx, {
             data: row,
-            select: { id: true },
+            provenance: skillRunApprovalProvenance(row),
           });
           return created.id;
         },

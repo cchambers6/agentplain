@@ -16,6 +16,10 @@
  */
 
 import type { Prisma, PrismaClient } from '@prisma/client';
+import {
+  createWorkApprovalItem,
+  skillRunApprovalProvenance,
+} from '../../approvals/create-item';
 import { withRls } from '../../db/rls';
 import { encryptPayloadForWrite } from '../../security/payload-crypto';
 import { skillError, skillOk, type SkillResult } from '../types';
@@ -47,9 +51,9 @@ export class PrismaFinancePulseApprovalSink
     const row = buildFinancePulseApprovalRow(args.workspaceId, args.proposal);
     try {
       if (this.options.tx) {
-        const created = await this.options.tx.workApprovalQueueItem.create({
+        const created = await createWorkApprovalItem(this.options.tx, {
           data: row,
-          select: { id: true },
+          provenance: skillRunApprovalProvenance(row),
         });
         return skillOk({ sinkId: created.id });
       }
@@ -61,9 +65,9 @@ export class PrismaFinancePulseApprovalSink
       const id = await withRls(
         ctx,
         async (tx) => {
-          const created = await tx.workApprovalQueueItem.create({
+          const created = await createWorkApprovalItem(tx, {
             data: row,
-            select: { id: true },
+            provenance: skillRunApprovalProvenance(row),
           });
           return created.id;
         },

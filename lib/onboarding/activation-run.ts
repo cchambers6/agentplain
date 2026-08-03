@@ -26,6 +26,10 @@
 
 import type { Prisma, Vertical, WorkApprovalStatus } from '@prisma/client';
 import { withSystemContext } from '../db/rls';
+import {
+  createWorkApprovalItem,
+  skillRunApprovalProvenance,
+} from '../approvals/create-item';
 import { verticalSlugFromEnum } from '../auth/vertical-enum';
 import { encryptPayloadForWrite, decryptPayloadForRead } from '../security/payload-crypto';
 import {
@@ -125,18 +129,23 @@ export async function runActivationForWorkspace(args: {
       verticalSlug,
     });
 
-    const item = await tx.workApprovalQueueItem.create({
-      data: {
-        workspaceId: args.workspaceId,
-        agentSlug: ACTIVATION_AGENT_SLUG,
-        kind: 'ACTIVATION_DRAFT',
-        refTable: 'KnowledgeDocument',
-        refId: urgent.knowledgeDocumentId,
-        status: 'PENDING',
-        discipline,
-        payload,
-      },
-      select: { id: true },
+    const row = {
+      workspaceId: args.workspaceId,
+      agentSlug: ACTIVATION_AGENT_SLUG,
+      kind: 'ACTIVATION_DRAFT' as const,
+      refTable: 'KnowledgeDocument',
+      refId: urgent.knowledgeDocumentId,
+      status: 'PENDING' as const,
+      discipline,
+      payload,
+    };
+    // confidence 1: the activation draft is built DETERMINISTICALLY from the
+    // seeded record (no LLM, step 4 above), so there is no inference to
+    // discount. It still ships verified:false — deterministic is not the same
+    // as vouched-for, and the owner's approval is what vouches.
+    const item = await createWorkApprovalItem(tx, {
+      data: row,
+      provenance: skillRunApprovalProvenance(row, { confidence: 1 }),
     });
 
     await tx.skillRun.create({

@@ -26,6 +26,10 @@ import type { Prisma, WorkApprovalKind } from '@prisma/client';
 import { mcpOk, type McpResult } from '@/lib/integrations/mcp-core';
 import { withSystemContext } from '@/lib/db/rls';
 import {
+  createWorkApprovalItem,
+  skillRunApprovalProvenance,
+} from '@/lib/approvals/create-item';
+import {
   decryptPayloadForRead,
   encryptPayloadForWrite,
 } from '@/lib/security/payload-crypto';
@@ -143,18 +147,23 @@ export class PrismaConnectorApprovalGate implements ConnectorApprovalGate {
       if (existing) {
         return approvalRequired(`${label} requires your approval before it can run.`, existing.id);
       }
-      const created = await tx.workApprovalQueueItem.create({
-        data: {
-          workspaceId,
-          agentSlug: `${action.connector}-write-action`,
-          kind,
-          refTable: REF_TABLE,
-          refId: fingerprint,
-          discipline: action.discipline ?? DEFAULT_DISCIPLINE,
-          status: 'PENDING',
-          payload: encryptPayloadForWrite(buildPayload(action, fingerprint)) as Prisma.InputJsonValue,
-        },
-        select: { id: true },
+      const row = {
+        workspaceId,
+        agentSlug: `${action.connector}-write-action`,
+        kind,
+        refTable: REF_TABLE,
+        refId: fingerprint,
+        discipline: action.discipline ?? DEFAULT_DISCIPLINE,
+        status: 'PENDING' as const,
+        payload: encryptPayloadForWrite(buildPayload(action, fingerprint)) as Prisma.InputJsonValue,
+      };
+      // confidence 1: this row is not a judgement call the agent might have
+      // got wrong — it is the record of an action the agent definitely
+      // attempted, fingerprinted to that exact action. What the owner is
+      // deciding is whether to allow it, not whether we read it right.
+      const created = await createWorkApprovalItem(tx, {
+        data: row,
+        provenance: skillRunApprovalProvenance(row, { confidence: 1 }),
       });
       return approvalRequired(`${label} requires your approval before it can run.`, created.id);
     });

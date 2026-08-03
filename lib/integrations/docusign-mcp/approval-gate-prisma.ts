@@ -23,6 +23,10 @@ import type { Prisma, WorkApprovalKind } from '@prisma/client';
 import { mcpOk, type McpResult } from '@/lib/integrations/mcp-core';
 import { withSystemContext } from '@/lib/db/rls';
 import {
+  createWorkApprovalItem,
+  skillRunApprovalProvenance,
+} from '@/lib/approvals/create-item';
+import {
   decryptPayloadForRead,
   encryptPayloadForWrite,
 } from '@/lib/security/payload-crypto';
@@ -148,18 +152,21 @@ export class PrismaDocuSignApprovalGate implements DocuSignApprovalGate {
           existing.id,
         );
       }
-      const created = await tx.workApprovalQueueItem.create({
-        data: {
-          workspaceId,
-          agentSlug: AGENT_SLUG,
-          kind,
-          refTable: REF_TABLE,
-          refId: fingerprint,
-          discipline: DISCIPLINE,
-          status: 'PENDING',
-          payload: encryptPayloadForWrite(buildPayload(action, fingerprint)),
-        },
-        select: { id: true },
+      const row = {
+        workspaceId,
+        agentSlug: AGENT_SLUG,
+        kind,
+        refTable: REF_TABLE,
+        refId: fingerprint,
+        discipline: DISCIPLINE,
+        status: 'PENDING' as const,
+        payload: encryptPayloadForWrite(buildPayload(action, fingerprint)),
+      };
+      // confidence 1: the row records an attempted send/void, fingerprinted
+      // to that exact envelope. Nothing was inferred.
+      const created = await createWorkApprovalItem(tx, {
+        data: row,
+        provenance: skillRunApprovalProvenance(row, { confidence: 1 }),
       });
       return approvalRequired(
         `DocuSign ${verb} requires your approval before it can run.`,

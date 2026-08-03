@@ -16,16 +16,29 @@
  * What gets deleted (via tearDownWorkspaceData): every workspace-scoped
  * row carrying customer data — knowledge docs + embeddings, approvals,
  * handoffs, webhook events + subscriptions, integration credentials
- * (OAuth tokens), chat threads + messages, memory entries, briefings,
- * preferences, compliance flags, the time-savings ledger, converted
- * Inquiry PII, and more.
+ * (OAuth tokens), integration health + retry queues, onboarding state,
+ * chat threads + messages, memory entries + the memory access audit log,
+ * BYO storage config (encrypted S3/KMS keys), briefings, preferences,
+ * compliance flags, counsel redlines, capability proposals + creator
+ * briefs tagged to the workspace, teams + team memberships, discipline
+ * heads, support requests and support tickets + their threads, the whole
+ * client-portal tree (portal config, end clients, cases + timeline
+ * events, invites, sessions, threads, encrypted messages, uploaded
+ * documents), the customer's own AuditLog trail, the time-savings
+ * ledger, and converted Inquiry PII. The authoritative list is the
+ * `SWEPT_MODELS` manifest in lib/customer-files/deletion.ts, which a
+ * DMMF-derived coverage test holds to the Prisma schema.
  *
  * What is PRESERVED by design: the Workspace + Membership rows (now empty
- * of tenant data) and the AuditLog / Subscription / BillingEvent billing
- * history. Refund reconciliation needs the Stripe ids on the Workspace
- * row, and the audit trail must outlive the workspace. This mirrors the
- * existing closure path (lib/customer-data/closure.ts) — closure is a
- * state on the workspace, not a row deletion.
+ * of tenant data) and the Subscription / BillingEvent / WorkspaceInvoice /
+ * LlmUsageRecord billing history. Refund reconciliation needs the Stripe
+ * ids on the Workspace row and the metered-usage rows behind any charge
+ * already reported to Stripe. This mirrors the existing closure path
+ * (lib/customer-data/closure.ts) — closure is a state on the workspace,
+ * not a row deletion. Note the workspace's own AuditLog rows ARE deleted
+ * (Conner, 2026-06-18: "your data is yours; we delete on cancel"); the
+ * durable record of the deletion itself is the audit row written below,
+ * after the sweep.
  *
  * Per feedback_no_quick_fixes: the right fix is reusing the audited
  * teardown, not a hand-rolled `prisma.deleteMany` per table that drifts

@@ -16,12 +16,21 @@
  *      Workspace-closure path. Deletes every workspace-scoped tenant row:
  *      CUSTOMER KnowledgeDocument + Embeddings, WorkApprovalQueueItem,
  *      HandoffLogEntry, WebhookEvent, WebhookSubscription,
- *      IntegrationCredential, WorkspacePreference + PreferenceSignal, and
- *      Inquiry rows whose `convertedWorkspaceId` matches. Runs under
- *      `withSystemContext` so RLS policy `FORCE`-mode writes pass.
- *      Callable-only by design — wired to nothing autoexec; an admin
+ *      IntegrationCredential, WorkspacePreference + PreferenceSignal,
+ *      onboarding / support / team / storage-config rows, the whole
+ *      client-portal tree (PortalConfig and every end-client row hanging
+ *      off it), and Inquiry rows whose `convertedWorkspaceId` matches.
+ *      Runs under `withSystemContext` so RLS policy `FORCE`-mode writes
+ *      pass. Callable-only by design — wired to nothing autoexec; an admin
  *      action or workspace-closure UI is the intended caller. Other
  *      context kinds in the knowledge substrate are shared and stay put.
+ *
+ *      The authoritative list of what this sweep touches lives in the
+ *      `SWEPT_MODELS` / `PRESERVED_MODELS` / `OUT_OF_SCOPE_MODELS`
+ *      manifests below. `__tests__/deletion-coverage.test.ts` reads the
+ *      Prisma DMMF and fails the build when a workspace-scoped model (or
+ *      a cascade child of a swept model) is missing from them — so a new
+ *      tenant table cannot ship without a deletion ruling.
  *
  *   3. `reapTombstonedDriveCustomerData({ workspaceId, sourceName,
  *      liveFileIds, listingWasComplete, store })`
@@ -207,6 +216,203 @@ export async function reapTombstonedDriveCustomerData(
   };
 }
 
+// ── Deletion manifests (single source of truth for the coverage gate) ────
+//
+// Every Prisma model in `prisma/schema.prisma` is classified exactly once
+// across the three manifests below. `__tests__/deletion-coverage.test.ts`
+// reads the DMMF and asserts:
+//
+//   a. every model carrying a `workspaceId` column is in SWEPT_MODELS or
+//      PRESERVED_MODELS (never both, never neither);
+//   b. every model reachable from a SWEPT model through a REQUIRED
+//      relation with `onDelete: Cascade` is covered transitively (that is
+//      how TeamMembership and the portal children are accounted for) —
+//      and so is any future child somebody adds;
+//   c. everything left over is named in OUT_OF_SCOPE_MODELS with a reason;
+//   d. every `via: 'prisma'` entry actually appears as a `deleteMany` call
+//      in this file, so the manifest can't drift away from the code.
+
+export interface SweptModel {
+  /** Prisma model name, exactly as spelled in `prisma/schema.prisma`. */
+  model: string;
+  /**
+   * How the row is removed. `'prisma'` = an explicit `deleteMany` in
+   * `tearDownWorkspaceData`; `'knowledge-store'` = the `IKnowledgeStore`
+   * seam (per `feedback_no_silent_vendor_lock.md`, knowledge-substrate I/O
+   * never goes through bare `prisma.*`).
+   */
+  via: 'prisma' | 'knowledge-store';
+  /** Column the delete is keyed on. Defaults to `workspaceId`. */
+  keyedOn?: string;
+}
+
+/**
+ * Tables the workspace teardown hard-deletes. Order here is documentation,
+ * not execution order — the executing order lives in `runDeletes` and is
+ * children-before-parents so every count is exact.
+ */
+export const SWEPT_MODELS: readonly SweptModel[] = [
+  // Knowledge substrate — CUSTOMER kind only, through the store seam.
+  { model: 'KnowledgeDocument', via: 'knowledge-store' },
+  { model: 'Embedding', via: 'knowledge-store' },
+  // Integrations + webhooks.
+  { model: 'WebhookEvent', via: 'prisma' },
+  { model: 'WebhookSubscription', via: 'prisma' },
+  { model: 'IntegrationCredential', via: 'prisma' },
+  { model: 'IntegrationHealthCheck', via: 'prisma' },
+  { model: 'RetryableAction', via: 'prisma' },
+  // Work + activity.
+  { model: 'WorkApprovalQueueItem', via: 'prisma' },
+  { model: 'HandoffLogEntry', via: 'prisma' },
+  { model: 'SkillRun', via: 'prisma' },
+  { model: 'SkillConfig', via: 'prisma' },
+  { model: 'SkillScheduleWindow', via: 'prisma' },
+  { model: 'WorkspacePauseConfig', via: 'prisma' },
+  { model: 'WorkspaceSkillInstallation', via: 'prisma' },
+  { model: 'WorkThresholdConfig', via: 'prisma' },
+  { model: 'WorkspaceBriefing', via: 'prisma' },
+  { model: 'WorkspaceLifecycleEvent', via: 'prisma' },
+  { model: 'OnboardingState', via: 'prisma' },
+  // Conversation + memory.
+  { model: 'ChatMessage', via: 'prisma' },
+  { model: 'ChatThread', via: 'prisma' },
+  { model: 'PlainoConversation', via: 'prisma' },
+  { model: 'WorkspaceMemoryEntry', via: 'prisma' },
+  { model: 'MemoryAuditLog', via: 'prisma' },
+  { model: 'WorkspaceStorageConfig', via: 'prisma' },
+  // Preferences + compliance.
+  { model: 'WorkspacePreference', via: 'prisma' },
+  { model: 'PreferenceSignal', via: 'prisma' },
+  { model: 'PreferenceFeedback', via: 'prisma' },
+  { model: 'ComplianceFlag', via: 'prisma' },
+  { model: 'CounselRedline', via: 'prisma' },
+  { model: 'CapabilityProposal', via: 'prisma' },
+  { model: 'CreatorBrief', via: 'prisma' },
+  // People + org.
+  { model: 'TeamMembership', via: 'prisma', keyedOn: 'team.workspaceId' },
+  { model: 'Team', via: 'prisma' },
+  { model: 'DisciplineHead', via: 'prisma' },
+  // Support.
+  { model: 'SupportTicketMessage', via: 'prisma' },
+  { model: 'SupportTicket', via: 'prisma' },
+  { model: 'SupportRequest', via: 'prisma' },
+  // Client portal — end-client PII (emails, encrypted message bodies,
+  // uploaded documents). None of these carry a `workspaceId` of their own;
+  // they are keyed through PortalConfig, which does.
+  { model: 'PortalMessage', via: 'prisma', keyedOn: 'portalConfig.workspaceId' },
+  { model: 'PortalCaseEvent', via: 'prisma', keyedOn: 'case.portalConfig.workspaceId' },
+  { model: 'PortalThread', via: 'prisma', keyedOn: 'portalConfig.workspaceId' },
+  { model: 'PortalSession', via: 'prisma', keyedOn: 'portalConfig.workspaceId' },
+  { model: 'PortalInvite', via: 'prisma', keyedOn: 'portalConfig.workspaceId' },
+  { model: 'PortalDocument', via: 'prisma', keyedOn: 'portalConfig.workspaceId' },
+  { model: 'PortalCase', via: 'prisma', keyedOn: 'portalConfig.workspaceId' },
+  { model: 'PortalClient', via: 'prisma', keyedOn: 'portalConfig.workspaceId' },
+  { model: 'PortalConfig', via: 'prisma' },
+  // Audit + guarantee ledger.
+  { model: 'AuditLog', via: 'prisma' },
+  { model: 'TimeSavingsEntry', via: 'prisma' },
+  // Soft pointer, no FK.
+  { model: 'Inquiry', via: 'prisma', keyedOn: 'convertedWorkspaceId' },
+];
+
+/**
+ * Workspace-scoped tables the teardown deliberately PRESERVES. Each entry
+ * is a ruling, not an oversight — the coverage test refuses an empty
+ * reason. Disclosed to the customer on the closure screen.
+ */
+export const PRESERVED_MODELS: readonly { model: string; reason: string }[] = [
+  {
+    model: 'Workspace',
+    reason:
+      'Billing/tax shell. Refund reconciliation needs the Stripe ids on this row; ' +
+      'closure is a state on the workspace, not a row deletion.',
+  },
+  {
+    model: 'Membership',
+    reason:
+      'Part of the preserved workspace shell — who was on the account is billing ' +
+      'history. Carries no tenant content of its own.',
+  },
+  {
+    model: 'Subscription',
+    reason: 'Tax record. Stripe subscription/customer ids survive closure.',
+  },
+  {
+    model: 'BillingEvent',
+    reason: 'Tax record — the Stripe webhook ledger behind every charge.',
+  },
+  {
+    model: 'WorkspaceInvoice',
+    reason: 'Tax record — issued invoices must remain queryable after closure.',
+  },
+  {
+    model: 'LlmUsageRecord',
+    reason:
+      'Billing record, not customer content: token counts, model name, cost, and ' +
+      '`stripeReportedAt` — the source of truth for metered usage reported to ' +
+      'Stripe. No prompt/response text is stored on the row. Preserved on the same ' +
+      'footing as Subscription / BillingEvent / WorkspaceInvoice so a closure ' +
+      'cannot erase the basis of an already-issued (or in-flight) usage charge.',
+  },
+];
+
+/**
+ * Models that are neither workspace-scoped nor reachable from a swept
+ * model. Listed with a reason so the coverage gate can prove the schema is
+ * fully classified rather than silently ignoring anything it doesn't
+ * recognise.
+ */
+export const OUT_OF_SCOPE_MODELS: readonly { model: string; reason: string }[] = [
+  {
+    model: 'User',
+    reason:
+      'User-scoped, not workspace-scoped. A person may belong to several ' +
+      'workspaces; account deletion is a separate path.',
+  },
+  {
+    model: 'MagicLinkToken',
+    reason: 'User-scoped auth artifact (cascades from User), short-TTL + single-use.',
+  },
+  {
+    model: 'WebAuthnCredential',
+    reason: 'User-scoped passkey (cascades from User), not workspace tenant data.',
+  },
+  {
+    model: 'PushDevice',
+    reason: 'User-scoped device registration (cascades from User).',
+  },
+  {
+    model: 'LeadCapture',
+    reason:
+      'Operator-global marketing lead surface. Rows predate (and are not owned by) ' +
+      'any workspace.',
+  },
+  {
+    model: 'OpsFlag',
+    reason:
+      'Operator-global kill-switch store, keyed on flag name. MUST survive teardown: ' +
+      'the walk-away executor guards its money movement with a once-per-lifetime ' +
+      'OpsFlag, so deleting it would re-arm a refund the customer already took.',
+  },
+  {
+    model: 'ComplianceCounselSignoff',
+    reason:
+      'Per-VERTICAL counsel sign-off (unique on verticalSlug), explicitly not ' +
+      'per-workspace — the row has no workspaceId. Shared across every workspace ' +
+      'in the vertical.',
+  },
+  {
+    model: 'OutreachProspect',
+    reason:
+      'Operator-global design-partner CRM. Prospects are not customers, so there is ' +
+      'no workspace to scope to.',
+  },
+  {
+    model: 'OutreachTouch',
+    reason: 'Cascade child of OutreachProspect — same operator-global scope.',
+  },
+];
+
 export interface TearDownWorkspaceDataArgs {
   workspaceId: string;
   /** Override the knowledge store. Tests inject `TestKnowledgeStore`. */
@@ -254,6 +460,39 @@ export interface TearDownWorkspaceDataResult {
   // teardown PRESERVES the Workspace row, the cascade never fires, so it
   // is purged explicitly (same reasoning as the pfd-4 tables above).
   timeSavingsEntriesDeleted: number;
+
+  // 2026-08-01 deletion audit — the remaining uncovered tables. Same root
+  // cause as the pfd-4 batch: every one of these cascades from Workspace,
+  // and teardown preserves the Workspace row, so the cascade never fired.
+  onboardingStatesDeleted: number;
+  integrationHealthChecksDeleted: number;
+  retryableActionsDeleted: number;
+  supportRequestsDeleted: number;
+  supportTicketsDeleted: number;
+  supportTicketMessagesDeleted: number;
+  storageConfigsDeleted: number;
+  memoryAuditLogsDeleted: number;
+  teamsDeleted: number;
+  teamMembershipsDeleted: number;
+  disciplineHeadsDeleted: number;
+  creatorBriefsDeleted: number;
+  capabilityProposalsDeleted: number;
+
+  // Client-portal tree. These rows hold END-CLIENT PII — the SMB owner's
+  // buyers / legal clients / tax clients: their email addresses, their
+  // AES-256-GCM message bodies, and the documents they uploaded. They
+  // cascade from PortalConfig, which cascades from Workspace, so with the
+  // Workspace row preserved NONE of it was being deleted. Keyed through
+  // PortalConfig because none of the children carry a workspaceId.
+  portalConfigsDeleted: number;
+  portalClientsDeleted: number;
+  portalCasesDeleted: number;
+  portalCaseEventsDeleted: number;
+  portalInvitesDeleted: number;
+  portalSessionsDeleted: number;
+  portalThreadsDeleted: number;
+  portalMessagesDeleted: number;
+  portalDocumentsDeleted: number;
 }
 
 /**
@@ -278,6 +517,24 @@ export interface TearDownWorkspaceDataResult {
  *      FK, plain UUID column. Deleted because the row carries PII
  *      (name, email, needs) belonging to a person who is closing their
  *      workspace.
+ *  10. SupportTicketMessage → SupportTicket. Messages carry a
+ *      denormalized workspaceId AND cascade from the ticket; deleted
+ *      first so the count is the real number of rows removed rather than
+ *      whatever the cascade left.
+ *  11. TeamMembership → Team. TeamMembership has no workspaceId of its
+ *      own (it is keyed through `team`), so it is deleted via a relation
+ *      filter before its parent — again for an exact count.
+ *  12. The portal tree, deepest-first, all keyed through
+ *      `portalConfig.workspaceId` (no portal child carries a
+ *      workspaceId):
+ *        PortalMessage → PortalCaseEvent → PortalThread → PortalSession
+ *        → PortalInvite → PortalDocument → PortalCase → PortalClient
+ *        → PortalConfig
+ *      Every edge in that tree is `onDelete: Cascade`, so the order is
+ *      about accurate per-table counts, not about avoiding an FK error —
+ *      a schema-wide sweep confirmed ZERO Restrict/NoAction foreign keys
+ *      (all 92 relations are explicitly Cascade or SetNull), so no delete
+ *      here can be blocked by a referencing row.
  *
  * Workspace + Membership rows themselves stay put (with no tenant data) so
  * the workspace's billing history (`Subscription`, `WorkspaceInvoice`,
@@ -398,6 +655,125 @@ export async function tearDownWorkspaceData(
       await tx.timeSavingsEntry.deleteMany({ where: { workspaceId } })
     ).count;
 
+    // ── 2026-08-01 deletion audit — remaining uncovered tables ──────────
+    // Same root cause as pfd-4: each of these cascades from Workspace, and
+    // teardown preserves the Workspace row, so the cascade never fired.
+
+    // Independent, workspaceId-scoped. No children among the swept set.
+    const onboardingStatesDeleted = (
+      await tx.onboardingState.deleteMany({ where: { workspaceId } })
+    ).count;
+    const integrationHealthChecksDeleted = (
+      await tx.integrationHealthCheck.deleteMany({ where: { workspaceId } })
+    ).count;
+    // RetryableAction payloads reconstruct in-flight customer work (record
+    // ids, draft bodies) — tenant content, not just queue plumbing.
+    const retryableActionsDeleted = (
+      await tx.retryableAction.deleteMany({ where: { workspaceId } })
+    ).count;
+    // WorkspaceStorageConfig holds the customer's BYO object-store
+    // credentials (AES-GCM envelopes of the S3 access/secret key and the
+    // KMS key ref). Highest-sensitivity row in this batch.
+    const storageConfigsDeleted = (
+      await tx.workspaceStorageConfig.deleteMany({ where: { workspaceId } })
+    ).count;
+    const memoryAuditLogsDeleted = (
+      await tx.memoryAuditLog.deleteMany({ where: { workspaceId } })
+    ).count;
+    const disciplineHeadsDeleted = (
+      await tx.disciplineHead.deleteMany({ where: { workspaceId } })
+    ).count;
+    // Support: the customer's own words about their problems, plus the
+    // point-in-time workspace context snapshot on the ticket. Messages
+    // first (they cascade from the ticket) for an exact count.
+    const supportTicketMessagesDeleted = (
+      await tx.supportTicketMessage.deleteMany({ where: { workspaceId } })
+    ).count;
+    const supportTicketsDeleted = (
+      await tx.supportTicket.deleteMany({ where: { workspaceId } })
+    ).count;
+    const supportRequestsDeleted = (
+      await tx.supportRequest.deleteMany({ where: { workspaceId } })
+    ).count;
+    // CreatorBrief.workspaceId is OPTIONAL — NULL means platform-level
+    // agentplain brand work with no owner. Scoping the delete to the
+    // workspace leaves those operator-global rows untouched by
+    // construction.
+    const creatorBriefsDeleted = (
+      await tx.creatorBrief.deleteMany({ where: { workspaceId } })
+    ).count;
+    // CapabilityProposal.workspaceId is optional with onDelete: SetNull.
+    // We DELETE the workspace's rows rather than mirroring the FK's
+    // SetNull, because a workspace-tagged proposal is workspace-DERIVED
+    // content: the drift sweep (lib/feedback/store.ts#createDriftProposal)
+    // synthesises the body from that workspace's PreferenceFeedback rows,
+    // which this teardown deletes. Nulling the pointer would leave an
+    // orphan artifact derived from data the customer just asked us to
+    // erase. The SetNull FK exists to protect PLATFORM-level proposals
+    // (workspaceId NULL) from a workspace hard-delete — and those are
+    // untouched here, since the filter is `workspaceId = <this one>`.
+    const capabilityProposalsDeleted = (
+      await tx.capabilityProposal.deleteMany({ where: { workspaceId } })
+    ).count;
+
+    // Teams: TeamMembership carries no workspaceId — it is reached through
+    // `team`. Deleted explicitly (not left to the Team cascade) so the
+    // count is real.
+    const teamMembershipsDeleted = (
+      await tx.teamMembership.deleteMany({ where: { team: { workspaceId } } })
+    ).count;
+    const teamsDeleted = (
+      await tx.team.deleteMany({ where: { workspaceId } })
+    ).count;
+
+    // ── Client portal ───────────────────────────────────────────────────
+    // The heaviest PII in the schema and, until this pass, entirely
+    // un-swept: end-client email addresses, AES-256-GCM message bodies,
+    // uploaded documents, live session tokens. Nothing below PortalConfig
+    // carries a workspaceId, so every child is keyed through the
+    // `portalConfig` relation (or `case.portalConfig` for PortalCaseEvent,
+    // whose only FK is to PortalCase). Deepest-first for exact counts.
+    const portalMessagesDeleted = (
+      await tx.portalMessage.deleteMany({ where: { portalConfig: { workspaceId } } })
+    ).count;
+    const portalCaseEventsDeleted = (
+      await tx.portalCaseEvent.deleteMany({
+        where: { case: { portalConfig: { workspaceId } } },
+      })
+    ).count;
+    const portalThreadsDeleted = (
+      await tx.portalThread.deleteMany({ where: { portalConfig: { workspaceId } } })
+    ).count;
+    const portalSessionsDeleted = (
+      await tx.portalSession.deleteMany({ where: { portalConfig: { workspaceId } } })
+    ).count;
+    const portalInvitesDeleted = (
+      await tx.portalInvite.deleteMany({ where: { portalConfig: { workspaceId } } })
+    ).count;
+    // TODO(orphan-blob): PortalDocument.blobUrl points at Vercel Blob when
+    // PORTAL_STORAGE=blob. The row goes away here but the object does not —
+    // `lib/portal/storage.ts` exposes a put-only port (`PortalStorage`) and
+    // `@vercel/blob` is an optional, lazily-imported package that is not
+    // installed today, so there is no delete seam to call. The DEFAULT
+    // adapter is RefStorage, which persists nothing externally (`durable:
+    // false`), so in the current shipping posture there are no orphans.
+    // Closing this properly means adding `delete()` to the PortalStorage
+    // port + a seam-injectable purge here — a `lib/portal` change, out of
+    // scope for this deletion pass and tracked separately rather than
+    // half-built.
+    const portalDocumentsDeleted = (
+      await tx.portalDocument.deleteMany({ where: { portalConfig: { workspaceId } } })
+    ).count;
+    const portalCasesDeleted = (
+      await tx.portalCase.deleteMany({ where: { portalConfig: { workspaceId } } })
+    ).count;
+    const portalClientsDeleted = (
+      await tx.portalClient.deleteMany({ where: { portalConfig: { workspaceId } } })
+    ).count;
+    const portalConfigsDeleted = (
+      await tx.portalConfig.deleteMany({ where: { workspaceId } })
+    ).count;
+
     return {
       workApprovalsDeleted,
       handoffsDeleted,
@@ -424,6 +800,28 @@ export async function tearDownWorkspaceData(
       preferenceFeedbackDeleted,
       auditLogsDeleted,
       timeSavingsEntriesDeleted,
+      onboardingStatesDeleted,
+      integrationHealthChecksDeleted,
+      retryableActionsDeleted,
+      supportRequestsDeleted,
+      supportTicketsDeleted,
+      supportTicketMessagesDeleted,
+      storageConfigsDeleted,
+      memoryAuditLogsDeleted,
+      teamsDeleted,
+      teamMembershipsDeleted,
+      disciplineHeadsDeleted,
+      creatorBriefsDeleted,
+      capabilityProposalsDeleted,
+      portalConfigsDeleted,
+      portalClientsDeleted,
+      portalCasesDeleted,
+      portalCaseEventsDeleted,
+      portalInvitesDeleted,
+      portalSessionsDeleted,
+      portalThreadsDeleted,
+      portalMessagesDeleted,
+      portalDocumentsDeleted,
     };
   };
 

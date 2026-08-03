@@ -22,7 +22,10 @@
 
 import type { Prisma } from '@prisma/client';
 import { withSystemContext as defaultWithSystemContext } from '@/lib/db';
-import { tearDownWorkspaceData } from '@/lib/customer-files/deletion';
+import {
+  tearDownWorkspaceData,
+  type TearDownWorkspaceDataResult,
+} from '@/lib/customer-files/deletion';
 import { getKnowledgeStore } from '@/lib/knowledge';
 import { SYSTEM_OPERATOR_CONTEXT } from '@/lib/db/rls';
 import type { IKnowledgeStore } from '@/lib/knowledge/types';
@@ -105,17 +108,16 @@ export async function findWorkspacesDueForHardPurge(
   });
 }
 
-export interface HardPurgeResult {
+/**
+ * Extends the teardown counts rather than re-listing a hand-picked subset
+ * of them: the subset shape silently went stale every time a table was
+ * added to the sweep (it still named only the original nine after the
+ * pfd-4 batch). Extending is purely additive — every field the old
+ * interface declared is still here — and a future table shows up in the
+ * sweep's return value for free.
+ */
+export interface HardPurgeResult extends TearDownWorkspaceDataResult {
   workspaceId: string;
-  customerEmbeddingsDeleted: number;
-  workApprovalsDeleted: number;
-  handoffsDeleted: number;
-  webhookEventsDeleted: number;
-  webhookSubscriptionsDeleted: number;
-  integrationCredentialsDeleted: number;
-  preferenceSignalsDeleted: number;
-  workspacePreferencesDeleted: number;
-  inquiriesDeleted: number;
   closedAt: Date;
 }
 
@@ -187,15 +189,7 @@ export async function hardPurgeWorkspace(args: {
 
   return {
     workspaceId: args.workspaceId,
-    customerEmbeddingsDeleted: counts.customerEmbeddingsDeleted,
-    workApprovalsDeleted: counts.workApprovalsDeleted,
-    handoffsDeleted: counts.handoffsDeleted,
-    webhookEventsDeleted: counts.webhookEventsDeleted,
-    webhookSubscriptionsDeleted: counts.webhookSubscriptionsDeleted,
-    integrationCredentialsDeleted: counts.integrationCredentialsDeleted,
-    preferenceSignalsDeleted: counts.preferenceSignalsDeleted,
-    workspacePreferencesDeleted: counts.workspacePreferencesDeleted,
-    inquiriesDeleted: counts.inquiriesDeleted,
+    ...counts,
     closedAt: now,
   };
 }
@@ -256,6 +250,15 @@ export const workspaceTeardownSweepFn = inngest.createFunction(
                     workspace_preferences_deleted:
                       result.workspacePreferencesDeleted,
                     inquiries_deleted: result.inquiriesDeleted,
+                    // Roll-up across EVERY swept table, so tables added to
+                    // the sweep later are visible here without this call
+                    // site having to grow a field per table. The exact
+                    // per-table breakdown is on the AuditLog row written
+                    // above — that is the durable proof of the deletion.
+                    rows_deleted_total: Object.values(result).reduce<number>(
+                      (sum, v) => (typeof v === 'number' ? sum + v : sum),
+                      0,
+                    ),
                   });
                 } catch (err) {
                   reportInngestItemFailure(err, {

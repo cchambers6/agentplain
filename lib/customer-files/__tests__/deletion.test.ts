@@ -22,6 +22,17 @@
  *      - Other workspaces' rows are untouched.
  *      - Workspace + Subscription rows themselves are preserved (out of
  *        scope per the function's docblock).
+ *      - Rows reached through a RELATION filter rather than a workspaceId
+ *        column (TeamMembership via `team`, the whole portal tree via
+ *        `portalConfig`) are deleted too — and, because the fake resolves
+ *        those filters against live parent rows, a non-zero count is proof
+ *        the sweep ran children BEFORE parents.
+ *      - Optional-workspaceId tables (CreatorBrief, CapabilityProposal)
+ *        lose the workspace's rows and keep the platform-level NULL ones.
+ *
+ *      Which TABLES must be covered at all is a separate, schema-derived
+ *      question — see `deletion-coverage.test.ts`, which reads the Prisma
+ *      DMMF and fails when a workspace-scoped model has no deletion ruling.
  *
  *   3. `reapTombstonedDriveCustomerData`
  *      - Files in the live set are preserved.
@@ -295,9 +306,35 @@ describe('reapTombstonedDriveCustomerData', () => {
 
 interface FakeRow {
   id: string;
-  workspaceId: string;
+  /** Absent on the portal children + TeamMembership, which are reached
+   *  through a relation filter rather than a workspaceId column. */
+  workspaceId?: string | null;
   [key: string]: unknown;
 }
+
+/**
+ * Parent pointers for the fake tables the sweep reaches through a RELATION
+ * filter (`{ portalConfig: { workspaceId } }`,
+ * `{ case: { portalConfig: { workspaceId } } }`, `{ team: { workspaceId } }`).
+ * Mirrors the FKs in prisma/schema.prisma so the fake resolves the filter
+ * the same way Prisma's subquery does — and so the sweep's child-before-
+ * parent ordering is genuinely exercised: a parent deleted too early would
+ * make its children un-resolvable and the counts would drop to zero.
+ */
+const FAKE_RELATIONS: Record<
+  string,
+  Record<string, { fk: string; parent: string }>
+> = {
+  teamMemberships: { team: { fk: 'teamId', parent: 'teams' } },
+  portalClients: { portalConfig: { fk: 'portalConfigId', parent: 'portalConfigs' } },
+  portalCases: { portalConfig: { fk: 'portalConfigId', parent: 'portalConfigs' } },
+  portalCaseEvents: { case: { fk: 'caseId', parent: 'portalCases' } },
+  portalInvites: { portalConfig: { fk: 'portalConfigId', parent: 'portalConfigs' } },
+  portalSessions: { portalConfig: { fk: 'portalConfigId', parent: 'portalConfigs' } },
+  portalThreads: { portalConfig: { fk: 'portalConfigId', parent: 'portalConfigs' } },
+  portalMessages: { portalConfig: { fk: 'portalConfigId', parent: 'portalConfigs' } },
+  portalDocuments: { portalConfig: { fk: 'portalConfigId', parent: 'portalConfigs' } },
+};
 
 class FakeTeardownPrismaClient {
   webhookEvents: FakeRow[] = [];
@@ -307,7 +344,7 @@ class FakeTeardownPrismaClient {
   handoffs: FakeRow[] = [];
   preferenceSignals: FakeRow[] = [];
   workspacePreferences: FakeRow[] = [];
-  inquiries: Array<{ id: string; convertedWorkspaceId: string | null }> = [];
+  inquiries: FakeRow[] = [];
   // pfd-4 — teardown-gap tables.
   skillRuns: FakeRow[] = [];
   skillConfigs: FakeRow[] = [];
@@ -325,6 +362,31 @@ class FakeTeardownPrismaClient {
   lifecycleEvents: FakeRow[] = [];
   preferenceFeedbacks: FakeRow[] = [];
   auditLogs: FakeRow[] = [];
+  timeSavingsEntries: FakeRow[] = [];
+  // 2026-08-01 deletion audit — the coverage-gap tables.
+  onboardingStates: FakeRow[] = [];
+  integrationHealthChecks: FakeRow[] = [];
+  retryableActions: FakeRow[] = [];
+  supportRequests: FakeRow[] = [];
+  supportTickets: FakeRow[] = [];
+  supportTicketMessages: FakeRow[] = [];
+  storageConfigs: FakeRow[] = [];
+  memoryAuditLogs: FakeRow[] = [];
+  teams: FakeRow[] = [];
+  teamMemberships: FakeRow[] = [];
+  disciplineHeads: FakeRow[] = [];
+  creatorBriefs: FakeRow[] = [];
+  capabilityProposals: FakeRow[] = [];
+  // Client portal.
+  portalConfigs: FakeRow[] = [];
+  portalClients: FakeRow[] = [];
+  portalCases: FakeRow[] = [];
+  portalCaseEvents: FakeRow[] = [];
+  portalInvites: FakeRow[] = [];
+  portalSessions: FakeRow[] = [];
+  portalThreads: FakeRow[] = [];
+  portalMessages: FakeRow[] = [];
+  portalDocuments: FakeRow[] = [];
 
   async $transaction<T>(cb: (tx: FakeTeardownPrismaClient) => Promise<T>): Promise<T> {
     return cb(this);
@@ -337,6 +399,7 @@ class FakeTeardownPrismaClient {
   handoffLogEntry = makeDeleteMany(this, 'handoffs');
   preferenceSignal = makeDeleteMany(this, 'preferenceSignals');
   workspacePreference = makeDeleteMany(this, 'workspacePreferences');
+  inquiry = makeDeleteMany(this, 'inquiries');
   skillRun = makeDeleteMany(this, 'skillRuns');
   skillConfig = makeDeleteMany(this, 'skillConfigs');
   skillScheduleWindow = makeDeleteMany(this, 'skillScheduleWindows');
@@ -353,23 +416,57 @@ class FakeTeardownPrismaClient {
   workspaceLifecycleEvent = makeDeleteMany(this, 'lifecycleEvents');
   preferenceFeedback = makeDeleteMany(this, 'preferenceFeedbacks');
   auditLog = makeDeleteMany(this, 'auditLogs');
-  inquiry = {
-    deleteMany: async (args: { where: { convertedWorkspaceId: string } }) => {
-      const before = this.inquiries.length;
-      this.inquiries = this.inquiries.filter(
-        (r) => r.convertedWorkspaceId !== args.where.convertedWorkspaceId,
-      );
-      return { count: before - this.inquiries.length };
-    },
-  };
+  timeSavingsEntry = makeDeleteMany(this, 'timeSavingsEntries');
+  onboardingState = makeDeleteMany(this, 'onboardingStates');
+  integrationHealthCheck = makeDeleteMany(this, 'integrationHealthChecks');
+  retryableAction = makeDeleteMany(this, 'retryableActions');
+  supportRequest = makeDeleteMany(this, 'supportRequests');
+  supportTicket = makeDeleteMany(this, 'supportTickets');
+  supportTicketMessage = makeDeleteMany(this, 'supportTicketMessages');
+  workspaceStorageConfig = makeDeleteMany(this, 'storageConfigs');
+  memoryAuditLog = makeDeleteMany(this, 'memoryAuditLogs');
+  team = makeDeleteMany(this, 'teams');
+  teamMembership = makeDeleteMany(this, 'teamMemberships');
+  disciplineHead = makeDeleteMany(this, 'disciplineHeads');
+  creatorBrief = makeDeleteMany(this, 'creatorBriefs');
+  capabilityProposal = makeDeleteMany(this, 'capabilityProposals');
+  portalConfig = makeDeleteMany(this, 'portalConfigs');
+  portalClient = makeDeleteMany(this, 'portalClients');
+  portalCase = makeDeleteMany(this, 'portalCases');
+  portalCaseEvent = makeDeleteMany(this, 'portalCaseEvents');
+  portalInvite = makeDeleteMany(this, 'portalInvites');
+  portalSession = makeDeleteMany(this, 'portalSessions');
+  portalThread = makeDeleteMany(this, 'portalThreads');
+  portalMessage = makeDeleteMany(this, 'portalMessages');
+  portalDocument = makeDeleteMany(this, 'portalDocuments');
+}
+
+/** Recursive where-matcher: plain scalar equality, plus relation filters
+ *  resolved through FAKE_RELATIONS (one hop or many). */
+function rowMatches(
+  db: FakeTeardownPrismaClient,
+  table: string,
+  row: FakeRow,
+  where: Record<string, unknown>,
+): boolean {
+  return Object.entries(where).every(([field, expected]) => {
+    const rel = FAKE_RELATIONS[table]?.[field];
+    if (!rel) return row[field] === expected;
+    const parents = db[rel.parent as keyof FakeTeardownPrismaClient] as FakeRow[];
+    return parents.some(
+      (p) =>
+        p.id === row[rel.fk] &&
+        rowMatches(db, rel.parent, p, expected as Record<string, unknown>),
+    );
+  });
 }
 
 function makeDeleteMany(self: FakeTeardownPrismaClient, key: keyof FakeTeardownPrismaClient) {
   return {
-    deleteMany: async (args: { where: { workspaceId: string } }) => {
+    deleteMany: async (args: { where: Record<string, unknown> }) => {
       const arr = self[key] as FakeRow[];
       const before = arr.length;
-      const kept = arr.filter((r) => r.workspaceId !== args.where.workspaceId);
+      const kept = arr.filter((r) => !rowMatches(self, key as string, r, args.where));
       (self[key] as FakeRow[]) = kept;
       return { count: before - kept.length };
     },
@@ -443,10 +540,46 @@ describe('tearDownWorkspaceData', () => {
       prisma.lifecycleEvents.push({ id: `le-${target}`, workspaceId: target });
       prisma.preferenceFeedbacks.push({ id: `pf-${target}`, workspaceId: target });
       prisma.auditLogs.push({ id: `al-${target}`, workspaceId: target });
+      prisma.timeSavingsEntries.push({ id: `ts-${target}`, workspaceId: target });
+      // 2026-08-01 deletion-audit tables.
+      prisma.onboardingStates.push({ id: `on-${target}`, workspaceId: target });
+      prisma.integrationHealthChecks.push({ id: `hc-${target}`, workspaceId: target });
+      prisma.retryableActions.push({ id: `ra-${target}`, workspaceId: target });
+      prisma.supportRequests.push({ id: `sq-${target}`, workspaceId: target });
+      prisma.supportTickets.push({ id: `st-${target}`, workspaceId: target });
+      prisma.supportTicketMessages.push({
+        id: `sm-${target}`,
+        workspaceId: target,
+        ticketId: `st-${target}`,
+      });
+      prisma.storageConfigs.push({ id: `sg-${target}`, workspaceId: target });
+      prisma.memoryAuditLogs.push({ id: `ma-${target}`, workspaceId: target });
+      prisma.disciplineHeads.push({ id: `dh-${target}`, workspaceId: target });
+      prisma.creatorBriefs.push({ id: `cb-${target}`, workspaceId: target });
+      prisma.capabilityProposals.push({ id: `cp-${target}`, workspaceId: target });
+      // Teams — TeamMembership has NO workspaceId; it is reached via `team`.
+      prisma.teams.push({ id: `tm-${target}`, workspaceId: target });
+      prisma.teamMemberships.push({ id: `tmm-${target}`, teamId: `tm-${target}` });
+      // Client portal — only PortalConfig carries a workspaceId; every child
+      // hangs off it (and PortalCaseEvent hangs off PortalCase).
+      prisma.portalConfigs.push({ id: `pcfg-${target}`, workspaceId: target });
+      prisma.portalClients.push({ id: `pcl-${target}`, portalConfigId: `pcfg-${target}` });
+      prisma.portalCases.push({ id: `pcs-${target}`, portalConfigId: `pcfg-${target}` });
+      prisma.portalCaseEvents.push({ id: `pce-${target}`, caseId: `pcs-${target}` });
+      prisma.portalInvites.push({ id: `pin-${target}`, portalConfigId: `pcfg-${target}` });
+      prisma.portalSessions.push({ id: `pse-${target}`, portalConfigId: `pcfg-${target}` });
+      prisma.portalThreads.push({ id: `pth-${target}`, portalConfigId: `pcfg-${target}` });
+      prisma.portalMessages.push({ id: `pms-${target}`, portalConfigId: `pcfg-${target}` });
+      prisma.portalDocuments.push({ id: `pdc-${target}`, portalConfigId: `pcfg-${target}` });
     }
     prisma.inquiries.push({ id: 'iq-a', convertedWorkspaceId: WORKSPACE_A });
     prisma.inquiries.push({ id: 'iq-b', convertedWorkspaceId: WORKSPACE_B });
     prisma.inquiries.push({ id: 'iq-orphan', convertedWorkspaceId: null });
+    // Operator-global rows on the two OPTIONAL-workspaceId tables. NULL =
+    // platform-level (agentplain's own brand work / a platform capability
+    // proposal); a workspace teardown must never touch them.
+    prisma.creatorBriefs.push({ id: 'cb-platform', workspaceId: null });
+    prisma.capabilityProposals.push({ id: 'cp-platform', workspaceId: null });
 
     const result = await tearDownWorkspaceData({
       workspaceId: WORKSPACE_A,
@@ -486,6 +619,46 @@ describe('tearDownWorkspaceData', () => {
     assert.equal(result.auditLogsDeleted, 1);
     assert.equal(prisma.auditLogs.length, 1);
     assert.equal(prisma.auditLogs[0].workspaceId, WORKSPACE_B);
+    assert.equal(result.timeSavingsEntriesDeleted, 1);
+
+    // 2026-08-01 deletion audit — every previously-uncovered table purged.
+    assert.equal(result.onboardingStatesDeleted, 1);
+    assert.equal(result.integrationHealthChecksDeleted, 1);
+    assert.equal(result.retryableActionsDeleted, 1);
+    assert.equal(result.supportRequestsDeleted, 1);
+    assert.equal(result.supportTicketsDeleted, 1);
+    assert.equal(result.supportTicketMessagesDeleted, 1);
+    assert.equal(result.storageConfigsDeleted, 1);
+    assert.equal(result.memoryAuditLogsDeleted, 1);
+    assert.equal(result.disciplineHeadsDeleted, 1);
+    // TeamMembership is counted through the `team` relation filter — a
+    // non-zero count here proves the child ran BEFORE its parent.
+    assert.equal(result.teamMembershipsDeleted, 1);
+    assert.equal(result.teamsDeleted, 1);
+
+    // Client portal — the worst of the gaps. Every level of the tree.
+    assert.equal(result.portalMessagesDeleted, 1);
+    assert.equal(result.portalCaseEventsDeleted, 1);
+    assert.equal(result.portalThreadsDeleted, 1);
+    assert.equal(result.portalSessionsDeleted, 1);
+    assert.equal(result.portalInvitesDeleted, 1);
+    assert.equal(result.portalDocumentsDeleted, 1);
+    assert.equal(result.portalCasesDeleted, 1);
+    assert.equal(result.portalClientsDeleted, 1);
+    assert.equal(result.portalConfigsDeleted, 1);
+
+    // Optional-workspaceId tables: A's row goes, B's row and the
+    // platform-level (NULL) row stay.
+    assert.equal(result.creatorBriefsDeleted, 1);
+    assert.equal(result.capabilityProposalsDeleted, 1);
+    assert.deepEqual(
+      prisma.creatorBriefs.map((r) => r.id).sort(),
+      ['cb-platform', `cb-${WORKSPACE_B}`].sort(),
+    );
+    assert.deepEqual(
+      prisma.capabilityProposals.map((r) => r.id).sort(),
+      ['cp-platform', `cp-${WORKSPACE_B}`].sort(),
+    );
 
     // B rows still present across the board.
     assert.equal(prisma.webhookEvents.length, 1);
@@ -506,6 +679,40 @@ describe('tearDownWorkspaceData', () => {
     assert.equal(prisma.memoryEntries.length, 1);
     assert.equal(prisma.counselRedlines.length, 1);
     assert.equal(prisma.lifecycleEvents.length, 1);
+    // 2026-08-01 audit tables — B's rows untouched across the board.
+    for (const [label, rows] of [
+      ['onboardingStates', prisma.onboardingStates],
+      ['integrationHealthChecks', prisma.integrationHealthChecks],
+      ['retryableActions', prisma.retryableActions],
+      ['supportRequests', prisma.supportRequests],
+      ['supportTickets', prisma.supportTickets],
+      ['supportTicketMessages', prisma.supportTicketMessages],
+      ['storageConfigs', prisma.storageConfigs],
+      ['memoryAuditLogs', prisma.memoryAuditLogs],
+      ['disciplineHeads', prisma.disciplineHeads],
+      ['teams', prisma.teams],
+    ] as const) {
+      assert.equal(rows.length, 1, `${label}: only B's row should survive`);
+      assert.equal(rows[0].workspaceId, WORKSPACE_B, label);
+    }
+    // Portal: B's whole tree intact, keyed off B's config.
+    assert.equal(prisma.portalConfigs.length, 1);
+    assert.equal(prisma.portalConfigs[0].workspaceId, WORKSPACE_B);
+    for (const [label, rows] of [
+      ['portalClients', prisma.portalClients],
+      ['portalCases', prisma.portalCases],
+      ['portalInvites', prisma.portalInvites],
+      ['portalSessions', prisma.portalSessions],
+      ['portalThreads', prisma.portalThreads],
+      ['portalMessages', prisma.portalMessages],
+      ['portalDocuments', prisma.portalDocuments],
+    ] as const) {
+      assert.equal(rows.length, 1, `${label}: only B's row should survive`);
+    }
+    assert.equal(prisma.portalCaseEvents.length, 1);
+    assert.equal(prisma.portalCaseEvents[0].caseId, `pcs-${WORKSPACE_B}`);
+    assert.equal(prisma.teamMemberships.length, 1);
+    assert.equal(prisma.teamMemberships[0].teamId, `tm-${WORKSPACE_B}`);
 
     // Inquiry survivors: B's converted row + the orphan (null pointer).
     const inqIds = prisma.inquiries.map((r) => r.id).sort();

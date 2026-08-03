@@ -1,0 +1,71 @@
+# Independent architectural review gate (informally: the Fable review gate).
+#
+# Fails a PR that touches load-bearing surface unless an INDEPENDENT review
+# session has committed a filled review doc to the branch under `docs/reviews/`.
+#
+# Why this exists: a sibling project's change passed 706/706 unit tests and its
+# acceptance test, yet its own validation report claimed existing crons "cover
+# the new models for free" when those models were in fact unreachable by the
+# deletion machinery. Tests verify what they encode — only an independent
+# architectural review caught the false claim, and this repo had no such step.
+#
+# The three drift classes tests structurally cannot see:
+#   1. claim-code divergence — the PR description says X, the code does Y
+#   2. coverage illusions    — "already handled by Z", where Z never enumerates
+#                              the new model / route / storage location
+#   3. invariant erosion     — a ratified rule (no-outbound, LLM compose order,
+#                              tenancy scoping, pricing tiers) quietly stops
+#                              holding, and nothing asserts it
+#
+# Norm doc (what triggers the gate, the reviewer workflow, the override policy):
+#   docs/engineering/pre-merge-review-gate.md
+# Rubric the reviewer fills:
+#   docs/reviews/TEMPLATE.md
+# Gate implementation and the gated-path CONFIG (the source of truth):
+#   tools/review/fable-review-gate.mjs
+#   Runnable locally: `npm run review-gate` (dependency-free, needs only git)
+#
+# Deliberately NO `paths:` filter. A paths filter would skip the job entirely on
+# unrelated PRs and report a green check that never ran — indistinguishable in
+# the UI from a check that ran and passed. The script itself decides, and prints
+# an explicit "no review required" pass so the record always shows the decision.
+#
+# `labeled` / `unlabeled` are in the trigger list so that applying or removing
+# the `review-gate:override` label re-evaluates the gate immediately instead of
+# waiting for the next push. Only Conner applies that label.
+
+name: fable-review-gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  review-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: the gate walks ancestry (`merge-base --is-ancestor`,
+          # `rev-list <reviewed>..HEAD`) to prove the reviewed commit is inside
+          # this PR and that no gated commit landed after it. A shallow clone
+          # cannot answer either question.
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      # No `npm ci` on purpose. The gate is pure Node ESM with zero
+      # dependencies, so the job stays fast and cannot be blocked by an
+      # install failure on a PR that has nothing to do with dependencies.
+      - name: Fetch base ref
+        # actions/checkout leaves the base branch unfetched under some
+        # configurations; the gate diffs against it, so fetch it explicitly.
+        run: git fetch origin "${{ github.base_ref }}" --depth=0
+      - name: Verify independent architectural review
+        env:
+          # The PR range is `origin/<base>...HEAD`.
+          REVIEW_GATE_BASE: origin/${{ github.base_ref }}
+          # True only when the PR carries the `review-gate:override` label.
+          # The script then passes with a loud, permanent warning in the log.
+          REVIEW_GATE_OVERRIDE: ${{ contains(github.event.pull_request.labels.*.name, 'review-gate:override') }}
+        run: node tools/review/fable-review-gate.mjs

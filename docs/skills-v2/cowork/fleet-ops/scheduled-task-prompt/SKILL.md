@@ -15,6 +15,7 @@ A scheduled fire has no conversation history and no operator present. The prompt
 4. **The gates to run** before committing (voice-gate etc.).
 5. **Commit + report convention** — message format, report-back shape.
 6. **The memory-inbox block** — see [[librarian-inbox-rollup]]: observations append to INBOX; the Librarian formats.
+7. **A `model` spec per the routing tree** (`project_model_routing_plan_2026_07_19`): watchdog / curl / heartbeat / triage → `claude-haiku-4-5-20251001`; merges / config fixes / test runs → `claude-sonnet-5`; anything requiring judgment (incl. loop passes) → `claude-fable-5`. Never schedule a task without an explicit model field.
 
 ## Rules
 

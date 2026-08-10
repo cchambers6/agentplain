@@ -20,6 +20,7 @@ import PricingTierBanner from "@/components/vertical/PricingTierBanner";
 import IntegrationsList from "@/components/vertical/IntegrationsList";
 import VerticalFaq from "@/components/vertical/VerticalFaq";
 import VerticalCta from "@/components/vertical/VerticalCta";
+import VerticalProof from "@/components/trust/VerticalProof";
 import JsonLd from "@/components/seo/JsonLd";
 import {
   verticalBreadcrumbJsonLd,
@@ -127,6 +128,11 @@ export default function VerticalPage({
       <RoiAnchor roi={content.roi} />
       <ViolationAvoidance paragraph={content.roi.violationAvoidance} />
       <ClaimsTriadGrid claims={content.claims} />
+      {/* Per-vertical social proof (2026-07-19) — after the claims triad,
+          where "prove it" naturally follows. Self-contained: reads
+          lib/trust/proof.ts selectors and renders one honest band while the
+          vertical has no published results. */}
+      <VerticalProof slug={content.slug} verticalName={content.name} />
       {/* Grounded thesis pause — the one forest band on the template. Content-
           agnostic mission line (renders identically for all ten verticals), with
           a single wheat-foil accent on the closing phrase. Sits before pricing,

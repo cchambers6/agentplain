@@ -15,6 +15,17 @@
  * sends. Pricing answered as the three-tier service partnership.
  */
 
+// Billing-policy numbers (trial lengths, money-back window, support model)
+// interpolate from the SSOT so this module can never quote a stale policy.
+// `lib/billing/facts` is a leaf module — importing it here keeps this file
+// React-free for the KB loader.
+import {
+  MONEY_BACK_GUARANTEE_DAYS,
+  PARTNER_SUPPORT,
+  TRIAL_PERIOD_DAYS,
+  TRIAL_PERIOD_DAYS_EXTENDED,
+} from "@/lib/billing/facts";
+
 export type FAQItem = {
   q: string;
   a: string;
@@ -69,13 +80,16 @@ export const FAQ_ITEMS: FAQItem[] = [
   },
   {
     q: "What data do you need access to?",
-    a: "OAuth into your email (Gmail, Outlook), file substrate (Google Drive, OneDrive), spreadsheets (Excel), e-signature (DocuSign), messaging (Slack, Teams), and accounting (QuickBooks Online): those connect tiles live on the /integrations page today. The vertical-specific feeds — MLS for real estate, AMS for insurance, LOS for mortgage, practice-management for CPA / law / RIA — sit on the per-vertical integration roadmap; your service partner sets up what's available with you on a call and runs the unbuilt ones by hand until those adapters land. The fleet reads what's needed for the task, drafts the response, and returns the draft to your review queue. We don't use your client list to train foundation models.",
+    a: "OAuth into your email (Gmail, Outlook), file substrate (Google Drive, OneDrive), spreadsheets (Excel), e-signature (DocuSign), messaging (Slack, Teams), and accounting (QuickBooks Online): those connect tiles live on the /integrations page today. The vertical-specific feeds — MLS for real estate, AMS for insurance, LOS for mortgage, practice-management for CPA / law / RIA — sit on the per-vertical integration roadmap; your service partner sets up what's available with you during install and runs the unbuilt ones by hand until those adapters land. The fleet reads what's needed for the task, drafts the response, and returns the draft to your review queue. We don't use your client list to train foundation models.",
   },
   {
     q: "How does pricing work?",
     topic: "pricing",
-    a: "Three tiers of service partnership, all per seat, month-to-month, with a 7-day free trial (14 days for CPA & Law), card captured at signup. (1) Regular: standard partnership, monthly review, $199 solo sliding to $99 at 50+ seats. (2) Partner: everything in Regular plus priority support and a quarterly async check-in with your service team, $299 solo sliding to $199 at scale. (3) Max: ad-hoc service partnership for firms with non-standard scope — quoted to the engagement, sales-led. No setup charges. No long-term contract. 14-day money-back guarantee. Cancel anytime from your billing settings.",
-    link: { href: "/guarantee", label: "Read the 14-day money-back guarantee" },
+    a: `Three tiers of service partnership, all per seat, month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (${TRIAL_PERIOD_DAYS_EXTENDED} days for CPA & Law), card captured at signup. (1) Regular: standard partnership, monthly review, $199 solo sliding to $99 at 50+ seats. (2) Partner: everything in Regular plus priority support and a quarterly async check-in with your service team, $299 solo sliding to $199 at scale. (3) Max: ad-hoc service partnership for firms with non-standard scope — quoted to the engagement, sales-led. No setup charges. No long-term contract. ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee. Cancel anytime from your billing settings.`,
+    link: {
+      href: "/guarantee",
+      label: `Read the ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee`,
+    },
   },
   {
     q: "What's the difference between Regular, Partner, and Max?",
@@ -91,6 +105,11 @@ export const FAQ_ITEMS: FAQItem[] = [
     q: "What is /custom and how is it different from Max?",
     topic: "pricing",
     a: "Max is a service-partnership tier — recurring per-seat relationship with non-standard scope. /custom is engagement work: a written spec, a 4–6 week build, a fixed price ($5K–$15K typical plus $200–$500/mo maintenance), then handoff. You'd reach /custom when you need something the productized tiers don't include: a bespoke compliance corpus, a white-label deployment, a custom integration to a tool that isn't on our roadmap, 100+ seats, custom reporting. You can be on Regular OR Partner AND have a /custom engagement in flight at the same time.",
+  },
+  {
+    q: "Do I pay extra when the fleet works more?",
+    topic: "pricing",
+    a: "No. The per-seat fee is flat — there is no metered usage line item and no overage charge. The fleet's AI usage is our cost to manage, not a bill that grows behind your back. Your workspace shows the fleet's last-30-day activity on the usage page, so what the fleet is doing is never a mystery. If a workspace's usage climbs well past what's healthy for its plan, your service partner talks through the right plan with you — a conversation, never a surprise charge.",
   },
   {
     q: "What's the ROI math?",

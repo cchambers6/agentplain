@@ -3,7 +3,7 @@
 // The signup headline, the tier summary, and (transitively) any other trial
 // mention must all tell the SAME truth about two facts that are actually
 // configured, not assumed:
-//   1. trial length — env.stripeTrialPeriodDays() (default 14, not 30)
+//   1. trial length — env.stripeTrialPeriodDays() (default 7, not 30)
 //   2. whether a card is taken AT signup — only when billing is live AND the
 //      Checkout-at-signup variant is on (STRIPE_CHECKOUT_ENABLED). The #241
 //      scaffold default is trial-first / NO card.

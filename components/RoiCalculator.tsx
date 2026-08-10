@@ -4,8 +4,11 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { tokens } from "@/lib/brand/tokens";
 import {
+  MONEY_BACK_GUARANTEE_DAYS,
   PER_SEAT_MONTHLY_USD_CENTS,
   TIER_TAGLINE,
+  TRIAL_PERIOD_DAYS,
+  TRIAL_PERIOD_DAYS_EXTENDED,
   tierDisplayName,
   type TierName,
 } from "@/lib/pricing/tiers";
@@ -177,7 +180,7 @@ export default function RoiCalculator() {
                 <Row
                   label="Subscription cost"
                   value={fmtDollars(result.subscription)}
-                  detail={`${result.clampedSeats} seat${result.clampedSeats > 1 ? "s" : ""} @ ${fmtDollars(result.perSeat)}/seat · 7-day free trial`}
+                  detail={`${result.clampedSeats} seat${result.clampedSeats > 1 ? "s" : ""} @ ${fmtDollars(result.perSeat)}/seat · ${TRIAL_PERIOD_DAYS}-day free trial`}
                 />
                 <Row
                   label="Automation value recovered"
@@ -240,9 +243,10 @@ export default function RoiCalculator() {
                 ) : null}
 
                 <p className="mt-6 font-mono text-[11px] leading-relaxed text-mute">
-                  7-day free trial across every Regular and Partner seat band
-                  (14 days for CPA + Law), card at signup. 14-day money-back
-                  guarantee.
+                  {TRIAL_PERIOD_DAYS}-day free trial across every Regular and
+                  Partner seat band ({TRIAL_PERIOD_DAYS_EXTENDED} days for CPA
+                  + Law), card at signup. {MONEY_BACK_GUARANTEE_DAYS}-day
+                  money-back guarantee.
                 </p>
               </>
             ) : null}
@@ -275,7 +279,7 @@ function TierToggle({
             role="radio"
             aria-checked={isActive}
             onClick={() => onSelect(t)}
-            className={`flex-1 bg-paper px-4 py-3 text-left transition focus:outline-none ${
+            className={`min-h-[44px] flex-1 bg-paper px-4 py-3 text-left transition focus:outline-none ${
               isActive
                 ? "bg-paper-deep"
                 : "hover:bg-paper-deep focus-visible:bg-paper-deep"

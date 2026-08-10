@@ -8,18 +8,80 @@ Audit worktree: `C:/agentplain/agentplain-audit-0809` (detached from `origin/mai
 
 ## (a) Executive summary
 
-1. **`origin/main` has not moved in 28 days** (last commit 2026-07-12) while **8 CI-green PRs sit unmerged** and **3 commits sit unpushed on local `main`**. The fleet is building; nothing is landing.
-2. That single stall is upstream of most of what follows: the brand/voice zero-baseline, the pricing fix, and the trust scaffolding are all *written and green* — just not on main.
-3. **Main is healthy where it counts**: `build:no-migrate` exits 0, there are zero conflict markers, and the pre-push husky gate is **installed and functional** (7 layers) — the "known no-op" in memory is stale.
-4. **The L3 loop is not merely frozen — it never ticked.** `state.yaml` shows `pass_number: 1`, `last_tick_at: null`, 5 of 9 tracks never run.
-5. Diagnosis: the fleet-side heartbeat is a **deliberate no-op** — its own prompt says "~800 wasted ticks" and instructs it to write nothing while deferred. It ticks without committing *by design*.
-6. **The fix already exists and is one manual run from proving out**: `agentplain-loop-governor` is staged on the capable scheduler, enabled, never executed. It waits on Conner.
-7. **Customer-facing billing drift is live**: the RAG corpus still sells Partner as "4 hrs/mo reserved time" + "monthly business review", contradicting `facts.ts` on two ratified points.
-8. **Only 3 verticals are live** (real-estate, cpa, law) — and **property-management is one line from live**: its daily sweep already runs, but the readiness manifest doesn't list it, so PM signups are sent to the waitlist for nothing.
-9. **Two credential files sit untracked-but-unignored in the repo root**, one `git add -A` from being committed.
-10. **Both schedulers were dark 2026-08-06 → 2026-08-09**, and the watchdog that should have caught it is on the dead scheduler.
+1. **The entire scheduled fleet stopped for three days** (2026-08-06 → 2026-08-09). Root cause is not a scheduler bug — it is **host memory exhaustion wedging Claude Desktop**: 15.6 GB RAM, 0.98 GB free, `claude` (18 procs, 6.59 GB) + `node` MCP servers (24 procs, 2.40 GB) = 8.99 GB, 57.6% of the machine.
+2. **Nothing detected it.** The liveness watchdog runs *on the scheduler it monitors*, so it died with it. This is the third consecutive audit to find a different dead task, and **all three were found only because a human manually asked**.
+3. **That is the P0**: there is no off-host liveness check, and there cannot be a useful on-host one. Everything else in this report is a thing the fleet could fix; this is the thing that makes the fleet unable to notice it is broken.
+4. **Proximate cause is plugin sprawl** — 40+ plugins installed, 30+ unauthenticated and therefore incapable of doing any work, while still spawning node processes and holding RAM on a 16 GB machine.
+5. **`origin/main` has not moved in 28 days** (last commit 2026-07-12) while **8 CI-green PRs sit unmerged** and **3 commits sit unpushed on local `main`**. The fleet is building; nothing is landing.
+6. **The L3 loop has two stacked causes and they separate cleanly.** The 3-day outage explains staleness only after 2026-08-06T13:31Z. The pre-existing bug is independently confirmed: across ~850 ticks from 2026-07-19 to 2026-08-06 the loop ran and wrote **nothing**.
+7. **And it is a class, not an incident**: `agentplain-librarian-rollup` shows the identical signature — **~3,336 executions over 34.8 days with zero writes** to `INBOX.md`. Two tasks that are alive, scheduled, and silently producing nothing.
+8. **Main is healthy where it counts**: `build:no-migrate` exits 0, zero conflict markers, and the pre-push husky gate is **installed and functional** (7 layers) — the "known no-op" in memory is stale.
+9. **Customer-facing billing drift is live**: the RAG corpus still sells Partner as "4 hrs/mo reserved time", contradicting `facts.ts` on two ratified points. **Only 3 verticals are live**, and **property-management is one line from live**.
+10. **Two credential files sit untracked-but-unignored in the repo root**, one `git add -A` from being committed.
 
 **Good news worth recording:** connector dispatch is fully covered (15/15), the DocuSign no-outbound gate is wired and passing 15/15, and vendor-invisibility is clean. Three memory items were stale in our favour.
+
+---
+
+## Scheduler execution outage (2026-08-06 → 2026-08-09) — P0
+
+**This outranks everything else in this report.** Not because of what broke, but because of what failed to notice.
+
+### What happened
+
+The entire scheduled-task fleet — both schedulers — stopped executing for ~3 days. Every enabled task's last run clusters in a 90-minute window on 2026-08-06 and nothing fired afterwards:
+
+| Task | Cadence | Last run |
+|---|---|---|
+| `agentplain-librarian-rollup` | `*/15` | 2026-08-06T13:32:02Z |
+| `agentplain-watchdog` | `0,30 * * * *` | 2026-08-06T13:45:02Z |
+| `agentplain-loop-heartbeat` | `*/30` | 2026-08-06T13:31:02Z |
+| `agentplain-audit-queue-autofire` | — | 2026-08-06T13:15:02Z |
+| `chiron-demo-readiness-watchdog` | — | 2026-08-06T12:30:01Z |
+| `agentplain-morning-brief` | `0 8 * * *` | 2026-08-06T12:15:01Z |
+| `agentplain-audit-queue-seeder-local` | `*/30` | 2026-08-06T13:45:07Z |
+| `scheduler-liveness-watchdog` | daily | 2026-08-06T11:55:07Z |
+
+All reported `enabled: true` throughout.
+
+### Root cause — host stability, not a scheduler defect
+
+Confirmed on the host at 2026-08-09 ~20:51 ET: **memory exhaustion wedged Claude Desktop.**
+
+- 15.6 GB total RAM, **0.98 GB free (93.7% used)**
+- `claude`: 18 processes, 6.59 GB
+- `node` (MCP plugin servers): 24 processes, 2.40 GB
+- Combined **8.99 GB = 57.6% of system RAM**
+- App restarted 20:45:44 ET; all 42 processes fresh from that restart, `Responding=True`, zero stranded processes
+- `agentplain-morning-brief` fired its first run since 08-06 within minutes of the restart
+
+Conner independently reported "claude was black" plus a file-lock dialog on relaunch — consistent with the renderer being killed under memory pressure, then 40+ children holding handles through a slow shutdown.
+
+**Explicitly discarded hypothesis:** an earlier read of `nextRunAt` values (01:01–02:00Z on 2026-08-10) suggested "the daemon is scheduling but not executing." That was an artifact of the app having just restarted and recomputed every slot minutes before the read. There is no scheduler defect. Do not re-derive this.
+
+### The structural finding — this is the part that matters
+
+The outage ran for three days and **nothing detected it**. The reason is architectural, not incidental:
+
+> **`scheduler-liveness-watchdog` runs on the scheduler it monitors.** When the scheduler dies, the watchdog dies with it, and a dead watchdog is indistinguishable from a healthy one that has nothing to report. Silence is its success signal *and* its failure signal.
+
+This is not a one-off. **Three consecutive audits have each caught a different dead-task failure, and every one was found only by a manual, human-triggered audit** — never by the fleet. The fleet has no capacity to notice its own absence. Adding another on-host watchdog cannot fix this at any level of effort.
+
+### Proposed external check (concrete)
+
+A liveness check must run **off the host** and be **pull-based on a positive heartbeat**, so that "no signal" is itself the alarm:
+
+1. **Heartbeat writer (on-host, cheap).** Add one line to the existing `agentplain-watchdog` task: on every run, `PUT` a timestamp to a durable external store. The lowest-friction option needing no new infrastructure is a commit or a Gist update via the existing fleet token — e.g. stamp `memory/data/fleet-heartbeat.txt`. No new service, no new credential.
+2. **External observer (off-host).** A GitHub Actions workflow on a `schedule:` cron — GHA runs on GitHub's infrastructure, so it is immune to this failure mode by construction. It reads the heartbeat and fails the run if the timestamp is older than a threshold (2 h is comfortably above the `*/30` cadence).
+3. **Notification path that does not traverse the dead host.** A failing GHA run emails the repo owner by default. That is sufficient and requires zero setup.
+4. **Threshold discipline.** Alert on *staleness*, never on an error signal — the failure mode here produces no errors at all, only absence.
+
+The `repository_dispatch` route already specced in `docs/specs/audit-fire-gha-bridge-2026-06-15.md` establishes the same GHA-side beachhead; this check can share it. Estimated scope: one ~15-line workflow file plus one line in an existing task.
+
+### Two task-hygiene items
+
+- **`dispatch-journal-daily-sweep` is still `enabled: true`** three weeks after being tombstoned for deletion. It has been firing (or queued to fire) work that was explicitly retired.
+- **`chiron-build-heartbeat` has been disabled since 2026-08-01** — intentional or not, it is not running and nothing surfaces that.
 
 ---
 
@@ -31,7 +93,9 @@ Audit worktree: `C:/agentplain/agentplain-audit-0809` (detached from `origin/mai
 |---|---|---|
 | P0-1 | **Delivery stall.** `origin/main` unchanged for 28 days. 8 CI-green PRs unmerged (#380, #390–#396); 3 commits unpushed on local `main` (`9171f9d`, `0b983a7`, `469f4f5`). Nothing reaches production. | `git log origin/main -1` → `5606114` @ 2026-07-12; `git rev-list --left-right --count origin/main...HEAD` → `0  3`; GitHub REST `/pulls?state=open` → 10 open, all `combined=success` |
 | P0-2 | **Plaintext GitHub tokens in the repo root, unignored.** `.flt` holds a GitHub App installation token (`ghs_3714103_…`, exp 2026-08-03 — expired). `.claude/check-flatsbo-prs.mjs:1` holds a second hardcoded `ghs_` token. Neither is tracked *nor* gitignored → one `git add -A` from being committed. `.gitignore` covers `*.pem` and `.claude/worktrees/` but not these. | `git check-ignore .flt` → exit 1 (not ignored); `git ls-files --error-unmatch .flt` → not tracked; `.claude/check-flatsbo-prs.mjs:1` |
-| P0-3 | **Loop never ran.** `memory/data/loop/state.yaml` on main: `pass_number: 1`, `last_pass_completed_at: 2026-07-02T20:00:00Z`, `last_tick_at: null`, `tick_metrics: []`, `stalls_logged: 0`. 5 of 9 tracks at `passes_completed: 0` (product-owner, tab-audit, agent-audit, business-model, vertical-priority). | `git show origin/main:memory/data/loop/state.yaml`; last commit touching it `dfd788b` @ 2026-07-04 |
+| P0-3 | **No off-host liveness check exists, and no on-host one can work.** The 3-day outage above went undetected because `scheduler-liveness-watchdog` runs on the scheduler it monitors. Three consecutive audits have each found a different dead task; all three were found by a human asking, never by the fleet. | See §Scheduler execution outage |
+| P0-4 | **Loop is frozen, with two stacked causes that separate cleanly.** `memory/data/loop/state.yaml` on main: `pass_number: 1`, `last_pass_completed_at: 2026-07-02T20:00:00Z`, `last_tick_at: null`, `tick_metrics: []`, `stalls_logged: 0`; 5 of 9 tracks at `passes_completed: 0`. The outage explains staleness only after 2026-08-06T13:31Z. The **pre-existing bug is independently confirmed** — see §3 below. | `git show origin/main:memory/data/loop/state.yaml`; last commit touching it `dfd788b` @ 2026-07-04 |
+| P0-5 | **Plugin sprawl is the proximate cause of the wedge.** 40+ plugins installed; **30+ unauthenticated and therefore incapable of doing any work**, while still spawning node processes and holding RAM. 24 node MCP processes held 2.40 GB on a 16 GB machine. This session's own MCP roster lists 30 auth-required plugin servers by name plus "…and 25 more". Only 8 are CLI-scope (`.claude/plugins/installed_plugins.json`), so the bulk live in the desktop connector layer. | host process census 2026-08-09 ~20:51 ET; `installed_plugins.json` → 8 entries |
 
 ### P1
 
@@ -40,8 +104,8 @@ Audit worktree: `C:/agentplain/agentplain-audit-0809` (detached from `origin/mai
 | P1-1 | **Billing SSOT drift reaching customers.** `lib/knowledge/seed-data.ts:689` sells Partner as "Named-service-partner with **4 hrs/mo reserved time** … reserved hours each month … and **monthly business review**." Contradicts `facts.ts` twice: `PARTNER_SUPPORT.includesConnerTime = false` and `quarterlyAsyncCheckIn: true`. Seeded to the RAG corpus by `scripts/seed-knowledge.ts` — the corpus customer chat retrieves from. This is the exact leak vector flagged in `project_voice_hygiene_zero_baseline_2026_07_19`. | `lib/knowledge/seed-data.ts:689` vs `lib/billing/facts.ts:65,78-85` |
 | P1-2 | **Two operator pages have no authorization assertion.** `app/(operator)/operator/tickets/page.tsx` and `…/tickets/[ticketId]/page.tsx` contain no `isOperator` / `requireOperator` / `requireUser` / `redirect`. The other **17 of 19** operator pages all assert. They read support threads across all workspaces relying on the layout redirect alone. Open since 2026-07-02 (INBOX `p1_operator_tickets_pages_layout_only_auth`). | grep over all 19 `app/(operator)/**/page.tsx` — 17 OK, 2 MISS |
 | P1-3 | **Only 3 verticals are live**, not 4+general — and **property-management is one line from live, blocking revenue for no reason.** Its daily sweep `propertyManagementRentCollectionChaseSweepFn` **exists and auto-registers** (`lib/inngest/functions/property-management-rent-collection-chase-sweep.ts:264`, cron `0 12 * * *`), structurally identical to the CPA sweep that *is* trusted. The only thing missing is the string `'property-management-rent-collection-chase'` in `SKILLS_WITH_PRODUCTION_CALLER`. Until it's added, the signup gate sends every PM customer to the waitlist while the workflow runs daily. Separately, `general` → `no-killer-workflow-defined` even though `invoice-chase-general` **is** in the manifest with a live sweep — orphaned because no vertical maps to it. | Ran `resolveVerticalReadiness` over all 11 slugs → `SUPPORTED COUNT: 3 of 11`; `verticalReadinessSelfCheck()` → `[]`; `lib/verticals/readiness.ts:103-118,63-76`; sweep file confirmed exporting `inngest.createFunction` |
-| P1-4 | **Both schedulers were dark ~3.5 days** (2026-08-06 → 2026-08-10T00:46Z). `agentplain-audit-queue-seeder-local` is `*/30` but last ran 2026-08-06T13:45Z (~165 missed slots). Three tasks then fired within 60 ms of each other at 2026-08-10T00:46:27Z — a catch-up burst on app open, i.e. the scheduler only runs while the desktop app is open. **`scheduler-liveness-watchdog`, the task that exists to catch this, last ran 2026-08-06T11:55Z** — the watchdog is on the dead scheduler. | `list_scheduled_tasks` — `lastRunAt` fields |
-| P1-5 | **The memory/telemetry write-back layer is inert.** `INBOX.md` is 170 KB, mtime 2026-07-02 — no Librarian roll-up in 5 weeks. `memory/data/conner-queue.yaml` `pending:` contains only commented examples. `memory/data/budget-state.yaml` still reads week `2026-06-15 → 2026-06-22`, `spent_usd: 0`. `pending-fires.yaml` has 0 entries. | file mtimes + `grep -c "^  - id:"` → 0 |
+| P1-4 | **Task-list hygiene.** `dispatch-journal-daily-sweep` is still `enabled: true` three weeks after being tombstoned for deletion. `chiron-build-heartbeat` has been disabled since 2026-08-01 with nothing surfacing that. Retired and dormant tasks are indistinguishable from live ones in the task list. | `list_scheduled_tasks`; §Scheduler execution outage |
+| P1-5 | **The silent-no-op pattern is not unique to the loop — the Librarian has it too, and it is worse.** `agentplain-librarian-rollup` runs `*/15` and executed normally through 2026-08-06T13:32:02Z, yet `INBOX.md` has mtime **2026-07-02 15:20**. That is **~3,336 executions across 34.8 days that wrote nothing.** Same signature as P0-4: the task is alive, scheduled, and produces no output or complaint. Downstream, the whole write-back layer is inert — `conner-queue.yaml` `pending:` holds only commented examples, `budget-state.yaml` still reads week `2026-06-15 → 2026-06-22` with `spent_usd: 0`, `pending-fires.yaml` has 0 entries. **Two independent tasks now show this failure mode, which makes it a class, not an incident.** | task `lastRunAt` 2026-08-06T13:32:02Z vs `INBOX.md` mtime 2026-07-02; `grep -c "^  - id:"` → 0 |
 
 ### P2
 
@@ -97,17 +161,51 @@ All 10 are CI-green (`combined=success`). 9 mergeable/clean, 1 dirty.
 
 Every fleet[bot] branch from the 2026-07-19/07-25 wave was built, went green, and was never merged.
 
-### 3. The L3 loop — diagnosis
-State (above) shows the loop at pass 1 with `last_tick_at: null`. The cause is documented in the heartbeat's own prompt:
+### 3. The L3 loop — two stacked causes, separated
 
-`C:\Users\conne\Claude\Scheduled\agentplain-loop-heartbeat\SKILL.md` (regenerated 2026-07-19) states:
+The loop's committed state is stale, and there are **two independent candidate causes**. They separate cleanly on the timeline, so both can be settled rather than confused.
+
+**Committed state as of the last real tick** (`agentplain-loop-heartbeat` lastRunAt **2026-08-06T13:31:02Z**):
+
+| Field | Value |
+|---|---|
+| `pass_number` | 1 |
+| `last_pass_completed_at` | 2026-07-02T20:00:00Z |
+| `last_tick_at` | `null` |
+| `tick_metrics` | `[]` |
+| `stalls_logged` | 0 |
+| tracks at `passes_completed: 0` | 5 of 9 — product-owner, tab-audit, agent-audit, business-model, vertical-priority |
+
+Last commit touching `state.yaml`: `dfd788b`, 2026-07-04.
+
+**Cause A — the 3-day outage (2026-08-06T13:31Z → 2026-08-09).** Fully explains any staleness *inside that window*, and nothing outside it. The loop was not ticking at all; there is nothing further to diagnose there.
+
+**Cause B — the pre-existing tick-without-commit behaviour. CONFIRMED PRESENT, and independent of the outage.** The isolation is decisive:
+
+- The status ledger `l3-heartbeat-status.txt` contains **exactly one line**, `2026-07-19T20:02:36Z | dispatch=absent | main=5606114 | pass_number=1 | verdict=DEFERRED`, with file mtime **2026-07-19 16:02** — re-verified after the restart, still one line.
+- The heartbeat ran on `*/30` from that timestamp through **2026-08-06T13:31:02Z** — a window of **~17.7 days ≈ 850 ticks**.
+- That window **ends before the outage begins**. So the outage cannot account for it.
+- Across ~850 executions the ledger gained **zero** new lines and `state.yaml` gained zero commits.
+
+**But it is not a defect — it is spec-compliant.** The heartbeat's own prompt (regenerated 2026-07-19) states the constraint and then instructs the behaviour:
+
 > "KNOWN RUNNER CONSTRAINT (verified 2026-07-19, ~800 wasted ticks): this scheduled-task environment has NO dispatch tooling … and NO writable checkout of main … every tick will be a DEFERRED no-op."
+> — `C:\Users\conne\Claude\Scheduled\agentplain-loop-heartbeat\SKILL.md`
 
-Step 3 of that prompt instructs: if dispatch is absent **and** main's sha is unchanged **and** pass_number is unchanged, "**append nothing, write nothing else anywhere**". So: **the loop ticks without committing, by design.** `last_tick_at: null` is the designed output of a deferred tick, not evidence of a crash.
+Step 3 of that prompt instructs: if dispatch is absent **and** main's sha is unchanged **and** pass_number is unchanged, "**append nothing, write nothing else anywhere**". All three conditions held continuously (main has been pinned at `5606114` since 2026-07-12). So every one of those ~850 ticks *correctly* did nothing. `last_tick_at: null` is the **designed output of a deferred tick**, not evidence of a crash.
 
-Status ledger `…/agent/memory/data/l3-heartbeat-status.txt` contains exactly one line:
-`2026-07-19T20:02:36Z | dispatch=absent | main=5606114 | pass_number=1 | verdict=DEFERRED` (mtime 2026-07-19).
-Because the design suppresses writes when nothing changes — and main's sha genuinely has not changed since 2026-07-12 — **whether the heartbeat has ticked at all since 2026-07-19 is UNVERIFIED**: the fleet-side scheduler stores no run records (only `SKILL.md`), so both "ran and correctly wrote nothing" and "never ran" produce this identical evidence.
+**So what is actually wrong.** The implementation matches its spec; the spec is what's wrong. The deferred branch has **no escalation path**:
+
+- no counter of consecutive deferred ticks,
+- no "deferred for N days" threshold that raises anything,
+- no write to `conner-queue.yaml` (still empty — only commented examples),
+- no entry in `stalls_logged` (still `0`, despite ~850 stalls by any ordinary reading of the word).
+
+The prompt's author optimised the deferred tick to be "CHEAP and IDEMPOTENT" and succeeded completely — it became **silent**. ~850 executions, ~17.7 days, zero signal. The loop was not failing loudly and being ignored; it was failing quietly and correctly.
+
+This is the same architectural flaw as P0-3, one level down: **a component whose failure mode is silence, monitored only by watching for noise.**
+
+**Prior-audit correction.** The 2026-07-19 audit recorded this as "UNVERIFIED — cannot distinguish 'ran and correctly wrote nothing' from 'never ran' from the repo alone." That was correct *from the repo alone*, and it is now **resolved**: the scheduler's `lastRunAt` for `agentplain-loop-heartbeat` (2026-08-06T13:31:02Z) proves the task **was executing** throughout. The repo genuinely cannot distinguish the two — the scheduler's own run record can. Future audits should read both.
 
 **The fix is already built and staged.** `agentplain-loop-governor` exists on the Claude Code scheduler, `enabled: true`, `schedule: "Manual only"`, and **has no `lastRunAt` — it has never been executed.** Its own description: "First manual run = the mode-2 acceptance test. Conner adds the */30 cron only after that passes AND the fleet-side `agentplain-loop-heartbeat` is disabled (one governor only)."
 
@@ -152,6 +250,10 @@ So the honest read: the suite is *already telling us* about P0-1 and P1-3. Nobod
 
 | Item | Action |
 |---|---|
+| **P0-5 — plugin sprawl** | **Highest-leverage systematic item.** Uninstall the 30+ unauthenticated plugins: they cannot perform work by definition (no credentials) yet each spawns a node MCP process holding RAM. On a 16 GB host this is the proximate cause of the wedge. Audit the 40+ installed against what the fleet actually calls, and keep only those. Recheck the process census afterwards to confirm headroom. |
+| **P0-3 — external liveness** | Add the heartbeat line to `agentplain-watchdog` + the ~15-line GHA staleness workflow (see §Scheduler execution outage). Both are mechanical; neither needs a decision. |
+| **P0-4 — loop escalation** | Add a consecutive-deferred-tick counter to the heartbeat spec and a threshold that writes to `conner-queue.yaml` and increments `stalls_logged`. The bug is silence, so the fix is a signal. |
+| P1-4 | Delete `dispatch-journal-daily-sweep` (tombstoned 3 weeks ago, still enabled). Confirm whether `chiron-build-heartbeat` should stay disabled and annotate it either way. |
 | P0-2 | Delete `.flt`; strip the hardcoded token from `.claude/check-flatsbo-prs.mjs`; add `.flt`, `output-file`, `.depfile`, `.l3probe*`, `.claude/*.mjs` to `.gitignore`. Rotate the app credential as a precaution. |
 | P1-1 | Rewrite `seed-data.ts:689` to read from `PARTNER_SUPPORT`; re-seed the corpus. Add a test asserting no corpus chunk contradicts `facts.ts`. |
 | P1-2 | Add the 2-line operator assertion to both ticket pages (copy the pattern from the other 17). |
@@ -163,7 +265,7 @@ So the honest read: the suite is *already telling us* about P0-1 and P1-3. Nobod
 | P2-6 | Bump Next.js 14.2.18 → 14.2.25+. |
 | P2-7 | Fix or remove the two broken imports; `captureCheckIn` silently disables cron monitoring. |
 | P2-8 | Clean repo-root clutter and stray worktrees. |
-| P1-5 | Restart the Librarian roll-up; reset `budget-state.yaml` to the current week. |
+| P1-5 | Diagnose why the Librarian roll-up writes nothing (it is *running*, so "restart it" is the wrong fix — that was the July assumption). Reset `budget-state.yaml` to the current week. Then apply the same escalation rule as P0-4 to **every** recurring task: a task that completes N times without producing its declared artefact must raise, not shrug. |
 
 ### JUDGMENT — needs Conner
 
@@ -171,10 +273,14 @@ So the honest read: the suite is *already telling us* about P0-1 and P1-3. Nobod
 |---|---|---|---|
 | **J1** | **Land the 8 green PRs.** Merge order: GitHub first (#390 → #391 → #392 → #393 → #394 → #395 → #396, then #380), *then* rebase local `main`. Close #367 and #351. | Merging is a mobile action only Conner performs; #351 is his own draft. | Merge all 8; close #367 (obsolete) and #351 (off-topic). |
 | **J2** | **Activate the L3 governor.** Run `agentplain-loop-governor` once manually as its acceptance test; if the verdict line is clean, add the `*/30` cron and disable the fleet-side `agentplain-loop-heartbeat`. | The task is explicitly staged waiting on his go/no-go, and requires one-governor-only arbitration. | Run the acceptance test this week. Re-probe the push path with the mint-token recipe first — the "runner can't write" premise is unproven. |
-| **J3** | **Decide where the scheduler lives.** Both schedulers are dark whenever the desktop app is closed; the outage ran 3.5 days undetected because the watchdog shares the dead runner. The GHA `repository_dispatch` route is already specced in `docs/specs/audit-fire-gha-bridge-2026-06-15.md`. | Infrastructure + cost commitment; changes where the fleet's autonomy actually runs. | Move the heartbeat + watchdog to the GHA route; keep local scheduling only for tasks that need the desktop. |
+| **J3** | **Does the fleet keep running on a 16 GB desktop?** The 3-day outage was memory exhaustion, not a bug. Pruning plugins (P0-5) buys headroom and is worth doing regardless — but it raises the ceiling, it doesn't remove it: the fleet's autonomy is still capped by one machine's RAM and by whether the app happens to be open. The real choice is whether scheduled work migrates to a hosted runner (the GHA `repository_dispatch` route in `docs/specs/audit-fire-gha-bridge-2026-06-15.md` is already specced). | Infrastructure and cost commitment; changes where the fleet's autonomy physically lives. | Prune plugins now; move the *heartbeat and watchdog* to GHA this week (small, high-value). Defer the full migration until after the PR backlog lands — but decide it deliberately, not by drift. |
 
 Everything else on the judgment side is deliberately excluded to keep this queue short. The `ANTHROPIC_API_KEY` pause is recorded as settled policy and needs no decision.
+
+**A note on ordering.** J1 (land the PRs) is the largest *value* unlock, but J3's cheap half — the external liveness check — is what stops this report's findings from silently rotting again. Three consecutive audits found dead tasks, each by a human asking. If only one thing gets done, make it the GHA staleness check.
 
 ---
 
 *Audit method: `git fetch origin` then all reads pinned to `origin/main` via a dedicated worktree; PR data from the GitHub REST API with a freshly minted fleet token (`gh` CLI is unauthenticated in this environment); gates, build, tests, and the vertical-readiness resolver executed rather than reasoned about.*
+
+*Host-stability facts in §Scheduler execution outage (process census, memory figures, restart time) were verified on the host by Conner at 2026-08-09 ~20:51 ET and are carried here as given, not re-derived. An earlier `nextRunAt`-based inference that the daemon was "scheduling but not executing" was an artifact of reading slots minutes after an app restart; it is withdrawn and should not be revived.*

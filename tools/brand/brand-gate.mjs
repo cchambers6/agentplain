@@ -110,10 +110,15 @@ function buildSurfaceFiles() {
   return [...new Set(globs)];
 }
 
-// Files for R2 placeholder check: public brand SVGs + ap/ components
+// Files for R2 placeholder check: the ENTIRE public/ tree + ap/ components.
+// Everything under public/ is fetchable from prod by URL, so a labeled stand-in
+// anywhere in it is a customer-visible defect — not just under public/brand/.
+// Binary formats (png/jpg/webp) are read as utf8 and regexed; ASCII sentinels
+// embedded in them still match. (Widened from public/brand-only, 2026-07-19,
+// after public/logo-iterations shipped internal iteration notes to prod.)
 function buildPlaceholderFiles() {
   return [
-    ...walk(join(REPO_ROOT, "public", "brand"), /\.(svg|png|jpg|webp)$/),
+    ...walk(join(REPO_ROOT, "public"), /\.(svg|png|jpe?g|webp|html?|md|txt|json|xml|webmanifest|css|js)$/i),
     ...walk(join(REPO_ROOT, "components", "ui", "ap"), /\.(ts|tsx)$/),
   ];
 }
@@ -224,6 +229,28 @@ const R2_RULES = [
     id: "R2",
     pattern: /awaiting real asset/i,
     message: "Placeholder sentinel 'awaiting real asset' found in brand asset",
+  },
+  {
+    id: "R2",
+    pattern: /lorem ipsum/i,
+    message: "Lorem-ipsum filler text found in public asset",
+  },
+  {
+    id: "R2",
+    pattern: /\bFPO\b/,
+    message: "'FPO' (for-position-only) marker found in public asset",
+  },
+  {
+    id: "R2",
+    pattern: /coming soon/i,
+    message: "'Coming soon' stand-in text found in public asset (product copy may say it; static assets may not)",
+  },
+  {
+    id: "R2",
+    // Wireframe dimension annotation, e.g. "600 × 400". Typographic × only —
+    // ASCII "x" would false-positive on strings like "24x7".
+    pattern: /\b\d{2,4}\s*×\s*\d{2,4}\b/,
+    message: "Dimension annotation (e.g. '600 × 400') found — wireframe tell in a shipped asset",
   },
 ];
 

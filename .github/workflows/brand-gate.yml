@@ -1,0 +1,37 @@
+# Brand launch gate — placeholder assets, vendor names, token drift, banned words.
+#
+# WHY THIS WORKFLOW EXISTS: 27 "PLACEHOLDER"-labeled wireframe SVGs shipped live
+# to prod (fixed in PR #231) because the only enforcement was the husky pre-push
+# hook — which fleet REST pushes and `HUSKY=0` both bypass, and which Vercel
+# never sees. This workflow makes the gate unskippable at the PR boundary, and
+# the same script also runs inside `npm run build` so a bypassed push still
+# cannot produce a deploy.
+#
+# The gate is pure Node built-ins (zero dependencies), so this job skips
+# `npm ci` entirely and finishes in seconds.
+#
+# Ratchet semantics: only NEW violations vs tools/brand/brand-gate-baseline.json
+# fail. R2 (placeholder/stand-in text anywhere under public/) is at ZERO in the
+# baseline and must stay there — never re-baseline an R2 hit; fix the asset.
+#
+# Run locally:
+#   npm run brand-gate            # ratchet mode (what CI runs)
+#   npm run brand-gate -- --all   # full violation surface, ignoring baseline
+
+name: brand-gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  brand-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Brand gate (ratchet — new violations fail)
+        run: node tools/brand/brand-gate.mjs

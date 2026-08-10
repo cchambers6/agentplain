@@ -1,5 +1,9 @@
 import Link from "next/link";
 import Logo from "./brand/Logo";
+import {
+  TRIAL_PERIOD_DAYS,
+  TRIAL_PERIOD_DAYS_EXTENDED,
+} from "@/lib/billing/facts";
 import { tokens } from "@/lib/brand/tokens";
 import { getAllVerticals } from "@/lib/verticals";
 
@@ -181,7 +185,8 @@ export default function Footer() {
         <div className="container-wide flex flex-col gap-2 py-5 text-xs text-paper/45 sm:flex-row sm:items-center sm:justify-between">
           <p className="font-mono tracking-wide">© 2026 agentplain</p>
           <p className="font-mono tracking-wide">
-            10 verticals · 3 service-partnership tiers · 7-day free trial
+            10 verticals · 3 service-partnership tiers · {TRIAL_PERIOD_DAYS}
+            -day free trial ({TRIAL_PERIOD_DAYS_EXTENDED} for CPA + Law)
           </p>
         </div>
       </div>

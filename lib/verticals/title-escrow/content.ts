@@ -1,4 +1,8 @@
 import type { VerticalContent } from "../types";
+import {
+  TRIAL_PERIOD_DAYS,
+  MONEY_BACK_GUARANTEE_DAYS,
+} from "../../billing/facts";
 
 // Source: `b2b_vertical_opportunity_analysis_2026-04-27.md` roadmap note +
 // `agentplain_positioning.md` listing title/escrow as adjacent.
@@ -32,7 +36,7 @@ export const titleEscrow: VerticalContent = {
     },
     {
       q: "How much does agentplain cost for a title shop?",
-      a: "Title & escrow is recommended at the Regular tier — $199 per seat per month for a solo operator, sliding to $99 per seat at 50+ seats. Every tier is per seat, month-to-month, with the first month free, and you can cancel anytime.",
+      a: `Title & escrow is recommended at the Regular tier — $199 per seat per month for a solo operator, sliding to $99 per seat at 50+ seats. Every tier is per seat and month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
     },
     {
       q: "Does the fleet send anything on its own?",

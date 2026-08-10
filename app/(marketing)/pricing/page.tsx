@@ -7,6 +7,12 @@ import { FaqList, pricingFaqItems } from "@/components/FAQ";
 import { faqPageJsonLd } from "@/lib/seo/structured-data";
 import { alternatesFor } from "@/lib/seo/metadata";
 import { tierLadderBands } from "@/lib/pricing/tiers";
+import {
+  MONEY_BACK_GUARANTEE_DAYS,
+  PARTNER_SUPPORT,
+  TRIAL_PERIOD_DAYS,
+  TRIAL_PERIOD_DAYS_EXTENDED,
+} from "@/lib/billing/facts";
 import HeroBackdrop from "@/components/marketing/HeroBackdrop";
 import {
   ApClosingBand,
@@ -16,7 +22,7 @@ import {
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Three per-seat service-partnership tiers, month-to-month. Regular $199→$99, Partner $299→$199, Max quoted. 7-day free trial, card at signup, 14-day money-back guarantee. Custom engagements on /custom.",
+    `Three per-seat service-partnership tiers, month-to-month. Regular $199→$99, Partner $299→$199, Max quoted. ${TRIAL_PERIOD_DAYS}-day free trial, card at signup, ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee. Custom engagements on /custom.`,
   alternates: alternatesFor("/pricing"),
 };
 
@@ -43,7 +49,7 @@ const partnerBands: Band[] = tierLadderBands("plus");
 
 const sharedGuarantees = [
   "A service partner who installs the fleet and runs reviews",
-  "7-day free trial across every seat band (14 days for CPA + Law)",
+  `${TRIAL_PERIOD_DAYS}-day free trial across every seat band (${TRIAL_PERIOD_DAYS_EXTENDED} days for CPA + Law)`,
   "Month-to-month — cancel any time",
   "Human review on every customer-facing output",
   "Liability for licensed activities stays with you",
@@ -52,11 +58,32 @@ const sharedGuarantees = [
   "You own the work product",
 ];
 
+// The three objections buyers actually raise at the pricing decision, each
+// answered from a source of truth: trial/money-back numbers from
+// `lib/billing/facts.ts`, the flat-fee/no-overage promise from the customer
+// billing surface (BudgetSummary + /usage — the fleet's activity is visible,
+// never surprise-billed), support channels from PARTNER_SUPPORT. Rendered as
+// its own section so a skimmer hits them without opening the FAQ.
+const objections: { q: string; a: string }[] = [
+  {
+    q: "What if it doesn't work for us?",
+    a: `You find out on our dime, not yours. The ${TRIAL_PERIOD_DAYS}-day free trial (${TRIAL_PERIOD_DAYS_EXTENDED} days for CPA + Law) runs on your real inbox and tools, not a demo — by the end you've approved real drafts or you haven't. After the trial, the ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee covers your first charge. And it's month-to-month: cancel from billing settings, no long-term contract to escape.`,
+  },
+  {
+    q: "What if my volume is unpredictable?",
+    a: "Your price doesn't move with it. The fee is flat per seat — no metered usage line, no overage charges. A heavy month is our cost to manage, not yours. The usage page in your workspace shows the fleet's last-30-day activity, so what it's doing is never a mystery; if usage outgrows your plan, your service partner raises it as a conversation, never as a surprise on the invoice.",
+  },
+  {
+    q: "What if I need help?",
+    a: `A human answers, and the channel is stated up front. Every tier gets email and chat support at ${PARTNER_SUPPORT.supportEmail}; Regular adds the monthly review, where tuning questions get worked. Partner gets priority support — a faster line — plus the quarterly async check-in. Max scopes its support shape to the engagement, including named service hours.`,
+  },
+];
+
 const whenToChoose = [
   {
     tier: "Regular",
     headline: "Standard service partnership.",
-    body: "Most local-business shops fit here. A service partner installs the fleet, runs a monthly review call, handles tuning between calls. Your day-to-day stays inside the workspace.",
+    body: "Most local-business shops fit here. A service partner installs the fleet, runs the monthly review, handles tuning between reviews over email and chat. Your day-to-day stays inside the workspace.",
     examples: [
       "Solo or small-team realtor / mortgage broker / CPA",
       "Steady weekly ops, predictable case mix",
@@ -99,7 +126,7 @@ const SBM_COMPARISON: { dimension: string; diy: string; us: string }[] = [
   {
     dimension: "Time to value",
     diy: "Weeks to months: learn prompting, decide which agents to build, write the skills, wire each integration, then tune until it's reliable.",
-    us: "Days. We install the per-vertical fleet, connect your tools, and you're approving real drafts in the first week. 7-day free trial, card at signup.",
+    us: `Days. We install the per-vertical fleet, connect your tools, and you're approving real drafts in the first week. ${TRIAL_PERIOD_DAYS}-day free trial, card at signup.`,
   },
   {
     dimension: "Ongoing maintenance",
@@ -137,13 +164,13 @@ export default function PricingPage() {
           </h1>
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft md:text-xl">
             Every tier is a service partnership: we install the fleet, run
-            reviews, and customize alongside you. Per seat, month-to-month.
-            7-day free trial, card at signup.{" "}
+            reviews, and customize alongside you. Per seat, month-to-month.{" "}
+            {TRIAL_PERIOD_DAYS}-day free trial, card at signup.{" "}
             <Link
               href="/guarantee"
               className="text-ink underline underline-offset-4 hover:text-clay-deep"
             >
-              14-day money-back guarantee
+              {MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee
             </Link>
             .
           </p>
@@ -176,12 +203,12 @@ export default function PricingPage() {
           <TierColumn
             name="Regular"
             tagline="Standard service partnership."
-            description="A service partner installs, runs a monthly review, tunes between calls. Day-to-day in the workspace you log into."
+            description="A service partner installs, runs a monthly review, tunes between reviews. Day-to-day in the workspace you log into."
             bands={regularBands}
             ctaLabel="Start free trial"
             ctaHref="/app/sign-up"
             ctaStyle="primary"
-            footnote="7-day free trial. Month-to-month. Per seat."
+            footnote={`${TRIAL_PERIOD_DAYS}-day free trial. Month-to-month. Per seat.`}
           />
           <TierColumn
             name="Partner"
@@ -191,7 +218,7 @@ export default function PricingPage() {
             ctaLabel="Talk to a service partner"
             ctaHref="mailto:hello@agentplain.com?subject=agentplain%20Partner%20tier%20interest"
             ctaStyle="secondary"
-            footnote="7-day free trial. Month-to-month. Per seat."
+            footnote={`${TRIAL_PERIOD_DAYS}-day free trial. Month-to-month. Per seat.`}
             featured
           />
           <TierColumn
@@ -305,6 +332,36 @@ export default function PricingPage() {
       </Section>
 
       <Section
+        eyebrow="The three objections"
+        title="Asked before every yes. Answered here."
+        intro="If you're weighing this against doing nothing, these are the three questions that decide it. Straight answers, each backed by the policy pages they cite."
+      >
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-3">
+          {objections.map((row) => (
+            <div key={row.q} className="bg-paper p-7 md:p-8">
+              <h3 className="font-display text-2xl leading-snug text-ink">
+                {row.q}
+              </h3>
+              <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
+                {row.a}
+              </p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-6 text-[13px] leading-relaxed text-mute">
+          The money-back terms live on{" "}
+          <Link href="/guarantee" className="text-ink underline underline-offset-4">
+            /guarantee
+          </Link>
+          ; data handling on{" "}
+          <Link href="/privacy" className="text-ink underline underline-offset-4">
+            /privacy
+          </Link>
+          .
+        </p>
+      </Section>
+
+      <Section
         tone="deep"
         eyebrow="Outside the tiers?"
         title="When the productized tiers don't cover it, we scope custom."
@@ -352,13 +409,14 @@ export default function PricingPage() {
         eyebrow="Start where it's free"
         title={
           <>
-            7-day free trial, card at signup. By day 7 your service team has
-            either shown up or it hasn&apos;t.{" "}
+            {TRIAL_PERIOD_DAYS}-day free trial, card at signup. By day{" "}
+            {TRIAL_PERIOD_DAYS} your service team has either shown up or it
+            hasn&apos;t.{" "}
             <Link
               href="/guarantee"
               className="underline underline-offset-4 hover:text-wheat"
             >
-              14-day money-back
+              {MONEY_BACK_GUARANTEE_DAYS}-day money-back
             </Link>{" "}
             if it hasn&apos;t.
           </>

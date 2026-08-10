@@ -16,7 +16,7 @@
 |---|--------|----------------|
 | 0–3s | Dark bedroom, 9:14pm. A phone screen lights up on the nightstand: *"Counter-offer received."* | **VO:** "Tuesday, 9:14pm. The counter-offer lands." |
 | 3–7s | The screen goes dark. The house sleeps. A clock dissolves from 9:14pm → 6:30am. | **VO:** "You're not going to deal with it tonight. And that's fine." |
-| 7–14s | Morning. Kitchen light. Sarah pours coffee, opens the laptop. The agentplain workspace is already populated — a drafted response, three comps, a thread summary. | **VO:** "Because while you slept, the work got done. The response — drafted. The comps — pulled. The whole thread — summarized." |
+| 7–14s | Morning. Kitchen light. Sarah pours coffee, opens the laptop. The agentplain workspace is already populated — a drafted response, three comps, a thread summary. | **VO:** "Because while you slept, the work got done. The response is drafted. The comps are pulled. The whole thread, summarized." |
 | 14–20s | Close on her cursor. She edits one number. A small footer marker: *drafted by Plaino.* She clicks into dotloop and sends. | **VO:** "You change one number. You sign. You send — from your own system, with your name on it." |
 | 20–25s | She closes the laptop, still holding coffee. Calm. **On-screen:** "Four minutes. Not forty-five." | **VO:** "Four minutes. Not forty-five." |
 | 25–30s | Wordmark on paper texture. Ten vertical names ghost past underneath. **On-screen:** *agentplain · Intelligence rooted in reality.* CTA: "Start free trial." | **VO:** "agentplain. Your AI ops team — without hiring one." |

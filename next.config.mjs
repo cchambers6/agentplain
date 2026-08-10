@@ -14,6 +14,14 @@ const nextConfig = {
         destination: "/#pricing",
         permanent: true,
       },
+      {
+        // "/plans" is the guessable synonym for /pricing (typed URLs, old
+        // outreach drafts). No filesystem route exists there, so this can't
+        // shadow anything the way the /how-it-works redirect once did.
+        source: "/plans",
+        destination: "/pricing",
+        permanent: true,
+      },
       // NOTE: no /how-it-works redirect here. The standalone page at
       // app/(marketing)/how-it-works/page.tsx (PR #283) is the canonical
       // explainer; a stale `permanent: true` redirect to /#how shadowed it

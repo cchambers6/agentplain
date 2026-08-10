@@ -28,6 +28,7 @@ Auto-fire logged "fired 0, $0 spent" honestly for six consecutive runs — but "
 - **Liveness is proven by a fire, not by design docs.** "First manual pass verified" is the acceptance test.
 - **Graceful degradation still fails the autonomy bar** — the file-bridge fallback was good engineering and still left the loop human-gated for 17 days. Surface degraded mode loudly; don't let it become the steady state.
 - **Every tick writes `last_tick_at`** — the canary that separates "conductor down" from "nothing eligible" ([[heartbeat-governor]]).
+- **Liveness checks are triage — run them on Haiku** (`claude-haiku-4-5-20251001`, per `project_model_routing_plan_2026_07_19`); escalate to Fable only when a ✘ needs root-cause judgment.
 
 ## Example invocation
 

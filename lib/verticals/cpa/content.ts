@@ -74,7 +74,7 @@ export const cpa: VerticalContent = {
       job: "Drafts the engagement letter and doc checklist scoped to entity type and state.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your practice-management system (TaxDome / Karbon / Canopy) is connected.",
+        "Setting up — comes online once your practice-management system (TaxDome / Karbon / Canopy) is connected.",
     },
     {
       slug: "cpa-doc-chase",
@@ -82,7 +82,7 @@ export const cpa: VerticalContent = {
       job: "Runs the missing-document cadence per client through the season.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your tax-software client portal is connected.",
+        "Setting up — comes online once your tax-software client portal is connected.",
     },
     {
       slug: "cpa-compliance-sentinel",
@@ -90,7 +90,7 @@ export const cpa: VerticalContent = {
       job: "Runs the federal and state checklist before a return hits the partner's desk.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — federal and per-state checklist corpus is loaded; draft scoring activates after counsel review.",
+        "Setting up — federal and per-state checklist corpus is loaded; draft scoring activates after counsel review.",
     },
     {
       slug: "cpa-books-recon",
@@ -98,7 +98,7 @@ export const cpa: VerticalContent = {
       job: "Drafts the books reconciliation against bank feeds; staff reviews exceptions.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once QuickBooks Online or Xero plus the bank feed is connected.",
+        "Setting up — comes online once QuickBooks Online or Xero plus the bank feed is connected.",
     },
     {
       slug: "cpa-collections",
@@ -106,7 +106,7 @@ export const cpa: VerticalContent = {
       job: "Drafts the 30/60/90 aged-AR escalation for the partner to sign.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your AR feed (QuickBooks Online / practice-mgmt billing) is connected.",
+        "Setting up — comes online once your AR feed (QuickBooks Online / practice-mgmt billing) is connected.",
     },
     {
       slug: "cpa-billing",
@@ -114,7 +114,7 @@ export const cpa: VerticalContent = {
       job: "Drafts the invoice on each milestone trigger for the admin to send.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your practice-management billing module is connected.",
+        "Setting up — comes online once your practice-management billing module is connected.",
     },
     {
       slug: "cpa-client-inbound",

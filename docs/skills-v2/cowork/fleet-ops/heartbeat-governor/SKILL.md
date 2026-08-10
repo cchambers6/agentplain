@@ -5,7 +5,7 @@ description: Design a cheap deterministic conductor that schedules worker agents
 
 # Heartbeat governor (conductor, not a worker)
 
-A conductor ticks on a fixed cadence (30 min), keeps exactly one worker moving, and never designs anything. Cheap model (Haiku), deterministic branching, single instance.
+A conductor ticks on a fixed cadence (30 min), keeps exactly one worker moving, and never designs anything. Cheap model (Haiku — `claude-haiku-4-5-20251001`, the triage tier of `project_model_routing_plan_2026_07_19`; the workers it fires run on `pass_model`, Fable by default), deterministic branching, single instance.
 
 ## The tick — four steps, always all four
 

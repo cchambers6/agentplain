@@ -23,6 +23,7 @@ A worker does one increment per fire and closes the shared state with a declared
 ## Rules
 
 - **Cold-start-safe:** state is read on every fire; nothing assumed in memory.
+- **Model: passes run on `pass_model` = `claude-fable-5`** — every pass is judgment work; per `project_model_routing_plan_2026_07_19` do not downgrade to save a resource that is no longer scarce.
 - **No stop condition, no milestone field.** "Design it to be profitable, not design until it is profitable" (Conner, 2026-07-03) — the milestone field was removed on purpose; do not reintroduce it.
 - **The yaml block is the contract** — the governor's gate parses it mechanically; make the prose agree with it, not vice versa.
 - **A "delivering: yes" requires an opened code path** as evidence — the gate can't catch semantic hallucination; the evidence rule and depth passes do.

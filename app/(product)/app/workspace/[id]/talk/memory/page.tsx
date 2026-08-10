@@ -155,9 +155,7 @@ function MemoryRow({ entry, workspaceId }: RowProps) {
         </form>
       </details>
 
-      {!entry.sourceChatMessageId ? null : (
-        <p className="mt-2 text-[14px] leading-relaxed text-ink-soft">{entry.body}</p>
-      )}
+      <p className="mt-2 text-[14px] leading-relaxed text-ink-soft">{entry.body}</p>
 
       <div className="mt-3 flex items-center gap-3">
         <form action={pinAction.bind(null, workspaceId)}>

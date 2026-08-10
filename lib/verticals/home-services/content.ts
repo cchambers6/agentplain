@@ -74,7 +74,7 @@ export const homeServices: VerticalContent = {
       job: "Builds the bid from measurements and drafts the homeowner-facing proposal.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your measurement tool (EagleView / AccuLynx / Hover) is connected.",
+        "Setting up — comes online once your measurement tool (EagleView / AccuLynx / Hover) is connected.",
     },
     {
       slug: "home-services-estimate-followup",
@@ -95,7 +95,7 @@ export const homeServices: VerticalContent = {
       job: "Reads the adjuster scope and drafts the line-item rebuttal for owner sign-off.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once Symbility or Xactimate adjuster scopes are connected.",
+        "Setting up — comes online once Symbility or Xactimate adjuster scopes are connected.",
     },
     {
       slug: "home-services-dispatch",
@@ -103,7 +103,7 @@ export const homeServices: VerticalContent = {
       job: "Ranks same-day calls by SLA and skill match, then drafts and re-drafts the route.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your FSM (ServiceTitan / Housecall Pro / Jobber) is connected for the crew + skill matrix.",
+        "Setting up — comes online once your FSM (ServiceTitan / Housecall Pro / Jobber) is connected for the crew + skill matrix.",
     },
     {
       slug: "home-services-eta-updater",
@@ -111,7 +111,7 @@ export const homeServices: VerticalContent = {
       job: "Drafts homeowner updates on every job-state change for the dispatcher to send.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your FSM job-state webhooks are connected.",
+        "Setting up — comes online once your FSM is connected for live job updates.",
     },
     {
       slug: "home-services-project-coordinator",
@@ -119,7 +119,7 @@ export const homeServices: VerticalContent = {
       job: "Sequences material order, crew window, and inspection scheduling on a signed contract.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your project-management surface (AccuLynx / JobNimbus) and supplier connections are in place.",
+        "Setting up — comes online once your project-management surface (AccuLynx / JobNimbus) and supplier connections are in place.",
     },
     {
       slug: "home-services-reviews",
@@ -127,7 +127,7 @@ export const homeServices: VerticalContent = {
       job: "Runs the T+7 review-and-referral cadence on every completed job.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your FSM completed-job feed is connected.",
+        "Setting up — comes online once your FSM completed-job feed is connected.",
     },
     {
       // Horizontal chief-of-staff capability — proposals only, no execution.

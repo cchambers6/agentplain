@@ -178,9 +178,9 @@ draft → DraftReply (subject + body + Gmail draft id).`,
     body: `Three swappable ports keep lib/skills/ provider-neutral per feedback_no_silent_vendor_lock.md
 and project_living_portable_architecture.md.
 
-LlmProvider (lib/llm/types.ts): production AnthropicProvider (lib/llm/anthropic-provider.ts); test
-TestLlmProvider (lib/llm/test-provider.ts) with canned + heuristic outputs. getLlmProvider() reads
-LLM_PROVIDER env (test forces test mode) and ANTHROPIC_API_KEY presence.
+LlmProvider (lib/llm/types.ts): one production model-provider adapter (lib/llm/anthropic-provider.ts);
+test TestLlmProvider (lib/llm/test-provider.ts) with canned + heuristic outputs. getLlmProvider() reads
+LLM_PROVIDER env (test forces test mode) and the production provider key's presence.
 
 MessageFetcher (lib/skills/types.ts): production GmailMessageAdapter (lib/skills/gmail-fetcher.ts)
 calling gmail.users.history.list + gmail.users.messages.get; test FixtureMessageFetcher reading from
@@ -190,7 +190,7 @@ DraftPersister (lib/skills/types.ts): production GmailMessageAdapter (same class
 test RecordingDraftPersister captures calls in memory.
 
 The two-implementation rule per feedback_runner_portability.md is satisfied for each port — new
-providers (M365, OpenAI) slot in without touching skill code.`,
+providers (M365 mail, another model vendor) slot in without touching skill code.`,
     source: 'docs/skills-architecture.md',
     section: 'Adapter ports',
   },
@@ -236,17 +236,17 @@ app.workspace_id, and app.is_operator GUCs inside a transaction.`,
   {
     slug: 'knowledge-substrate:ports-and-embedding',
     title: 'Knowledge substrate — two-impl ports + embedding model',
-    body: `IEmbeddingProvider port: production OpenAIEmbeddingProvider (text-embedding-3-small, 1536
-dims, $0.02/1M tokens per OpenAI pricing read 2026-05-12); test TestEmbeddingProvider (deterministic
-SHA-256 → unit-norm float[]).
+    body: `IEmbeddingProvider port: one production embedding adapter (lib/knowledge/, model
+text-embedding-3-small, 1536 dims, $0.02/1M tokens per vendor pricing read 2026-05-12); test
+TestEmbeddingProvider (deterministic SHA-256 → unit-norm float[]).
 
 IKnowledgeStore port: production PgvectorKnowledgeStore (pgvector ivfflat cosine, RLS); test
 TestKnowledgeStore (in-memory).
 
 Selection rules in lib/knowledge/index.ts: KNOWLEDGE_EMBEDDING_PROVIDER (test forces test; unset +
-OPENAI_API_KEY present → openai; unset + no key → test fallback). KNOWLEDGE_STORE (pgvector default;
-test for in-memory). The test fallback when OPENAI_API_KEY is unset mirrors lib/llm/index.ts so the
-chain stays exercisable on mock data until prod keys land.
+embedding key present → production; unset + no key → test fallback). KNOWLEDGE_STORE (pgvector
+default; test for in-memory). The test fallback when the embedding key is unset mirrors
+lib/llm/index.ts so the chain stays exercisable on mock data until prod keys land.
 
 Dimension mismatch between provider and column is detected at write time (DIMENSION_MISMATCH error).
 The MCP route (app/api/knowledge/mcp/route.ts) exposes knowledge.search, knowledge.upsert, and

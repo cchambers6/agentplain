@@ -31,8 +31,8 @@
 ### Sitelinks (link text ≤25 / description ≤35)
 
 1. **Talk to a service partner** — `Scope your practice in 15 min` (29 → trim to: `Scope your practice in 15 min` is 29; use `A 15-minute scoping call` — 24)
-2. **How it works** — `The fleet drafts; you approve` — 29 → use `Draft, then you approve` — 23
-3. **The Marketing Rule** — `How we draft within 206(4)-1` — 28 → use `How we draft within the rule` — 28
+2. **How it works** — `The fleet drafts; you approve` (29) → use `Draft, then you approve` (23)
+3. **The Marketing Rule** — `How we draft within 206(4)-1` (28) → use `How we draft within the rule` (28)
 4. **Pricing** — `Max quote; Partner floor` — 24
 
 > Corrected to fit ≤25 link / ≤35 desc:

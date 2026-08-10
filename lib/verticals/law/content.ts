@@ -81,7 +81,7 @@ export const law: VerticalContent = {
       job: "Drafts the first pass of a pleading or contract with the matter facts inserted.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your document-mgmt system (NetDocuments / iManage / SharePoint) is connected for matter facts.",
+        "Setting up — comes online once your document-mgmt system (NetDocuments / iManage / SharePoint) is connected for matter facts.",
     },
     {
       slug: "law-doc-chase",
@@ -89,7 +89,7 @@ export const law: VerticalContent = {
       job: "Runs the doc-collection cadence with clients and opposing counsel per channel.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your client portal (Clio Connect / MyCase) is connected.",
+        "Setting up — comes online once your client portal (Clio Connect / MyCase) is connected.",
     },
     {
       slug: "law-compliance-sentinel",
@@ -97,7 +97,7 @@ export const law: VerticalContent = {
       job: "Flags privilege and ABA Model Rule 1.6 concerns before a draft is sent.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — privilege and ABA 1.6 corpus is loaded; draft scoring activates after counsel review.",
+        "Setting up — privilege and ABA 1.6 corpus is loaded; draft scoring activates after counsel review.",
     },
     {
       slug: "law-discovery-review",
@@ -105,7 +105,7 @@ export const law: VerticalContent = {
       job: "Runs first-pass responsiveness and privilege tagging, citing the rule basis.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once a Relativity / Everlaw connection is established for the discovery corpus.",
+        "Setting up — comes online once a Relativity / Everlaw connection is established for the discovery corpus.",
     },
     {
       slug: "law-status-updater",
@@ -113,7 +113,7 @@ export const law: VerticalContent = {
       job: "Drafts the client matter-status update on every state change for the attorney.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once matter-state webhooks from your practice-management system are connected.",
+        "Setting up — comes online once your practice-management system is connected for live matter updates.",
     },
     {
       slug: "law-billing",
@@ -121,7 +121,7 @@ export const law: VerticalContent = {
       job: "Drafts the milestone invoice and the aged-AR escalation for the partner.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your billing module (Clio Manage / TimeSolv) is connected.",
+        "Setting up — comes online once your billing module (Clio Manage / TimeSolv) is connected.",
     },
     {
       // Horizontal chief-of-staff capability — proposals only, no execution.

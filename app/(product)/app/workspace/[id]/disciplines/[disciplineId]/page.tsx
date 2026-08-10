@@ -182,7 +182,7 @@ export default async function DisciplineDetailPage({ params }: PageProps) {
                 key={`agent-${a.slug}`}
                 right={
                   <span className="font-mono text-[11px] uppercase text-mute">
-                    {a.runtime === "live" ? "live" : "rooting"}
+                    {a.runtime === "live" ? "working" : "setting up"}
                   </span>
                 }
               >

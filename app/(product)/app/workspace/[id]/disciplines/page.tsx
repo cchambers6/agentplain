@@ -260,7 +260,7 @@ export default async function DisciplinesPanelPage({ params }: PageProps) {
               <span
                 aria-hidden
                 className={[
-                  "inline-block h-1.5 w-1.5 shrink-0 rounded-full",
+                  "inline-block h-1.5 w-1.5 shrink-0",
                   card.status === "active" && card.enabled
                     ? "bg-clay"
                     : "bg-rule",
@@ -317,7 +317,7 @@ export default async function DisciplinesPanelPage({ params }: PageProps) {
                   aria-checked={card.enabled}
                   aria-label={`${card.name} is ${card.enabled ? "on" : "off"} — tap to ${card.enabled ? "turn off" : "turn on"}`}
                   className={[
-                    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent",
+                    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer border-2 border-transparent",
                     "transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
                     card.enabled ? "bg-clay" : "bg-rule",
                   ].join(" ")}
@@ -325,7 +325,7 @@ export default async function DisciplinesPanelPage({ params }: PageProps) {
                   <span
                     aria-hidden
                     className={[
-                      "pointer-events-none inline-block h-5 w-5 rounded-full bg-paper shadow ring-0 transition-transform duration-200",
+                      "pointer-events-none inline-block h-5 w-5 bg-paper shadow ring-0 transition-transform duration-200",
                       card.enabled ? "translate-x-5" : "translate-x-0",
                     ].join(" ")}
                   />

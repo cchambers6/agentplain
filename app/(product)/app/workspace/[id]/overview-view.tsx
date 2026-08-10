@@ -193,7 +193,7 @@ export function OverviewView({
           {!verticalIsLive && verticalName ? (
             <>
               <span aria-hidden>·</span>
-              <span className="text-mute">per-vertical fleet rooting in</span>
+              <span className="text-mute">per-vertical fleet setting up</span>
             </>
           ) : null}
           {verticalPublicHref && verticalName ? (

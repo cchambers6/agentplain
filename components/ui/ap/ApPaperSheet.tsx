@@ -124,7 +124,7 @@ export function ApPaperSheet({
         {bottom ? (
           // Grab-handle affordance — phones only. Signals "drag/swipe me".
           <div className="flex justify-center pt-2 md:hidden" aria-hidden>
-            <span className="h-1 w-10 rounded-full bg-rule" />
+            <span className="h-1 w-10 bg-rule" />
           </div>
         ) : null}
         <div className="flex items-start justify-between gap-4 border-b border-rule px-6 py-5">

@@ -70,7 +70,7 @@ export const insurance: VerticalContent = {
       job: "Drafts 60/30/15-day renewal proposals with coverage-gap flags and carrier-appetite context.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your AMS and comparative rater are connected for declarations + rerate data.",
+        "Setting up — comes online once your AMS and comparative rater are connected for declarations + rerate data.",
     },
     {
       slug: "insurance-claims-status",
@@ -78,7 +78,7 @@ export const insurance: VerticalContent = {
       job: "Drafts the insured-facing status note on every carrier-side claim movement.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once carrier claim portals or the AMS claims feed are connected.",
+        "Setting up — comes online once carrier claim portals or the AMS claims feed are connected.",
     },
     {
       slug: "insurance-endorsement",
@@ -86,7 +86,7 @@ export const insurance: VerticalContent = {
       job: "Drafts the AMS update and the carrier-portal endorsement submission from the insured request.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your AMS and the carrier portals you write the most premium with are connected.",
+        "Setting up — comes online once your AMS and the carrier portals you write the most premium with are connected.",
     },
     {
       slug: "insurance-billing-recon",
@@ -94,7 +94,7 @@ export const insurance: VerticalContent = {
       job: "Reconciles direct-bill carrier statements against the AMS and drafts the insured-facing explanation.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your AMS billing module and carrier direct-bill statements are connected.",
+        "Setting up — comes online once your AMS billing module and carrier direct-bill statements are connected.",
     },
     {
       slug: "insurance-carrier-intel",
@@ -102,7 +102,7 @@ export const insurance: VerticalContent = {
       job: "Posts the weekly carrier-appetite pulse and flags appetite shifts on in-flight accounts.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your AMS account book and carrier bulletin feeds are connected.",
+        "Setting up — comes online once your AMS account book and carrier bulletin feeds are connected.",
     },
     {
       // Horizontal chief-of-staff capability — proposals only, no execution.

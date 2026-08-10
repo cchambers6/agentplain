@@ -24,7 +24,7 @@
 
 ## 30-minute agenda (timed)
 
-- **0:00–0:03 — The week of evenings.** Open on the scene: forty quarterly letters, each an advertisement under the Marketing Rule, written at night. Why the volume — not the writing — is the problem.
+- **0:00–0:03 — The week of evenings.** Open on the scene: forty quarterly letters, each an advertisement under the Marketing Rule, written at night. Why the volume, not the writing, is the problem.
 - **0:03–0:08 — What the Marketing Rule actually catches.** 206(4)-1 in plain terms: client letters are advertisements; the 2024 sweeps settled $60k–$325k per adviser for unsubstantiated claims. Where the risk really sits.
 - **0:08–0:16 — The draft-then-approve workflow (live walkthrough).** A quarterly letter drafted overnight: every dollar figure and forward-looking line as a blank merge field, Form ADV and custodian pointers riding along, a Marketing Rule corpus flagging the draft. Then the one step that can't be delegated — the advisor fills, reviews, and signs. Same for a meeting recap drafted within hours.
 - **0:16–0:21 — Why "we never render a number" is the compliance design, not a limitation.** How keeping every figure a merge field means the draft can't make the claim — the advisor does, with the number in front of them. Why an auto-send tool structurally can't offer this.

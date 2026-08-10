@@ -147,7 +147,7 @@
 > status updates — and an attorney approves every client-facing draft before it goes out.
 > Built on Claude, run by us, scoped to your firm.
 >
-> If the timing's wrong, no problem at all. If it's worth a look down the road, this thread
+> If the timing's wrong, that's fine. If it's worth a look down the road, this thread
 > is the easiest way to reach me. Either way, I appreciate your time.
 >
 > Conner Chambers

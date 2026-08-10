@@ -103,7 +103,7 @@ That is before the compliance angle. A first-offense Fair Housing Act civil pena
 ## 5. Top 10 Objections + Responses
 
 ### 1. "Isn't this just ChatGPT?"
-"That is the right question. ChatGPT is a general tool — you write the prompts, you copy-paste the output, you stitch it into your inbox and your CRM. agentplain is the service that runs that for you: pre-built agents for real estate specifically, connected to your inbox and your CRM, running on a schedule, dropping drafts into your approval queue. We are built on Claude — same underlying model family — but configured, wired, and maintained by us. You do not write a single prompt."
+"That is the right question. ChatGPT is a general tool — you write the prompts, you copy-paste the output, you stitch it into your inbox and your CRM. agentplain is the service that runs that for you: pre-built agents for real estate specifically, connected to your inbox and your CRM, running on a schedule, dropping drafts into your approval queue. We are built on Claude, same underlying model family, but configured, wired, and maintained by us. You do not write a single prompt."
 
 ### 2. "We do not trust AI with our clients."
 "That is a sound instinct, and honestly it is the right frame to start with. Nothing in agentplain goes to a client without you approving it first. Every draft lands in a queue. You read it, edit it if you want, then it copies to your own email client and you send it. The fleet drafts; you decide. If you never approve a single draft, nothing leaves the brokerage. The trust question is really about whether you trust the draft quality — and the answer to that is the free trial."
@@ -112,7 +112,7 @@ That is before the compliance angle. A first-offense Fair Housing Act civil pena
 "That is exactly why the Compliance Sentinel exists. The fleet does not publish listing descriptions — it drafts them, and then the sentinel runs a pre-check against the HUD Fair Housing Act enumerated-phrase set before the draft ever reaches MLS. If there is a flag, it surfaces with severity and a suggested rewrite. The broker-of-record still reviews; the AI does the first pass to catch what a tired agent misses at 11pm. The flag catches the problem before it becomes a $26,000 civil penalty."
 
 ### 4. "We are too busy to set it up."
-"Setup is mostly us, not you. The two integrations that matter most — your email and your CRM — take about 15 minutes to connect via OAuth or an API key. After that, the fleet starts running. You do not configure agents or write prompts. The one thing that requires your time is reviewing drafts — and that is the work you would have been doing anyway, just less of it."
+"Setup is mostly us, not you. The two integrations that matter most — your email and your CRM — take about 15 minutes to connect via OAuth or an API key. After that, the fleet starts running. You do not configure agents or write prompts. The one thing that requires your time is reviewing drafts, and that is the work you would have been doing anyway, just less of it."
 
 ### 5. "What if it sends something wrong?"
 "It cannot send anything without your approval. That is a hard constraint, not a setting. Every draft lands as a pending item in your approval queue. You approve it, it copies to clipboard, and you send it from your own system. agentplain never touches your send button. If a draft is wrong, you edit it or delete it — nothing happens automatically."
@@ -121,7 +121,7 @@ That is before the compliance angle. A first-offense Fair Housing Act civil pena
 "Good — those are the two CRM integrations that are live today. agentplain connects to Follow Up Boss and Sierra via an API key, reads your leads, triages each one, drafts first-touch replies, and writes the triage decision back as a note and tag. You keep your CRM; agentplain runs on top of it."
 
 ### 7. "This is too expensive."
-"Let me put a number on the other side. If you are spending 8 hours a week on coordination work — just you, not your agents — that is $120 an hour in opportunity cost because every hour you spend on coordination is an hour you are not in front of a client. That is $4,000 a month. The Regular-tier seat is $199. The question is not whether $199 is a lot — it is whether getting four to six hours of producing time back per week is worth it."
+"Let me put a number on the other side. If you are spending 8 hours a week on coordination work — just you, not your agents — that is $120 an hour in opportunity cost because every hour you spend on coordination is an hour you are not in front of a client. That is $4,000 a month. The Regular-tier seat is $199. The question is not whether $199 is a lot; it is whether getting four to six hours of producing time back per week is worth it."
 
 ### 8. "I need to think about it."
 "That is fair. What would make this a clearer call for you — is it the integration question, the pricing, or something you are not sure about yet on what it actually does? I would rather get you to a clean yes or no than leave you with open questions."
@@ -130,7 +130,7 @@ That is before the compliance angle. A first-offense Fair Housing Act civil pena
 "No, and that is deliberate. The fleet drafts coordination work — lead replies, showing proposals, compliance pre-checks. Your agents still approve, send, and handle every client conversation. The goal is to get them out of the inbox and back into the field. An agent who spends four fewer hours a week on email is a better-producing agent — not a replaced one."
 
 ### 10. "What is actually live today?"
-"Good question, and I want to be straight with you. Three agents are live and running on real data today: the Buyer Inquiry Router, the Showing Scheduler, and the Compliance Sentinel. The Chief of Staff is live once your calendar is connected. The CRM Hygiene agent, the Production Reporter, and the Recruiter Assistant are Setting Up — they come online once the CRM and MLS feed connections are built, which is on our Q3 2026 roadmap. The three live agents are the core of the daily value loop. The Setting Up agents are real — not vaporware — they just need the integration unlocked."
+"Good question, and I want to be straight with you. Three agents are live and running on real data today: the Buyer Inquiry Router, the Showing Scheduler, and the Compliance Sentinel. The Chief of Staff is live once your calendar is connected. The CRM Hygiene agent, the Production Reporter, and the Recruiter Assistant are Setting Up — they come online once the CRM and MLS feed connections are built, which is on our Q3 2026 roadmap. The three live agents are the core of the daily value loop. The Setting Up agents are real, not vaporware; they just need the integration unlocked."
 
 ---
 

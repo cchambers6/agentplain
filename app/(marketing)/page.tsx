@@ -26,6 +26,7 @@ import {
   faqPageJsonLd,
 } from "@/lib/seo/structured-data";
 import { alternatesFor } from "@/lib/seo/metadata";
+import TrustSection from "@/components/trust/TrustSection";
 import { getAllVerticals, getVerticalContent } from "@/lib/verticals";
 import { tokens } from "@/lib/brand/tokens";
 import { SEED_COUNTS } from "@/lib/knowledge/seed-data";
@@ -633,6 +634,14 @@ export default function HomePage() {
             ))}
         </div>
       </Section>
+
+      {/* Social proof scaffolding (2026-07-19) — sits between the
+          rooted-in-reality claims and pricing, where a prospect asks "who
+          else trusts you?" before asking "what does it cost?". Every block
+          reads lib/trust/proof.ts and holds an honest empty state until real
+          proof lands; populating a registry lights this up with no page
+          edits. */}
+      <TrustSection />
 
       {/* Q6/Q7 — Pricing + ROI under the service-partnership lock.
           Three tiers (Regular / Partner / Max) reframe the per-seat ladder

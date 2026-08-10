@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import Section from "@/components/Section";
 import HeroBackdrop from "@/components/marketing/HeroBackdrop";
+import DesignPartnerGrid from "@/components/trust/DesignPartnerGrid";
 import { getAllVerticals } from "@/lib/verticals";
 import { alternatesFor } from "@/lib/seo/metadata";
 
@@ -78,6 +79,13 @@ export default function VerticalsIndexPage() {
             See the on-ramp →
           </Link>
         </div>
+      </Section>
+
+      {/* Founding design partners (2026-07-19) — the vertical-picker page is
+          where a prospect sizes up who else runs this. Reads
+          lib/trust/proof.ts; honest launching state until partners land. */}
+      <Section tone="deep" eyebrow="Who runs this today">
+        <DesignPartnerGrid />
       </Section>
 
       <Section

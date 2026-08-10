@@ -5,12 +5,13 @@
 **Authored by:** Fable (planning). **Implemented by:** Opus sessions, per the execution units in §5. **Ratifier:** Conner, for §6 only — one JUDGMENT item plus one packaged accept/reject recommendation (queue item 7, delegated 2026-08-09). Everything else is resolved here.
 
 **Rev 2 (same day):** adds root cause 7 (doctrine rot) + mechanism M7 + EU-11/EU-12, and replaces the J-2 open question with recommendation R-1, incorporating the post-prune host measurements.
+**Rev 3 (same day):** adds root cause 8 (approval-blocked sessions are undetectable stalls — observed live during this spec's own execution) + mechanism M8 + EU-13.
 
 ---
 
 ## 0. What actually happened, compressed to its mechanism
 
-Seven root causes, from the 2026-08-09 audit cycle:
+Eight root causes — seven from the 2026-08-09 audit cycle, one observed live during this spec's own execution:
 
 1. **No external liveness monitor.** Every watchdog runs on the scheduler it monitors and dies with it. Three consecutive audits each found a different dead task; all three were found because a human manually asked.
 2. **No consumer for escalations.** `conner-queue.yaml` holds 11 pending items, some two months old. The L3 governor escalated correctly on 07-19; nobody answered. Detection without a reader is theatre.
@@ -19,6 +20,7 @@ Seven root causes, from the 2026-08-09 audit cycle:
 5. **Work that never lands.** `main` sat 28 days with 8 green PRs unmerged. No alarm exists for merge latency.
 6. **Host fragility.** A 16 GB desktop running 40+ plugin processes is the substrate everything depends on. *(Post-prune update, 2026-08-09 late: Conner pruned the plugins — free RAM 0.98 → 4.60 GB, node MCP processes 24/2.40 GB → 14/0.91 GB, ~3.6 GB recovered. The acute wedge driver is gone cheaply; the structural half — one host, no redundancy, monitor inside the monitored — is unchanged and is what M1/M6 and R-1 address.)*
 7. **Doctrine rot: a negative probe result becoming permanent fact.** A single failed probe of *one* mechanism gets generalized into a standing architectural constraint, written into a prompt, and never retested — where it hardens and shapes later design. Live instances: `chiron-build-heartbeat`'s prompt says *"Do NOT attempt to spawn a resume Fable via dispatch. Prior attempt showed dispatch is unavailable from this scheduled context"* (sitting since at least 08-01); `fire-path-probe-2026-07-19` tested only the ambient credential helper yet became "the runner cannot push" (the premise behind three weeks of L3-loop design, flagged UNPROVEN by the audit); the "build-gate OOMs above 8 GB" belief later **failed to reproduce** at 8192 MB. This is arguably how several of the other six became load-bearing: constraints nobody could cite evidence for were steering the architecture.
+8. **A session blocked on an unanswered tool-approval prompt is an undetectable stall.** Observed live, 2026-08-09, during this spec's own execution: the Opus session on queue item 1 (`local_0baf88be-7cd0-446d-8bd9-2be91aa8e75c`) called `create_scheduled_task`, hit an approval prompt, and froze at turn 96 for ~40 minutes. From outside it was indistinguishable from slow work: status `running`, turn count static, last output a perfectly reasonable in-progress line. A blocked session cannot read its own inbox, so the orchestrator's status query went unprocessed — and an orchestrator can itself be blocked the same way, so no fixed depth of watcher-sessions closes this. It surfaced only because a human polled three times, noticed the static turn count, and then checked **the artifact** — `git log origin/main`, still at `5606114` — which contradicted the "deep in it" progress report already relayed once without verification. This is root cause 3's shape (healthy-looking wait state, no distinguishing signal), compounding root cause 2 (the approval prompt *is* an escalation, raised correctly, with nobody reading it) and root cause 4 (progress asserted from session state instead of evidence).
 
 Two hard design constraints, applied throughout:
 
@@ -67,9 +69,9 @@ Residual risk accepted: GitHub itself down simultaneously with the host, or Conn
 
 ---
 
-## 2. The seven mechanisms
+## 2. The eight mechanisms
 
-Naming: **M1 Pulse**, **M2 Reader**, **M3 Earned Green**, **M4 Evidence Discipline**, **M5 Landing Alarm**, **M6 Headroom Ratchet**, **M7 Doctrine Expiry**. Seven mechanisms, but only **three moving parts**: one on-host publisher (M1's writer + M3 + M6 sampling), one off-host workflow trio sharing one issue-upsert helper (M1's reader + M2 + M5 + M6 thresholds), and one evidence toolchain (M4, which M7 extends). Everything else is configuration in three YAML files.
+Naming: **M1 Pulse**, **M2 Reader**, **M3 Earned Green**, **M4 Evidence Discipline**, **M5 Landing Alarm**, **M6 Headroom Ratchet**, **M7 Doctrine Expiry**, **M8 Artifact Truth**. Eight mechanisms, but only **three moving parts**: one on-host publisher (M1's writer + M3 + M6 sampling), one off-host workflow trio sharing one issue-upsert helper (M1's reader + M2 + M5 + M6 thresholds), and one evidence toolchain (M4, which M7 extends). Everything else is configuration in three YAML files.
 
 ---
 
@@ -266,6 +268,41 @@ Rules encoded in the schema: `scope` and `claim` may not exceed `mechanisms_test
 
 ---
 
+### M8 — Artifact Truth: watch the artifact, not the worker
+
+**The honest premise first.** Distinguishing "waiting on a human approval" from "waiting on a long computation" cheaply, from outside the session, is not solvable with the signals available: session status lies (`running` while frozen), turn counts are ambiguous (a full build and a blocked prompt both hold the count static), and the blocked session cannot report its own state by definition — it is frozen mid-tool-call and cannot even read its inbox. Nor can the watcher live in the spawning session: an orchestrator blocks the same way, and no fixed depth of watcher-sessions closes the hole. **So this mechanism does not watch workers at all.** It generalizes the check that actually caught the live incident: `origin/main` had not moved. The artifact is ground truth in a way session state never is. Everything else here is either that, or an explicitly-labeled heuristic with its false-positive direction chosen deliberately.
+
+**Mechanism, part 1 — every dispatched unit declares its artifact and deadline at spawn.** When an orchestrator fires a unit of work (an Opus session, a workflow, a fired queue item), it appends an entry to `<agent_store>/memory/data/dispatch-ledger.yaml`:
+
+```yaml
+- session: local_0baf88be-...
+  unit: "queue item 1 — land the 8 green PRs"
+  artifact: { kind: origin-main-advances, from_sha: "5606114" }   # GitHub-observable
+  spawned: 2026-08-09T23:10:00Z
+  deadline: 2026-08-10T05:10:00Z     # spawn + size budget (S=2h, M=6h, L=24h)
+  status: open
+```
+
+Artifact kinds are deliberately few and **GitHub-observable wherever possible** — `branch-exists`, `pr-opened`, `commit-on-branch`, `origin-main-advances`, `issue-closed`, plus `file-mtime` for host-local outputs — so the off-host checker can verify them against GitHub's API without trusting anything the host (or the worker) says. The ledger rides the heartbeat payload like the queue mirror does.
+
+**Mechanism, part 2 — the off-host deadline check.** The decision-escalation workflow (same daily+dispatch run, same helper) reads the ledger mirror: any `open` entry past `deadline` whose artifact is **absent** → `dispatch-overdue` issue naming the session, the unit, and the declared artifact. Entries close automatically when the artifact is observed, or when the orchestrator marks them `failed`/`reaped`. An overdue issue does not mean kill — it means *someone must look*, which is exactly the step that took a human three polls and a hunch tonight. False-positive direction, chosen deliberately: a legitimately slow unit past its deadline costs one issue saying "verify or extend the deadline" — cheap, and strictly better than forty silent minutes; a deadline generous enough to never false-positive would also never catch anything, so budgets are set at ~2× honest effort (the S/M/L mapping) and extending one is a ledger edit that leaves a record.
+
+**Mechanism, part 3 — progress claims require artifact evidence.** The orchestrator protocol (appended to `docs/audits/AUDIT_PROTOCOL.md` in EU-13) encodes the retraction from the live incident as a rule: a dispatched unit may only be reported as *progressing* on the basis of an artifact delta (new commit, branch movement, ledger line, file mtime) — session status and turn counts are `INFERRED`-class evidence under M4 and may support "still running," never "making progress." The one cheap worker-side heuristic that helped — turn count static across 3 polls — is recorded in the protocol as a *prompt to go check the artifact*, not as an alarm in its own right.
+
+**Mechanism, part 4 — shrink the trigger surface.** Blocked-on-approval is less likely when there is nothing left to approve: each execution unit in this spec already names its files and commands; EU-13 adds a `permissions` line to the unit template (tools/commands the unit will call), so spawners can pre-authorize the named set at spawn. This does not eliminate the stall class (novel tool calls happen) — it reduces its frequency, and M8's deadline check catches what remains.
+
+**Where it runs and why.** The ledger writer is the *spawning* session (only it knows what it dispatched); the judge is the off-host workflow — outside the worker's failure domain, outside the spawner's failure domain (a blocked orchestrator's already-written ledger entries still get checked; its *unwritten* ones are covered by the fact that the orchestrator is itself a dispatched unit with its own ledger entry when fired by a scheduled task), and immune to the "everything on the host looks fine" illusion because it consults GitHub, not the host.
+
+**Trigger.** Ledger writes at spawn; deadline evaluation on the daily escalation run + every `workflow_dispatch`; artifact observation on the same runs.
+
+**Consumer.** Conner or the orchestrator answering the `dispatch-overdue` issue. Consumption receipt: the ledger entry leaves `open` (artifact observed → auto-close with the observation stamped; or explicitly `reaped` in a mirror update), which closes the issue on the next run.
+
+**Failure mode and what watches it.** A unit dispatched *without* a ledger entry is invisible to M8 — that is the mechanism's real hole, and it is patched the same way M3 patches unregistered tasks: the orchestrator protocol makes ledger-write part of the dispatch act itself (one helper call, EU-13), and any PR/branch that appears on GitHub with no matching ledger entry is flagged by the escalation run as `undeclared-work` (a warning, not an alarm — ad-hoc sessions are legitimate; the flag exists so *delegated* work can't silently bypass the ledger). Checker rot: same channels as M2/M3 (fixtures in CI, brief footer, drill). A stall shorter than its deadline is invisible by design — accepted and stated in §7.
+
+**Deliberate-failure test.** Fixture ledger with one entry past deadline pointing at a branch that does not exist MUST yield exactly one `dispatch-overdue` action in the dry-run log (CI). Live ship-day test: seed a real ledger entry with `deadline` one minute out and artifact `branch-exists: refs/heads/does-not-exist-0810`, fire the workflow → the issue opens, naming the fixture session. The incident session (`local_0baf88be…`, artifact `origin-main-advances from 5606114`) is encoded as the canonical fixture — the test is literally "would this have caught tonight."
+
+---
+
 ## 3. Decisions resolved here (so Opus needs none)
 
 | Decision | Resolution |
@@ -276,6 +313,7 @@ Rules encoded in the schema: `scope` and `claim` may not exceed `mechanisms_test
 | Delivery thresholds | Green PR 7 days; frozen-main 14 days *with* green PRs open; local-ahead > 0 immediate. |
 | Host limits | `min_free_gb: 2`, `max_node_mcp_procs: 15`, in `ops/task-contracts.yaml`. Post-prune measurement (14 procs / 4.60 GB free) makes 15 = measured + 1: snug by intent. |
 | Constraint expiry | Default 45 days, per-entry override ≤180. Expired ≠ deleted: expired = loud until re-proven or retired. Probe claims scoped to `mechanisms_tested`, enforced by validator. |
+| Dispatch deadlines | S=2h, M=6h, L=24h from spawn (~2× honest effort). Overdue = "verify or extend," never auto-kill. False positives accepted deliberately: one cheap issue vs. an invisible stall. Artifact kinds GitHub-observable wherever possible. |
 | Status-line format | `<ISO-UTC> | <task> | OK\|NOOP\|DEFERRED\|ERROR | <one clause>` appended to `<agent_store>/memory/data/status/<task>.log`. |
 | Issue taxonomy | Labels `fleet-ops` (family), `fleet-down`, `decision-overdue`, `delivery-stalled`, `drill`. One issue per condition, upsert-with-comment, auto-close on clear. One shared helper `scripts/ops/upsert-issue.mjs`. |
 | Drill cadence | Monthly (1st), automatic, auto-closing, `[DRILL]`-prefixed. Brief flags `last drill > 35 days`. |
@@ -296,12 +334,13 @@ Rules encoded in the schema: `scope` and `claim` may not exceed `mechanisms_test
 | M5 Landing | GHA reads GitHub directly (+ ahead-count via heartbeat) | GHA | The missing action is human; alarm lives where the merge button is |
 | M6 Headroom | on-host sampling | GHA thresholds | A host sliding toward a wedge can't be trusted to raise its own alarm |
 | M7 Doctrine Expiry | registry in-repo; prompt lint on-host | expiry findings issued off-host; authoring gate in CI | Doctrine changes must be PR-visible; the session that ran a probe can't also be the judge of how far its result generalizes |
+| M8 Artifact Truth | spawner writes ledger at dispatch | GHA checks artifacts against GitHub | Neither the worker (frozen) nor the spawner (blockable the same way) can be the judge; the artifact on GitHub is ground truth no session state can fake |
 
 ---
 
 ## 5. Execution units for Opus
 
-Twelve units. Each is a single deliverable an Opus session can finish without judgment calls. Repo work branches from `origin/main` (worktree; PRs via the fleet token + REST recipe; compare-URL fallback if PR creation is classifier-blocked). Task-prompt work edits `SKILL.md` files under `C:\Users\conne\Claude\Scheduled\<task>\` directly (not in the repo). Ledger/status writes go to the **live agent store only** — resolve it via EU-2's script; its path and tell are in §M4.
+Thirteen units. Each is a single deliverable an Opus session can finish without judgment calls. **Spawn protocol (M8):** whoever dispatches a unit writes its ledger entry at spawn (artifact + size-derived deadline) and pre-authorizes the tools the unit names — for these units that means git push via token URL, the GitHub REST API, local file writes under the named paths, and (EU-4/10/11/13) edits to `C:\Users\conne\Claude\Scheduled\*\SKILL.md`; declared artifacts are the unit's acceptance outputs (branch/PR for repo units, file mtimes for prompt edits). Repo work branches from `origin/main` (worktree; PRs via the fleet token + REST recipe; compare-URL fallback if PR creation is classifier-blocked). Task-prompt work edits `SKILL.md` files under `C:\Users\conne\Claude\Scheduled\<task>\` directly (not in the repo). Ledger/status writes go to the **live agent store only** — resolve it via EU-2's script; its path and tell are in §M4.
 
 **Dependency graph:**
 
@@ -309,7 +348,7 @@ Twelve units. Each is a single deliverable an Opus session can finish without ju
 Wave A (parallel):  EU-1  EU-2
 Wave B (parallel):  EU-3 (←EU-2)   EU-5 (←EU-1)   EU-9 (←EU-2)
 Wave C (parallel):  EU-4 (←EU-3)   EU-6 (←EU-1,5)  EU-7 (←EU-5)   EU-8 (←EU-5,6)   EU-11 (←EU-3,9)
-Wave D:             EU-10 (←EU-5,6,7)
+Wave D (parallel):  EU-10 (←EU-5,6,7)   EU-13 (←EU-1,6 — extends EU-6's script)
 Gated on R-1 acceptance:  EU-12 (←EU-5; independent of Waves C/D)
 ```
 
@@ -408,6 +447,14 @@ Live: first real checker run emits exactly 2 `constraint-expired` findings (the 
 **Acceptance (runnable).** `curl -X POST .../dispatches -d '{"event_type":"audit-fire","client_payload":{...test payload...}}'` → workflow run completes, a PR exists with the expected branch prefix, and the run summary contains the three cost numbers. The short-term file-bridge fallback still works (fire one item through it afterward).
 **Depends on:** EU-5 (helper conventions only). **Parallel:** independent of Waves C/D. **Do not start until Conner accepts R-1** — if he rejects toward full migration instead, this unit is superseded by a migration spec, not extended.
 
+### EU-13 · Dispatch ledger + artifact-deadline checks — `M` (Wave D)
+**Deliverable.** `scripts/ops/dispatch-ledger.mjs` (`add | close | reap` subcommands; `add` validates artifact kind against the M8 enumeration and computes the deadline from a `--size S|M|L` flag); ledger mirror added to `publish-heartbeat.mjs`'s payload (same sanitization pass); `dispatch-overdue` + artifact-observation + `undeclared-work` checks added to `escalate-decisions.mjs` (EU-6's script — same dry-run action-log pattern, artifact observation via the GitHub API only); orchestrator protocol section appended to `docs/audits/AUDIT_PROTOCOL.md` (ledger-write is part of the dispatch act; progress claims require artifact deltas — session status and turn counts are `INFERRED` and support "still running" only; turn-count-static-across-3-polls is a go-check-the-artifact prompt, not an alarm; spawn protocol per this spec's §5 preamble).
+**Files.** New: `scripts/ops/dispatch-ledger.mjs`. Edit: `scripts/ops/publish-heartbeat.mjs`, `scripts/ops/escalate-decisions.mjs` + its test file, `docs/audits/AUDIT_PROTOCOL.md`. Ledger lives at `<agent_store>/memory/data/dispatch-ledger.yaml` (resolve via EU-2).
+**Acceptance (runnable).**
+`node --test scripts/ops/escalate-decisions.test.mjs` → new cases pass: the canonical fixture — a ledger entry mirroring the live incident (`session: local_0baf88be…`, artifact `origin-main-advances from 5606114`, deadline in the past) — yields exactly one `dispatch-overdue` action ("would this have caught tonight" = yes, by construction); an entry whose artifact IS observed (fixture API response) yields exactly one `close` action; a fixture PR with no ledger entry yields one `undeclared-work` warning.
+Live: `node scripts/ops/dispatch-ledger.mjs add --unit drill --size S --artifact branch-exists:refs/heads/does-not-exist-0810 --deadline-override +1m`, fire the escalation workflow → a `dispatch-overdue` issue opens naming the drill entry; `dispatch-ledger.mjs reap` it → issue closes on the next run.
+**Depends on:** EU-1, EU-6. **Parallel:** with EU-10.
+
 ---
 
 ## 6. Routed to Conner — one JUDGMENT, one packaged recommendation
@@ -444,14 +491,15 @@ Everything else that looked like a decision is resolved in §3 and editable late
 
 ## 7. Honest accounting: what is not preventable, and what "survivable" means for each
 
-Claiming total prevention is the same overreach that produced the audit's false findings. These five are not prevented; each is made survivable in a specific, testable way:
+Claiming total prevention is the same overreach that produced the audit's false findings. These seven are not prevented; each is made survivable in a specific, testable way:
 
 1. **The host can still die.** One machine, an Electron app — the prune bought real headroom (4.60 GB free, wedge driver removed) but bought no redundancy. Survivable: early warning before (M6 thresholds off-host), detection ≤2 h during (M1), measured duration after (heartbeat gap — no more disputed "3 vs 5.8 days"), and auto-recovery on restart (cold-start-safe tasks + issues auto-close). Removing the failure mode entirely means migrating — R-1 recommends against that today and names the five conditions under which the answer flips.
 2. **The scheduler will keep dropping individual fires episodically.** Evidenced behaviour (84-min and ~12.7-h gaps on healthy tasks); closed-source, not fixable from here. Survivable: M3 makes every drop countable within a day from ledger gaps, and M1's threshold is sized so episodic drops don't cry wolf.
 3. **Conner may not answer.** No mechanism can force a human decision, and one that nags harder just trains ignoring. Survivable: M2 guarantees *seen* (issues on a channel he uses, ages always visible, snooze as a legitimate answer) — the system's guarantee is "no silent pending," never "answered."
 4. **GitHub itself can be down or GHA cron can starve.** Survivable: thresholds absorb ordinary delay; GitHub-down + host-down simultaneously is the accepted residual, bounded by GitHub's own recovery and caught retroactively by the outage ruler. No third platform is added — a third watcher would itself need watching (§1.1).
 5. **A free-prose audit can still assert nonsense.** M4 mechanizes the two error patterns that actually occurred (wrong store, slot arithmetic) and gates structured findings; it cannot gate prose. Survivable: the audit protocol requires the structured file + validator, and the pre-merge review gate reviews load-bearing PRs. Residual: an author who bypasses both — at which point the failure is disobedience, not architecture, and no architecture fixes that.
-6. **Doctrine can be written in words the tripwire doesn't match.** M7's phrase lint catches the observed pattern (`do not attempt`, `is unavailable`, …), not every possible encoding of an untested belief. Survivable: any constraint that *matters* eventually surfaces in a finding or a design decision, where M4's evidence rules and M7's `generalized-beyond-probe` gate apply; the registry's expiry clock catches the rest on a 45-day fuse. The residual — a load-bearing belief phrased novelly and never surfaced in a finding — is accepted and named, not papered over.
+6. **"Waiting on a human" and "waiting on a computer" cannot be cheaply told apart from outside, and a stall shorter than its deadline is invisible.** Stated plainly rather than engineered around: session status, turn counts, and last-output lines are all consistent with both states, and the blocked session cannot testify. M8 therefore does not try — it bounds the damage instead: every dispatched unit's stall is caught at its declared deadline (2h/6h/24h by size) via the artifact, with the false-positive direction chosen deliberately (a slow-but-healthy unit costs one "verify or extend" issue). The residual — a 40-minute stall inside a 6-hour budget stays invisible for the remainder of the budget — is accepted; shrinking it means either tighter deadlines (more false positives, a knob in one file) or a real prompt-state API from the platform, which does not exist today. Reduction at the source (pre-authorized permission sets per unit) lowers frequency but cannot reach zero.
+7. **Doctrine can be written in words the tripwire doesn't match.** M7's phrase lint catches the observed pattern (`do not attempt`, `is unavailable`, …), not every possible encoding of an untested belief. Survivable: any constraint that *matters* eventually surfaces in a finding or a design decision, where M4's evidence rules and M7's `generalized-beyond-probe` gate apply; the registry's expiry clock catches the rest on a 45-day fuse. The residual — a load-bearing belief phrased novelly and never surfaced in a finding — is accepted and named, not papered over.
 
 ---
 

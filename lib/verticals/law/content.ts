@@ -1,4 +1,8 @@
 import type { VerticalContent } from "../types";
+import {
+  TRIAL_PERIOD_DAYS_EXTENDED,
+  MONEY_BACK_GUARANTEE_DAYS,
+} from "../../billing/facts";
 
 // Source: `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 (law firms
 // composite 30, deprioritized for Product 2 due to Clio Work April 2026
@@ -45,7 +49,15 @@ export const law: VerticalContent = {
     },
     {
       q: "How much does agentplain cost for a law firm?",
-      a: "Law firms are recommended at the Max tier — an ad-hoc service partnership quoted to your engagement and sold sales-led rather than by self-checkout, because the stakes per draft warrant a named partner and a weekly cadence. Every agentplain tier is month-to-month with the first month free; Max is quoted to scope.",
+      a: `Law firms are recommended at the Max tier — an ad-hoc service partnership quoted to your engagement and sold sales-led rather than by self-checkout, because the stakes per draft warrant a named partner and a weekly cadence. Every agentplain subscription is month-to-month; law firms get the extended ${TRIAL_PERIOD_DAYS_EXTENDED}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on the first charge. Max engagements are quoted to scope.`,
+    },
+    {
+      q: "Where does client and matter data live?",
+      a: "In your systems. Matter files, client communications, and discovery material stay in the Outlook, OneDrive, and DocuSign your firm already controls — the fleet reads them in-flight through your own connected accounts and does not copy them onto agentplain's servers. What agentplain keeps is Plaino's working memory of your practice: your templates, your voice, per-matter context. That memory is encrypted per workspace, exportable anytime, and hard-deleted when the account closes.",
+    },
+    {
+      q: "Whose accounts does the fleet run on?",
+      a: "Your firm's. Outlook and Microsoft 365 connect by OAuth on your own tenant, under your own credentials — revoke access in your admin console and it ends immediately. Practice-management and document-management integrations on the roadmap connect the same way: your accounts, your keys, never a shared login we hold for you.",
     },
     {
       q: "Does the fleet send communications or file pleadings on its own?",

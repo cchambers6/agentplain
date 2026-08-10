@@ -1,4 +1,8 @@
 import type { VerticalContent } from "../types";
+import {
+  TRIAL_PERIOD_DAYS_EXTENDED,
+  MONEY_BACK_GUARANTEE_DAYS,
+} from "../../billing/facts";
 
 // Source: `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.4 (accounting
 // firms, 2–10 person, composite 34). Fleet shape and operational pain
@@ -42,7 +46,15 @@ export const cpa: VerticalContent = {
     },
     {
       q: "How much does agentplain cost for a CPA firm?",
-      a: "CPA firms are recommended at the Partner tier — a named service partner with a weekly review cadence — $299 per seat per month for a solo CPA, sliding to $199 per seat at scale. Every tier is per seat, month-to-month, with the first month free, and you can cancel anytime.",
+      a: `CPA firms are recommended at the Partner tier — priority support and a quarterly async check-in with your service team — $299 per seat per month for a solo CPA, sliding to $199 per seat at scale. Every tier is per seat and month-to-month. CPA firms get the extended ${TRIAL_PERIOD_DAYS_EXTENDED}-day free trial (card at signup) so one real doc-chase cycle runs before billing starts, plus a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
+    },
+    {
+      q: "What happens to my clients' tax data?",
+      a: "Client returns, source documents, and books stay in your systems. The fleet reads them in-flight through the accounts you connect — your QuickBooks, your Microsoft 365 — and does not copy them onto agentplain's servers. What agentplain does keep is Plaino's working memory of your practice: preferences, voice, engagement context. That memory is encrypted per workspace, exportable anytime, and hard-deleted when you close the account.",
+    },
+    {
+      q: "Whose accounts and credentials does the fleet run on?",
+      a: "Yours. QuickBooks Online and Outlook / Microsoft 365 connect by OAuth on your own accounts, and when the TaxDome and Karbon connect steps open you paste your own API key. Revoke a credential and access ends with it — the integrations belong to your firm, not to us.",
     },
     {
       q: "Does the fleet send anything to clients or file returns on its own?",
@@ -287,7 +299,7 @@ export const cpa: VerticalContent = {
     math:
       "Tax season = 80-hour weeks. Doc-chase consumes ~25% of staff hours through 8 weeks (per b2b_vertical_opportunity_analysis_2026-04-27.md §3.4 — \"document chase consumes the front office for 8 weeks a year\"). 0.25 × 80 hours × 8 weeks × $65/hr loaded = $10,400 per staff per season. Add onboarding-letter automation and books-recon reclamation: total ~$42k/yr (~$3,500/mo) per staff seat. Solo case: against the Partner-tier solo seat ($299/mo) = ~12x ROI. At-scale case: same per-staff value against the 50-seat-band price ($199/mo) = ~18x. Customers needing bespoke compliance corpora, white-label, or 100+ seats route to Max (quote-based) or /custom (capability build).",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (Partner tier per 2026-05-15 ratification; per-seat ladder $299→$199 with 4 hrs/mo of named-service-partner time included). ROI band per `project_pricing_value_anchor.md` (Partner-tier value scales with Regular's $2,900–$10,600/mo per seat plus the named-partner overlay). Doc-chase share cited from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.4. Staff-loading rate is operator-modeled — flagged in capability inbox for primary-research validation.",
+      "Pricing per `project_stripe_both_surfaces.md` (Partner tier per 2026-05-15 ratification; per-seat ladder $299→$199 — priority support + quarterly async check-in, NO reserved human hours per the 2026-06-14 trial-policy ratification). ROI band per `project_pricing_value_anchor.md` (Partner-tier value scales with Regular's $2,900–$10,600/mo per seat plus the named-partner overlay). Doc-chase share cited from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.4. Staff-loading rate is operator-modeled — flagged in capability inbox for primary-research validation.",
     violationAvoidance:
       "Tax and advisory correspondence is governed by the AICPA Code of Professional Conduct and Treasury Circular 230 — a preparer position that understates a client's liability carries an IRC §6694 penalty of $1,000 (unreasonable position) or $5,000 (willful or reckless conduct) per return, on top of Circular 230 censure, suspension, or disbarment from practice before the IRS. The fleet drafts client letters, engagement notes, and filing-ready work; a credentialed person approves before anything is sent or filed, so a Circular 230 slip is corrected at the draft stage rather than assessed as a preparer penalty. That avoided exposure is real ROI the 12x–18x hours math leaves out, and it only holds because nothing auto-executes.",
   },

@@ -1,4 +1,8 @@
 import type { VerticalContent } from "../types";
+import {
+  TRIAL_PERIOD_DAYS,
+  MONEY_BACK_GUARANTEE_DAYS,
+} from "../../billing/facts";
 
 // Source: `b2b_vertical_opportunity_analysis_2026-04-27.md` notes property
 // management as a roadmap-fit vertical (operating-model analog to realty).
@@ -32,7 +36,11 @@ export const propertyManagement: VerticalContent = {
     },
     {
       q: "How much does agentplain cost for a property-management company?",
-      a: "Property management is recommended at the Regular tier — $199 per seat per month for a solo operator, sliding to $99 per seat at 50+ seats. Every tier is per seat, month-to-month, with the first month free, and you can cancel anytime.",
+      a: `Property management is recommended at the Regular tier — $199 per seat per month for a solo operator, sliding to $99 per seat at 50+ seats. Every tier is per seat and month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
+    },
+    {
+      q: "I run Buildium — how does agentplain connect to it?",
+      a: "You paste your own Buildium API key and the rent-collection chase starts reading your rent roll. The key is yours: it is stored encrypted, scoped to your workspace, and you can revoke it in Buildium at any moment to cut access instantly. AppFolio, Propertyware, and Yardi Breeze connect the same way when their adapters open per the roadmap below.",
     },
     {
       q: "Does the fleet send anything to tenants or owners on its own?",
@@ -339,6 +347,6 @@ export const propertyManagement: VerticalContent = {
     after:
       "The fleet classified the request as urgent water damage and — once Maria's Buildium API key is connected — pulled unit 4B's three prior plumbing tickets; it drafted the vendor dispatch, drafted the owner notification with the likely cost band, and proposed a Saturday morning slot. All of it queued for Maria's review.",
     outcome:
-      "One review, three approvals, one Saturday visit. Maria spends the weekend on her owners and tenants, not on coordination.",
+      "One review, three approvals, one Saturday visit — about 25 minutes of weekend inbox ping-pong becomes a two-minute review. Maria spends the weekend on her owners and tenants, not on coordination.",
   },
 };

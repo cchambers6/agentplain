@@ -55,7 +55,7 @@ export const titleEscrow: VerticalContent = {
       job: "Parses realtor and lender source documents and drafts the file to confirm.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your title production system (SoftPro / Qualia / RamQuest) is connected to receive the parsed file.",
+        "Setting up — comes online once your title production system (SoftPro / Qualia / RamQuest) is connected to receive the parsed file.",
     },
     {
       slug: "title-doc-chase",
@@ -76,7 +76,7 @@ export const titleEscrow: VerticalContent = {
       job: "Drafts the chain of title from the plant feed; examiner reviews defects only.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your county title plant or DataTrace / NetROnline feed is connected.",
+        "Setting up — comes online once your county title plant or DataTrace / NetROnline feed is connected.",
     },
     {
       slug: "title-closing-prep",
@@ -84,7 +84,7 @@ export const titleEscrow: VerticalContent = {
       job: "Drafts the closing packet against file state for the closer to review.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your underwriter portal and production-system file state are connected.",
+        "Setting up — comes online once your underwriter portal and production-system file state are connected.",
     },
     {
       slug: "title-recording",
@@ -92,7 +92,7 @@ export const titleEscrow: VerticalContent = {
       job: "Prepares the recording package per county schema for the clerk to submit.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your county recording integration (Simplifile / CSC) is connected.",
+        "Setting up — comes online once your county recording integration (Simplifile / CSC) is connected.",
     },
     {
       slug: "title-trust-recon",
@@ -100,7 +100,7 @@ export const titleEscrow: VerticalContent = {
       job: "Drafts the per-file trust reconciliation citing each disbursement against the CD.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your escrow trust-account ledger is connected.",
+        "Setting up — comes online once your escrow trust-account ledger is connected.",
     },
     {
       slug: "title-compliance-sentinel",
@@ -108,7 +108,7 @@ export const titleEscrow: VerticalContent = {
       job: "Runs a CFPB-aware check on every customer-facing draft before send.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — CFPB-aware checklist corpus is loaded; draft scoring activates after counsel review.",
+        "Setting up — CFPB-aware checklist corpus is loaded; draft scoring activates after counsel review.",
     },
     {
       // Horizontal chief-of-staff capability — proposals only, no execution.
@@ -261,9 +261,9 @@ export const titleEscrow: VerticalContent = {
     math:
       "Average closer handles 30–50 files/month. File-intake automation saves ~45 minutes/file. 40 files × 0.75 hours × $40/hr × 12 months = $14,400/yr per closer. Closing-prep automation saves another ~30 minutes/file = ~$9,600/yr — total ~$24k/yr (~$2,000/mo) per closer. Solo case: against the Regular-tier solo seat ($199/mo) = ~10x ROI. At-scale case: same per-closer value against the 50-seat-band price ($99/mo) = ~20x. Multi-closer title/escrow offices typically see the at-scale economics.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (Regular tier per the 2026-05-15 three-tier ratification — Regular is the default entry path; title/escrow operations wanting named-service-partner reserved time can step up to Partner ($299→$199/seat), and high-intensity multi-state closing engagements route to Max (quote-based)). ROI band per `project_pricing_value_anchor.md` (Regular-tier value $2,900–$10,600/mo per seat). Time-per-file estimates pending primary-research validation — flagged in capability inbox. Closer compensation midpoint based on US BLS 2024 SOC 13-2072 (loan officers and related) — flagged as operator-modeled.",
+      "Pricing per `project_stripe_both_surfaces.md` (Regular tier per the 2026-05-15 three-tier ratification — Regular is the default entry path; title/escrow operations wanting named-service-partner reserved time can step up to Partner ($299→$199/seat), and high-intensity multi-state closing engagements route to Max (quote-based)). ROI band per `project_pricing_value_anchor.md` (Regular-tier value $2,900–$10,600/mo per seat). Time-per-file estimates pending primary-research validation (flagged in capability inbox). Closer compensation midpoint based on US BLS 2024 SOC 13-2072, loan officers and related; flagged as operator-modeled.",
     violationAvoidance:
-      "Closing and settlement communications are governed by ALTA Best Practices and CFPB enforcement of RESPA — a referral-fee or unearned-fee implication carries RESPA §8 exposure ($10,000 criminal plus CFPB civil penalties reaching $1,443,275 for knowing violations, 2025 inflation-adjusted), and an ALTA pillar finding can cost the lender relationships the office runs on. The fleet drafts settlement correspondence and a closer approves before send, so a RESPA-implicating line never reaches a borrower or lender. That avoided penalty — and the kept lender relationship — is value the 10x–20x hours math doesn't price, and an auto-send tool can't guarantee it.",
+      "Closing and settlement communications are governed by ALTA Best Practices and CFPB enforcement of RESPA — a referral-fee or unearned-fee implication carries RESPA §8 exposure ($10,000 criminal plus CFPB civil penalties reaching $1,443,275 for knowing violations, 2025 inflation-adjusted), and an ALTA pillar finding can cost the lender relationships the office runs on. The fleet drafts settlement correspondence and a closer approves before send, so a RESPA-implicating line never reaches a borrower or lender. That avoided penalty, and the kept lender relationship, is value the 10x–20x hours math doesn't price, and an auto-send tool can't guarantee it.",
   },
 
   claims: {

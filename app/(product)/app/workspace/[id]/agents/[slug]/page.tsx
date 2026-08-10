@@ -66,7 +66,7 @@ export default async function AgentDetailPage({ params }: PageProps) {
 
       {agent?.runtime === "rooting" ? (
         <p className="mt-4 max-w-2xl border-l-2 border-rule pl-4 text-[13px] leading-relaxed text-mute">
-          {agent.rootingNote ?? "This capability is rooting — its runtime is still being built."}
+          {agent.rootingNote ?? "Setting up — first activity lands soon."}
         </p>
       ) : null}
 

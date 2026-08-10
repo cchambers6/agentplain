@@ -33,5 +33,10 @@
     "path": "lib/plaino/support-prompt.ts",
     "pattern": "(Claude|ChatGPT|OpenAI|Anthropic)",
     "reason": "Identity-deflection instruction — same rationale as system-prompt.ts."
+  },
+  {
+    "path": "lib/plaino/turn-failure.ts",
+    "pattern": "Anthropic",
+    "reason": "opsSummary strings only — pager subject + Sentry message for the on-call human, never rendered to customers. The customerNotice strings in the same file are vendor-free; ops MUST see the real vendor to fix a key outage fast."
   }
 ]

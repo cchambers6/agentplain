@@ -516,7 +516,7 @@ function ConfirmDetails({
       </div>
       {!verticalIsLive ? (
         <p className="mt-6 border border-rule bg-paper-deep p-4 text-[13px] leading-relaxed text-ink-soft">
-          The per-vertical fleet for {verticalLabel} is rooting in. You
+          The per-vertical fleet for {verticalLabel} is setting up. You
           can finish onboarding now; your workspace activates the moment
           the agents come online.
         </p>
@@ -949,7 +949,7 @@ function PickSkills({
       <div className="border border-rule bg-paper-deep p-5 text-[14px] text-ink-soft">
         <p>
           Nothing in the live catalog matches your workspace yet. We&rsquo;re
-          rooting your fleet in — {partner} will pick this back up on the
+          setting your fleet up — {partner} will pick this back up on the
           welcome call.
         </p>
       </div>

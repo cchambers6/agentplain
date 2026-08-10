@@ -69,7 +69,7 @@ export const ria: VerticalContent = {
       job: "Drafts the agenda, delta-since-last-meeting, and open task list per client.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your CRM (Wealthbox / Redtail) and your custodian feed are connected.",
+        "Setting up — comes online once your CRM (Wealthbox / Redtail) and your custodian feed are connected.",
     },
     {
       slug: "ria-meeting-notes",
@@ -77,7 +77,7 @@ export const ria: VerticalContent = {
       job: "Drafts the recap and task list from the meeting capture for the advisor.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your meeting-capture tool (Zocks / Jump / Otter) is connected.",
+        "Setting up — comes online once your meeting-capture tool (Zocks / Jump / Otter) is connected.",
     },
     {
       slug: "ria-compliance-sentinel",
@@ -85,7 +85,7 @@ export const ria: VerticalContent = {
       job: "Runs an ADV, suitability, and Marketing Rule check before a draft is sent.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — the ADV, suitability, and Marketing Rule corpus is loaded; draft scoring activates after counsel review.",
+        "Setting up — the ADV, suitability, and Marketing Rule corpus is loaded; draft scoring activates after counsel review.",
     },
     {
       slug: "ria-planning-refresh",
@@ -93,7 +93,7 @@ export const ria: VerticalContent = {
       job: "Drafts refreshed plan inputs scoped to a client's life event.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your planning software (eMoney / MoneyGuidePro / RightCapital) is connected.",
+        "Setting up — comes online once your planning software (eMoney / MoneyGuidePro / RightCapital) is connected.",
     },
     {
       slug: "ria-rebalance",
@@ -101,7 +101,7 @@ export const ria: VerticalContent = {
       job: "Drafts the per-model trade list with drift cited for the PM to submit.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your portfolio system (Tamarac / Black Diamond / Orion) is connected.",
+        "Setting up — comes online once your portfolio system (Tamarac / Black Diamond / Orion) is connected.",
     },
     {
       slug: "ria-performance-reporter",
@@ -120,7 +120,7 @@ export const ria: VerticalContent = {
       job: "Drafts the quarter-close fee schedule; operations reviews exceptions.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your custodian feed is connected for quarter-end balances.",
+        "Setting up — comes online once your custodian feed is connected for quarter-end balances.",
     },
     {
       // Horizontal chief-of-staff capability — proposals only, no execution.

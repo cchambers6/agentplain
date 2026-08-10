@@ -70,7 +70,7 @@ export const homeServices: VerticalContent = {
       job: "Builds the bid from measurements and drafts the homeowner-facing proposal.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your measurement tool (EagleView / AccuLynx / Hover) is connected.",
+        "Setting up — comes online once your measurement tool (EagleView / AccuLynx / Hover) is connected.",
     },
     {
       slug: "home-services-estimate-followup",
@@ -91,7 +91,7 @@ export const homeServices: VerticalContent = {
       job: "Reads the adjuster scope and drafts the line-item rebuttal for owner sign-off.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once Symbility or Xactimate adjuster scopes are connected.",
+        "Setting up — comes online once Symbility or Xactimate adjuster scopes are connected.",
     },
     {
       slug: "home-services-dispatch",
@@ -99,7 +99,7 @@ export const homeServices: VerticalContent = {
       job: "Ranks same-day calls by SLA and skill match, then drafts and re-drafts the route.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your FSM (ServiceTitan / Housecall Pro / Jobber) is connected for the crew + skill matrix.",
+        "Setting up — comes online once your FSM (ServiceTitan / Housecall Pro / Jobber) is connected for the crew + skill matrix.",
     },
     {
       slug: "home-services-eta-updater",
@@ -107,7 +107,7 @@ export const homeServices: VerticalContent = {
       job: "Drafts homeowner updates on every job-state change for the dispatcher to send.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your FSM job-state webhooks are connected.",
+        "Setting up — comes online once your FSM is connected for live job updates.",
     },
     {
       slug: "home-services-project-coordinator",
@@ -115,7 +115,7 @@ export const homeServices: VerticalContent = {
       job: "Sequences material order, crew window, and inspection scheduling on a signed contract.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your project-management surface (AccuLynx / JobNimbus) and supplier connections are in place.",
+        "Setting up — comes online once your project-management surface (AccuLynx / JobNimbus) and supplier connections are in place.",
     },
     {
       slug: "home-services-reviews",
@@ -123,7 +123,7 @@ export const homeServices: VerticalContent = {
       job: "Runs the T+7 review-and-referral cadence on every completed job.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your FSM completed-job feed is connected.",
+        "Setting up — comes online once your FSM completed-job feed is connected.",
     },
     {
       // Horizontal chief-of-staff capability — proposals only, no execution.
@@ -298,7 +298,7 @@ export const homeServices: VerticalContent = {
     citation:
       "Supplement-savings claim cited verbatim from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3. Pricing per `project_stripe_both_surfaces.md` (Partner tier per 2026-05-15 ratification; per-seat ladder $299→$199 with 4 hrs/mo of named-service-partner time included). ROI band per `project_pricing_value_anchor.md`.",
     violationAvoidance:
-      "Customer outreach — appointment texts, follow-ups, review requests — falls squarely under the TCPA, where statutory damages run $500 per text and up to $1,500 for willful violations, with no statutory cap (47 U.S.C. §227). A single non-consented blast to a few hundred numbers is six-figure exposure, which is exactly why agentplain does not auto-send: the fleet drafts the message and a person reviews and approves it before it sends, so a TCPA-violating text never goes out by machine. That avoided exposure is value the 14x–21x hours math doesn't count — and the one promise an auto-dialer competitor structurally cannot make.",
+      "Customer outreach — appointment texts, follow-ups, review requests — falls squarely under the TCPA, where statutory damages run $500 per text and up to $1,500 for willful violations, with no statutory cap (47 U.S.C. §227). A single non-consented blast to a few hundred numbers is six-figure exposure, which is exactly why agentplain does not auto-send: the fleet drafts the message and a person reviews and approves it before it sends, so a TCPA-violating text never goes out by machine. That avoided exposure is value the 14x–21x hours math doesn't count, and the one promise an auto-dialer competitor structurally cannot make.",
   },
 
   claims: {

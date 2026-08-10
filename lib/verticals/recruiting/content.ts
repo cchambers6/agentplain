@@ -54,7 +54,7 @@ export const recruiting: VerticalContent = {
       job: "Drafts a ranked candidate list with a substantiated reference per name.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your ATS (Greenhouse / Lever / Workable / Bullhorn) is connected.",
+        "Setting up — comes online once your ATS (Greenhouse / Lever / Workable / Bullhorn) is connected.",
     },
     {
       slug: "recruiting-outreach",
@@ -69,7 +69,7 @@ export const recruiting: VerticalContent = {
       job: "Runs the second and third touch timing for the recruiter to send.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once a sequence tool (Gem / Outreach / SalesLoft) or your ATS cadence is connected.",
+        "Setting up — comes online once a sequence tool (Gem / Outreach / SalesLoft) or your ATS cadence is connected.",
     },
     {
       slug: "recruiting-candidate-status-update",
@@ -90,7 +90,7 @@ export const recruiting: VerticalContent = {
       job: "Drafts the role brief from the hiring-manager call and surfaces open questions.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your call-capture tool (Gong / Fireflies / Otter) is connected for the intake transcript.",
+        "Setting up — comes online once your call-capture tool (Gong / Fireflies / Otter) is connected for the intake transcript.",
     },
     {
       slug: "recruiting-pipeline-recap",
@@ -98,7 +98,7 @@ export const recruiting: VerticalContent = {
       job: "Drafts the weekly client recap with candidates moved and bottlenecks flagged.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your ATS is connected for stage-transition history.",
+        "Setting up — comes online once your ATS is connected for stage-transition history.",
     },
     {
       slug: "recruiting-scheduler",
@@ -113,7 +113,7 @@ export const recruiting: VerticalContent = {
       job: "Dedupes, normalizes, and surfaces stale records in the ATS each week.",
       runtime: "rooting",
       rootingNote:
-        "rooting now — comes online once your ATS is connected with read + write scope.",
+        "Setting up — comes online once your ATS is connected with read + write scope.",
     },
     {
       // Horizontal chief-of-staff capability — proposals only, no execution.

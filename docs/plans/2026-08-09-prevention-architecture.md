@@ -2,20 +2,23 @@
 
 **Layer above** `docs/plans/2026-08-09-remediation-plan.md` (PR #398). The remediation plan fixes the 30 specific defects; this document makes the *class* of failure structurally impossible to go unnoticed again. Companion audit: `docs/audits/2026-08-09-full-audit.md` (PR #397 — read its corrections banner first; the retracted claims are not findings).
 
-**Authored by:** Fable (planning). **Implemented by:** Opus sessions, per the execution units in §5. **Ratifier:** Conner, for the two JUDGMENT items in §6 only — everything else is resolved here.
+**Authored by:** Fable (planning). **Implemented by:** Opus sessions, per the execution units in §5. **Ratifier:** Conner, for §6 only — one JUDGMENT item plus one packaged accept/reject recommendation (queue item 7, delegated 2026-08-09). Everything else is resolved here.
+
+**Rev 2 (same day):** adds root cause 7 (doctrine rot) + mechanism M7 + EU-11/EU-12, and replaces the J-2 open question with recommendation R-1, incorporating the post-prune host measurements.
 
 ---
 
 ## 0. What actually happened, compressed to its mechanism
 
-Six root causes, from the 2026-08-09 audit cycle:
+Seven root causes, from the 2026-08-09 audit cycle:
 
 1. **No external liveness monitor.** Every watchdog runs on the scheduler it monitors and dies with it. Three consecutive audits each found a different dead task; all three were found because a human manually asked.
 2. **No consumer for escalations.** `conner-queue.yaml` holds 11 pending items, some two months old. The L3 governor escalated correctly on 07-19; nobody answered. Detection without a reader is theatre.
 3. **Silent success.** A task that runs and produces nothing is indistinguishable from a healthy one on every signal except artifact mtime. The L3 heartbeat's deferred tick was *specified* to "append nothing, write nothing" — silence was made spec-correct.
 4. **Unverified inference presented as finding.** The audit produced four false findings from slot arithmetic and a wrong path, and relayed a dramatic number before checking it.
 5. **Work that never lands.** `main` sat 28 days with 8 green PRs unmerged. No alarm exists for merge latency.
-6. **Host fragility.** A 16 GB desktop running 40+ plugin processes is the substrate everything depends on.
+6. **Host fragility.** A 16 GB desktop running 40+ plugin processes is the substrate everything depends on. *(Post-prune update, 2026-08-09 late: Conner pruned the plugins — free RAM 0.98 → 4.60 GB, node MCP processes 24/2.40 GB → 14/0.91 GB, ~3.6 GB recovered. The acute wedge driver is gone cheaply; the structural half — one host, no redundancy, monitor inside the monitored — is unchanged and is what M1/M6 and R-1 address.)*
+7. **Doctrine rot: a negative probe result becoming permanent fact.** A single failed probe of *one* mechanism gets generalized into a standing architectural constraint, written into a prompt, and never retested — where it hardens and shapes later design. Live instances: `chiron-build-heartbeat`'s prompt says *"Do NOT attempt to spawn a resume Fable via dispatch. Prior attempt showed dispatch is unavailable from this scheduled context"* (sitting since at least 08-01); `fire-path-probe-2026-07-19` tested only the ambient credential helper yet became "the runner cannot push" (the premise behind three weeks of L3-loop design, flagged UNPROVEN by the audit); the "build-gate OOMs above 8 GB" belief later **failed to reproduce** at 8192 MB. This is arguably how several of the other six became load-bearing: constraints nobody could cite evidence for were steering the architecture.
 
 Two hard design constraints, applied throughout:
 
@@ -64,9 +67,9 @@ Residual risk accepted: GitHub itself down simultaneously with the host, or Conn
 
 ---
 
-## 2. The six mechanisms
+## 2. The seven mechanisms
 
-Naming: **M1 Pulse**, **M2 Reader**, **M3 Earned Green**, **M4 Evidence Discipline**, **M5 Landing Alarm**, **M6 Headroom Ratchet**. Six mechanisms, but only **three moving parts**: one on-host publisher (M1's writer + M3 + M6 sampling), one off-host workflow trio sharing one issue-upsert helper (M1's reader + M2 + M5 + M6 thresholds), and one evidence toolchain (M4). Everything else is configuration in two YAML files.
+Naming: **M1 Pulse**, **M2 Reader**, **M3 Earned Green**, **M4 Evidence Discipline**, **M5 Landing Alarm**, **M6 Headroom Ratchet**, **M7 Doctrine Expiry**. Seven mechanisms, but only **three moving parts**: one on-host publisher (M1's writer + M3 + M6 sampling), one off-host workflow trio sharing one issue-upsert helper (M1's reader + M2 + M5 + M6 thresholds), and one evidence toolchain (M4, which M7 extends). Everything else is configuration in three YAML files.
 
 ---
 
@@ -219,6 +222,48 @@ The proc-count limit is a **ratchet against sprawl regrowth**: plugin bloat regr
 
 **Where/trigger/consumer/failure/test.** Rides M1 entirely: sampled on-host (only place the data exists), judged off-host, consumed via the same issue path, watched by the same drill, and tested by `workflow_dispatch` input `simulate_breach: true` which evaluates a fixture payload with `free_gb: 0.5` and MUST produce the warning issue. No new moving part.
 
+*Post-prune calibration:* measured 2026-08-09 after the prune — 14 node MCP processes / 0.91 GB, 4.60 GB free. The `max_node_mcp_procs: 15` default now sits at measured + 1: deliberately snug, so regrowth of even two processes is loud. `min_free_gb: 2` gives ~2.6 GB of visible slide before warning.
+
+---
+
+### M7 — Doctrine Expiry: negative probe results may not become permanent fact
+
+The audit corrected *findings* that were inferences; root cause 7 is the same disease in *constraints*: "X is unavailable from context Y" gets probed once, fails once, and is then written into a prompt as eternal law. Nobody re-probes, because a constraint in a prompt looks like knowledge, not like a claim with a date on it. The fix is to make every capability constraint carry its evidence, its scope, and an expiry — and to make an expired constraint a finding, not a fact.
+
+**Mechanism, part 1 — the constraint registry.** `ops/constraints.yaml`, one entry per standing capability constraint:
+
+```yaml
+- id: dispatch-unavailable-scheduled-context
+  claim: "mcp__dispatch__* tools are absent from scheduled-task sessions"
+  scope: "Claude Desktop scheduled-task runner"        # never broader than what was tested
+  mechanisms_tested: ["direct select: lookup of mcp__dispatch__start_code_task"]
+  evidence: { date: 2026-07-19, ref: "WORKING_STATE.md L3 tick 14:33Z" }
+  reprobe: "from a scheduled session: ToolSearch 'select:mcp__dispatch__start_code_task'; record hit/miss"
+  verified: 2026-07-19
+  expires: 2026-09-02        # verified + 45d default
+  used_by: ["chiron-build-heartbeat/SKILL.md", "agentplain-loop-heartbeat/SKILL.md"]
+```
+
+Rules encoded in the schema: `scope` and `claim` may not exceed `mechanisms_tested` (a probe result may only claim the mechanism it tested — "push via ambient credential helper fails," never "the runner cannot push"); `reprobe` must be a runnable recipe; default expiry 45 days (long enough not to thrash, short enough that a wrong constraint cannot silently shape a quarter's design), per-entry override up to 180 for constraints with structural reasons to be stable.
+
+**Mechanism, part 2 — expiry enforcement.** The contracts checker (M3's script, same invocation) also loads `ops/constraints.yaml` and emits a `constraint-expired` finding for every entry past `expires` — which rides the heartbeat and becomes an issue via the normal path, naming the constraint and its recorded re-probe recipe. Re-verifying = running the recipe and updating `verified`/`expires` in a PR. An expired constraint does **not** auto-delete (that would silently un-constrain designs); it goes loud until re-proven or retired.
+
+**Mechanism, part 3 — no untracked doctrine.** The same checker greps the scheduled-task prompts (`C:\Users\conne\Claude\Scheduled\*\SKILL.md`) for a small, high-signal phrase set — `do not attempt`, `is unavailable`, `cannot push`, `dispatch is absent`, `no writable`, `not reachable from` (case-insensitive) — and flags any hit not accompanied by a `[constraint:<id>]` tag referencing a registry entry, as an `untracked-doctrine` finding. Deliberately narrow phrase list: this is a tripwire for the exact language pattern that burned us, not NLP. A flagged line gets either registered (with evidence and expiry) or rephrased; both are one-line changes.
+
+**Mechanism, part 4 — validator rule.** EU-9's findings validator gains a `CONSTRAINT` class: any finding asserting a capability constraint must name `mechanisms_tested`, and a claim broader than its tested mechanisms is rejected (`generalized-beyond-probe`). This closes the authoring end: fresh probes can no longer be born over-general.
+
+**Where it runs and why.** Registry in-repo (constraint changes are PR-reviewed — doctrine changes on the record, not in prompt edits nobody sees). Checker on-host (prompts live there), findings judged and issued off-host like all M3 findings. The authoring gate runs in CI, outside the session that ran the probe.
+
+**Trigger.** Every watchdog run (findings dedupe via issue upsert); CI on PRs touching findings or the registry.
+
+**Consumer.** Whoever answers the `constraint-expired` issue — usually an Opus session running the recorded `reprobe` recipe (mechanical by design: the recipe is written down at registration time, so re-proof costs minutes). Consumption receipt: `verified` date advances in a PR, finding clears, issue auto-closes.
+
+**Failure mode and what watches it.** The registry can be ignored (constraints written straight into prompts) — that is exactly what part 3 trips on. The phrase list can miss novel wordings — accepted residual, stated: this mechanism catches the recurrence of the observed pattern, not every possible way to encode a belief; the backstop is that any constraint which *matters* eventually gates a design decision, and M4's evidence rules apply when it surfaces in findings. Checker rot is caught the same way as M3's (self-test daily, `checker-stale` payload timestamps).
+
+**Deliberate-failure test.** `check-task-freshness.mjs --self-test` extends to: a fixture registry entry with `expires` in the past MUST yield exactly one `constraint-expired` finding; a fixture SKILL.md containing an untagged "Do NOT attempt … is unavailable" line MUST yield exactly one `untracked-doctrine` finding; a fixture CONSTRAINT finding claiming "runner cannot push" with `mechanisms_tested: [ambient-credential-helper]` MUST be rejected by the validator as `generalized-beyond-probe` — that fixture is verbatim the fire-path-probe error.
+
+**Seed entries at ship time (EU-11):** `dispatch-unavailable-scheduled-context` (above; tag the chiron and loop-heartbeat prompt lines), `runner-cannot-push` (**already disputed** — seeded pre-expired so its issue opens on day one; the re-probe is remediation W2-1's token-injected push test), `build-gate-oom-threshold` (seeded pre-expired; the 8192 MB non-reproduction is already on record), `gcm-auth-dead` (verified 2026-07-25, expiry per default). Two of four seeds firing immediately is the ship-day falsification rule applied to M7.
+
 ---
 
 ## 3. Decisions resolved here (so Opus needs none)
@@ -229,7 +274,8 @@ The proc-count limit is a **ratchet against sprawl regrowth**: plugin bloat regr
 | Staleness threshold | 2 h (4 missed beats; absorbs evidenced episodic drops, catches real outages). |
 | Escalation SLAs | Issue at 7 days pending; weekly bump after 30 days. Snooze via `snooze_until` in the queue item is a first-class answer. |
 | Delivery thresholds | Green PR 7 days; frozen-main 14 days *with* green PRs open; local-ahead > 0 immediate. |
-| Host limits | `min_free_gb: 2`, `max_node_mcp_procs: 15`, in `ops/task-contracts.yaml`; tighten post-prune. |
+| Host limits | `min_free_gb: 2`, `max_node_mcp_procs: 15`, in `ops/task-contracts.yaml`. Post-prune measurement (14 procs / 4.60 GB free) makes 15 = measured + 1: snug by intent. |
+| Constraint expiry | Default 45 days, per-entry override ≤180. Expired ≠ deleted: expired = loud until re-proven or retired. Probe claims scoped to `mechanisms_tested`, enforced by validator. |
 | Status-line format | `<ISO-UTC> | <task> | OK\|NOOP\|DEFERRED\|ERROR | <one clause>` appended to `<agent_store>/memory/data/status/<task>.log`. |
 | Issue taxonomy | Labels `fleet-ops` (family), `fleet-down`, `decision-overdue`, `delivery-stalled`, `drill`. One issue per condition, upsert-with-comment, auto-close on clear. One shared helper `scripts/ops/upsert-issue.mjs`. |
 | Drill cadence | Monthly (1st), automatic, auto-closing, `[DRILL]`-prefixed. Brief flags `last drill > 35 days`. |
@@ -249,20 +295,22 @@ The proc-count limit is a **ratchet against sprawl regrowth**: plugin bloat regr
 | M4 Evidence | authoring session | CI on the PR | Independent of the session that might have fooled itself |
 | M5 Landing | GHA reads GitHub directly (+ ahead-count via heartbeat) | GHA | The missing action is human; alarm lives where the merge button is |
 | M6 Headroom | on-host sampling | GHA thresholds | A host sliding toward a wedge can't be trusted to raise its own alarm |
+| M7 Doctrine Expiry | registry in-repo; prompt lint on-host | expiry findings issued off-host; authoring gate in CI | Doctrine changes must be PR-visible; the session that ran a probe can't also be the judge of how far its result generalizes |
 
 ---
 
 ## 5. Execution units for Opus
 
-Ten units. Each is a single deliverable an Opus session can finish without judgment calls. Repo work branches from `origin/main` (worktree; PRs via the fleet token + REST recipe; compare-URL fallback if PR creation is classifier-blocked). Task-prompt work edits `SKILL.md` files under `C:\Users\conne\Claude\Scheduled\<task>\` directly (not in the repo). Ledger/status writes go to the **live agent store only** — resolve it via EU-2's script; its path and tell are in §M4.
+Twelve units. Each is a single deliverable an Opus session can finish without judgment calls. Repo work branches from `origin/main` (worktree; PRs via the fleet token + REST recipe; compare-URL fallback if PR creation is classifier-blocked). Task-prompt work edits `SKILL.md` files under `C:\Users\conne\Claude\Scheduled\<task>\` directly (not in the repo). Ledger/status writes go to the **live agent store only** — resolve it via EU-2's script; its path and tell are in §M4.
 
 **Dependency graph:**
 
 ```
 Wave A (parallel):  EU-1  EU-2
 Wave B (parallel):  EU-3 (←EU-2)   EU-5 (←EU-1)   EU-9 (←EU-2)
-Wave C (parallel):  EU-4 (←EU-3)   EU-6 (←EU-1,5)  EU-7 (←EU-5)   EU-8 (←EU-5,6)
+Wave C (parallel):  EU-4 (←EU-3)   EU-6 (←EU-1,5)  EU-7 (←EU-5)   EU-8 (←EU-5,6)   EU-11 (←EU-3,9)
 Wave D:             EU-10 (←EU-5,6,7)
+Gated on R-1 acceptance:  EU-12 (←EU-5; independent of Waves C/D)
 ```
 
 ---
@@ -343,16 +391,52 @@ Live: `gh workflow run delivery-latency.yml` → if stale green PRs exist at run
 **Deliverable.** `agentplain-morning-brief` SKILL.md gains a closing "Monitors" footer: heartbeat age (from `ops/heartbeat` head commit via API), last-run age of each of the three workflows (actions API), last drill date (newest closed `drill` issue), count of open `fleet-ops`/`decision-overdue`/`delivery-stalled` issues. Flag lines in red-equivalent wording when: heartbeat >2 h, any workflow last-run >48 h, drill >35 days. Graceful degradation is specified, not judged: any API miss renders as `<name>: UNREACHABLE (<error>)` — an unreachable monitor is itself a flag line, never omitted. (The queue-leads-the-brief content is remediation W1-4, not this unit — do not duplicate it.)
 **Files.** Edit: `C:\Users\conne\Claude\Scheduled\agentplain-morning-brief\SKILL.md`.
 **Acceptance (runnable).** Fire the brief task once manually → the delivered brief contains a Monitors footer with all six lines populated (or UNREACHABLE-flagged), and the drill line matches the newest closed `drill` issue's date.
-**Depends on:** EU-5/6/7 existing (degrades visibly if any are missing). **Parallel:** no — last.
+**Depends on:** EU-5/6/7 existing (degrades visibly if any are missing). **Parallel:** no — last (of the core waves).
+
+### EU-11 · Constraint registry + doctrine-expiry enforcement — `M` (Wave C)
+**Deliverable.** `ops/constraints.yaml` with schema comment + the four seed entries from §M7 (two seeded pre-expired: `runner-cannot-push`, `build-gate-oom-threshold` — their issues MUST open on the first watchdog cycle after ship); expiry + untracked-doctrine checks added to `check-task-freshness.mjs`; `CONSTRAINT` class + `generalized-beyond-probe` rule added to `validate-findings.mjs`; `[constraint:dispatch-unavailable-scheduled-context]` tags added to the two prompt lines that carry that doctrine (`chiron-build-heartbeat`, `agentplain-loop-heartbeat` SKILL.md — tag, do not reword the constraint itself).
+**Files.** New: `ops/constraints.yaml`. Edit: `scripts/ops/check-task-freshness.mjs`, `scripts/ops/validate-findings.mjs` + its fixtures, two SKILL.md files under `C:\Users\conne\Claude\Scheduled\`.
+**Acceptance (runnable).**
+`node scripts/ops/check-task-freshness.mjs --self-test` → additionally reports `constraint-expired (fixture)` = 1 and `untracked-doctrine (fixture)` = 1, exit 0.
+`node scripts/ops/validate-findings.mjs scripts/ops/fixtures/overgeneralized-constraint.yaml` (the verbatim fire-path-probe error) → exit 1, rule `generalized-beyond-probe`.
+Live: first real checker run emits exactly 2 `constraint-expired` findings (the pre-expired seeds) and 0 `untracked-doctrine` findings (both known lines are tagged).
+**Depends on:** EU-3, EU-9. **Parallel:** with EU-4/6/7/8.
+
+### EU-12 · GHA bridge pilot — one stateless task end-to-end — `L` · **gated on R-1 acceptance**
+**Deliverable.** The already-specced `repository_dispatch` route (`docs/specs/audit-fire-gha-bridge-2026-06-15.md`) implemented for exactly ONE stateless, fire-capable task: `.github/workflows/audit-fire.yml` accepting the specced payload, running the work, opening (never merging) a PR, and writing `pr_url` back per the spec. Purpose is **option preservation and price discovery**, not migration: record measured wall-time, runner minutes, and token cost per fire in the workflow summary, so R-1's falsifier #4 has real numbers.
+**Files.** New: `.github/workflows/audit-fire.yml` + whatever the bridge spec's payload contract requires. No task is moved off the host; the desktop path remains primary per the spec's own coexistence design.
+**Acceptance (runnable).** `curl -X POST .../dispatches -d '{"event_type":"audit-fire","client_payload":{...test payload...}}'` → workflow run completes, a PR exists with the expected branch prefix, and the run summary contains the three cost numbers. The short-term file-bridge fallback still works (fire one item through it afterward).
+**Depends on:** EU-5 (helper conventions only). **Parallel:** independent of Waves C/D. **Do not start until Conner accepts R-1** — if he rejects toward full migration instead, this unit is superseded by a migration spec, not extended.
 
 ---
 
-## 6. JUDGMENT — the only two things routed to Conner
+## 6. Routed to Conner — one JUDGMENT, one packaged recommendation
 
 | # | Decision | Why only Conner | Default |
 |---|---|---|---|
 | J-1 | **Notification reach.** Do GitHub issue/workflow-failure emails actually reach you (phone) fast enough to be an alarm channel? Ship-day: EU-5's drill fires; confirm you got the email and how fast. If GitHub email isn't a channel you'd notice within a day, name the channel you would (SMS via the existing env-gated Twilio layer is the pre-built alternative) and one EU gets amended to add it. | Only you know what you actually notice. | GitHub notifications; add Twilio SMS only if the drill test proves email too slow. |
-| J-2 | **Where the fleet lives** (restates remediation W4-2, unchanged). This architecture makes host death *visible in ≤2 h and measured*, not impossible. The 16 GB ceiling stands until scheduled work migrates (GHA `repository_dispatch` route already specced). | Infrastructure + cost. | Ship this layer now; decide migration after the PR backlog lands — deliberately, not by drift. |
+
+### R-1 — Where the fleet lives (queue item 7, delegated 2026-08-09; accept or reject)
+
+**The call: stay on the desktop. Do not migrate the fleet to GHA. Buy the option instead of the move (EU-12), and bind the decision to five named falsifiers.**
+
+**Reasoning, with the prune data weighed honestly.** The desktop had two failure modes: it wedges, and it dies silently. Tonight's prune addressed the first for ~$0 — free RAM 0.98 → 4.60 GB, node MCP load 24 procs/2.40 GB → 14/0.91 GB — and M6's ratchet (ceiling 15 vs measured 14) keeps it addressed by making regrowth loud. The second — the monitor living inside the thing it monitors — is fully solved off-host by M1/M2 *without moving any workload*: worst-case undetected outage drops from ~139 h to ≤2 h. That is the half money can't fix with RAM, and it is fixed by this spec regardless of where the fleet runs. What migration would buy **on top** of all that is availability — the fleet keeps working while the host is down — and that is worth little here, for a reason that is structural, not hopeful: **the customer-facing runtime does not live on the desktop.** Production sweeps and workflows run on Inngest/Vercel in the cloud already; a host outage stalls the internal build/ops cadence only. The August outage hurt because it was *invisible for days*, not because the ops layer paused.
+
+Against that modest gain, migration's real costs: (1) **It is not a lift-and-shift.** The fleet's memory substrate — INBOX, WORKING_STATE, conner-queue, the new status ledgers — is host-local by construction; `audit-queue-seeder.yml` already documents that a cloud runner cannot write it. Moving scheduled work means re-homing the memory store first: an architecture project, not plumbing. (2) **Recurring cost asymmetry.** Desktop scheduled sessions ride the existing Claude subscription; GHA sessions pay metered API plus runner minutes. Illustrative floor: the Librarian alone at `*/15` is ~2,900 runs/mo — at ~3 min/run on a private-repo Linux runner ($0.008/min) that is ~$70/mo of runner time *before* any API token costs, for one task of eight. Exact API delta unknown; it is strictly positive and recurring. (3) Full migration is a week-plus of fleet work (remediation W4-2's own honest estimate) competing with revenue-facing work like the vertical one-liner.
+
+**Cost of this recommendation:** $0 new recurring. One-time: the prevention layer (ships regardless) + EU-12's pilot (~1 day) to prove and price the GHA path.
+
+**Migration path if/when a falsifier fires** (pre-committed so the future decision is "turn the crank," not a fresh investigation): **Phase 0** — EU-12 pilot: one stateless task end-to-end on `repository_dispatch`, costs measured (this happens now, on acceptance). **Phase 1** — move stateless, fire-capable work (audit-fire, delivery checks) behind the proven bridge. **Phase 2** — re-home the memory store (the real project; decide repo-backed vs hosted store then, with Phase 0/1 cost data in hand). **Phase 3** — move the stateful tasks (Librarian, governor) last. Each phase independently shippable and reversible.
+
+**What specifically changes my mind** — each measurable by machinery in this spec, none requiring a new investigation:
+
+1. **A second full-host outage within 90 days with free RAM ≥ 2 GB at last heartbeat** (M6's payload proves it wasn't memory) → the substrate is unreliable independent of headroom → migrate.
+2. **Median alarm-to-recovery > 24 h across two or more outages** (measured by M1's outage ruler + `fleet-down` issue timestamps) → the human-restart dependency, not the host, is the bottleneck → migrate or automate restart.
+3. **Any customer-visible SLA comes to depend on the desktop fleet** → migrate that path immediately; do not wait for the review.
+4. **Fleet workload outgrows the subscription** so it pays metered API anyway (EU-12's measured per-fire cost × observed fire volume makes this arithmetic, not judgment) → the cost asymmetry dies → re-decide.
+5. **The memory store gets re-homed for an independent reason** (multi-machine, backup policy) → the biggest migration blocker is gone → re-decide.
+
+Review trigger: any falsifier firing, or 2026-11-09 (90 days), whichever first — the review date goes into `conner-queue.yaml` as a snoozed item so M2 resurfaces it automatically. A standing infrastructure decision with no expiry would be root cause 7 wearing a nicer shirt.
 
 Everything else that looked like a decision is resolved in §3 and editable later in one tracked file each.
 
@@ -362,11 +446,12 @@ Everything else that looked like a decision is resolved in §3 and editable late
 
 Claiming total prevention is the same overreach that produced the audit's false findings. These five are not prevented; each is made survivable in a specific, testable way:
 
-1. **The host will wedge again.** 16 GB, one machine, an Electron app. Survivable: early warning before (M6 thresholds off-host), detection ≤2 h during (M1), measured duration after (heartbeat gap — no more disputed "3 vs 5.8 days"), and auto-recovery on restart (cold-start-safe tasks + issues auto-close). Prevention requires J-2, which is Conner's call.
+1. **The host can still die.** One machine, an Electron app — the prune bought real headroom (4.60 GB free, wedge driver removed) but bought no redundancy. Survivable: early warning before (M6 thresholds off-host), detection ≤2 h during (M1), measured duration after (heartbeat gap — no more disputed "3 vs 5.8 days"), and auto-recovery on restart (cold-start-safe tasks + issues auto-close). Removing the failure mode entirely means migrating — R-1 recommends against that today and names the five conditions under which the answer flips.
 2. **The scheduler will keep dropping individual fires episodically.** Evidenced behaviour (84-min and ~12.7-h gaps on healthy tasks); closed-source, not fixable from here. Survivable: M3 makes every drop countable within a day from ledger gaps, and M1's threshold is sized so episodic drops don't cry wolf.
 3. **Conner may not answer.** No mechanism can force a human decision, and one that nags harder just trains ignoring. Survivable: M2 guarantees *seen* (issues on a channel he uses, ages always visible, snooze as a legitimate answer) — the system's guarantee is "no silent pending," never "answered."
 4. **GitHub itself can be down or GHA cron can starve.** Survivable: thresholds absorb ordinary delay; GitHub-down + host-down simultaneously is the accepted residual, bounded by GitHub's own recovery and caught retroactively by the outage ruler. No third platform is added — a third watcher would itself need watching (§1.1).
 5. **A free-prose audit can still assert nonsense.** M4 mechanizes the two error patterns that actually occurred (wrong store, slot arithmetic) and gates structured findings; it cannot gate prose. Survivable: the audit protocol requires the structured file + validator, and the pre-merge review gate reviews load-bearing PRs. Residual: an author who bypasses both — at which point the failure is disobedience, not architecture, and no architecture fixes that.
+6. **Doctrine can be written in words the tripwire doesn't match.** M7's phrase lint catches the observed pattern (`do not attempt`, `is unavailable`, …), not every possible encoding of an untested belief. Survivable: any constraint that *matters* eventually surfaces in a finding or a design decision, where M4's evidence rules and M7's `generalized-beyond-probe` gate apply; the registry's expiry clock catches the rest on a 45-day fuse. The residual — a load-bearing belief phrased novelly and never surfaced in a finding — is accepted and named, not papered over.
 
 ---
 

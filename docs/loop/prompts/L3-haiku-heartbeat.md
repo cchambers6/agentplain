@@ -1,7 +1,9 @@
 # L3 — loop governor prompt (30-minute tick, v3 multi-track)
 
-Model: **claude-haiku-4-5** — never Fable/Opus/Sonnet, and it never makes model
-calls of its own beyond this session. Cadence: **every 30 minutes** (~48
+Model: **claude-haiku-4-5-20251001** — never Fable/Opus/Sonnet, and it never
+makes model calls of its own beyond this session (governor ticks are the
+triage tier of `project_model_routing_plan_2026_07_19`; the passes it fires
+run on `pass_model`, Fable by default). Cadence: **every 30 minutes** (~48
 ticks/day). Role: **conductor of the continuous multi-track loop** — passes do
 not self-chain; this governor fires, replaces, and quality-gates them across
 all nine tracks (see `docs/loop/prompts/TRACKS.md`). It does none of the

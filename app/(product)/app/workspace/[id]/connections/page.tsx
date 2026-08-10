@@ -202,13 +202,25 @@ export default async function ConnectionsPage({ params }: PageProps) {
               {recs.primary.reason}.
             </p>
             <div className="mt-4 flex flex-wrap gap-3">
-              <ApHeritageButton
-                variant="primary"
-                withArrow
-                href={`${base}/integrations/${recs.primary.id}`}
-              >
-                connect {recs.primary.name}
-              </ApHeritageButton>
+              {/* A coming-soon primary (e.g. TaxDome for CPA) must not promise
+                  "connect" — its detail page can only offer the waitlist. */}
+              {recs.primary.status === "available" ? (
+                <ApHeritageButton
+                  variant="primary"
+                  withArrow
+                  href={`${base}/integrations/${recs.primary.id}`}
+                >
+                  connect {recs.primary.name}
+                </ApHeritageButton>
+              ) : (
+                <ApHeritageButton
+                  variant="secondary"
+                  withArrow
+                  href={`${base}/integrations/${recs.primary.id}`}
+                >
+                  {recs.primary.name} is coming soon — join the waitlist
+                </ApHeritageButton>
+              )}
               <ApHeritageButton
                 variant="secondary"
                 withArrow

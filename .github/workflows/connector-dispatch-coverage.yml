@@ -29,6 +29,7 @@ on:
       - "lib/integrations/**/tools.ts"
       - "lib/integrations/**/index.ts"
       - "app/api/integrations/**/route.ts"
+      - "app/(product)/app/workspace/[id]/integrations/[integrationId]/page.tsx"
       - "tools/connector-dispatch-coverage.mjs"
       - ".github/workflows/connector-dispatch-coverage.yml"
   push:
@@ -37,6 +38,7 @@ on:
       - "lib/integrations/marketplace.ts"
       - "lib/integrations/**/tools.ts"
       - "app/api/integrations/**/route.ts"
+      - "app/(product)/app/workspace/[id]/integrations/[integrationId]/page.tsx"
       - "tools/connector-dispatch-coverage.mjs"
       - ".github/workflows/connector-dispatch-coverage.yml"
 

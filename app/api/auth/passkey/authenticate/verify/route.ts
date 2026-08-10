@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import { writeSession, type SessionPayload } from "@/lib/auth/session";
 import { verifyAuthentication } from "@/lib/auth/passkey";
 import { clearChallenge, readChallenge } from "@/lib/auth/webauthn";
+import { withSystemContext } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -51,8 +52,21 @@ export async function POST(req: Request): Promise<NextResponse> {
   };
   await writeSession(session, { remember: true });
 
-  const redirect = resolution.defaultWorkspaceId
-    ? `/app/workspace/${resolution.defaultWorkspaceId}`
-    : "/app";
+  // Same onboarding gate as the magic-link verify route: a passkey holder
+  // who hasn't finished onboarding lands on the wizard, not the dashboard.
+  let redirect: string;
+  if (resolution.defaultWorkspaceId) {
+    const onboardingDone = await withSystemContext((tx) =>
+      tx.onboardingState.findUnique({
+        where: { workspaceId: resolution.defaultWorkspaceId! },
+        select: { completedAt: true },
+      }),
+    ).catch(() => null);
+    redirect = onboardingDone?.completedAt
+      ? `/app/workspace/${resolution.defaultWorkspaceId}`
+      : `/app/workspace/${resolution.defaultWorkspaceId}/onboarding`;
+  } else {
+    redirect = "/app";
+  }
   return NextResponse.json({ ok: true, redirect });
 }

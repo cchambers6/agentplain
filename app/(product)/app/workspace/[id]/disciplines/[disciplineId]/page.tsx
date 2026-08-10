@@ -271,9 +271,20 @@ export default async function DisciplineDetailPage({ params }: PageProps) {
                     </p>
                     {isRooted ? (
                       <p className="mt-2 text-[13px] leading-relaxed text-mute">
-                        {card.installState !== "installed"
-                          ? `Not running on your workspace yet — install from /marketplace to bring it into the fleet.`
-                          : `Installed — nothing fired in the last 7 days yet.`}
+                        {card.installState !== "installed" ? (
+                          <>
+                            Not running on your workspace yet —{" "}
+                            <Link
+                              href={`/app/workspace/${workspaceId}/marketplace`}
+                              className="text-ink underline underline-offset-4 hover:text-ink-soft"
+                            >
+                              install from the marketplace
+                            </Link>{" "}
+                            to bring it into the fleet.
+                          </>
+                        ) : (
+                          `Installed — nothing fired in the last 7 days yet.`
+                        )}
                       </p>
                     ) : (
                       <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-[13px] text-ink-soft md:grid-cols-4">

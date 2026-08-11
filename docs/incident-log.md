@@ -42,6 +42,7 @@ follow-up brought the build back to green.
 | Date | SHA | Reason | Follow-up |
 | --- | --- | --- | --- |
 | 2026-08-02 | 0b983a7 | `build:no-migrate` OOMs locally (heap-limit mark-compact at 8 GB `--max-old-space-size`; machine has 16 GB RAM, 12 GB also failed on 2026-07-25). Machine-only — same tree builds green on Vercel. | Verify Vercel production build goes green on this push; local repro tracked under the build-gate memory-ceiling follow-up. |
+| 2026-08-11 | b961f9d (branch `docs/value-proposition-review-2026-08-11`) | Docs-only push (one new file under `docs/reviews/`). Build gate failed twice on machine-local causes: first `prisma generate` EPERM renaming the query-engine DLL (locked by a concurrent session), then with `PRISMA_GENERATE_NO_ENGINE=true` a native V8 crash during `next build` at 8 GB — same machine-only memory-ceiling class as the 2026-08-02 row. Change cannot affect the compile graph. | Verify the branch's Vercel preview builds green on the PR. |
 | — | — | — | — |
 
 **Why not `git push --no-verify`.** `--no-verify` works too and remains

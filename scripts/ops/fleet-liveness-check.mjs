@@ -110,7 +110,7 @@ async function main() {
       headCommitIso = commits[0].commit.committer.date;
       prevCommitIso = commits[1]?.commit.committer.date ?? null;
     }
-    const open = await fetchOpenIssues({ token, labels: "fleet-down" });
+    const open = await fetchOpenIssues({ token });
     openIssue = findBySlug(open, "fleet-down");
   }
 

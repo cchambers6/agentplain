@@ -12,11 +12,21 @@ import { ghApi, REPO } from "./lib.mjs";
 
 export const slugMarker = (slug) => `<!-- ops-slug: ${slug} -->`;
 
-export async function fetchOpenIssues({ token, labels }) {
-  return ghApi(
-    `/repos/${REPO}/issues?state=open&labels=${encodeURIComponent(labels)}&per_page=100`,
-    { token }
-  );
+// Discovery is MARKER-based, never label-based: the fleet App token cannot
+// manage labels (403 "Resource not accessible by integration", measured
+// 2026-08-11 on issue #406), so an alarm path that depended on labels would
+// silently lose track of its own issues depending on which credential ran it.
+// Labels are best-effort display metadata only.
+export async function fetchOpenIssues({ token }) {
+  const all = [];
+  for (let page = 1; page <= 3; page++) {
+    const batch = await ghApi(`/repos/${REPO}/issues?state=open&per_page=100&page=${page}`, {
+      token,
+    });
+    all.push(...batch.filter((i) => !i.pull_request));
+    if (batch.length < 100) break;
+  }
+  return all.filter((i) => /<!-- ops-slug: /.test(i.body || ""));
 }
 
 export function findBySlug(openIssues, slug) {

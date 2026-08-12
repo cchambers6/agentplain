@@ -1,0 +1,257 @@
+{
+  "ts": "2026-08-12T01:18:50Z",
+  "host": {
+    "ts": "2026-08-12T01:18:50Z",
+    "node_procs": 39,
+    "claude_procs": 20,
+    "node_rss_gb": 3.05,
+    "claude_rss_gb": 4.09,
+    "free_gb": 3.46
+  },
+  "git": {
+    "ts": "2026-08-12T01:18:51Z",
+    "local_main_ahead": 0,
+    "origin_main_sha": "bcaccbea9842f96463fd00f2c46f9390a064b6a2"
+  },
+  "queue": {
+    "ts": "2026-08-12T01:18:51Z",
+    "mirror_mode": "ranked",
+    "generated": "2026-08-12T01:18:51Z",
+    "generator": "rank-queue.mjs",
+    "pending_total": 14,
+    "producer_ratio": {
+      "self_generated": 9,
+      "external": 5
+    },
+    "business_lane": [
+      {
+        "rank": 1,
+        "band": "B0",
+        "id": "revoke-flatsbo-pat",
+        "title": "Revoke leaked flatsbo PAT (2026-06-09 exposure)",
+        "raised": null,
+        "age_days": null,
+        "declared_priority": 6,
+        "subject": "credential-exposure",
+        "producer": "WORKING_STATE",
+        "snooze_until": null,
+        "recommended_default": null,
+        "self_produced": true
+      },
+      {
+        "rank": 2,
+        "band": "B1",
+        "id": "prod-deploy-dead-since-06-17",
+        "title": "PRODUCTION HAS NOT DEPLOYED SINCE 2026-06-17. A failed client_portal migration blocks every prod build (P3009); previews stay green because they skip migrate.",
+        "raised": "2026-08-10T23:53:00Z",
+        "age_days": 1.1,
+        "declared_priority": 0,
+        "subject": "production-deploy-pipeline",
+        "producer": "session-16fa0ca6",
+        "snooze_until": null,
+        "recommended_default": "(a) now. Also build the alarm rather than folding it: the eight-week silence is the whole point of this item, and an incident whose lesson is \"nothing alarmed\" should not close without one.",
+        "self_produced": false
+      },
+      {
+        "rank": 3,
+        "band": "B1",
+        "id": "design-partners-on-record",
+        "title": "Name first 3-5 design partners + confirm they'll go ON RECORD (gates social-proof plan)",
+        "raised": null,
+        "age_days": null,
+        "declared_priority": 2,
+        "subject": "design-partner-pipeline",
+        "producer": "business-plan-ceo-plus-10-lenses-2026-06",
+        "snooze_until": null,
+        "recommended_default": null,
+        "self_produced": false
+      },
+      {
+        "rank": 4,
+        "band": "B1",
+        "id": "legal-entity-ip",
+        "title": "Confirm agentplain is a formed legal ENTITY with founder IP assigned (DPA signer must exist)",
+        "raised": null,
+        "age_days": null,
+        "declared_priority": 3,
+        "subject": "legal-entity",
+        "producer": "business-plan-ceo-plus-10-lenses-2026-06",
+        "snooze_until": null,
+        "recommended_default": null,
+        "self_produced": false
+      },
+      {
+        "rank": 5,
+        "band": "B1",
+        "id": "company-postal-address",
+        "title": "Set COMPANY_POSTAL_ADDRESS (CAN-SPAM) before enabling weekly-report cron",
+        "raised": null,
+        "age_days": null,
+        "declared_priority": 2,
+        "subject": "customer-email-compliance",
+        "producer": "weekly-customer-report-email-block-b2",
+        "snooze_until": null,
+        "recommended_default": null,
+        "self_produced": false
+      },
+      {
+        "rank": 6,
+        "band": "B1",
+        "id": "weekly-email-dedupe",
+        "title": "Decide Mon proof-digest vs Fri weekly-report canonical (two ROI emails exist)",
+        "raised": null,
+        "age_days": null,
+        "declared_priority": 5,
+        "subject": "customer-email-program",
+        "producer": "weekly-customer-report-email-block-b2",
+        "snooze_until": null,
+        "recommended_default": null,
+        "self_produced": false
+      }
+    ],
+    "fleet_lane": [
+      {
+        "rank": 1,
+        "band": "B3",
+        "id": "working-state-retention-policy",
+        "title": "RESIDUAL ASK ONLY (narrowed #222): delete WORKING_STATE.md.preXXXX snapshots older than 7 days (321 of them + 5 .bak files). This is the sole half still needing Conner sign-off, because it is real his",
+        "raised": "2026-07-19T04:36:00Z",
+        "age_days": 23.9,
+        "declared_priority": 8,
+        "subject": "fleet-memory-store",
+        "producer": "WORKING_STATE-hygiene-note-carried-since-515th-pass",
+        "snooze_until": null,
+        "recommended_default": null,
+        "self_produced": true
+      },
+      {
+        "rank": 2,
+        "band": "B3",
+        "id": "l3-loop-progress-unverified",
+        "title": "Two decisions on the L3 loop, both edits the governor is forbidden to make. (1) RUNNER — the loop is no longer \"unverified\", it is VERIFIED BLOCKED AT STEP 2c. The 14:33Z governor tick computed the fu",
+        "raised": "2026-07-19T11:36:00Z",
+        "age_days": 23.6,
+        "declared_priority": null,
+        "subject": "fleet-loop",
+        "producer": "librarian pass 592",
+        "snooze_until": null,
+        "recommended_default": "Retire the */30 heartbeat until a runner with dispatch + repo write exists — the diagnosis is complete, further ticks add nothing. If instead the loop should run, give it that runner and in the same sitting re-cut the SKILL.md: drop the Jul-7 pause branch and move pass_model off claude-fable-5.",
+        "self_produced": true
+      },
+      {
+        "rank": 3,
+        "band": "B3",
+        "id": "fix-claude-code-scheduler-cwd",
+        "title": "Claude Code scheduled sessions start in C:\\business (archived RecoverAI) - fix the default folder",
+        "raised": "2026-07-19T20:36:00Z",
+        "age_days": 23.2,
+        "declared_priority": null,
+        "subject": "fleet-scheduler",
+        "producer": "librarian pass 624",
+        "snooze_until": null,
+        "recommended_default": null,
+        "self_produced": true
+      },
+      {
+        "rank": 4,
+        "band": "B3",
+        "id": "librarian-cadence-vs-cost-cap",
+        "title": "Librarian + watchdog claim \"waking hours\"; both crons run 24/7. Cost cap uses the wrong run count -- AND the 15-min period is shorter than a measured pass.",
+        "raised": "2026-08-10T20:52:00Z",
+        "age_days": 1.2,
+        "declared_priority": "medium",
+        "subject": "fleet-scheduler",
+        "producer": "librarian pass 172",
+        "snooze_until": null,
+        "recommended_default": "CHANGED THREE TIMES; #174 reverts to the #173-original grounds. (a) for the WATCHDOG -- pure cost, unaffected by any of this. For the librarian, (c) lengthen to 20-30 min, because two consecutive passes have now run ~16.3 and ~16.8 min against a 15-min period and the measured margin between them was",
+        "self_produced": true
+      },
+      {
+        "rank": 5,
+        "band": "B3",
+        "id": "budget-week-to-date-unmeasured",
+        "title": "The re-tier audit has held four times on one missing number. Supply week-to-date spend, or accept that the budget audit is permanently blind and stop scheduling it.",
+        "raised": "2026-08-10T22:16:00Z",
+        "age_days": 1.1,
+        "declared_priority": 6,
+        "subject": "fleet-budget",
+        "producer": "librarian pass 177",
+        "snooze_until": null,
+        "recommended_default": "(a). The ceiling is not small enough to ignore: the roll-up alone is 96 runs/day against its own $0.50/run cap = $48/day = ~$336/week, i.e. 7-11% of the $3000-5000/week envelope floor, entirely unmeasured -- and that is one task of six enabled. But do (b) rather than nothing: a control that has retu",
+        "self_produced": true
+      },
+      {
+        "rank": 6,
+        "band": "B3",
+        "id": "charter-cites-nonexistent-escalation-tool",
+        "title": "LIBRARIAN_CHARTER and the roll-up task file both name SendUserMessage as THE escalation path; it does not exist in Cowork and has not for 86 days",
+        "raised": "2026-08-11T00:22:00Z",
+        "age_days": 1,
+        "declared_priority": 2,
+        "subject": "fleet-charter",
+        "producer": "librarian pass 185",
+        "snooze_until": null,
+        "recommended_default": "(a). The report channel demonstrably works and needs no new capability. (b) is only worth it if you want the roll-up able to interrupt you BETWEEN passes rather than at the end of one -- which is a real difference for perishable items (see #185's recovery window), just not one the charter currently ",
+        "self_produced": true
+      },
+      {
+        "rank": 7,
+        "band": "B3",
+        "id": "memory-dir-scratch-bloat",
+        "title": "Approve a one-time sweep of scratch build artifacts in the memory directory.",
+        "raised": "2026-08-11T05:07:00Z",
+        "age_days": 0.8,
+        "declared_priority": "low",
+        "subject": "fleet-memory-store",
+        "producer": "librarian pass 205",
+        "snooze_until": null,
+        "recommended_default": null,
+        "self_produced": true
+      },
+      {
+        "rank": 8,
+        "band": "B3",
+        "id": "memory-dangling-links-class-a",
+        "title": "Approve a mechanical rewrite of 23 dangling links whose target file exists. Register and safety check are complete; execution is one pass.",
+        "raised": "2026-08-11T05:07:00Z",
+        "age_days": 0.8,
+        "declared_priority": "low",
+        "subject": "fleet-memory-store",
+        "producer": "librarian pass 205",
+        "snooze_until": null,
+        "recommended_default": null,
+        "self_produced": true
+      }
+    ]
+  },
+  "deploy": {
+    "ts": "2026-08-12T01:19:09Z",
+    "generated": "2026-08-12T01:18:51Z",
+    "environment": "Production",
+    "latest_production_deployment": {
+      "sha": "bcaccbea9842f96463fd00f2c46f9390a064b6a2",
+      "created_at": "2026-08-10T22:04:19Z",
+      "state": "failure"
+    },
+    "last_successful_production_deployment": {
+      "sha": "d5fcfad9ccd52d1a15659a8c90686c33e2bf9adc",
+      "created_at": "2026-06-17T14:28:49Z",
+      "days_ago": 55.5
+    },
+    "consecutive_failed_deployments_since_success": 94,
+    "origin_main": {
+      "sha": "bcaccbea9842f96463fd00f2c46f9390a064b6a2",
+      "deployed_to_production": false,
+      "undeployed_since": "2026-06-17T14:28:49Z",
+      "commits_not_in_production": 136
+    },
+    "walk": {
+      "deployments_examined": 95,
+      "exhausted_without_success": false
+    }
+  },
+  "contracts": {
+    "ts": "2026-08-12T01:19:09Z",
+    "status": "checker-not-installed"
+  }
+}

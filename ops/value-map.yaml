@@ -1,0 +1,71 @@
+# Value map (M9, prevention architecture 2026-08-09 rev 4).
+#
+# The standing customer-value bar ("would an SMB pay $500/mo for just this?")
+# frozen into a subject registry. This file is the ONE place value judgment
+# lives — made once, in a ratified PR, instead of re-exercised 96 times a day
+# by the party with the conflict of interest. rank-queue.mjs derives band from
+# `subject` (stamped at admission), with the keyword tripwires as fallback for
+# items that predate the door. Declared priority/severity NEVER order anything
+# (the live ledger declares the leaked PAT priority 6 of 8 — a field that
+# unreliable is evidence for this design, not input to it).
+#
+# Band beats everything; within a band, oldest `raised` first; an item that
+# cannot prove its age (no parseable raised) sorts after every dated item.
+# B0-B2 form the business lane; B3 is a separate, always-rendered fleet lane —
+# floored, not starved. No match -> B-UNKNOWN at the head of the fleet lane.
+#
+# Keyword tripwires are deliberately narrow (M7-style): a tripwire for the
+# pattern that burned us, not NLP.
+
+meta:
+  verified: 2026-08-11
+  expires: 2027-02-07 # 180-day default for value definitions
+
+bands:
+  - id: B0
+    name: exposure
+    description: Leaked credentials, exposed customer data, active legal exposure.
+    subjects:
+      - credential-exposure
+      - customer-data-exposure
+      - legal-exposure
+    keywords: '\b(pat|token|secret|credential|leaked?|revoke|exposed?|exposure)\b'
+
+  - id: B1
+    name: customer-revenue
+    description: >-
+      The production deploy path, customer-facing domains, billing/Stripe, the
+      design-partner pipeline, legal-entity blockers to contracting — anything
+      that blocks a customer from seeing, using, or paying for the product.
+    subjects:
+      - production-deploy-pipeline
+      - customer-email-compliance
+      - customer-email-program
+      - design-partner-pipeline
+      - legal-entity
+      - billing
+    keywords: '\b(production|prod|deploy(ed|ment|s)?|vercel|billing|stripe|design[- ]partners?|legal entity|customer|CAN-SPAM|postal|weekly-report|proof-digest)\b'
+
+  - id: B2
+    name: delivery
+    description: >-
+      Finished-but-unlanded work (green PRs, unpushed main). M5's landing
+      alarm owns these conditions; B2 is where their queue items rank.
+    subjects:
+      - delivery-backlog
+    keywords: '\b(green PRs?|unmerged|unpushed|merge wave|land the)\b'
+
+  - id: B3
+    name: fleet-hygiene
+    description: >-
+      The fleet's own machinery — memory store, Librarian cadence, scheduler
+      tasks, budgets, WORKING_STATE. Never competes with the business lane for
+      slots; never starved below its own 14-day SLA.
+    subjects:
+      - fleet-memory-store
+      - fleet-scheduler
+      - fleet-librarian
+      - fleet-budget
+      - fleet-charter
+      - fleet-loop
+    keywords: '\b(librarian|memory|scheduler|scheduled|charter|budget|WORKING_STATE|watchdog|cadence|l3|loop|heartbeat|snapshot|retention|INBOX|roll-?up)\b'

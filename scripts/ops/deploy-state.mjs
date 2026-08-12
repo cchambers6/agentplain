@@ -221,7 +221,7 @@ async function main() {
     } else {
       token = readToken();
       report = await buildReport({ token, now });
-      const open = await fetchOpenIssues({ token, labels: "deploy-dead" });
+      const open = await fetchOpenIssues({ token });
       openErrorIssue = findBySlug(open, "deploy:error");
       openStaleIssue = findBySlug(open, "deploy:stale");
     }

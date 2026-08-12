@@ -73,6 +73,27 @@ npm run check:connector-dispatch || {
   exit 1
 }
 
+# --- Layer 1.7: claim-vs-code checks (fast, in-process) ---
+# Three separate findings across the 2026-08-10 and 2026-08-11 audits were the
+# same drift: a customer surface claims something the code cannot do. A fleet
+# card renders "Watching — ready when triggered" for a skill nothing can
+# trigger; a connector tile sells an action the connect flow never requests a
+# scope for; the signup gate and the readiness resolver disagree about who can
+# be charged. All three are silent at runtime — no error, no log, just a
+# surface that lies.
+#
+# Deliberately NOT the full suite. `npm run test:gate` (5,900+ tests, ~7 min)
+# is enforced in CI (.github/workflows/tests.yml) because adding it on top of
+# the build gate below would push people toward HUSKY=0 — which turns off
+# EVERY layer in this file. This is the sub-second slice worth paying for
+# locally; CI is the enforcement point.
+npm run check:claims || {
+  echo "❌ Push blocked: a customer surface claims something the code cannot do."
+  echo "   See lib/claims/capability-claims.ts for what each check asserts."
+  echo "   Accepting a violation on purpose needs a dated entry in lib/claims/known-drift.ts."
+  exit 1
+}
+
 # --- Layer 2: build gate ---
 echo ""
 echo "▶ Running build gate (npm run build:no-migrate) — catches TS errors + broken pages before push."

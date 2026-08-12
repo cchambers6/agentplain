@@ -18,6 +18,7 @@ import {
   disclosedStoredModels,
 } from '../data-categories';
 import { PURGEABLE_CATEGORIES } from '../category-purge';
+import { STORAGE_SUMMARY_COUNTED_MODELS } from '../workspace-storage-summary';
 
 /**
  * Models that carry a workspaceId but are intentionally NOT customer-facing
@@ -56,6 +57,24 @@ describe('data-category taxonomy invariants', () => {
         `nor on the documented exclusion list: ${undisclosed.join(', ')}. ` +
         `Add each to a data category (and count it in workspace-storage-summary) ` +
         `or to EXCLUDED_FROM_SURFACE with a reason.`,
+    );
+  });
+
+  it('counts every disclosed model (no silent zeroes on the storage page)', () => {
+    // The storage page reads `counts[table] ?? 0`. A table that is disclosed
+    // but never counted renders "0 rows" whether or not rows exist — the
+    // surface then looks complete while under-reporting. Disclosing a model
+    // and counting it are two halves of the same commitment.
+    const counted = new Set<string>(STORAGE_SUMMARY_COUNTED_MODELS);
+    const uncounted = [...disclosedStoredModels()].filter((m) => !counted.has(m));
+    assert.deepEqual(
+      uncounted,
+      [],
+      `These models are disclosed in DATA_CATEGORIES but the live summary never ` +
+        `counts them, so the storage page shows 0 rows for them regardless of ` +
+        `reality: ${uncounted.join(', ')}. Add a count in ` +
+        `buildWorkspaceStorageSummary and list the model in ` +
+        `STORAGE_SUMMARY_COUNTED_MODELS.`,
     );
   });
 

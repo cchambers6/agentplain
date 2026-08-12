@@ -15,6 +15,7 @@ import { getVerticalContent } from "@/lib/verticals";
 import {
   isVerticalSupportedSafe,
   resolveVerticalReadiness,
+  SIGNUP_ON_RAMP_ALLOWLIST,
 } from "@/lib/verticals/readiness";
 import { submitLeadCapture } from "@/lib/leads";
 import { createTrialCheckoutForSignup } from "@/lib/billing/checkout";
@@ -91,7 +92,11 @@ export async function signUpAction(
   // other eight verticals route here until their killer-workflow caller
   // lands. `general` is not in the readiness map but is always serveable
   // (the horizontal fleet fires for it), so we let it through explicitly.
-  const isOnRampGeneral = verticalSlug === "general";
+  // The on-ramp hatch lives in lib/verticals/readiness.ts, not here. Inline,
+  // the gate and the resolver could hold different opinions with nothing to
+  // catch the drift; `checkVerticalReachability` now asserts the hatch never
+  // names one of the locked ten.
+  const isOnRampGeneral = SIGNUP_ON_RAMP_ALLOWLIST.includes(verticalSlug);
   if (
     !isOnRampGeneral &&
     !isVerticalSupportedSafe(verticalSlug, (err) =>

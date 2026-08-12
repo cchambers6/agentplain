@@ -1,0 +1,60 @@
+# Unit-test gate — the primary enforcement point for `npm test`.
+#
+# WHY THIS WORKFLOW EXISTS: until 2026-08-11 NOTHING in this repo ran the unit
+# suite. Not the husky pre-push hook (which runs lint, brand-gate, voice-gate,
+# connector-dispatch, the full Next build, and schema-drift — but never the
+# tests), and not any GitHub Action. 5,927 tests sat idle. The suite was never
+# failing; it was never being asked.
+#
+# It is wired here rather than only in pre-push for two reasons the repo has
+# already learned the hard way:
+#   • Pre-push is bypassable — `HUSKY=0`, `--no-verify`, and fleet REST pushes
+#     all skip it, which is exactly how 27 placeholder SVGs reached production
+#     (see .github/workflows/brand-gate.yml). CI is the unskippable boundary.
+#   • The pre-push hook already runs a full Next build. Adding a 7-minute suite
+#     on top would push developers toward HUSKY=0, which disables EVERY gate.
+#     Pre-push instead runs only the fast claim-vs-code checks (`npm run
+#     check:claims`, sub-second); the full suite lives here.
+#
+# BASELINE (measured 2026-08-11 on bcaccbe, `npm test`):
+#   5,927 tests · 5,867 pass · 39 fail · 21 skipped · 1,271 suites · 423s
+# Of the 39: one was a real storage-disclosure gap and was fixed. The other 38
+# are quarantined in tests/quarantine.json, each with a class, a reason, and a
+# shared 2026-11-09 expiry. The gate therefore lands GREEN and any failure it
+# reports is a NEW break — which is the only way a gate gets read.
+#
+# Run locally:
+#   npm run test:gate         # what CI runs
+#   npm run test:gate:all     # ignore the quarantine, see the real surface
+#   npm run test:quarantine   # print the quarantine table and exit
+
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test-gate:
+    runs-on: ubuntu-latest
+    # The 2026-08-11 baseline ran in 423s. 20 minutes leaves room for a slower
+    # runner without letting a hung test burn an hour.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - name: Install dependencies
+        # `prisma generate` runs via postinstall — several suites import the
+        # generated client's types, so it is not skippable here.
+        run: npm ci
+      - name: Test gate (quarantine applied — see tests/quarantine.json)
+        env:
+          # The suite is import-heavy (1,271 suites in one process). The
+          # default heap is enough on CI today; the explicit ceiling keeps a
+          # future growth spurt from failing as a mystery OOM.
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: npm run test:gate

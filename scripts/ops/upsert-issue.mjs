@@ -115,18 +115,31 @@ export async function executeActions(actions, { token, dryRun = false }) {
       stateTouched = true;
       process.stdout.write(`created issue #${created.number}: ${a.title}\n`);
     } else if (a.type === "comment") {
-      await ghApi(`/repos/${REPO}/issues/${a.number}/comments`, {
-        method: "POST",
-        token,
-        body: { body: a.body },
-      });
-      process.stdout.write(`commented on issue #${a.number}\n`);
+      // Best-effort: the fleet App token 403s on comment writes (measured
+      // 2026-08-11) while issue create/close work. A failed bump is logged,
+      // never fatal — the issue itself is the alarm.
+      try {
+        await ghApi(`/repos/${REPO}/issues/${a.number}/comments`, {
+          method: "POST",
+          token,
+          body: { body: a.body },
+        });
+        process.stdout.write(`commented on issue #${a.number}\n`);
+      } catch (e) {
+        process.stderr.write(`WARN comment on #${a.number} failed: ${e.message}\n`);
+      }
     } else if (a.type === "close") {
-      await ghApi(`/repos/${REPO}/issues/${a.number}/comments`, {
-        method: "POST",
-        token,
-        body: { body: a.body },
-      });
+      // The close must never be blocked by a failed comment: append the
+      // recovery note into the title-less comment when we can, close always.
+      try {
+        await ghApi(`/repos/${REPO}/issues/${a.number}/comments`, {
+          method: "POST",
+          token,
+          body: { body: a.body },
+        });
+      } catch (e) {
+        process.stderr.write(`WARN close-comment on #${a.number} failed: ${e.message}\n`);
+      }
       await ghApi(`/repos/${REPO}/issues/${a.number}`, {
         method: "PATCH",
         token,

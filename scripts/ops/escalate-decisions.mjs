@@ -192,10 +192,7 @@ async function main() {
   } else {
     token = readToken();
     payload = await fetchPayload({ token });
-    openIssues = await fetchOpenIssues({ token, labels: "decision-overdue" });
-    const opsIssues = await fetchOpenIssues({ token, labels: "fleet-ops" });
-    const seen = new Set(openIssues.map((i) => i.number));
-    for (const i of opsIssues) if (!seen.has(i.number)) openIssues.push(i);
+    openIssues = await fetchOpenIssues({ token });
   }
 
   const result = evaluateReader({ payload, openIssues, now });

@@ -1,0 +1,48 @@
+# fleet-liveness — M1's off-host reader (prevention architecture, EU-5).
+#
+# Reads the head-commit timestamp of the ops/heartbeat branch. Older than 2 h
+# (or branch absent) -> the run goes RED and upserts one `fleet-down` issue.
+# Recovery auto-closes it with the measured outage duration. This runs on
+# GitHub's infrastructure so no process, file, or scheduler on the desktop is
+# in its dependency chain — the exact inversion of scheduler-liveness-watchdog,
+# which died with the thing it watched.
+#
+# Deliberate-failure test: dispatch with simulate_stale=true. That MUST
+# produce a red run and a [DRILL]-prefixed fleet-down issue; anything else
+# means the alarm is broken.
+
+name: fleet-liveness
+
+on:
+  schedule:
+    - cron: "7 * * * *" # hourly; GHA cron is best-effort, 2 h threshold absorbs delay
+  workflow_dispatch:
+    inputs:
+      simulate_stale:
+        description: "Drill: evaluate the heartbeat as if it were epoch 0 (must go red)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: fleet-liveness
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # No npm ci: the checker and its helpers are dependency-free by design.
+      - name: Check heartbeat staleness
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node scripts/ops/fleet-liveness-check.mjs ${{ inputs.simulate_stale == true && '--simulate-stale' || '' }}

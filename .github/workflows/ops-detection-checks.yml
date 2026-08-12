@@ -1,0 +1,40 @@
+# CI for the ops detection layer (prevention architecture Wave 1).
+#
+# Runs the deliberate-failure tests for every detection script on any PR that
+# touches them. These tests are the proof that the alarms fire — an unfired
+# alarm and a broken alarm are indistinguishable, so a PR that breaks a test
+# here is a PR that ships a dead alarm.
+#
+# Deliberately a separate file from test.yml (owned by the npm-test gate work).
+
+name: ops-detection-checks
+
+on:
+  pull_request:
+    paths:
+      - "scripts/ops/**"
+      - "ops/**"
+      - ".github/workflows/fleet-liveness.yml"
+      - ".github/workflows/decision-escalation.yml"
+      - ".github/workflows/deploy-state.yml"
+      - ".github/workflows/ops-detection-checks.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci
+      - name: Run ops detection tests
+        # Unquoted so bash expands the glob to explicit files (node's --test
+        # glob support varies by version).
+        run: node --test scripts/ops/*.test.mjs

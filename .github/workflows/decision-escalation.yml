@@ -1,0 +1,45 @@
+# decision-escalation — M2's reader (prevention architecture, EU-6/EU-15).
+#
+# Detection without a reader is theatre: conner-queue.yaml held items pending
+# for two months with the escalation machinery working and nobody reading it.
+# This reader runs on GitHub's infrastructure, consumes M9's RANKED mirror
+# from the ops/heartbeat branch (it never sees ledger order), and opens one
+# band-labeled issue per item past its band SLA:
+#
+#   B0 exposure: first sight  ·  B1 customer/revenue: 48 h
+#   B2 delivery: 7 d          ·  B3 fleet hygiene: 14 d
+#
+# Consumption receipt is structural: the item's status changes in the queue,
+# the next mirror reflects it, the issue closes. Snooze is a first-class
+# answer. Total accounting enforced: ranked count must equal pending count or
+# the run goes red with `ranking-incomplete`.
+
+name: decision-escalation
+
+on:
+  schedule:
+    - cron: "41 13 * * *" # daily
+  workflow_dispatch: {}
+
+concurrency:
+  group: decision-escalation
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # No npm ci: the reader and its helpers are dependency-free by design.
+      - name: Escalate pending decisions past band SLA
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/ops/escalate-decisions.mjs

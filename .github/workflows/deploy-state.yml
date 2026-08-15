@@ -1,0 +1,45 @@
+# deploy-state — is origin/main actually deployed to production?
+#
+# "Merged" is not "shipped". Production served a 2026-06-17 build for eight
+# weeks while main advanced and every glanced-at surface said green. This
+# workflow makes deploy-state a first-class, off-host fact: it reads Vercel's
+# deployment outcomes from GitHub's Deployments API (no Vercel token needed)
+# and alarms on either of the two signals that would have caught the outage
+# on 2026-07-02 instead of 2026-08-10:
+#
+#   - the latest production deployment is in state failure/error
+#   - no successful production deployment in > 7 days
+#
+# Red run + one `deploy-dead` issue per condition; auto-close on recovery.
+# The same report rides the heartbeat payload for always-available reading.
+
+name: deploy-state
+
+on:
+  schedule:
+    - cron: "23 6,18 * * *" # twice daily
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-state
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+  deployments: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # No npm ci: the checker and its helpers are dependency-free by design.
+      - name: Evaluate production deploy state
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/ops/deploy-state.mjs check

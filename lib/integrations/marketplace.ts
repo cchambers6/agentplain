@@ -155,8 +155,13 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     id: 'gmail',
     name: 'Gmail',
     category: 'Email',
+    // "schedule" removed 2026-08-11: the Gmail connect flow requests no
+    // calendar scope (GOOGLE_DEFAULT_SCOPES in lib/integrations/google/oauth.ts),
+    // so every scheduling call through this connector fails at Google with a
+    // 403 the customer never sees. The claim comes back the day a calendar
+    // scope ships — `checkConnectorActionScopes` enforces the pairing now.
     description:
-      'Your service partner connects your Gmail to read, categorize, coordinate, schedule, and draft replies.',
+      'Your service partner connects your Gmail to read, categorize, coordinate, and draft replies.',
     mcpEndpointTemplate: '/api/integrations/gmail-mcp/{workspaceId}',
     scopes: ['gmail.readonly', 'gmail.modify', 'gmail.compose'],
     oauthConfigKey: 'GMAIL_OAUTH',
@@ -172,8 +177,11 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     id: 'outlook',
     name: 'Outlook',
     category: 'Email',
+    // "schedule" removed 2026-08-11: no Calendars.* scope is requested (see
+    // `scopes` below), so scheduling through this connector fails at Graph.
+    // Same rule as Gmail — the claim returns with the scope.
     description:
-      'Your service partner connects your Outlook mailbox to read, categorize, coordinate, schedule, and draft replies.',
+      'Your service partner connects your Outlook mailbox to read, categorize, coordinate, and draft replies.',
     mcpEndpointTemplate: '/api/integrations/outlook-mcp/{workspaceId}',
     // Microsoft Graph permission names. `Mail.ReadWrite` is the minimum
     // for creating drafts via POST /me/messages; we deliberately do NOT

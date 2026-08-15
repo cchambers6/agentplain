@@ -104,10 +104,40 @@ export const DATA_CATEGORIES: readonly DataCategory[] = [
       'CounselRedline',
       'RetryableAction',
       'AuditLog',
+      // Access log for the memory tier — who read or wrote a memory entry /
+      // cold object, why, and from where. Disclosed here (not under
+      // "what Plaino has learned") because it is the audit trail ABOUT that
+      // memory, the same kind of record as AuditLog.
+      'MemoryAuditLog',
+      // The time-savings guarantee ledger: one row per credited action with
+      // the minutes snapshotted at write time. Derived from work already
+      // done, so it lives with the work record.
+      'TimeSavingsEntry',
     ],
     customerDeletable: true,
     detail:
-      'Each item Plaino drafts, the decision you made on it, and what you edited — kept so Plaino learns what you like and how you change things. Plus the handoff/skill-run record of work done and the audit trail of what happened in your workspace. The drafts reference your data but are Plaino\'s own output, not bulk copies of your tools. Kept for the account lifetime, exportable, hard-deleted on close.',
+      'Each item Plaino drafts, the decision you made on it, and what you edited — kept so Plaino learns what you like and how you change things. Plus the handoff/skill-run record of work done, the time-savings ledger behind your guarantee, and the audit trail of what happened in your workspace (including every read or write against what Plaino remembers). The drafts reference your data but are Plaino\'s own output, not bulk copies of your tools. Kept for the account lifetime, exportable, hard-deleted on close.',
+  },
+  {
+    id: 'client-portal',
+    label: 'Your client portal',
+    classification: 'partner-memory',
+    summary:
+      'If you turn on a client portal, the clients, cases, messages, and files you put in it are stored here.',
+    tables: [
+      'PortalConfig',
+      'PortalClient',
+      'PortalCase',
+      'PortalCaseEvent',
+      'PortalInvite',
+      'PortalSession',
+      'PortalThread',
+      'PortalMessage',
+      'PortalDocument',
+    ],
+    customerDeletable: true,
+    detail:
+      "The client portal is off until you turn it on. Once it is on, this is the one place agentplain holds data about YOUR clients rather than about you: the portal's branding, the client records and cases you create, the invites and sign-in sessions those clients use, the messages exchanged in portal threads, and the documents uploaded to them. It is stored — not passed through — because the portal IS the system of record for it. Kept for the account lifetime, exportable, hard-deleted on close, and clearable any time by turning the portal off and deleting its contents.",
   },
   {
     id: 'knowledge',
@@ -147,10 +177,15 @@ export const DATA_CATEGORIES: readonly DataCategory[] = [
       'WebhookSubscription',
       'WebhookEvent',
       'IntegrationHealthCheck',
+      // Bring-your-own cold storage: the endpoint/bucket/region you pointed
+      // us at plus the AES-256-GCM envelopes of its access keys. Same class
+      // of record as IntegrationCredential — a connection secret, never the
+      // data behind it.
+      'WorkspaceStorageConfig',
     ],
     customerDeletable: false,
     detail:
-      'Workspace metadata (name, slug, vertical, tier), the team members we route work to, and the OAuth/API credentials for the systems you connected. Tokens are encrypted at rest (AES-256-GCM) and are the ONLY connector secret we keep — we never store the data those tokens reach. Removed when you disconnect a connector or close the account.',
+      'Workspace metadata (name, slug, vertical, tier), the team members we route work to, the OAuth/API credentials for the systems you connected, and — if you bring your own object storage — that bucket\'s endpoint and encrypted access keys. Tokens and storage keys are encrypted at rest (AES-256-GCM) and are the ONLY connector secrets we keep — we never store the data those credentials reach. Removed when you disconnect a connector or close the account.',
   },
   {
     id: 'billing',

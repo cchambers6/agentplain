@@ -55,6 +55,89 @@ export interface WorkspaceStorageSummary {
   ephemeralFetchCount: number;
 }
 
+/**
+ * Every Prisma model the live summary resolves a REAL count for.
+ *
+ * Why this exists: the per-category renderer below reads `counts[table] ?? 0`.
+ * A model disclosed in `DATA_CATEGORIES` but never counted therefore renders
+ * as "0 rows" on the customer's storage page whether or not rows exist — the
+ * page looks complete while silently under-reporting. That is a disclosure
+ * gap, not a display bug.
+ *
+ * `composeStorageCounts` below is typed against this list, so the object
+ * literal inside `buildWorkspaceStorageSummary` cannot add a key that is not
+ * declared here, nor omit one that is — TypeScript keeps the two in lock-step
+ * at compile time. `data-categories.test.ts` closes the other half: every
+ * disclosed table must appear in this list.
+ */
+export const STORAGE_SUMMARY_COUNTED_MODELS = [
+  'Workspace',
+  'Membership',
+  'Team',
+  'TeamMembership',
+  'OnboardingState',
+  'IntegrationCredential',
+  'WebhookSubscription',
+  'WebhookEvent',
+  'IntegrationHealthCheck',
+  'WorkspaceStorageConfig',
+  'Subscription',
+  'WorkspaceInvoice',
+  'BillingEvent',
+  'LlmUsageRecord',
+  'WorkApprovalQueueItem',
+  'HandoffLogEntry',
+  'SkillRun',
+  'ComplianceFlag',
+  'CounselRedline',
+  'RetryableAction',
+  'AuditLog',
+  'MemoryAuditLog',
+  'TimeSavingsEntry',
+  'ChatThread',
+  'ChatMessage',
+  'PlainoConversation',
+  'WorkspacePreference',
+  'PreferenceSignal',
+  'PreferenceFeedback',
+  'WorkspaceMemoryEntry',
+  'SkillConfig',
+  'WorkspaceSkillInstallation',
+  'WorkThresholdConfig',
+  'WorkspacePauseConfig',
+  'SkillScheduleWindow',
+  'DisciplineHead',
+  'WorkspaceBriefing',
+  'WorkspaceLifecycleEvent',
+  'SupportRequest',
+  'SupportTicket',
+  'SupportTicketMessage',
+  'KnowledgeDocument',
+  'Embedding',
+  'PortalConfig',
+  'PortalClient',
+  'PortalCase',
+  'PortalCaseEvent',
+  'PortalInvite',
+  'PortalSession',
+  'PortalThread',
+  'PortalMessage',
+  'PortalDocument',
+] as const;
+
+export type StorageCountedModel = (typeof STORAGE_SUMMARY_COUNTED_MODELS)[number];
+
+/**
+ * Identity at runtime; a type-level contract at compile time. The parameter
+ * type forces the caller's object literal to name EXACTLY the models declared
+ * in `STORAGE_SUMMARY_COUNTED_MODELS` — no more, no fewer.
+ */
+function composeStorageCounts(
+  raw: Record<StorageCountedModel, number>,
+): Record<string, number> {
+  return raw;
+}
+
 export interface BuildStorageSummaryArgs {
   ctx: RlsContext;
   workspaceId: string;
@@ -115,6 +198,18 @@ export async function buildWorkspaceStorageSummary(
         knowledgeDocument,
         embedding,
         retryableAction,
+        memoryAuditLog,
+        timeSavingsEntry,
+        storageConfig,
+        portalConfig,
+        portalClient,
+        portalCase,
+        portalCaseEvent,
+        portalInvite,
+        portalSession,
+        portalThread,
+        portalMessage,
+        portalDocument,
         ephemeralFetchCount,
       ] = await Promise.all([
         tx.membership.count({ where: { workspaceId: wid } }),
@@ -163,12 +258,30 @@ export async function buildWorkspaceStorageSummary(
         }),
         tx.embedding.count({ where: { workspaceId: wid, contextKind: 'CUSTOMER' } }),
         tx.retryableAction.count({ where: { workspaceId: wid } }),
+        tx.memoryAuditLog.count({ where: { workspaceId: wid } }),
+        tx.timeSavingsEntry.count({ where: { workspaceId: wid } }),
+        tx.workspaceStorageConfig.count({ where: { workspaceId: wid } }),
+        tx.portalConfig.count({ where: { workspaceId: wid } }),
+        // The portal tree hangs off PortalConfig, not off Workspace — every
+        // child is reached through the config's workspaceId so the count is
+        // still workspace-scoped. Disclosed because this is the one place we
+        // hold data about the customer's OWN clients (end-client PII).
+        tx.portalClient.count({ where: { portalConfig: { workspaceId: wid } } }),
+        tx.portalCase.count({ where: { portalConfig: { workspaceId: wid } } }),
+        tx.portalCaseEvent.count({
+          where: { case: { portalConfig: { workspaceId: wid } } },
+        }),
+        tx.portalInvite.count({ where: { portalConfig: { workspaceId: wid } } }),
+        tx.portalSession.count({ where: { portalConfig: { workspaceId: wid } } }),
+        tx.portalThread.count({ where: { portalConfig: { workspaceId: wid } } }),
+        tx.portalMessage.count({ where: { portalConfig: { workspaceId: wid } } }),
+        tx.portalDocument.count({ where: { portalConfig: { workspaceId: wid } } }),
         tx.auditLog.count({
           where: { workspaceId: wid, action: STORAGE_EPHEMERAL_FETCH_ACTION },
         }),
       ]);
 
-      const counts: Record<string, number> = {
+      const counts: Record<string, number> = composeStorageCounts({
         Workspace: 1,
         Membership: membership,
         Team: team,
@@ -209,7 +322,19 @@ export async function buildWorkspaceStorageSummary(
         SupportTicketMessage: supportTicketMessage,
         KnowledgeDocument: knowledgeDocument,
         Embedding: embedding,
-      };
+        MemoryAuditLog: memoryAuditLog,
+        TimeSavingsEntry: timeSavingsEntry,
+        WorkspaceStorageConfig: storageConfig,
+        PortalConfig: portalConfig,
+        PortalClient: portalClient,
+        PortalCase: portalCase,
+        PortalCaseEvent: portalCaseEvent,
+        PortalInvite: portalInvite,
+        PortalSession: portalSession,
+        PortalThread: portalThread,
+        PortalMessage: portalMessage,
+        PortalDocument: portalDocument,
+      });
 
       const categories: CategoryStorageSummary[] = DATA_CATEGORIES.map(
         (c: DataCategory) => {

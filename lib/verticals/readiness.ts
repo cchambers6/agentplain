@@ -117,6 +117,28 @@ export const SKILLS_WITH_PRODUCTION_CALLER: ReadonlySet<string> = new Set([
   'law-intake-conflict-screen',
 ]);
 
+/**
+ * Slugs the signup gate lets through to PAID signup WITHOUT a readiness
+ * verdict — the escape hatch, and the only one there is.
+ *
+ * `general` is the `/general` on-ramp surface: it has no vertical-specific
+ * killer workflow (so the resolver correctly answers
+ * `no-killer-workflow-defined`), but it is served by the HORIZONTAL fleet —
+ * inbox triage, follow-up chasing, invoice chase — all of which are
+ * catalog-live with declared callers. Charging for it is honest.
+ *
+ * This lived as an inline `verticalSlug === "general"` comparison inside the
+ * signup action, which meant the resolver and the gate could disagree with
+ * nothing to catch it. Exporting it here makes the readiness module the one
+ * place that knows which slugs can take money, and
+ * `lib/claims/capability-claims.ts → checkVerticalReachability` asserts the
+ * hatch never names one of the locked ten.
+ *
+ * ONLY on-ramp surfaces belong here. Adding one of the ten verticals to this
+ * list routes a paying customer past the gate that exists to protect them.
+ */
+export const SIGNUP_ON_RAMP_ALLOWLIST: readonly string[] = ['general'];
+
 export type VerticalReadinessReason =
   | 'supported'
   | 'no-killer-workflow-defined'

@@ -5,6 +5,7 @@ import {
   killerWorkflowStoryFor,
   VERTICALS_WITH_STORY,
 } from "@/lib/workflows/verticals";
+import { isVerticalOnSale } from "@/lib/verticals/launch";
 import KillerWorkflowPlayer from "./KillerWorkflowPlayer";
 
 // The named killer workflow, demoed live on the vertical landing page.
@@ -19,10 +20,23 @@ import KillerWorkflowPlayer from "./KillerWorkflowPlayer";
 // the product's own story + player, the marketing demo cannot overclaim: what
 // the visitor watches here is what the trial shows on day one.
 //
-// Renders only for verticals with a bespoke authored story (the four live
-// verticals). On-ramp and roadmap verticals return null rather than playing
-// the general fallback story under a vertical-specific headline.
+// Renders only for verticals with a bespoke authored story. On-ramp and
+// roadmap verticals return null rather than playing the general fallback
+// story under a vertical-specific headline.
+//
+// LAUNCH-WINDOW GATE (added with lib/verticals/launch.ts). The intro below
+// says, in the present tense, "this is the run a trial workspace plays on
+// day one." On a vertical outside the launch window there is no trial
+// workspace to play it — the signup gate routes that visitor to the
+// waitlist. Worse, `property-management` has an authored story whose
+// underlying skill (`property-management-rent-collection-chase`) is
+// catalog-live but has NO production caller (tracked in
+// lib/claims/known-drift.ts and tests/quarantine.json), so the section was
+// demonstrating a workflow nothing can trigger. Both are the same defect:
+// a present-tense capability claim the readiness verdict contradicts. The
+// section renders only where the claim actually holds.
 export default function KillerWorkflowShowcase({ slug }: { slug: string }) {
+  if (!isVerticalOnSale(slug)) return null;
   const vertical = verticalEnumFromSlug(slug);
   if (!vertical || !VERTICALS_WITH_STORY.includes(vertical)) return null;
 

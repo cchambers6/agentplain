@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { ApEyebrow, PlainoScene } from "@/components/ui/ap";
 import { getAllVerticals, getVerticalContent } from "@/lib/verticals";
+import {
+  isVerticalOnSale,
+  LAUNCH_VERTICAL_SLUG,
+} from "@/lib/verticals/launch";
 import { TIER_ORDER, type TierName } from "@/lib/pricing/tiers";
 import { PLAINO_PARTNER } from "@/lib/onboarding/service-partner";
 import { env } from "@/lib/env";
@@ -28,13 +32,29 @@ function resolveDefaultTier(raw: string | undefined): TierName {
 export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   const params = await searchParams;
   const raw = (params.vertical ?? "").toLowerCase();
-  const defaultVerticalSlug = getVerticalContent(raw) ? raw : "real-estate";
+  const requested = getVerticalContent(raw);
   const defaultTier = resolveDefaultTier(params.tier);
 
-  const verticals = getAllVerticals().map((v) => ({
-    slug: v.slug,
-    name: v.name,
-  }));
+  // LAUNCH WINDOW. The picker only offers what we actually sell today, so a
+  // visitor is never invited to fill in a form we are going to refuse. The
+  // server action re-checks (lib/verticals/launch.ts) — this is the polite
+  // half, not the enforcing half.
+  const verticals = getAllVerticals()
+    .filter((v) => isVerticalOnSale(v.slug))
+    .map((v) => ({ slug: v.slug, name: v.name }));
+
+  // A deep link to a vertical we are not selling (an old marketing link, a
+  // bookmark, a SERP result) lands straight on the honest waitlist screen
+  // rather than on a signup form. No charge, no workspace, no bait.
+  const heldVertical =
+    requested && !isVerticalOnSale(requested.slug)
+      ? { slug: requested.slug, name: requested.name }
+      : null;
+
+  const defaultVerticalSlug =
+    requested && isVerticalOnSale(requested.slug)
+      ? requested.slug
+      : LAUNCH_VERTICAL_SLUG;
 
   // Trial-honesty: the headline copy must match the ACTUAL configured flow,
   // not a stale promise. A card is only collected at signup when billing is
@@ -72,6 +92,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
             defaultTier={defaultTier}
             trialDays={trialDays}
             cardAtSignup={cardAtSignup}
+            heldVertical={heldVertical}
           />
         </div>
         <p className="mt-10 border-t border-rule pt-6 text-sm text-mute">

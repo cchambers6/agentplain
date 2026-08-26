@@ -172,6 +172,18 @@ export default function HomePage() {
             <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
               Built for ten kinds of local business — pick yours
             </p>
+            {/* LAUNCH WINDOW (lib/verticals/launch.ts): ten pages are
+                published, one vertical is open for signup. The chip row is
+                the first place a visitor self-selects, so it is the first
+                place that has to be honest about it. */}
+            <p className="mt-2 text-[13px] leading-relaxed text-mute">
+              Open for signup today:{" "}
+              <Link href="/law" className="text-ink underline">
+                law firms
+              </Link>
+              . The rest are on the roadmap — read the page, then join the
+              list.
+            </p>
             <div className="mt-4 flex flex-wrap gap-2">
               {verticals.map((v) => (
                 <Link

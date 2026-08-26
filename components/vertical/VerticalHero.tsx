@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { VerticalContent } from "@/lib/verticals/types";
 import { tierLadderBands, type TierName } from "@/lib/pricing/tiers";
 import { tokens } from "@/lib/brand/tokens";
+import { isVerticalOnSale } from "@/lib/verticals/launch";
 import { verticalSceneName } from "@/components/ui/ap";
 import HeroBackdrop from "@/components/marketing/HeroBackdrop";
 
@@ -34,6 +35,15 @@ export default function VerticalHero({
     content.status === "on-ramp"
       ? "/app/sign-up"
       : `/app/sign-up?vertical=${content.slug}`;
+
+  // LAUNCH WINDOW (lib/verticals/launch.ts). A vertical we are not selling
+  // today must not put a "Start free trial" button on its own page — the
+  // signup gate would refuse it, and advertising a trial we will decline is
+  // the exact defect the readiness work exists to prevent. The CTA becomes
+  // the honest waitlist path instead; the link still carries the slug so the
+  // sign-up route lands them straight on the waitlist screen for THIS
+  // vertical, with a real LeadCapture row at the end of it.
+  const onSale = isVerticalOnSale(content.slug);
 
   const sceneName = verticalSceneName(content.slug);
 
@@ -83,9 +93,22 @@ export default function VerticalHero({
           {content.hero.headline}
         </p>
 
+        {onSale ? null : (
+          <p className="mt-8 max-w-3xl border-l-2 border-clay pl-4 text-[15px] leading-relaxed text-ink-soft">
+            <span className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+              Not open yet
+            </span>
+            <br />
+            We open one line of work at a time so every install gets a real
+            service partner. {content.name} isn&apos;t open for signup today —
+            join the list and a person reaches out the moment it is. No card,
+            no commitment.
+          </p>
+        )}
+
         <div className="mt-10 flex flex-wrap items-center gap-4">
           <Link href={signUpHref} className="btn-primary">
-            Start free trial
+            {onSale ? "Start free trial" : "Join the list"}
             <span aria-hidden>→</span>
           </Link>
           <Link href="#pricing" className="btn-secondary">

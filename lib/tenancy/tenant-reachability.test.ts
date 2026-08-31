@@ -57,12 +57,18 @@ const REPO_ROOT = process.cwd();
 const ROOT_MODEL = 'Workspace';
 
 /**
- * Floors recorded 2026-08-30 against origin/main @ 4bc42b5.
+ * Floors re-measured 2026-08-31 against origin/main @ 5c03712.
  * These exist so a broken parser fails loudly instead of passing quietly.
+ *
+ * The floors themselves are unchanged; only the measured values beside them
+ * moved, and the RLS one moved a long way. PR #467 (merged `f6e2b52`) took RLS
+ * coverage from 52 tables to all 64 — every model in prisma/schema.prisma now
+ * carries ENABLE + FORCE + at least one policy, which is why
+ * KNOWN_TENANCY_DRIFT is empty below.
  */
-const MODEL_FLOOR = 60; // 64 measured
-const RLS_TABLE_FLOOR = 48; // 52 measured
-const SOURCE_FILE_FLOOR = 1200; // 1,474 measured
+const MODEL_FLOOR = 60; // 64 measured (unchanged)
+const RLS_TABLE_FLOOR = 48; // 64 measured (was 52 at 4bc42b5, before #467)
+const SOURCE_FILE_FLOOR = 1200; // 1,418 measured (was 1,474 at 4bc42b5)
 
 function loadProduction(): TenancyInput {
   const schema = parseSchema(
@@ -421,14 +427,45 @@ describe('tenant isolation — the parser is not blind', () => {
   });
 
   it('the accepted-debt list is itemized, reasoned and dated — no wildcards', () => {
-    assert.ok(KNOWN_TENANCY_DRIFT.length > 0);
+    // KNOWN_TENANCY_DRIFT is EMPTY as of 2026-08-31 and that is the correct
+    // state: PR #467 (merged `f6e2b52`) closed all ten entries it used to
+    // carry. This assertion previously read `KNOWN_TENANCY_DRIFT.length > 0`,
+    // which now fails.
+    //
+    // It is REPLACED rather than deleted. The `> 0` was load-bearing: a shape
+    // check that loops over an empty array passes without examining anything,
+    // and "found nothing wrong" then becomes indistinguishable from "looked at
+    // nothing" — the exact blind spot this whole file exists to close, and one
+    // this repo has shipped before. So the non-vacuity requirement stays; it
+    // just moves off the drift list, which is legitimately empty, and onto the
+    // things that must never be empty.
+    let examined = 0;
     for (const e of KNOWN_TENANCY_DRIFT) {
+      examined += 1;
       assert.ok(e.subject.length > 0 && !e.subject.includes('*'), `wildcard subject: ${e.subject}`);
       assert.ok(e.reason.length > 40, `reason too thin to be a decision: ${e.subject}`);
       assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(e.expires), `bad expiry on ${e.subject}`);
     }
+    assert.equal(
+      examined,
+      KNOWN_TENANCY_DRIFT.length,
+      'the shape loop did not visit every accepted entry — this check is not seeing what it claims to',
+    );
+
+    // GLOBAL_TABLES must never be empty. Every model with no FK path to
+    // Workspace has to be declared here, and the schema does contain such
+    // models (User, Inquiry, the outreach pair, ...). An empty map would mean
+    // the register had been emptied or the import had broken, and the loop
+    // below would then pass having classified nothing.
+    assert.ok(
+      GLOBAL_TABLES.size > 0,
+      'GLOBAL_TABLES is empty — the classification loop below would pass without examining anything',
+    );
+    let classified = 0;
     for (const [table, reason] of GLOBAL_TABLES) {
+      classified += 1;
       assert.ok(reason.length > 40, `GLOBAL_TABLES["${table}"] needs a real reason, not a label`);
     }
+    assert.equal(classified, GLOBAL_TABLES.size, 'the global-table loop did not visit every declaration');
   });
 });

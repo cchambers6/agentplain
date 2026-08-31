@@ -8,23 +8,26 @@
  * reason, an expiry after which the gate fails on the accepted entry, and a
  * stale-acceptance check so the list cannot rot into fiction.
  *
- * WHY THIS LANDS GREEN OVER TEN OPEN GAPS. The rule that motivated this work
- * is "a standard that catches 1 of 12 is worse than no standard, because it
- * produces a green check over an open gap." That rule is about CONCEALMENT,
- * not about colour. The failure it names is a check that examined one table,
- * found it clean, and reported success while eleven others were never looked
- * at — nobody could tell from the output that anything was missing.
+ * WHY THE DRIFT LIST IS EMPTY. An earlier revision of this file accepted ten
+ * dated gaps and argued at length for landing green over them. That argument
+ * is moot: PR #467 (merged `f6e2b52`) shipped migration
+ * `20260830000000_portal_team_outreach_rls`, which closed all ten. The list is
+ * empty because the debt was paid, not because it was swept away.
  *
- * This file is the opposite of that. It examines all 64 models, names all ten
- * gaps in the source, and puts a date on each. A reader of this file knows
- * exactly what is unprotected. What the green means is narrow and true: "no
- * ELEVENTH gap has appeared." The alternative — landing red — makes the gate
- * fail on every unrelated PR from day one, and a gate that is always red is
- * bypassed within a week, at which point the eleventh gap arrives unseen. That
- * is the failure mode this repo already has evidence for: `HUSKY=0` is how 27
- * placeholder SVGs reached production.
+ * The rule that motivated this work still stands: "a standard that catches 1
+ * of 12 is worse than no standard, because it produces a green check over an
+ * open gap." That rule is about CONCEALMENT, not about colour. The failure it
+ * names is a check that examined one table, found it clean, and reported
+ * success while eleven others were never looked at — nobody could tell from
+ * the output that anything was missing.
  *
- * The debt is not hidden. It is dated, and the date is enforced.
+ * This file is the opposite of that. It examines all 64 models and reports how
+ * many it examined, so "found nothing" and "examined nothing" stay
+ * distinguishable in the output. An empty acceptance list is the strongest
+ * state this file can be in — but only because the coverage count is reported
+ * beside it. An empty list over an unexamined schema would be the same green
+ * over the same open gap; the reporting is the only thing that tells them
+ * apart.
  */
 
 import type { TenancyCheckId, TenancyViolation } from './types';
@@ -40,102 +43,50 @@ export interface KnownTenancyDriftEntry {
 }
 
 /**
- * Accepted, dated tenant-isolation debt as of 2026-08-30, measured against
- * origin/main @ 4bc42b5.
+ * Accepted, dated tenant-isolation debt.
  *
- * These ten are ONE finding, not ten: the client-portal subtree
- * (`PortalConfig -> PortalClient/PortalCase/... `) shipped in migration
- * 20260618000003_client_portal without any of the RLS statements its sibling
- * subtrees got in 20260526000001_force_rls, and `TeamMembership` was added in
- * the Wave-6 RBAC work with the same omission.
+ * EMPTY as of 2026-08-31, re-derived against origin/main @ 5c03712.
  *
- * They are NOT fixed in the PR that introduces this gate, on purpose. The fix
- * is a new migration adding ENABLE/FORCE ROW LEVEL SECURITY plus a policy per
- * table, and each policy has to join back to Workspace through a different FK
- * chain — PortalMessage reaches it in three hops, TeamMembership in two by a
- * different route. That is a schema change requiring a migration review and a
- * shadow-database drift pass, and it lands on a repo whose production
- * migrations have been blocked since 2026-06-17 by P3009. Folding it into the
- * PR that introduces the detector would mean the detector could not merge
- * until the migration block is cleared, and the detector is what stops an
- * eleventh table joining this list in the meantime.
+ * It previously carried ten `tenant-reachable-without-rls` entries — the nine
+ * client-portal tables plus `TeamMembership`. All ten were closed by migration
+ * `20260830000000_portal_team_outreach_rls`, shipped in PR #467 (merged
+ * `f6e2b52`), which is on main and predates this branch.
  *
- * The expiry is aligned with the 2026-11-09 batch already used by
- * `lib/claims/known-drift.ts` and `tests/quarantine.json` so there is one date
- * to defend, not three.
+ * Measured, not assumed. Over all 67 migration SQL files on origin/main, with
+ * `--` comments stripped first (commented-out SQL has been miscounted as
+ * coverage in this repo before):
+ *
+ *   models in prisma/schema.prisma .................. 64
+ *   tables with ENABLE ROW LEVEL SECURITY ........... 64
+ *   tables with FORCE ROW LEVEL SECURITY ............ 64
+ *   tables with at least one CREATE POLICY .......... 64
+ *   models lacking ENABLE + FORCE + a policy ......... 0
+ *
+ *   of the ten formerly-accepted subjects, now protected ... 10 of 10
+ *     PortalConfig, PortalClient, PortalCase, PortalCaseEvent, PortalInvite,
+ *     PortalSession, PortalThread, PortalMessage, PortalDocument,
+ *     TeamMembership — each with ENABLE + FORCE + a *_workspace_isolation
+ *     policy created in 20260830000000_portal_team_outreach_rls.
+ *
+ * Do NOT re-add an entry here to make a red check green. An entry is a dated
+ * promise that a specific table is knowingly unprotected; if the detector
+ * reports a violation, either the table regressed or the detector is wrong,
+ * and both are worth finding out.
+ *
+ * WHAT THIS EMPTINESS DOES NOT MEAN. Every number above is read out of
+ * migration *text*, not out of a live database. A policy dropped by hand in
+ * production, or a migration that never applied, still reads as protected
+ * here. Production migrations have been blocked since 2026-06-17, so the
+ * deployed database is NOT known to match this. Live enforcement is a separate
+ * question, answered by the `rls-live` workflow (PR #472, merged `ea5fbf6`),
+ * which runs the cross-tenant layer against a real Postgres — and which covers
+ * four tables by read, and none by cross-tenant INSERT.
+ *
+ * The expiry convention, should an entry ever be needed again: align with the
+ * 2026-11-09 batch already used by `lib/claims/known-drift.ts` and
+ * `tests/quarantine.json` so there is one date to defend, not three.
  */
-export const KNOWN_TENANCY_DRIFT: readonly KnownTenancyDriftEntry[] = [
-  {
-    check: 'tenant-reachable-without-rls',
-    subject: 'PortalConfig',
-    reason:
-      'Client-portal root. Reaches Workspace directly via workspaceId and has no RLS policy — note that it DOES carry a workspaceId column, which is why the previous column-name-based isolation test read it as protected. Fixed by the client-portal RLS migration, blocked behind the P3009 production migration block.',
-    expires: '2026-11-09',
-  },
-  {
-    check: 'tenant-reachable-without-rls',
-    subject: 'PortalClient',
-    reason:
-      'End-client identities (email, name) for an SMB customer. Reaches Workspace via portalConfigId -> PortalConfig. No workspaceId column, so the previous isolation test never considered it. Same client-portal RLS migration.',
-    expires: '2026-11-09',
-  },
-  {
-    check: 'tenant-reachable-without-rls',
-    subject: 'PortalCase',
-    reason:
-      'End-client matter records. Reaches Workspace via portalConfigId. Same client-portal RLS migration.',
-    expires: '2026-11-09',
-  },
-  {
-    check: 'tenant-reachable-without-rls',
-    subject: 'PortalCaseEvent',
-    reason:
-      'Case timeline entries. Reaches Workspace in three hops via caseId -> PortalCase -> PortalConfig. Same client-portal RLS migration.',
-    expires: '2026-11-09',
-  },
-  {
-    check: 'tenant-reachable-without-rls',
-    subject: 'PortalInvite',
-    reason:
-      'Invite tokens addressed to a named end client. Reaches Workspace via portalConfigId. Same client-portal RLS migration.',
-    expires: '2026-11-09',
-  },
-  {
-    check: 'tenant-reachable-without-rls',
-    subject: 'PortalSession',
-    reason:
-      'Live portal sessions for end clients. Reaches Workspace via portalConfigId. Same client-portal RLS migration.',
-    expires: '2026-11-09',
-  },
-  {
-    check: 'tenant-reachable-without-rls',
-    subject: 'PortalThread',
-    reason:
-      'Gated end-client chat threads. Reaches Workspace via portalConfigId. Same client-portal RLS migration.',
-    expires: '2026-11-09',
-  },
-  {
-    check: 'tenant-reachable-without-rls',
-    subject: 'PortalMessage',
-    reason:
-      'End-client message bodies — the highest-sensitivity table in the portal subtree. Reaches Workspace via threadId -> PortalThread -> PortalConfig. Same client-portal RLS migration.',
-    expires: '2026-11-09',
-  },
-  {
-    check: 'tenant-reachable-without-rls',
-    subject: 'PortalDocument',
-    reason:
-      'End-client document metadata and blob pointers. Reaches Workspace via portalConfigId. Same client-portal RLS migration.',
-    expires: '2026-11-09',
-  },
-  {
-    check: 'tenant-reachable-without-rls',
-    subject: 'TeamMembership',
-    reason:
-      'Wave-6 RBAC join table. Reaches Workspace via teamId -> Team and via membershipId -> Membership; both parents are RLS-protected and this row is not, so team composition is readable across workspaces. Separate one-line migration from the portal batch, same review.',
-    expires: '2026-11-09',
-  },
-];
+export const KNOWN_TENANCY_DRIFT: readonly KnownTenancyDriftEntry[] = [];
 
 /**
  * Tables that hold no customer-tenant data.
@@ -181,22 +132,30 @@ export const GLOBAL_TABLES: ReadonlyMap<string, string> = new Map([
   ],
   [
     'OutreachProspect',
-    "agentplain's own sales CRM — businesses WE are prospecting, not any customer's clients. No tenant to isolate by. NOTE, and this is not a suppression: together with OutreachTouch it is the only table in the schema holding personal data (name, business, email) with neither a tenant boundary NOR an RLS policy. The sole control is the operator-only route guard on its surfaces. That is a real finding about a single access-control layer, tracked as its own item — it is recorded here rather than in the drift list because it is genuinely global, so no amount of tenant scoping would address it.",
+    "agentplain's own sales CRM — businesses WE are prospecting, not any customer's clients. No tenant to isolate by, which is why it belongs here rather than in the drift list: no amount of tenant scoping would address it. CORRECTED 2026-08-31: this note used to say it had 'neither a tenant boundary NOR an RLS policy' and that 'the sole control is the operator-only route guard'. Both halves are now out of date. Migration 20260830000000_portal_team_outreach_rls (PR #467, merged f6e2b52) gave it ENABLE + FORCE ROW LEVEL SECURITY and the policy outreach_prospect_operator_all — verified against origin/main. It still holds personal data (name, business, email) and still has no tenant boundary, but there are now two controls, not one: the operator-only route guard on its surfaces AND a database policy. The residual risk is narrower and worth stating exactly — an operator-only policy is satisfied by anything running under withSystemContext(), so the policy constrains ordinary tenant traffic and does not constrain the bypass surface counted by SYSTEM_CONTEXT_BUDGET.",
   ],
   [
     'OutreachTouch',
-    "Contact events against an OutreachProspect. Same class, same single-control caveat as OutreachProspect: agentplain's own data, no tenant boundary, no RLS.",
+    "Contact events against an OutreachProspect. Same class as OutreachProspect: agentplain's own data, no tenant boundary. CORRECTED 2026-08-31: the old 'no RLS' and 'single-control' wording was wrong for this table too, not just for its parent — the same migration 20260830000000_portal_team_outreach_rls (PR #467) gave it ENABLE + FORCE ROW LEVEL SECURITY and the policy outreach_touch_operator_all. #467 covered BOTH outreach tables; this branch was the last place still describing the pre-#467 world. Same residual as OutreachProspect: an operator-only predicate is satisfied by withSystemContext(), so it bounds tenant traffic and not the bypass surface.",
   ],
 ]);
 
 /**
  * Ceiling on `withSystemContext()` call sites in the declared source roots.
  *
- * Measured 2026-08-30 against a pristine `git archive origin/main` export at
- * 4bc42b5: 365 call sites across 170 files of 1,467 scanned. The same scan of
- * the working checkout returns 365/170/1,470 — the three-file difference is
- * untracked local files, and the call-site count is identical, which is the
- * property a budget needs. Every one of those call sites runs its queries with
+ * RE-MEASURED 2026-08-31 against `origin/main` @ 5c03712, reproducing
+ * `scanSystemContext`'s own rules (roots app/lib/components/scripts; excluding
+ * `lib/db/rls.ts`, `lib/tenancy/`, `*.test.ts(x)` and `__tests__/`; comments
+ * stripped): **365 call sites across 170 files of 1,418 scanned.** The same
+ * scan of this branch returns an identical 365/170/1,418, so the six merges
+ * since the original measurement added no bypass sites and the budget is met
+ * exactly — which passes, since the gate fails only on EXCEEDING it.
+ *
+ * The previously recorded figure was "365 across 170 of 1,467 scanned" at
+ * 4bc42b5. The call-site count — the number the budget is actually about — is
+ * unchanged; only the denominator moved, and it moved DOWN, so the floor
+ * (SOURCE_FILE_FLOOR) is still cleared with room. Every one of those call
+ * sites runs its queries with
  * `app.is_operator = 'true'` and `app.workspace_id = ''`, which disables the
  * tenant predicate on every policy written as "operator sees all." RLS on a
  * table is only worth what the call sites that read it do NOT bypass, so the

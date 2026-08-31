@@ -148,14 +148,23 @@ export function isRendererFallbackBlock(block: string): boolean {
 // interpolates the app name ("… will run this in Follow Up Boss …") and a
 // literal set would silently stop matching the day a new connector lands.
 //
-// TWO THINGS KEEP THAT SHAPE FROM EATING THE CUSTOMER'S OWN WORDS, and both
-// are load-bearing:
+// THREE THINGS KEEP THAT SHAPE FROM EATING THE CUSTOMER'S OWN WORDS, and all
+// three are load-bearing:
 //
-//  1. It is gated to CLOSED_LOOP_KINDS. Those five are the ONLY kinds whose
-//     renderers emit this chrome. Every other kind's body is the customer's
-//     prose or their counterparty's, and we do not edit that.
-//  2. It matches the WHOLE sentence — the "only after you approve" clause AND
-//     the "Nothing has been/happened" tail — not the opening words.
+//  1. Each pattern is keyed to the KINDS WHOSE RENDERER EMITS IT, not to the
+//     closed-loop set as a whole. A set-wide gate is not enough: the five are
+//     not interchangeable. PORTAL_CLIENT_MESSAGE is the one closed-loop kind
+//     that passes arbitrary CUSTOMER PROSE through to `body`, so applying the
+//     consent card's sentence to it deleted the customer's own words —
+//     "Recording stays off until you approve it here." is chrome on
+//     VOICE_RECORDING_CONSENT and is a sentence a contractor may well write
+//     to their client on a portal message. DocuSign and connector writes emit
+//     no customer prose and so are safe either way, but they are listed
+//     explicitly rather than left to that accident.
+//  2. The whole set is still gated to CLOSED_LOOP_KINDS, so a kind added to a
+//     pattern by mistake fails SAFE (strips nothing) rather than open.
+//  3. Each pattern matches the WHOLE sentence — the "only after you approve"
+//     clause AND the "Nothing has been/happened" tail — not the opening words.
 //
 // A bare `/^Awaiting your approval\b/` prefix applied to all 30 kinds is not
 // a hypothetical: it shipped, and it silently deleted customer paragraphs. A
@@ -166,31 +175,60 @@ export function isRendererFallbackBlock(block: string): boolean {
 // content loss on a customer surface is a worse defect than the chrome it was
 // removing. lib/approvals/__tests__/artifact.test.ts pins that exact body.
 
-const CARD_CHROME_PATTERNS: readonly RegExp[] = [
-  // DOCUSIGN_SEND_ENVELOPE, DOCUSIGN_VOID_ENVELOPE, CONNECTOR_WRITE_ACTION,
-  // PORTAL_CLIENT_MESSAGE. Three anchors — the opener, the "only after you
-  // approve" promise, and the "Nothing has …" tail — so the connector's
-  // interpolated app name stays free while customer prose cannot collide.
-  // Deliberately NOT dot-all: a paragraph break must not bridge the anchors.
-  /^Awaiting your approval\s+—\s.*\bonly after you approve\b.*\bNothing has (?:been|happened)\b/,
-  // VOICE_RECORDING_CONSENT states the same pending-state promise in its own
-  // words and shares no prefix with the other four, so it gets its own shape.
-  // See renderVoiceRecordingConsent: the sentence is emitted as its own block
-  // precisely so this can drop it without rewriting the line around it.
-  /^Recording stays off until you approve it here\.$/,
+interface CardChromePattern {
+  /** The kinds whose renderer actually emits this shape. A kind absent from
+   *  this set keeps the block verbatim, whatever it says. */
+  kinds: ReadonlySet<string>;
+  re: RegExp;
+}
+
+const CARD_CHROME_PATTERNS: readonly CardChromePattern[] = [
+  {
+    // Three anchors — the opener, the "only after you approve" promise, and
+    // the "Nothing has …" tail — so the connector's interpolated app name
+    // stays free while customer prose cannot collide. Deliberately NOT
+    // dot-all: a paragraph break must not bridge the anchors.
+    kinds: new Set([
+      "DOCUSIGN_SEND_ENVELOPE",
+      "DOCUSIGN_VOID_ENVELOPE",
+      "CONNECTOR_WRITE_ACTION",
+      "PORTAL_CLIENT_MESSAGE",
+    ]),
+    re: /^Awaiting your approval\s+—\s.*\bonly after you approve\b.*\bNothing has (?:been|happened)\b/,
+  },
+  {
+    // VOICE_RECORDING_CONSENT states the same pending-state promise in its own
+    // words and shares no prefix with the other four, so it gets its own shape.
+    // See renderVoiceRecordingConsent: the sentence is emitted as its own block
+    // precisely so this can drop it without rewriting the line around it.
+    //
+    // ONLY that kind. It is a plain English sentence, and on
+    // PORTAL_CLIENT_MESSAGE — the one closed-loop kind that carries the
+    // customer's own prose — it is something the customer may genuinely have
+    // written to their client.
+    kinds: new Set(["VOICE_RECORDING_CONSENT"]),
+    re: /^Recording stays off until you approve it here\.$/,
+  },
 ];
+
+/** Every kind any chrome pattern is keyed to. Asserted against
+ *  CLOSED_LOOP_KINDS by the test suite in both directions. */
+export const CARD_CHROME_KINDS: ReadonlySet<string> = new Set<string>(
+  CARD_CHROME_PATTERNS.flatMap((p) => [...p.kinds]),
+);
 
 /** True when a block describes the approval CARD's pending state rather than
  *  the work the card is about — the class of sentence that is correct under a
  *  pair of approve/reject buttons and FALSE the moment an artifact exists.
  *
- *  `kind` is required, not optional: the gate to CLOSED_LOOP_KINDS is the
- *  thing that stops this from deleting the customer's own prose, so it cannot
- *  be something a caller forgets to pass. */
+ *  `kind` is required, not optional: the per-kind keying is the thing that
+ *  stops this from deleting the customer's own prose, so it cannot be
+ *  something a caller forgets to pass. */
 export function isCardChromeBlock(kind: string, block: string): boolean {
-  if (!CLOSED_LOOP_KINDS.has(String(kind))) return false;
+  const k = String(kind);
+  if (!CLOSED_LOOP_KINDS.has(k)) return false;
   const trimmed = block.trim();
-  return CARD_CHROME_PATTERNS.some((re) => re.test(trimmed));
+  return CARD_CHROME_PATTERNS.some((p) => p.kinds.has(k) && p.re.test(trimmed));
 }
 
 // Title/recipient fallbacks — not body blocks, but equally not real content.
@@ -428,8 +466,20 @@ export function buildApprovalArtifact(
     blocks,
     provenanceBlocks,
     filename: artifactFilename(kind, subject),
-    modes: handoffModes(kind, recipient),
+    modes: handoffModes(kind, recipient, hasDraft(rendered)),
   };
+}
+
+/** True when the renderer stated, discretely, that it produced a DRAFT — a
+ *  message written to be sent to someone — rather than only a card body.
+ *
+ *  `editableBody` is that statement: it is what ApprovalsList puts in the
+ *  edit-before-approve textarea, and every renderer sets it exactly when it
+ *  has a real drafted message. It is the same discrete-field discipline this
+ *  module already applies to recipients, moved to the body. */
+function hasDraft(rendered: RenderedApproval): boolean {
+  const draft = rendered.editableBody;
+  return typeof draft === "string" && draft.trim().length > 0;
 }
 
 /**
@@ -438,18 +488,48 @@ export function buildApprovalArtifact(
  *  - The five closed-loop kinds redeem into a real execution on approval, so
  *    they get `copy` only — no competing handoff next to an action that
  *    already happened.
- *  - `mailto` is offered only when a real address was parsed. It opens
- *    the customer's own mail client with their finger on send; nothing here
+ *  - `mailto` needs BOTH a real address AND a real draft. It opens the
+ *    customer's own mail client with their finger on send; nothing here
  *    sends anything.
  *  - Everything else gets copy + download at minimum.
+ *
+ * WHY `hasDraft` IS NOT OPTIONAL
+ * -----------------------------
+ * An addressee alone does not mean there is a message for that addressee.
+ * renderInboxTriage takes its recipient from `ackDraft.toEmails` but falls
+ * back to `body = ["Priority: <bucket>", reasoning]` whenever the draft body
+ * is missing — and `pickString` counts "", "   " and "\n" as missing. That
+ * pair is the fleet's INTERNAL verdict on the sender, and the addressee IS
+ * the sender, so the mailto offered to pre-fill an email to a vendor reading
+ *
+ *     Priority: noise
+ *
+ *     Low-value vendor solicitation; the sender has been ignored twice before.
+ *
+ * None of the provenance guards catch it: the labelled "Why this was drafted:"
+ * block is suppressed by the `already()` dedupe precisely BECAUSE the
+ * reasoning is sitting verbatim in `body`, so `provenanceBlocks` is empty and
+ * `artifactBodyBlocks(a, false)` has nothing to drop.
+ *
+ * Labelling the reasoning as provenance would not close this: "Priority:
+ * noise" is an internal verdict too and would still go out. Requiring a draft
+ * removes the outbound affordance entirely, which is the honest answer — there
+ * is no message to send, so there is nothing to open a mail client over. The
+ * customer keeps copy and download; the classification is theirs to read.
+ *
+ * Latent as of this commit — inbox-triage-general always populates a real
+ * body — but the payload is decrypted `Json` read back at render time and the
+ * renderer is explicit that it is not statically typed, so the producer's
+ * shape is not a guarantee the consumer holds. This fails closed instead.
  */
 export function handoffModes(
   kind: WorkApprovalKind,
-  recipient?: string,
+  recipient: string | undefined,
+  hasDraftBody: boolean,
 ): ApprovalHandoffMode[] {
   if (CLOSED_LOOP_KINDS.has(String(kind))) return ["copy"];
   const modes: ApprovalHandoffMode[] = ["copy", "download"];
-  if (recipient && recipient.length > 0) modes.push("mailto");
+  if (recipient && recipient.length > 0 && hasDraftBody) modes.push("mailto");
   return modes;
 }
 

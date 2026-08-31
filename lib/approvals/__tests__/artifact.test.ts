@@ -25,6 +25,7 @@ import { WorkApprovalKind } from "@prisma/client";
 import { renderApprovalPayload } from "@/app/(product)/app/workspace/[id]/approvals/renderApprovalPayload";
 import {
   ARTIFACT_EMPTY_NOTICE,
+  CARD_CHROME_KINDS,
   CLOSED_LOOP_KINDS,
   RENDERER_FALLBACK_BLOCKS,
   artifactBodyBlocks,
@@ -1159,4 +1160,243 @@ test("the recording-consent artifact keeps the terms and drops the pending promi
     rendered.body.includes("Recording stays off until you approve it here."),
     "the fix removed the sentence from the CARD, where it is true and useful",
   );
+});
+
+// ── …and the chrome strip is keyed PER KIND, not to the closed-loop set ──
+//
+// Round 2 fixed the prefix; the gate it left behind was still set-wide.
+// `isCardChromeBlock` asked only `CLOSED_LOOP_KINDS.has(kind)`, so BOTH
+// patterns applied to ALL FIVE closed-loop kinds. Four of them emit no
+// customer prose, so nothing showed. PORTAL_CLIENT_MESSAGE does: it passes
+// arbitrary customer prose straight through to `body`. And the consent card's
+// sentence is ordinary English — a contractor writing to their client about a
+// call is entitled to say it. So the VOICE_RECORDING_CONSENT pattern deleted
+// a paragraph out of a portal message, in the copy, the download and the
+// mailto, with nothing on screen to show it had gone.
+
+test("a portal message keeps a line that is chrome only on the CONSENT card", () => {
+  const body = [
+    "Hi Jane, quick note before Tuesday's call.",
+    "Recording stays off until you approve it here.",
+    "Talk then.",
+  ].join("\n\n");
+
+  const rendered = renderApprovalPayload(WorkApprovalKind.PORTAL_CLIENT_MESSAGE, {
+    toClientEmail: "jane@acme.example.com",
+    body,
+  });
+
+  // Precondition, pinned: the renderer really does hand over the customer's
+  // three paragraphs under its own card chrome. If this drifts the assertions
+  // below stop meaning anything.
+  assert.deepEqual(rendered.body, [
+    "Awaiting your approval — your client sees this reply only after you approve it. Nothing has been sent.",
+    "Hi Jane, quick note before Tuesday's call.",
+    "Recording stays off until you approve it here.",
+    "Talk then.",
+  ]);
+
+  const artifact = buildApprovalArtifact(
+    WorkApprovalKind.PORTAL_CLIENT_MESSAGE,
+    rendered,
+  );
+  const text = renderArtifactText(artifact);
+
+  assert.ok(
+    artifact.blocks.includes("Recording stays off until you approve it here."),
+    `the customer's own words were deleted. blocks: ${JSON.stringify(artifact.blocks)}`,
+  );
+  assert.match(text, /Recording stays off until you approve it here\./);
+  // The paragraphs either side too, so "kept everything" cannot be satisfied
+  // by an artifact that lost the whole body.
+  assert.match(text, /Hi Jane, quick note before Tuesday's call\./);
+  assert.match(text, /Talk then\./);
+
+  // The card's OWN promise is still dropped — this kind does emit that one.
+  assert.doesNotMatch(text, /your client sees this reply only after you approve/);
+  assert.equal(artifact.blocks[0], "Action: Message to your client");
+
+  // The predicate, directly: identical sentence, chrome only on the kind
+  // whose renderer emits it.
+  const consentLine = "Recording stays off until you approve it here.";
+  assert.equal(isCardChromeBlock("VOICE_RECORDING_CONSENT", consentLine), true);
+  assert.equal(isCardChromeBlock("PORTAL_CLIENT_MESSAGE", consentLine), false);
+  assert.equal(isCardChromeBlock("DOCUSIGN_SEND_ENVELOPE", consentLine), false);
+  assert.equal(isCardChromeBlock("CONNECTOR_WRITE_ACTION", consentLine), false);
+  assert.equal(isCardChromeBlock("DOCUSIGN_VOID_ENVELOPE", consentLine), false);
+});
+
+test("every chrome pattern is keyed to closed-loop kinds, and all five are covered", () => {
+  // Keying by kind only helps if the keys stay honest. A pattern keyed to a
+  // kind outside the closed-loop set would be dead (the outer gate rejects
+  // it) and would advertise a strip that never happens; a closed-loop kind
+  // keyed to no pattern would carry its card chrome into the artifact.
+  for (const kind of CARD_CHROME_KINDS) {
+    assert.ok(
+      CLOSED_LOOP_KINDS.has(kind),
+      `${kind} is keyed to a chrome pattern but is not closed-loop, so the ` +
+        `outer gate makes that pattern dead code`,
+    );
+  }
+  for (const kind of CLOSED_LOOP_KINDS) {
+    assert.ok(
+      CARD_CHROME_KINDS.has(kind),
+      `${kind} is closed-loop and no chrome pattern claims it, so its card ` +
+        `promise reaches the artifact`,
+    );
+  }
+
+  // And the strip still fires where it should: each closed-loop kind's own
+  // chrome is gone from its own artifact.
+  for (const kind of CLOSED_LOOP_KINDS) {
+    const rendered = renderApprovalPayload(
+      WorkApprovalKind[kind as keyof typeof WorkApprovalKind],
+      FIXTURES[kind]!.payload,
+    );
+    const artifact = buildApprovalArtifact(
+      WorkApprovalKind[kind as keyof typeof WorkApprovalKind],
+      rendered,
+    );
+    for (const line of rendered.body) {
+      if (!isCardChromeBlock(kind, line)) continue;
+      assert.equal(
+        artifact.blocks.includes(line),
+        false,
+        `${kind}: its own card chrome survived into the artifact`,
+      );
+    }
+  }
+});
+
+// ── An addressee is not a message ────────────────────────────────────────
+//
+// renderInboxTriage takes its recipient from `ackDraft.toEmails`, but falls
+// back to `body = ["Priority: <bucket>", reasoning]` whenever the ack draft
+// carries no usable body — and `pickString` counts "", "   " and "\n" as no
+// body. The result was a mailto, addressed to the person being triaged,
+// pre-filled with the fleet's verdict ON them:
+//
+//   mailto:jane%40vendor.example.com?subject=Your%20enquiry&body=
+//     Priority: noise
+//
+//     Low-value vendor solicitation; the sender has been ignored twice before.
+//
+// Every provenance guard misses it. The labelled "Why this was drafted:"
+// block is suppressed by the `already()` dedupe precisely BECAUSE the
+// reasoning is sitting verbatim in `body`, so `provenanceBlocks` comes out
+// EMPTY and `artifactBodyBlocks(a, false)` has nothing to drop.
+//
+// Latent today — inbox-triage-general always writes a real body — but the
+// payload is decrypted `Json` at read time and renderApprovalPayload's own
+// header says it is not statically typed, so the producer's shape is not a
+// guarantee this consumer holds.
+
+const TRIAGE_REASONING =
+  "Low-value vendor solicitation; the sender has been ignored twice before.";
+
+for (const [label, emptyish] of [
+  ["empty string", ""],
+  ["whitespace", "   "],
+  ["a bare newline", "\n"],
+] as const) {
+  test(`inbox triage with an ack draft whose body is ${label}: no mailto`, () => {
+    const rendered = renderApprovalPayload(WorkApprovalKind.INBOX_TRIAGE, {
+      priority: "noise",
+      reasoning: TRIAGE_REASONING,
+      ackDraft: {
+        subject: "Your enquiry",
+        body: emptyish,
+        toEmails: ["jane@vendor.example.com"],
+      },
+    });
+
+    // Precondition: this input really does reach the fallback pair, with the
+    // addressee still taken from the ack draft. Without this the test could
+    // pass because the renderer changed, not because the leak is closed.
+    assert.deepEqual(rendered.body, ["Priority: noise", TRIAGE_REASONING]);
+    assert.deepEqual(rendered.recipients, ["jane@vendor.example.com"]);
+
+    const artifact = buildApprovalArtifact(WorkApprovalKind.INBOX_TRIAGE, rendered);
+
+    // The shape that defeats every provenance guard, pinned so a future
+    // refactor cannot quietly rely on it.
+    assert.deepEqual(artifact.provenanceBlocks, []);
+    assert.ok(
+      artifact.blocks.includes(TRIAGE_REASONING),
+      "the verdict is in the body, unlabelled — that is what the dedupe sees",
+    );
+
+    // The fix: there is no draft, so there is nothing to open a mail client
+    // over. No mailto mode, and no href even if a caller asks for one.
+    assert.equal(
+      artifactMailtoHref(artifact),
+      null,
+      `a mailto addressed to the person being triaged, carrying the verdict ` +
+        `ON them: ${artifactMailtoHref(artifact)}`,
+    );
+    assert.deepEqual(artifact.modes, ["copy", "download"]);
+
+    // The fix is deliberately at the AFFORDANCE, not at the text. The other
+    // route on the table was to relabel the verdict as provenance so the
+    // outbound body dropped it — but "Priority: noise" is an internal verdict
+    // too and would have gone out regardless, so that route closes half the
+    // leak. Suppressing the mailto closes all of it: there is no draft, so
+    // there is no message, so there is nothing to open a mail client over.
+    //
+    // The counterpart, so this is a gate on the DRAFT and not on the kind:
+    // the same card with a real ack body keeps its mailto.
+    const withDraft = buildApprovalArtifact(
+      WorkApprovalKind.INBOX_TRIAGE,
+      renderApprovalPayload(WorkApprovalKind.INBOX_TRIAGE, {
+        priority: "noise",
+        reasoning: TRIAGE_REASONING,
+        ackDraft: {
+          subject: "Your enquiry",
+          body: "Thanks for reaching out — we are not taking on new vendors this quarter.",
+          toEmails: ["jane@vendor.example.com"],
+        },
+      }),
+    );
+    assert.ok(
+      withDraft.modes.includes("mailto"),
+      "the gate is keyed to the kind, not to the presence of a draft",
+    );
+    assert.doesNotMatch(mailtoBody(artifactMailtoHref(withDraft)!), /Priority: noise/);
+
+    // The customer's own copy is untouched — the classification is theirs to
+    // read. Only the outbound affordance goes away.
+    const text = renderArtifactText(artifact);
+    assert.match(text, /Priority: noise/);
+    assert.match(text, /ignored twice before/);
+    assert.match(text, /To: jane@vendor\.example\.com/);
+  });
+}
+
+test("a real ack draft still gets its mailto — the fix does not over-correct", () => {
+  const rendered = renderApprovalPayload(
+    WorkApprovalKind.INBOX_TRIAGE,
+    FIXTURES.INBOX_TRIAGE!.payload,
+  );
+  const artifact = buildApprovalArtifact(WorkApprovalKind.INBOX_TRIAGE, rendered);
+
+  assert.ok(artifact.modes.includes("mailto"), "the drafted ack lost its mailto");
+  const href = artifactMailtoHref(artifact)!;
+  assert.ok(href, "no mailto href for a real ack draft");
+  const body = mailtoBody(href);
+  assert.match(body, /title company today/);
+  // …and the classifier's verdict is still not in it.
+  assert.doesNotMatch(body, /^Priority: /m);
+  assert.doesNotMatch(body, /not noise/);
+
+  // Every kind that had a mailto before this change still has one: each of
+  // them states a draft discretely, which is exactly what the gate asks for.
+  for (const kind of ALL_KINDS) {
+    const r = renderApprovalPayload(WorkApprovalKind[kind], FIXTURES[kind]!.payload);
+    const a = buildApprovalArtifact(WorkApprovalKind[kind], r);
+    if (!a.modes.includes("mailto")) continue;
+    assert.ok(
+      r.editableBody && r.editableBody.trim().length > 0,
+      `${kind}: offers a mailto with no draft body`,
+    );
+  }
 });

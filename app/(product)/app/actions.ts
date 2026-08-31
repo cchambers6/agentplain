@@ -17,6 +17,7 @@ import {
   resolveVerticalReadiness,
   SIGNUP_ON_RAMP_ALLOWLIST,
 } from "@/lib/verticals/readiness";
+import { isVerticalOnSale, launchHoldReason } from "@/lib/verticals/launch";
 import { submitLeadCapture } from "@/lib/leads";
 import { createTrialCheckoutForSignup } from "@/lib/billing/checkout";
 import { provisionTrialSubscriptionSafe } from "@/lib/billing/provisioning";
@@ -54,8 +55,15 @@ export interface ActionResult {
   waitlist?: {
     verticalSlug: string;
     verticalName: string;
+    /** WHY they are on the waitlist — the two reasons are different truths
+     *  and the screen must not tell them the wrong one. `not-ready` = the
+     *  flagship workflow cannot fire (readiness). `not-open-yet` = it can,
+     *  but the vertical is outside the launch window (lib/verticals/launch). */
+    reason: WaitlistReason;
   };
 }
+
+export type WaitlistReason = "not-ready" | "not-open-yet";
 
 export async function signUpAction(
   _prev: ActionResult | undefined,
@@ -87,10 +95,13 @@ export async function signUpAction(
   // customer is provisioned.
   //
   // `isVerticalSupportedSafe` is fail-closed: if the registry can't be read
-  // it returns false (→ waitlist), NEVER true (→ take the money). The
-  // `general` on-ramp + `real-estate` are the supported slugs today; the
-  // other eight verticals route here until their killer-workflow caller
-  // lands. `general` is not in the readiness map but is always serveable
+  // it returns false (→ waitlist), NEVER true (→ take the money). Readiness
+  // clears `real-estate`, `cpa`, and `law` today; the other seven verticals
+  // route here until their killer-workflow caller lands. The LAUNCH-WINDOW
+  // gate immediately below narrows that further — only `law` and the
+  // `general` on-ramp are on sale — so `real-estate` and `cpa` land on the
+  // waitlist too, with the honest "not open yet" reason rather than this
+  // one. `general` is not in the readiness map but is always serveable
   // (the horizontal fleet fires for it), so we let it through explicitly.
   // The on-ramp hatch lives in lib/verticals/readiness.ts, not here. Inline,
   // the gate and the resolver could hold different opinions with nothing to
@@ -110,6 +121,28 @@ export async function signUpAction(
       waitlist: {
         verticalSlug,
         verticalName: verticalContent.name,
+        reason: "not-ready",
+      },
+    };
+  }
+
+  // LAUNCH-WINDOW GATE. Readiness answers "can we serve this vertical?";
+  // this answers "are we selling it today?". It can only ever be NARROWER
+  // than readiness (asserted in lib/verticals/launch.test.ts), so it can
+  // never route a customer INTO a vertical the readiness gate above would
+  // have refused — it only holds back verticals we are serveable for but
+  // have not opened yet. Same honest waitlist branch, different reason:
+  // telling a CPA firm "the flagship workflow isn't live" would be a lie.
+  //
+  // Runs AFTER the readiness gate so a vertical that is both unserveable
+  // and unopened gets the more fundamental reason.
+  if (!isVerticalOnSale(verticalSlug)) {
+    return {
+      ok: true,
+      waitlist: {
+        verticalSlug,
+        verticalName: verticalContent.name,
+        reason: "not-open-yet",
       },
     };
   }
@@ -312,13 +345,20 @@ export async function joinVerticalWaitlistAction(
   // can see WHY this vertical is on the waitlist (not-live vs no-caller vs
   // no-flagship) without re-deriving it.
   const readiness = resolveVerticalReadiness(verticalSlug);
+  // A vertical can be readiness-supported and still held by the launch
+  // window. Record whichever is actually holding them so the operator
+  // queue distinguishes "waiting on engineering" from "waiting on us to
+  // open the door" — those are different follow-ups.
+  const hold = launchHoldReason(verticalSlug);
+  const reasonCode =
+    readiness.supported && hold ? hold : readiness.reason;
 
   const result = await submitLeadCapture({
     email,
     name: ownerName ?? undefined,
     business: businessName ?? undefined,
     vertical: verticalSlug,
-    intent: `vertical-waitlist: ${content.name} (${readiness.reason})`,
+    intent: `vertical-waitlist: ${content.name} (${reasonCode})`,
     sourcePage: "/app/sign-up",
   });
 

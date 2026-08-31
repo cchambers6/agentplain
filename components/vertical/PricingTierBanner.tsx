@@ -11,6 +11,7 @@ import {
   type TierName,
 } from "@/lib/pricing/tiers";
 import type { VerticalTier } from "@/lib/verticals/types";
+import { isVerticalOnSale } from "@/lib/verticals/launch";
 
 // Pricing surface on a vertical landing page. Anchored to the 2026-05-15
 // three-tier ratification in `memory/project_stripe_both_surfaces.md`
@@ -48,6 +49,13 @@ export default function PricingTierBanner({
   const resolvedTier: TierName = (tier ?? "regular") as TierName;
   const displayName = tierDisplayName(resolvedTier);
   const trialDays = trialPeriodDaysForVertical(verticalSlug ?? "");
+  // LAUNCH WINDOW (lib/verticals/launch.ts). The per-seat ladder is real and
+  // stays visible — that IS the price when we open. What must not stand on a
+  // vertical we are not selling is the "free trial, card at signup" clause:
+  // it advertises a checkout the signup gate will refuse. Swap that sentence
+  // for the honest one; leave the numbers alone.
+  const onSale = isVerticalOnSale(verticalSlug ?? "");
+  const notOpenLine = `Not open for signup yet — we open one line of work at a time. The ladder below is the price when we do; join the list from the top of this page and a person reaches out.`;
 
   if (resolvedTier === "max") {
     return (
@@ -98,12 +106,19 @@ export default function PricingTierBanner({
         </div>
         <div className="mt-8 max-w-3xl border-t border-rule pt-6">
           <p className="text-[15px] leading-relaxed text-ink-soft">
-            Every agentplain subscription is month-to-month, with a {trialDays}
-            -day free trial (card at signup) and a {MONEY_BACK_GUARANTEE_DAYS}
-            -day money-back guarantee on the first charge —{" "}
-            <Link href="/guarantee" className="text-ink underline">
-              how the guarantee works →
-            </Link>
+            {onSale ? (
+              <>
+                Every agentplain subscription is month-to-month, with a{" "}
+                {trialDays}-day free trial (card at signup) and a{" "}
+                {MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on the
+                first charge —{" "}
+                <Link href="/guarantee" className="text-ink underline">
+                  how the guarantee works →
+                </Link>
+              </>
+            ) : (
+              <>{notOpenLine}</>
+            )}
           </p>
         </div>
       </Section>
@@ -127,9 +142,13 @@ export default function PricingTierBanner({
         </>
       }
       intro={
-        resolvedTier === "plus"
-          ? `Per seat, month-to-month. Priority support + quarterly async check-in with your service team. ${trialDays}-day free trial, card at signup; cancel any time.`
-          : `Per seat, month-to-month. Standard managed AI ops + onboarding bundled in. ${trialDays}-day free trial, card at signup; cancel any time.`
+        !onSale
+          ? resolvedTier === "plus"
+            ? `Per seat, month-to-month. Priority support + quarterly async check-in with your service team. ${notOpenLine}`
+            : `Per seat, month-to-month. Standard managed AI ops + onboarding bundled in. ${notOpenLine}`
+          : resolvedTier === "plus"
+            ? `Per seat, month-to-month. Priority support + quarterly async check-in with your service team. ${trialDays}-day free trial, card at signup; cancel any time.`
+            : `Per seat, month-to-month. Standard managed AI ops + onboarding bundled in. ${trialDays}-day free trial, card at signup; cancel any time.`
       }
     >
       <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-5">

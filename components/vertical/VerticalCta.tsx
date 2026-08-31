@@ -5,6 +5,7 @@ import {
   trialPeriodDaysForVertical,
   type TierName,
 } from "@/lib/pricing/tiers";
+import { isVerticalOnSale } from "@/lib/verticals/launch";
 
 // Closing CTA on every vertical page. Brand-token styled, mission-aligned.
 // Per `project_stripe_both_surfaces.md` pilot pricing is killed — no "pilot"
@@ -20,6 +21,11 @@ export default function VerticalCta({
   // default, 14 for CPA + Law); Max is quote-based with no self-checkout, so
   // it must not advertise a free trial. Drives both the body copy and the
   // primary CTA below.
+  // LAUNCH WINDOW (lib/verticals/launch.ts): a vertical we are not selling
+  // today gets the honest waitlist close, not a free-trial close. `selfServe`
+  // only means "this tier has a self-checkout shape" — it says nothing about
+  // whether the door is open, so both have to hold.
+  const onSale = isVerticalOnSale(content.slug);
   const selfServe = isSelfServeTier(content.tier as TierName);
   const trialDays = trialPeriodDaysForVertical(content.slug);
   // On-ramp surfaces (e.g. `/general`) read awkwardly with the ratified-
@@ -39,13 +45,26 @@ export default function VerticalCta({
     <section className="bg-ink text-paper">
       <div className="container-wide py-20 md:py-24">
         <p className="eyebrow mb-6 text-paper/60">
-          {selfServe ? "Start free" : "Let's scope it"}
+          {!onSale
+            ? "Not open yet"
+            : selfServe
+              ? "Start free"
+              : "Let's scope it"}
         </p>
         <h2 className="max-w-3xl font-display text-4xl leading-tight md:text-5xl">
-          {heading}
+          {onSale ? heading : `${content.name} is next in line.`}
         </h2>
         <p className="mt-6 max-w-2xl text-paper/75">
-          {selfServe ? (
+          {!onSale ? (
+            <>
+              We open one line of work at a time, because every install gets a
+              real service partner rather than a queue position. We are not
+              taking {content.name.toLowerCase()} signups today and we&apos;d
+              rather say so than sell you a trial we&apos;d have to decline.
+              Leave your email — a person reaches out the moment we open. No
+              card, no commitment, no drip.
+            </>
+          ) : selfServe ? (
             <>
               {trialDays}-day free trial, card at signup. Month-to-month from
               day one — no annual contract, no auto-renew. The fleet drafts;
@@ -63,10 +82,14 @@ export default function VerticalCta({
         </p>
         <div className="mt-10 flex flex-wrap gap-4">
           <Link
-            href={selfServe ? signUpHref : "/custom?type=max"}
+            href={onSale && !selfServe ? "/custom?type=max" : signUpHref}
             className="inline-flex items-center justify-center gap-2 border border-paper bg-paper px-6 py-3 text-sm font-medium text-ink transition hover:bg-paper-deep"
           >
-            {selfServe ? "Start free trial" : "Talk to us about Max"}
+            {!onSale
+              ? "Join the list"
+              : selfServe
+                ? "Start free trial"
+                : "Talk to us about Max"}
             <span aria-hidden>→</span>
           </Link>
           <Link

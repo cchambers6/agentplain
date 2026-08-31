@@ -59,7 +59,10 @@ export type FinanceQuickbooksState =
  *  QuickBooks. The pulse names the customer's financial-discipline
  *  activity from these even when QB is dark. */
 export interface FinanceInternalCounts {
-  /** Fires of `invoice-chasing-realestate` in window (proposals created). */
+  /** Fires of `invoice-chase-general` in window (proposals created) — that is
+   *  the slug its Prisma sink writes and the one the daily sweep dispatches.
+   *  NOT `invoice-chasing-realestate`, which is schema-only, has no Prisma
+   *  sink, and produces no approval rows at all. */
   invoiceChaseDrafts: number;
   /** Fires of `month-end-close-cpa` in window (proposals created). */
   monthEndCloseDrafts: number;

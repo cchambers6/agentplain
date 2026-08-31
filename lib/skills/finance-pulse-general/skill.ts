@@ -49,7 +49,7 @@ const SYSTEM_PROMPT = [
   '  counts specifically. When QuickBooks is NOT connected, say so plainly ',
   '  (one short sentence) and ground the pulse on the internal draft + ',
   '  approval counts only. Do NOT estimate AR / dollars when QB is dark.',
-  '- If a vertical-specific skill (invoice-chasing-realestate or ',
+  '- If a finance skill (invoice-chase-general or ',
   '  month-end-close-cpa) is the workspace\'s natural fit and produced ',
   '  zero drafts this week, name that gap as a candidate to lean on next ',
   '  week.',

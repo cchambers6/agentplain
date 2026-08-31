@@ -23,6 +23,15 @@ import {
   buildQuickbooksMcpServer as defaultBuildQuickbooksMcpServer,
   type QuickbooksMcpServer,
 } from '@/lib/integrations/quickbooks-mcp';
+// Import the slug constants from the sinks that WRITE them. A second string
+// literal typed out here is exactly how the 2026-08-30 defect happened: this
+// file counted `agentSlug: 'invoice-chasing-realestate'`, a schema-only skill
+// with no Prisma sink and no production caller, so `invoiceChaseDrafts` was 0
+// on every workspace forever while `invoice-chase-general` — the daily sweep
+// that actually produces the rows — went uncounted. See
+// lib/claims/approval-slug-parity.ts for the guard that now pins this.
+import { INVOICE_CHASE_GENERAL_AGENT_SLUG } from '../invoice-chase-general/prisma-approval-sink';
+import { MONTH_END_CLOSE_CPA_AGENT_SLUG } from '../month-end-close-cpa/prisma-approval-persister';
 import type {
   FinanceInternalCounts,
   FinancePulseSnapshot,
@@ -108,14 +117,14 @@ async function readInternal(
   const invoiceChaseDrafts = await tx.workApprovalQueueItem.count({
     where: {
       workspaceId,
-      agentSlug: 'invoice-chasing-realestate',
+      agentSlug: INVOICE_CHASE_GENERAL_AGENT_SLUG,
       proposedAt: { gte: windowFrom },
     },
   });
   const monthEndCloseDrafts = await tx.workApprovalQueueItem.count({
     where: {
       workspaceId,
-      agentSlug: 'month-end-close-cpa',
+      agentSlug: MONTH_END_CLOSE_CPA_AGENT_SLUG,
       proposedAt: { gte: windowFrom },
     },
   });

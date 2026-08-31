@@ -1,5 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+// This file had NO `React` import at all until the .tsx pass of the test
+// gate started running it. The tsx runner compiles JSX with the CLASSIC
+// factory and does not honour `"jsx": "react-jsx"` from
+// tests/tsconfig.test.json, so `<div/>` becomes `React.createElement(...)`
+// and `React` has to be a VALUE in scope. Without this line the module
+// throws `ReferenceError: React is not defined` before a single assertion
+// runs.
+import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   ApprovalCard,
@@ -82,11 +90,16 @@ test("FIX 2 — drafted row deep-links to the specific queue item (focus param)"
   assert.match(html, /\/app\/workspace\/ws_123\/approvals\?focus=appr_55/);
 });
 
-test("FIX 4 — StuckHelpLink deep-links /help with the step encoded in subject", () => {
+test("FIX 4 — StuckHelpLink deep-links the help surface with the step encoded in subject", () => {
   const html = render(
     <StuckHelpLink workspaceId="ws_9" subject="Stuck connecting a tool" />,
   );
-  assert.match(html, /\/app\/workspace\/ws_9\/help\?subject=/);
+  // The workspace help surface is /support/new. This assertion used to name
+  // /help, a route that does not exist under app/(product)/app/workspace/[id],
+  // so it asserted a 404 at the exact moment a stuck customer clicks for help.
+  // StuckHelpLink.tsx has always emitted /support/new; the assertion was just
+  // never executed, because nothing ran the .tsx suite until this gate pass.
+  assert.match(html, /\/app\/workspace\/ws_9\/support\/new\?subject=/);
   // Space-encoded subject so the help form arrives pre-named.
   assert.match(html, /Stuck%20connecting%20a%20tool/);
   assert.match(html, /a real person reads every note/i);

@@ -39,6 +39,32 @@ const quarantinePath = join(repoRoot, 'tests', 'quarantine.json');
 
 const TEST_GLOBS = ['tests/*.test.ts', 'lib/**/*.test.ts'];
 
+// ── The .tsx pass ────────────────────────────────────────────────────────
+// `.tsx` was not matched by TEST_GLOBS at all, so `tests/*.test.tsx` — 14
+// files, including the consumer-path coverage that renders ApprovalCard and
+// reads the real `mailto:` href back out of the markup — was run by NOTHING.
+// Not by this gate, not by `npm test`, not by CI. Some of the most valuable
+// tests in the repo were ungated by a three-character omission in a glob.
+//
+// They get their own pass rather than another entry in TEST_GLOBS because
+// rendering React needs the settings in tests/tsconfig.test.json, which the
+// runner only picks up from TSX_TSCONFIG_PATH.
+//
+// This is a plain glob with NO exclusion list and NO new quarantine entries.
+// Getting there took one prerequisite, and it was a real fix rather than a
+// suppression: ALL 14 files had NO `React` import whatsoever — not a
+// type-only import, none at all. The runner compiles JSX to the classic
+// `React.createElement` factory, so each of them threw
+// `ReferenceError: React is not defined` before a single assertion ran.
+// `React` is now imported as a VALUE in each. (Measured on main before the
+// fix: 81 such ReferenceErrors across the glob, plus customer-approvals.test
+// .tsx failing at module load on its `<>` fragment.)
+//
+// A new tests/*.test.tsx file is picked up automatically — no list to update
+// and therefore no list to forget.
+const TSX_TEST_GLOBS = ['tests/*.test.tsx'];
+const TSX_TSCONFIG = 'tests/tsconfig.test.json';
+
 const args = new Set(process.argv.slice(2));
 const noSkip = args.has('--no-skip');
 const listOnly = args.has('--list');
@@ -127,41 +153,67 @@ if (!noSkip) {
   }
 }
 
-const nodeArgs = ['--import', 'tsx', '--test'];
-
-if (!noSkip && quarantine.entries.length > 0) {
-  // One anchored alternation. Anchoring matters: an unanchored fragment would
-  // quietly swallow other tests whose names merely contain a quarantined one.
-  const pattern = `^(?:${quarantine.entries.map((e) => escapeRegExp(e.test)).join('|')})$`;
-  nodeArgs.push(`--test-skip-pattern=${pattern}`);
+/** The loader, the runner, and the quarantine skip pattern — shared by both
+ *  passes. The quarantine is anchored by test NAME and applies repo-wide, so
+ *  the .tsx pass honours it too. No entry names a .tsx test today; the point
+ *  is that a future one must not be silently un-skippable. */
+function baseArgs() {
+  const a = ['--import', 'tsx', '--test'];
+  if (!noSkip && quarantine.entries.length > 0) {
+    // One anchored alternation. Anchoring matters: an unanchored fragment
+    // would quietly swallow other tests whose names merely contain a
+    // quarantined one.
+    const pattern = `^(?:${quarantine.entries.map((e) => escapeRegExp(e.test)).join('|')})$`;
+    a.push(`--test-skip-pattern=${pattern}`);
+  }
+  return a;
 }
 
-nodeArgs.push(...TEST_GLOBS);
+/** Run one pass. Returns its exit status; never throws. */
+function runPass(label, globs, extraEnv = {}) {
+  console.log(`▶ ${label}`);
+  console.log(`  node --import tsx --test ${globs.join(' ')}`);
+  console.log('');
 
-console.log(
-  `▶ ${noSkip ? 'Running the FULL suite (quarantine ignored)' : 'Running the test gate'}: ` +
-    `node ${nodeArgs.slice(0, 3).join(' ')} ${TEST_GLOBS.join(' ')}`,
-);
+  const result = spawnSync(process.execPath, [...baseArgs(), ...globs], {
+    cwd: repoRoot,
+    stdio: 'inherit',
+    env: { ...process.env, ...extraEnv },
+  });
+
+  if (result.error) {
+    console.error(`❌ Could not start the test runner: ${result.error.message}`);
+    return 1;
+  }
+  return result.status ?? 1;
+}
+
+const mode = noSkip ? 'FULL suite (quarantine ignored)' : 'test gate';
+
+// BOTH passes always run, even when the first one fails. A gate that stops at
+// the first red hides the rest of the damage and costs a second round-trip to
+// find it.
+const tsStatus = runPass(`Running the ${mode} — TypeScript`, TEST_GLOBS);
+
 console.log('');
 
-const result = spawnSync(process.execPath, nodeArgs, {
-  cwd: repoRoot,
-  stdio: 'inherit',
-  env: process.env,
-});
+const tsxStatus = runPass(
+  `Running the ${mode} — React components (.tsx, via ${TSX_TSCONFIG})`,
+  TSX_TEST_GLOBS,
+  { TSX_TSCONFIG_PATH: TSX_TSCONFIG },
+);
 
-if (result.error) {
-  console.error(`❌ Could not start the test runner: ${result.error.message}`);
-  process.exit(1);
-}
+const status = tsStatus !== 0 ? tsStatus : tsxStatus;
 
-if (result.status !== 0) {
+if (status !== 0) {
   console.error('');
   console.error('❌ Test gate failed.');
+  if (tsStatus !== 0) console.error('   ↳ the TypeScript pass is red.');
+  if (tsxStatus !== 0) console.error('   ↳ the React (.tsx) pass is red.');
   console.error('   A failure here is a NEW break: everything known-broken on');
   console.error(`   ${quarantine.expires.slice(0, 10)}'s baseline is in tests/quarantine.json.`);
   console.error('   Fix it. Quarantining it needs a class, a reason, and a reviewer.');
   console.error('');
 }
 
-process.exit(result.status ?? 1);
+process.exit(status);

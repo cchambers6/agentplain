@@ -1,5 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+// This file had NO `React` import at all until the .tsx pass of the test
+// gate started running it. The tsx runner compiles JSX with the CLASSIC
+// factory and does not honour `"jsx": "react-jsx"` from
+// tests/tsconfig.test.json, so `<div/>` becomes `React.createElement(...)`
+// and `React` has to be a VALUE in scope. Without this line the module
+// throws `ReferenceError: React is not defined` before a single assertion
+// runs.
+import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 // Site-audit P1-4 ("customer-visible failure surface"): a failed skill step

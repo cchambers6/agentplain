@@ -30,7 +30,6 @@ import {
   artifactBodyBlocks,
   artifactMailtoHref,
   buildApprovalArtifact,
-  extractRecipients,
   isCardChromeBlock,
   isRendererFallbackBlock,
   renderArtifactText,
@@ -454,8 +453,14 @@ const FIXTURES: Record<string, Fixture> = {
   },
   VOICE_RECORDING_CONSENT: {
     payload: { retentionDays: 45, requireTwoPartyConsentPrompt: true },
+    // The retention window and the disclosure rule ARE the terms being
+    // consented to, so they must survive. "Recording stays off until you
+    // approve it here." is NOT in this list and must not be: it is a promise
+    // about the card's pending state, and the artifact only exists after the
+    // owner approved. See the dedicated regression test below — this fixture
+    // used to assert that sentence was present, which locked the defect in.
     expect: [
-      "Recording stays off until you approve it here.",
+      "Approving this turns on call recording for your workspace.",
       "kept for 45 days",
       "two-party-consent states",
     ],
@@ -584,20 +589,84 @@ test("mailto is offered only when a real address was parsed", () => {
   assert.equal(artifactMailtoHref(noAddress), null);
 });
 
-test("extractRecipients pulls every address out of a humanized recipient line", () => {
-  assert.deepEqual(
-    extractRecipients("To: jane@buyer.example.com    Re: 142 Peachtree Ave"),
-    ["jane@buyer.example.com"],
+// ── The recipient line is never parsed ───────────────────────────────────
+//
+// `extractRecipients` used to sit here as a "legacy" fallback. It is gone —
+// see the note in lib/approvals/artifact.ts. These two tests are what make
+// the absence loud rather than merely quiet: a rendered approval that shows
+// an addressee but does not STATE it discretely gets no recipient at all,
+// and no mailto. Failing closed is the point; a 31st kind whose author
+// forgets `recipients` loses a feature visibly instead of silently
+// re-opening the subject-line injection the field was added to close.
+
+test("a rendered approval that states no recipients gets none — the line is never parsed", () => {
+  const rendered = {
+    kindLabel: "Buyer inquiry reply",
+    title: "142 Peachtree Ave",
+    // Shows an addressee AND carries a stranger's address in the subject —
+    // exactly the shape the deleted parser used to mine.
+    recipientLine:
+      "To: jane@buyer.example.com    Re: please cc mallory@evil.example.com",
+    body: ["Hi Jane — 142 Peachtree is still on the market."],
+  } as unknown as Parameters<typeof buildApprovalArtifact>[1];
+
+  const artifact = buildApprovalArtifact(
+    WorkApprovalKind.BUYER_INQUIRY_REPLY_DRAFT,
+    rendered,
   );
-  assert.deepEqual(extractRecipients("To: a@x.example.com, b@y.example.com"), [
-    "a@x.example.com",
-    "b@y.example.com",
-  ]);
-  assert.deepEqual(extractRecipients("To your client: sam@acme.example.com"), [
-    "sam@acme.example.com",
-  ]);
-  assert.deepEqual(extractRecipients("Re: no address here"), []);
-  assert.deepEqual(extractRecipients(undefined), []);
+
+  assert.equal(
+    artifact.recipient,
+    undefined,
+    "an address was mined out of the display line — the parse path is back",
+  );
+  assert.equal(artifact.modes.includes("mailto"), false, "mailto without an address");
+  assert.equal(artifactMailtoHref(artifact), null);
+  // There is no To: line at all — not the real addressee, not the stranger.
+  const text = renderArtifactText(artifact);
+  assert.doesNotMatch(text, /^To: /m);
+  assert.doesNotMatch(text, /^To:.*jane@buyer/m);
+  // The stranger's address appears ONLY in the quoted subject, which is the
+  // one place it is allowed: quoting their words back is correct, addressing
+  // them is not. It must never appear anywhere else in the artifact.
+  assert.match(text, /^Subject: please cc mallory@evil\.example\.com$/m);
+  assert.equal(
+    text.split("\n").filter((l) => l.includes("evil.example.com")).length,
+    1,
+    "the stranger's address escaped the subject line",
+  );
+  // The work product itself is untouched.
+  assert.match(text, /still on the market/);
+});
+
+test("every kind that shows an addressee states it discretely, and only from that field", () => {
+  let addressed = 0;
+  for (const kind of ALL_KINDS) {
+    const r = renderApprovalPayload(WorkApprovalKind[kind], FIXTURES[kind]!.payload);
+    const artifact = buildApprovalArtifact(WorkApprovalKind[kind], r);
+
+    if (artifact.recipient) {
+      addressed += 1;
+      assert.ok(
+        Array.isArray(r.recipients) && r.recipients.length > 0,
+        `${kind}: artifact has a recipient that did not come from the discrete field`,
+      );
+      // Every address on the artifact is one the renderer named explicitly.
+      for (const addr of artifact.recipient.split(", ")) {
+        assert.ok(
+          r.recipients!.includes(addr),
+          `${kind}: ${addr} is on the To: line but the renderer never named it`,
+        );
+      }
+    }
+    if (r.recipientLine && /^\s*To\b/i.test(r.recipientLine)) {
+      assert.ok(
+        Array.isArray(r.recipients),
+        `${kind}: shows an addressee but does not expose it discretely`,
+      );
+    }
+  }
+  assert.ok(addressed > 0, "no kind produced a recipient — the assertion proved nothing");
 });
 
 test("an empty payload yields the empty notice — never a fallback dressed as content", () => {
@@ -647,7 +716,7 @@ test("every placeholder the RENDERER emits for an empty payload is recognised he
       const line = raw.trim();
       if (line.length === 0) continue;
       if (isRendererFallbackBlock(line)) continue;
-      if (isCardChromeBlock(line)) continue;
+      if (isCardChromeBlock(kindName, line)) continue;
       if (STRUCTURAL_EMPTY_LINES.some((re) => re.test(line))) continue;
       unrecognised.push({ kind: kindName, line });
     }
@@ -707,7 +776,7 @@ test("no artifact block is a renderer placeholder, for any kind, empty or full",
       const isEmptyProbe = Object.keys(payload).length === 0;
       for (const block of artifact.blocks) {
         assert.equal(
-          isCardChromeBlock(block),
+          isCardChromeBlock(kind, block),
           false,
           `${kind}: card chrome reached the artifact: ${JSON.stringify(block)}`,
         );
@@ -856,16 +925,6 @@ test("the renderer hands over discrete recipients; the artifact does not re-pars
   }
 });
 
-test("extractRecipients reads the addressee segment only, never the subject", () => {
-  // The legacy path, kept for a RenderedApproval that predates `recipients`.
-  assert.deepEqual(
-    extractRecipients("To: jane@buyer.example.com    Re: ask bob@attacker.example.com"),
-    ["jane@buyer.example.com"],
-  );
-  // A line with no addressee label addresses nobody, whatever it contains.
-  assert.deepEqual(extractRecipients("Re: ask bob@attacker.example.com"), []);
-});
-
 // ── Provenance is for the customer, not for their counterparty ───────────
 //
 // "Why this was drafted: The vendor asked for a renewal decision by end of
@@ -982,4 +1041,122 @@ test("a thin closed-loop payload yields an honest artifact, not card chrome", ()
   assert.match(text, /Subject: Listing agreement — 142 Peachtree Ave/);
   assert.match(text, /To: seller@example\.com/);
   assert.match(text, /From template: tpl_listing_agreement_v4/);
+});
+
+// ── …and the chrome strip never eats the customer's own words ────────────
+//
+// The first fix for the above over-corrected. `/^Awaiting your approval\b/`
+// was applied to every block of all 30 kinds, so any customer paragraph that
+// happened to OPEN with those four words was deleted from the copy, the
+// download and the mailto. There is no visual signal when it happens:
+// ApprovalHandoff keeps the artifact text in an off-screen <textarea>, so the
+// customer sees a green checkmark over a message with a paragraph missing.
+//
+// Silent content loss on a customer surface is worse than the chrome it was
+// removing, so these are the tests that hold the line.
+
+test("a client message that OPENS with 'Awaiting your approval' keeps that paragraph", () => {
+  const body =
+    "Awaiting your approval on the revised scope, we are holding the crew until Friday.\n\nLet me know.";
+
+  const artifact = buildApprovalArtifact(
+    WorkApprovalKind.PORTAL_CLIENT_MESSAGE,
+    renderApprovalPayload(WorkApprovalKind.PORTAL_CLIENT_MESSAGE, {
+      toClientEmail: "client@acme.example.com",
+      body,
+    }),
+  );
+  const text = renderArtifactText(artifact);
+
+  assert.ok(
+    artifact.blocks.includes(
+      "Awaiting your approval on the revised scope, we are holding the crew until Friday.",
+    ),
+    `the customer's first paragraph was deleted. blocks: ${JSON.stringify(artifact.blocks)}`,
+  );
+  assert.match(text, /holding the crew until Friday/);
+  assert.match(text, /Let me know\./);
+
+  // The card's OWN pending promise is still gone — this kind is closed-loop.
+  assert.doesNotMatch(text, /your client sees this reply only after you approve/);
+  assert.doesNotMatch(text, /Nothing has been sent/);
+  assert.equal(artifact.blocks[0], "Action: Message to your client");
+});
+
+test("no kind loses a body paragraph merely for opening with the chrome's first words", () => {
+  // Reachable on the reply-draft kinds too, where there is not even an
+  // "Action:" line to cushion the loss — the paragraph just vanishes.
+  const opener =
+    "Awaiting your approval on the revised scope, we are holding the crew until Friday.";
+
+  const reply = buildApprovalArtifact(
+    WorkApprovalKind.BUYER_INQUIRY_REPLY_DRAFT,
+    renderApprovalPayload(WorkApprovalKind.BUYER_INQUIRY_REPLY_DRAFT, {
+      to: "jane@buyer.example.com",
+      subject: "Revised scope",
+      draft: `${opener}\n\nLet me know.`,
+    }),
+  );
+  assert.ok(
+    reply.blocks.includes(opener),
+    `BUYER_INQUIRY_REPLY_DRAFT dropped the paragraph: ${JSON.stringify(reply.blocks)}`,
+  );
+  assert.match(renderArtifactText(reply), /holding the crew until Friday/);
+
+  // And the mailto the customer's mail client opens carries it as well —
+  // this is the surface the counterparty actually reads.
+  const href = artifactMailtoHref(reply)!;
+  assert.ok(href, "no mailto to check");
+  assert.match(mailtoBody(href), /holding the crew until Friday/);
+
+  // The predicate itself is gated: identical text, chrome only where the
+  // renderer actually emits chrome.
+  assert.equal(isCardChromeBlock("BUYER_INQUIRY_REPLY_DRAFT", opener), false);
+  assert.equal(isCardChromeBlock("PORTAL_CLIENT_MESSAGE", opener), false);
+});
+
+// ── The consent card does not promise a state it has already left ────────
+//
+// VOICE_RECORDING_CONSENT's artifact carried "Recording stays off until you
+// approve it here." — a sentence that is true on the card and false in the
+// artifact, because the artifact only exists once the owner approved. The
+// fixture above used to positively assert its presence, so the suite locked
+// the defect in rather than catching it.
+
+test("the recording-consent artifact keeps the terms and drops the pending promise", () => {
+  const artifact = buildApprovalArtifact(
+    WorkApprovalKind.VOICE_RECORDING_CONSENT,
+    renderApprovalPayload(
+      WorkApprovalKind.VOICE_RECORDING_CONSENT,
+      FIXTURES.VOICE_RECORDING_CONSENT!.payload,
+    ),
+  );
+  const text = renderArtifactText(artifact);
+
+  // The false sentence is gone from the structure AND the derived text.
+  assert.equal(
+    artifact.blocks.some((b) => b.includes("Recording stays off until you approve")),
+    false,
+    `a promise that is false once copied survived: ${JSON.stringify(artifact.blocks)}`,
+  );
+  assert.doesNotMatch(text, /Recording stays off until you approve/);
+
+  // The substantive terms — what was consented to — all survive.
+  assert.match(text, /Approving this turns on call recording for your workspace\./);
+  assert.match(text, /Recordings are kept for 45 days, then deleted\./);
+  assert.match(text, /In two-party-consent states/);
+
+  // Still a record of the action, and still copy-only.
+  assert.equal(artifact.blocks[0], "Action: Call recording consent");
+  assert.deepEqual(artifact.modes, ["copy"]);
+
+  // The CARD keeps the sentence — it is correct there, under the buttons.
+  const rendered = renderApprovalPayload(
+    WorkApprovalKind.VOICE_RECORDING_CONSENT,
+    FIXTURES.VOICE_RECORDING_CONSENT!.payload,
+  );
+  assert.ok(
+    rendered.body.includes("Recording stays off until you approve it here."),
+    "the fix removed the sentence from the CARD, where it is true and useful",
+  );
 });

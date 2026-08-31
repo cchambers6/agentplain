@@ -1041,8 +1041,15 @@ function renderVoiceRecordingConsent(p: Record<string, unknown>): RenderedApprov
   const retentionDays = pickNumber(p, ["retentionDays"]);
   const twoParty = p.requireTwoPartyConsentPrompt === true;
 
+  // Two SEPARATE blocks, deliberately. The first states what approving does
+  // and stays true forever; the second is a promise about the CARD's pending
+  // state and stops being true the instant the owner approves. Splitting them
+  // lets lib/approvals/artifact.ts drop the second out of the handoff artifact
+  // — which only exists post-approval — without rewriting the sentence around
+  // it. The card still shows both, where both are correct.
   const body = [
-    "Approving this turns on call recording for your workspace. Recording stays off until you approve it here.",
+    "Approving this turns on call recording for your workspace.",
+    "Recording stays off until you approve it here.",
   ];
   if (typeof retentionDays === "number") {
     body.push(`Recordings are kept for ${retentionDays} days, then deleted.`);

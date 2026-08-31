@@ -1,5 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+// `React` must be in SCOPE, not merely imported for its types: the tsx test
+// runner uses the CLASSIC JSX factory and does not honour the "jsx":
+// "react-jsx" in tests/tsconfig.test.json, so `<div/>` compiles to
+// `React.createElement(...)`. Without this the module throws
+// `ReferenceError: React is not defined` before a single assertion runs.
+import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   WorkspaceDetailView,

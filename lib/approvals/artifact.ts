@@ -147,13 +147,50 @@ export function isRendererFallbackBlock(block: string): boolean {
 // Matched by shape rather than by literal, because the connector variant
 // interpolates the app name ("… will run this in Follow Up Boss …") and a
 // literal set would silently stop matching the day a new connector lands.
+//
+// TWO THINGS KEEP THAT SHAPE FROM EATING THE CUSTOMER'S OWN WORDS, and both
+// are load-bearing:
+//
+//  1. It is gated to CLOSED_LOOP_KINDS. Those five are the ONLY kinds whose
+//     renderers emit this chrome. Every other kind's body is the customer's
+//     prose or their counterparty's, and we do not edit that.
+//  2. It matches the WHOLE sentence — the "only after you approve" clause AND
+//     the "Nothing has been/happened" tail — not the opening words.
+//
+// A bare `/^Awaiting your approval\b/` prefix applied to all 30 kinds is not
+// a hypothetical: it shipped, and it silently deleted customer paragraphs. A
+// PORTAL_CLIENT_MESSAGE opening "Awaiting your approval on the revised scope,
+// we are holding the crew until Friday." lost that paragraph out of the copy,
+// the download AND the mailto. Nothing on screen showed the gap, because
+// ApprovalHandoff parks the artifact text in an off-screen <textarea>. Silent
+// content loss on a customer surface is a worse defect than the chrome it was
+// removing. lib/approvals/__tests__/artifact.test.ts pins that exact body.
 
-const CARD_CHROME_RE = /^Awaiting your approval\b/;
+const CARD_CHROME_PATTERNS: readonly RegExp[] = [
+  // DOCUSIGN_SEND_ENVELOPE, DOCUSIGN_VOID_ENVELOPE, CONNECTOR_WRITE_ACTION,
+  // PORTAL_CLIENT_MESSAGE. Three anchors — the opener, the "only after you
+  // approve" promise, and the "Nothing has …" tail — so the connector's
+  // interpolated app name stays free while customer prose cannot collide.
+  // Deliberately NOT dot-all: a paragraph break must not bridge the anchors.
+  /^Awaiting your approval\s+—\s.*\bonly after you approve\b.*\bNothing has (?:been|happened)\b/,
+  // VOICE_RECORDING_CONSENT states the same pending-state promise in its own
+  // words and shares no prefix with the other four, so it gets its own shape.
+  // See renderVoiceRecordingConsent: the sentence is emitted as its own block
+  // precisely so this can drop it without rewriting the line around it.
+  /^Recording stays off until you approve it here\.$/,
+];
 
-/** True when a block describes the approval card's state rather than the
- *  work the card is about. */
-export function isCardChromeBlock(block: string): boolean {
-  return CARD_CHROME_RE.test(block.trim());
+/** True when a block describes the approval CARD's pending state rather than
+ *  the work the card is about — the class of sentence that is correct under a
+ *  pair of approve/reject buttons and FALSE the moment an artifact exists.
+ *
+ *  `kind` is required, not optional: the gate to CLOSED_LOOP_KINDS is the
+ *  thing that stops this from deleting the customer's own prose, so it cannot
+ *  be something a caller forgets to pass. */
+export function isCardChromeBlock(kind: string, block: string): boolean {
+  if (!CLOSED_LOOP_KINDS.has(String(kind))) return false;
+  const trimmed = block.trim();
+  return CARD_CHROME_PATTERNS.some((re) => re.test(trimmed));
 }
 
 // Title/recipient fallbacks — not body blocks, but equally not real content.
@@ -165,40 +202,38 @@ const EMPTY_TITLES: ReadonlySet<string> = new Set([
 
 // ── Recipient + subject extraction ───────────────────────────────────────
 // `RenderedApproval.recipients` is the discrete, authoritative list and is
-// what we use. `recipientLine` is a HUMANIZED DISPLAY STRING that also
-// carries the subject ("To: jane@buyer.com    Re: 142 Peachtree"), and on
-// every reply-draft kind that subject came from an inbound email a stranger
-// sent. Scanning the whole line for addresses therefore let a stranger put
-// themselves on the customer's To: header by writing an address into their
-// subject line — no encoding trick required. `extractRecipients` survives
-// only as the fallback for a rendered approval that predates the discrete
-// field, and it now reads the addressee segment ALONE.
+// the ONLY source of an addressee. `recipientLine` is a HUMANIZED DISPLAY
+// STRING that also carries the subject ("To: jane@buyer.com    Re: 142
+// Peachtree"), and on every reply-draft kind that subject came from an
+// inbound email a stranger sent. Scanning that line for addresses let a
+// stranger put themselves on the customer's To: header by writing an address
+// into their subject line — no encoding trick required.
+//
+// There used to be an `extractRecipients` fallback here for "a RenderedApproval
+// that predates the discrete field". It has been DELETED, for three reasons:
+//
+//  • No such value can exist. `recipients` shipped in the same commit as its
+//    consumer, and RenderedApproval is a RENDER-TIME type — it is built fresh
+//    from the payload on every request and is never persisted, so there is no
+//    stored older shape to be compatible with.
+//  • It was unreachable and still injectable. Every one of the 9 render sites
+//    that shows an addressee sets `recipients`, so the branch never ran — but
+//    the exported function still handed a stranger's address back from lines
+//    like "To:    Re: hello mallory@evil.example.com" (empty addressee
+//    segment) and "To: jane@b.example.com    Re:hello mallory@evil.example.com"
+//    (no space after "Re:", so the subject was read as addressee).
+//  • Dead code that re-opens a HIGH defect the moment someone adds a 31st
+//    kind and forgets the field is worse than no code at all.
+//
+// The absence is deliberately LOUD rather than silently permissive: a kind
+// whose renderer omits `recipients` now yields no recipient, therefore no
+// mailto and no To: line, and the test suite asserts both that behaviour and
+// that every kind showing an addressee exposes it discretely.
 
 /** Anchored: a whole token must be an address. No whitespace, no CR/LF, no
  *  header separator can survive into a To: line through this. */
 const STRICT_EMAIL_RE =
   /^[^\s@,;:<>"'()[\]]+@[^\s@,;:<>"'()[\]]+\.[A-Za-z]{2,}$/;
-
-/** The addressee segment of a humanized recipient line: the text after a
- *  leading "To…:" label and before the " Re: " that introduces the subject.
- *  Returns null when the line has no addressee label at all — a bare
- *  "Re: <subject>" line addresses nobody. */
-function addresseeSegment(recipientLine: string): string | null {
-  const labelled = /^\s*To\b[^:]*:\s*(.*)$/i.exec(recipientLine);
-  if (!labelled) return null;
-  const rest = labelled[1] ?? "";
-  const subjectAt = rest.search(/\s+Re:\s/i);
-  return subjectAt >= 0 ? rest.slice(0, subjectAt) : rest;
-}
-
-/** Every syntactically-real address in the ADDRESSEE SEGMENT of a recipient
- *  line, deduped, in order. Never scans the subject. */
-export function extractRecipients(recipientLine?: string): string[] {
-  if (!recipientLine) return [];
-  const segment = addresseeSegment(recipientLine);
-  if (segment === null) return [];
-  return sanitizeRecipients(segment.split(/[,\s]+/));
-}
 
 /** Keep only whole, syntactically-real addresses, deduped, in order. Applied
  *  to the renderer's discrete list too — the artifact is the last stop before
@@ -293,12 +328,13 @@ export function buildApprovalArtifact(
   kind: WorkApprovalKind,
   rendered: RenderedApproval,
 ): ApprovalArtifact {
-  // The discrete field is authoritative. Parsing the humanized line is the
-  // legacy path only, and it reads the addressee segment alone — see the
-  // note above `extractRecipients`.
-  const recipients = rendered.recipients
-    ? sanitizeRecipients(rendered.recipients)
-    : extractRecipients(rendered.recipientLine);
+  // The discrete field is the ONLY source of an addressee. There is no parse
+  // fallback: a rendered approval that does not state its recipients does not
+  // have any, and the artifact fails closed to no To: line and no mailto
+  // rather than guessing from a display string that carries a stranger's
+  // subject. Still sanitized — the artifact is the last stop before a To:
+  // header, so it validates the renderer rather than trusting it.
+  const recipients = sanitizeRecipients(rendered.recipients ?? []);
   const recipient = recipients.length > 0 ? recipients.join(", ") : undefined;
 
   const title = meaningfulTitle(rendered.title);
@@ -343,7 +379,7 @@ export function buildApprovalArtifact(
     const line = raw.replace(/\s+$/, "");
     if (line.trim().length === 0) continue;
     if (isRendererFallbackBlock(line)) continue;
-    if (isCardChromeBlock(line)) continue;
+    if (isCardChromeBlock(String(kind), line)) continue;
     blocks.push(line);
   }
 

@@ -23,6 +23,15 @@
 # shared 2026-11-09 expiry. The gate therefore lands GREEN and any failure it
 # reports is a NEW break — which is the only way a gate gets read.
 #
+# WHAT THIS GATE DOES *NOT* COVER: anything gated on a live database. Suites
+# guarded by `DATABASE_URL` — notably `memory-scale RLS — live cross-tenant
+# isolation` in tests/rls-memory-scale-isolation.test.ts — report `# SKIP`
+# here, because this job has no Postgres. They run in
+# `.github/workflows/rls-live.yml`, which stands up a pgvector service
+# container, applies all 67 migrations as an UNPRIVILEGED owner, and attempts a
+# real cross-tenant read. That job is path-filtered rather than running on
+# every PR; the reasoning and the Actions-minute arithmetic are in its header.
+#
 # Run locally:
 #   npm run test:gate         # what CI runs
 #   npm run test:gate:all     # ignore the quarantine, see the real surface

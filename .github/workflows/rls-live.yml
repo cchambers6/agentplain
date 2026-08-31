@@ -1,0 +1,322 @@
+# Live cross-tenant isolation — the only check in this repo that talks to a
+# real Postgres and actually attempts a cross-tenant read.
+#
+# WHY THIS EXISTS
+# ---------------
+# `tests/rls-memory-scale-isolation.test.ts` has two layers. Layer A reads the
+# migration FILES and asserts every table gets ENABLE + FORCE + a policy. Layer
+# B — `memory-scale RLS — live cross-tenant isolation` — seeds two workspaces in
+# a real database and proves workspace A cannot read workspace B's rows. Layer
+# B is gated on `DATABASE_URL`, and in CI there was no database, so it reported:
+#
+#     ﹣ memory-scale RLS — live cross-tenant isolation (0.1977ms) # SKIP
+#
+# (measured 2026-08-31 on origin/main @ a4cffad, `node tools/test-gate.mjs`,
+# exit 0 — 5,928 tests, 0 fail, and that line among the 21 skips.)
+#
+# So the entire tenant-isolation guarantee rested on static analysis of SQL
+# text. That is the same failure shape as the two bugs 5,927 unit tests missed
+# on 2026-08-11: dead wiring between components that each worked in isolation.
+# Migration files that SAY `FORCE ROW LEVEL SECURITY` and a database that
+# ENFORCES it are two different claims, and only one of them was being checked.
+#
+# THE OWNER IS THE WHOLE POINT
+# ----------------------------
+# `FORCE ROW LEVEL SECURITY` exists because a table's OWNER bypasses RLS by
+# default, and in production Neon's `neondb_owner` owns every table. A test
+# that connects as the container's `postgres` superuser proves NOTHING — a
+# superuser bypasses RLS unconditionally, so the suite would go green with
+# every policy deleted. That is worse than no test: it manufactures confidence.
+#
+# So this job creates `rls_owner` — NOSUPERUSER, NOBYPASSRLS — makes it own the
+# schema and therefore every table `prisma migrate deploy` creates, and points
+# DATABASE_URL at it. The "connection under test is not privileged" step below
+# is not ceremony; it is the assumption the entire job rests on, asserted
+# rather than assumed.
+#
+# WHY A pgvector IMAGE
+# --------------------
+# `prisma/migrations/20260512000000_add_knowledge_substrate` runs
+# `CREATE EXTENSION vector` and builds an `ivfflat` index on `vector(1536)`.
+# The stock `postgres:16` image does not ship pgvector, so migration 3 of 67
+# fails and nothing after it applies. `pgvector/pgvector:pg16` is the official
+# pgvector build ON TOP OF the official postgres:16 image, so it carries the
+# contrib extensions (`uuid-ossp`, `citext`, `pg_trgm`) the other migrations
+# need as well. This repo already made this exact choice, for this exact
+# reason, in `.github/workflows/schema-drift.yml` — this is consistency, not a
+# new bet.
+#
+# The four extensions are installed here by the SUPERUSER before
+# `migrate deploy` runs, so the migrations' `CREATE EXTENSION IF NOT EXISTS`
+# statements are no-ops for `rls_owner`. This also mirrors production: Neon
+# installs pgvector; `neondb_owner` does not and cannot.
+#
+# NO HOSTED DATABASE. EVER.
+# -------------------------
+# The service container is ephemeral, lives on the runner, and dies with the
+# job. `DATABASE_URL` is a throwaway literal written in this file on purpose —
+# it is NOT a secret, it must never be read from `secrets.*` or `vars.*`, and
+# this job must never point at Neon, at production, or at any hosted database.
+# Production migrations have been blocked since 2026-06-17; `migrate deploy`
+# belongs nowhere near them. If you find yourself adding a secret here, stop.
+#
+# COST
+# ----
+# Actions minutes are a real budget: ~1,245 min/month measured against the
+# 2,000-minute private-repo cap, and this repo is intended to go private. This
+# job is therefore NOT on every PR. It is path-filtered to the code that can
+# actually break tenant isolation at the database layer — the schema, the
+# migrations, the RLS wrapper, and the RLS tests themselves. See the trigger
+# block below and the cost note in the PR description for the measured
+# per-run figure.
+#
+# RUN IT LOCALLY
+#   docker run --rm -p 5432:5432 -e POSTGRES_PASSWORD=postgres pgvector/pgvector:pg16
+#   ...then the same three psql blocks below, then:
+#   DATABASE_URL=... DATABASE_URL_DIRECT=... npx prisma migrate deploy
+#   DATABASE_URL=... node --import tsx --test tests/rls-memory-scale-isolation.test.ts
+
+name: rls-live
+
+on:
+  pull_request:
+    paths:
+      - "prisma/schema.prisma"
+      - "prisma/migrations/**"
+      - "lib/db/**"
+      - "lib/tenancy/**"
+      - "tests/rls-*.test.ts"
+      - ".github/workflows/rls-live.yml"
+  push:
+    branches: [main]
+    paths:
+      - "prisma/schema.prisma"
+      - "prisma/migrations/**"
+      - "lib/db/**"
+      - "lib/tenancy/**"
+      - "tests/rls-*.test.ts"
+      - ".github/workflows/rls-live.yml"
+  # So it can be run on demand against any branch without editing the filters.
+  workflow_dispatch:
+
+concurrency:
+  group: rls-live-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  rls-live:
+    runs-on: ubuntu-latest
+    # Measured runs land well under this. 15 minutes stops a hung migration
+    # from burning an hour of a budget that has ~755 minutes of headroom.
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      # Superuser handle, used ONLY to provision. Nothing under test uses it.
+      ADMIN_URL: postgres://postgres:postgres@localhost:5432/postgres
+      ADMIN_URL_APPDB: postgres://postgres:postgres@localhost:5432/agentplain_rls
+      # The connection under test: an unprivileged role that owns the tables,
+      # exactly like `neondb_owner` in production. Throwaway credentials for an
+      # ephemeral container — deliberately literal, deliberately not a secret.
+      DATABASE_URL: postgres://rls_owner:rls_owner@localhost:5432/agentplain_rls
+      DATABASE_URL_DIRECT: postgres://rls_owner:rls_owner@localhost:5432/agentplain_rls
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: psql is present
+        # Fail here with a legible message rather than 200 lines later with a
+        # "command not found" buried in a heredoc.
+        run: psql --version
+
+      - name: Create the unprivileged owner role and the throwaway database
+        run: |
+          set -euo pipefail
+          psql "$ADMIN_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE rls_owner
+            LOGIN PASSWORD 'rls_owner'
+            NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+          CREATE DATABASE agentplain_rls OWNER rls_owner;
+          SQL
+
+      - name: Install the extensions as superuser; hand the schema to rls_owner
+        run: |
+          set -euo pipefail
+          psql "$ADMIN_URL_APPDB" -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+          CREATE EXTENSION IF NOT EXISTS "citext";
+          CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+          CREATE EXTENSION IF NOT EXISTS "vector";
+          -- Postgres 15+ revokes CREATE on schema public from PUBLIC, so the
+          -- unprivileged role has to OWN the schema to create tables in it.
+          -- Owning it is also what makes it the owner of every table the
+          -- migrations create, which is the condition FORCE RLS defends.
+          ALTER SCHEMA public OWNER TO rls_owner;
+          SQL
+
+      - name: The connection under test is NOT privileged
+        # If this step is ever removed or weakened, every assertion downstream
+        # becomes decorative: a superuser or a BYPASSRLS role reads every row
+        # in every tenant regardless of policy, and the suite goes green over a
+        # totally open database.
+        run: |
+          set -euo pipefail
+          echo "connection identity:"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -Atc \
+            "SELECT 'user=' || current_user
+                  || ' superuser=' || current_setting('is_superuser')
+                  || ' bypassrls=' || (SELECT rolbypassrls FROM pg_roles WHERE rolname = current_user)::text"
+
+          su=$(psql "$DATABASE_URL" -Atc "SELECT current_setting('is_superuser')")
+          if [ "$su" != "off" ]; then
+            echo "::error::the RLS test connection is a SUPERUSER. It bypasses RLS unconditionally and would pass with every policy deleted."
+            exit 1
+          fi
+
+          bypass=$(psql "$DATABASE_URL" -Atc "SELECT rolbypassrls FROM pg_roles WHERE rolname = current_user")
+          if [ "$bypass" != "f" ]; then
+            echo "::error::the RLS test role has BYPASSRLS. Same problem: the test would prove nothing."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        # postinstall runs `prisma generate`; the test imports the generated
+        # client, so this is not skippable here.
+        run: npm ci
+
+      - name: Apply all migrations as the unprivileged owner
+        run: npx prisma migrate deploy
+
+      - name: Every table is owned by rls_owner, with RLS enabled AND forced
+        run: |
+          set -euo pipefail
+
+          foreign_owner=$(psql "$DATABASE_URL" -Atc "
+            SELECT coalesce(string_agg(c.relname || ' -> ' || pg_get_userbyid(c.relowner), ', '), '')
+            FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public' AND c.relkind IN ('r','p')
+              AND pg_get_userbyid(c.relowner) <> 'rls_owner'")
+          if [ -n "$foreign_owner" ]; then
+            echo "::error::tables not owned by rls_owner (FORCE RLS would not be the control under test): $foreign_owner"
+            exit 1
+          fi
+
+          not_forced=$(psql "$DATABASE_URL" -Atc "
+            SELECT coalesce(string_agg(c.relname, ', ' ORDER BY c.relname), '')
+            FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public' AND c.relkind IN ('r','p')
+              AND c.relname <> '_prisma_migrations'
+              AND NOT (c.relrowsecurity AND c.relforcerowsecurity)")
+          if [ -n "$not_forced" ]; then
+            echo "::error::tables missing ENABLE and/or FORCE ROW LEVEL SECURITY in the live database: $not_forced"
+            exit 1
+          fi
+
+          psql "$DATABASE_URL" -Atc "
+            SELECT count(*) || ' tables report relrowsecurity AND relforcerowsecurity'
+            FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public' AND c.relkind IN ('r','p')
+              AND c.relrowsecurity AND c.relforcerowsecurity"
+
+      - name: A bare connection with no workspace GUC reads nothing and writes nothing
+        # The cheapest cross-tenant probe there is, and the one that catches a
+        # policy written as `USING (true)`. No transaction and no GUCs, so
+        # `current_setting('app.workspace_id', true)` is NULL for every policy.
+        #
+        # The row is planted by the SUPERUSER first, on purpose: counting zero
+        # rows in an empty table proves nothing at all, and a probe that is
+        # vacuously true is exactly the kind of green check this whole job
+        # exists to stop shipping.
+        run: |
+          set -euo pipefail
+          psql "$ADMIN_URL_APPDB" -v ON_ERROR_STOP=1 -c \
+            "INSERT INTO \"Workspace\" (\"name\",\"slug\",\"updatedAt\") VALUES ('rls probe','rls-guc-probe',now())"
+
+          planted=$(psql "$ADMIN_URL_APPDB" -Atc 'SELECT count(*) FROM "Workspace"')
+          if [ "$planted" = "0" ]; then
+            echo "::error::could not plant the probe row; the read check below would be vacuous."
+            exit 1
+          fi
+          echo "planted $planted Workspace row(s) as superuser"
+
+          leaked=$(psql "$DATABASE_URL" -Atc 'SELECT count(*) FROM "Workspace"')
+          echo "rows visible to the GUC-less rls_owner connection: $leaked"
+          if [ "$leaked" != "0" ]; then
+            echo "::error::a connection with no RLS context read $leaked Workspace rows. Tenant isolation is open."
+            exit 1
+          fi
+
+          # RLS is enabled and forced and no policy matches a context-free
+          # connection, so the write must be refused too.
+          if psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c \
+              "INSERT INTO \"Workspace\" (\"name\",\"slug\",\"updatedAt\") VALUES ('bad','rls-guc-probe-write',now())" \
+              >/dev/null 2>&1; then
+            echo "::error::a connection with no RLS context INSERTED a Workspace row. WITH CHECK is not holding."
+            exit 1
+          fi
+          echo "context-free INSERT was refused, as required"
+
+          psql "$ADMIN_URL_APPDB" -v ON_ERROR_STOP=1 -c \
+            "DELETE FROM \"Workspace\" WHERE \"slug\" LIKE 'rls-guc-probe%'"
+
+      - name: Live cross-tenant isolation
+        run: |
+          set -euo pipefail
+          node --import tsx --test tests/rls-memory-scale-isolation.test.ts 2>&1 | tee /tmp/rls-live.out
+
+          # The failure mode that would make this whole job theatre: DATABASE_URL
+          # does not reach the runner, `RUN_DB` is false, the live describe
+          # reports `# SKIP`, node exits 0, and the job is green having proved
+          # exactly what it proved before this file existed.
+          if grep -q 'live cross-tenant isolation.*# SKIP' /tmp/rls-live.out; then
+            echo "::error::the live cross-tenant suite SKIPPED. DATABASE_URL did not reach the test process; this job proved nothing."
+            exit 1
+          fi
+
+      - name: Negative control — break FORCE and require the live layer to go red
+        # A green test is not evidence that a test works. This deliberately
+        # removes the owner-bypass closer from ONE table in the throwaway
+        # database and requires the live layer to fail, FOR THE PREDICTED
+        # REASON. If it still passes, the layer is not load-bearing and this
+        # job fails — which is the correct outcome, because a check that cannot
+        # go red is a check that is not checking.
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c 'ALTER TABLE "Team" NO FORCE ROW LEVEL SECURITY;'
+
+          if node --import tsx --test tests/rls-memory-scale-isolation.test.ts > /tmp/rls-neg.out 2>&1; then
+            echo "::error::negative control PASSED. FORCE ROW LEVEL SECURITY was removed from \"Team\" and the live cross-tenant test still went green — it is not actually reading the database."
+            tail -80 /tmp/rls-neg.out
+            exit 1
+          fi
+
+          if ! grep -q 'Team RLS leaked a foreign row to A' /tmp/rls-neg.out; then
+            echo "::error::negative control went red for the WRONG reason. Expected the cross-tenant leak assertion; got something else."
+            tail -80 /tmp/rls-neg.out
+            exit 1
+          fi
+
+          echo "negative control OK: removing FORCE from \"Team\" made workspace A read workspace B's rows, and the live layer caught it."
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c 'ALTER TABLE "Team" FORCE ROW LEVEL SECURITY;'

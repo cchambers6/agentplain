@@ -5,6 +5,10 @@ import Section from "@/components/Section";
 import HeroBackdrop from "@/components/marketing/HeroBackdrop";
 import DesignPartnerGrid from "@/components/trust/DesignPartnerGrid";
 import { getAllVerticals } from "@/lib/verticals";
+import {
+  isVerticalOnSale,
+  launchVerticalName,
+} from "@/lib/verticals/launch";
 import { alternatesFor } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = {
@@ -23,6 +27,10 @@ export const metadata: Metadata = {
 
 export default function VerticalsIndexPage() {
   const all = getAllVerticals();
+  // Derived from lib/verticals/launch.ts — the launch vertical is never
+  // spelled out in copy. `null` when nothing is on sale, which is a real
+  // state the copy below has to render honestly rather than assume away.
+  const openName = launchVerticalName();
 
   return (
     <>
@@ -46,6 +54,32 @@ export default function VerticalsIndexPage() {
             Three service-partnership tiers cover every vertical — Regular
             $199 → $99, Partner $299 → $199, Max quoted to scope. 7-day free
             trial (14 days for CPA &amp; Law), card at signup. Month-to-month.
+          </p>
+          {/* LAUNCH WINDOW (lib/verticals/launch.ts). Ten pages are
+              published; one vertical is open for signup today. Saying so
+              here, on the page that invites the visitor to pick, is cheaper
+              than letting them find out at the signup gate. */}
+          <p className="mt-4 max-w-2xl border-l-2 border-clay pl-4 text-[14px] leading-relaxed text-ink-soft">
+            <span className="font-mono text-[11px] tracking-eyebrow uppercase text-clay">
+              Open today
+            </span>{" "}
+            We open one line of work at a time so every install gets a real
+            service partner.{" "}
+            {openName ? (
+              <>
+                <strong className="font-medium">{openName}</strong> are open
+                for signup now.{" "}
+              </>
+            ) : (
+              <>
+                <strong className="font-medium">
+                  Nothing is open for signup today.
+                </strong>{" "}
+              </>
+            )}
+            Every other page below is a real roadmap — read it, then join the
+            list. We&apos;d rather tell you we&apos;re not open than sell you a
+            trial we&apos;d decline.
           </p>
         </div>
       </section>
@@ -135,6 +169,15 @@ function Grid({ items }: { items: ReturnType<typeof getAllVerticals> }) {
           </p>
           <p className="mt-5 inline-flex items-center gap-2 font-mono text-[11px] tracking-eyebrow text-mute group-hover:text-clay">
             Read the page <span aria-hidden>→</span>
+          </p>
+          {/* Honest status at the point of choice — see the launch-window
+              note in the hero. */}
+          <p className="mt-2 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+            {isVerticalOnSale(v.slug) ? (
+              <span className="text-clay">Open for signup</span>
+            ) : (
+              "Not open yet — join the list"
+            )}
           </p>
         </Link>
       ))}

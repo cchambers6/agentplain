@@ -14,6 +14,7 @@ import {
   signUpAction,
   joinVerticalWaitlistAction,
   type ActionResult,
+  type WaitlistReason,
 } from "../actions";
 
 const initial: ActionResult = { ok: false };
@@ -59,6 +60,8 @@ export function SignUpForm({
   defaultTier = "regular",
   trialDays = 7,
   cardAtSignup = true,
+  heldVertical = null,
+  openName = null,
 }: {
   verticals: VerticalOption[];
   defaultVerticalSlug?: string;
@@ -69,10 +72,20 @@ export function SignUpForm({
   /** True only when billing is live AND Checkout-at-signup is on. Default
    *  (#241 scaffold) is trial-first / no card — the summary must say so. */
   cardAtSignup?: boolean;
+  /** Set when the visitor deep-linked to a vertical outside the launch
+   *  window (`?vertical=mortgage`). We render the honest waitlist screen
+   *  immediately instead of a signup form we would refuse on submit. */
+  heldVertical?: { slug: string; name: string } | null;
+  /** Display name of the launch vertical, DERIVED on the server from
+   *  `lib/verticals/launch.ts → launchVerticalName()` and passed in rather
+   *  than imported here: this is a client component and launch.ts pulls the
+   *  skill registry through readiness.ts. `null` means nothing is on sale,
+   *  which every consumer below must render rather than assume away. */
+  openName?: string | null;
 }) {
   const [tier, setTier] = useState<Selection>(defaultTier);
   const [verticalSlug, setVerticalSlug] = useState<string>(
-    defaultVerticalSlug ?? "real-estate",
+    defaultVerticalSlug ?? verticals[0]?.slug ?? "general",
   );
   const [state, formAction] = useFormState<ActionResult, FormData>(
     signUpAction,
@@ -112,6 +125,22 @@ export function SignUpForm({
       <VerticalWaitlist
         verticalSlug={state.waitlist.verticalSlug}
         verticalName={state.waitlist.verticalName}
+        reason={state.waitlist.reason}
+        openName={openName}
+      />
+    );
+  }
+
+  // Deep-linked to a vertical outside the launch window — show the waitlist
+  // before they type anything, not after. Rendered after the state branches
+  // above so a submitted waitlist form still shows its own confirmation.
+  if (heldVertical) {
+    return (
+      <VerticalWaitlist
+        verticalSlug={heldVertical.slug}
+        verticalName={heldVertical.name}
+        reason="not-open-yet"
+        openName={openName}
       />
     );
   }
@@ -144,6 +173,7 @@ export function SignUpForm({
             verticals={verticals}
             selected={verticalSlug}
             onSelect={setVerticalSlug}
+            openName={openName}
           />
 
           <ApHeritageField
@@ -292,14 +322,18 @@ function VerticalChipRow({
   verticals,
   selected,
   onSelect,
+  openName,
 }: {
   verticals: VerticalOption[];
   selected: string;
   onSelect: (slug: string) => void;
+  /** Derived launch-vertical name; `null` when nothing is on sale. */
+  openName: string | null;
 }) {
   // Per design language §3.3 (chip row), with a /general fallback so
-  // shops outside the 10 launch verticals can self-select. Tens of
-  // chips fit on one line at md and wrap on mobile.
+  // shops outside the launch window can self-select. `verticals` is
+  // already filtered to the launch window by the page — this row never
+  // offers a vertical the server action would refuse.
   const options: VerticalOption[] = [
     ...verticals,
     { slug: "general", name: "Something else" },
@@ -336,9 +370,16 @@ function VerticalChipRow({
         })}
       </div>
       <p className="mt-2 text-[13px] leading-relaxed text-mute">
-        Real-estate brokerages get the full agent fleet today. Others
-        start with the compliance-and-drafting stack; your service
-        partner extends it for your shop.
+        We open one line of work at a time.{" "}
+        {openName ? (
+          <>{openName} get the full vertical fleet today; </>
+        ) : (
+          <>Nothing is open for signup today; </>
+        )}
+        &ldquo;something else&rdquo; starts on the horizontal stack — inbox
+        triage, follow-up chasing, invoice chase — with no vertical-specific
+        compliance corpus. Everything else is on the list, and we&apos;ll say
+        so rather than sell it early.
       </p>
     </fieldset>
   );
@@ -362,9 +403,14 @@ function Submit({ tier }: { tier: Exclude<Selection, "max"> }) {
 function VerticalWaitlist({
   verticalSlug,
   verticalName,
+  reason,
+  openName,
 }: {
   verticalSlug: string;
   verticalName: string;
+  reason: WaitlistReason;
+  /** Derived launch-vertical name; `null` when nothing is on sale. */
+  openName: string | null;
 }) {
   const waitlistInitial: ActionResult = { ok: false };
   const [state, formAction] = useFormState<ActionResult, FormData>(
@@ -393,14 +439,30 @@ function VerticalWaitlist({
           not yet — and we&apos;ll say so plainly
         </p>
         <p className="font-display text-2xl leading-tight text-ink">
-          Plaino isn&apos;t ready for {lower} yet.
+          {reason === "not-open-yet"
+            ? `We haven't opened ${lower} yet.`
+            : `Plaino isn't ready for ${lower} yet.`}
         </p>
         <p className="text-[15px] leading-relaxed text-ink-soft">
-          We hold ourselves to one rule: we don&apos;t take a local
-          business&apos;s money for work we can&apos;t do well yet. The one
-          flagship workflow that would earn its keep for {lower} isn&apos;t
-          live on our side today — so we&apos;re not going to charge you for
-          it.
+          {reason === "not-open-yet" ? (
+            <>
+              We hold ourselves to one rule: we don&apos;t take a local
+              business&apos;s money before a real service partner can stand
+              behind the work. We&apos;re opening one line of work at a time
+              so every install gets a person, not a queue position
+              {openName ? <> — {openName} first</> : null}. {verticalName} is
+              next in line, not abandoned, and we&apos;re not going to charge
+              you ahead of it.
+            </>
+          ) : (
+            <>
+              We hold ourselves to one rule: we don&apos;t take a local
+              business&apos;s money for work we can&apos;t do well yet. The one
+              flagship workflow that would earn its keep for {lower}{" "}
+              isn&apos;t live on our side today — so we&apos;re not going to
+              charge you for it.
+            </>
+          )}
         </p>
         <p className="text-[15px] leading-relaxed text-ink-soft">
           Leave your email and your service partner will reach out the moment
@@ -437,8 +499,15 @@ function VerticalWaitlist({
       </form>
 
       <p className="border-t border-rule pt-4 text-[13px] leading-relaxed text-mute">
-        Run a real-estate brokerage instead? That one&apos;s live today —
-        reload and pick it. Or tell us what you need at{" "}
+        {openName ? (
+          <>
+            Run one of our {openName.toLowerCase()} instead? That one&apos;s
+            open today — reload and pick it. Or tell us
+          </>
+        ) : (
+          <>Tell us</>
+        )}{" "}
+        what you need at{" "}
         <a href="/custom" className="text-ink underline">
           /custom
         </a>

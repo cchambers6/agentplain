@@ -30,7 +30,11 @@
  */
 
 import { tokens } from '@/lib/brand/tokens';
-import { getAllVerticals } from '@/lib/verticals';
+import {
+  getAllVerticals,
+  getAllVerticalsIncludingOnRamps,
+} from '@/lib/verticals';
+import { isVerticalOnSale } from '@/lib/verticals/launch';
 import {
   PER_SEAT_MONTHLY_USD_CENTS,
   SEAT_BANDS,
@@ -66,6 +70,21 @@ export function buildMarketingSystemPrompt(
   const verticals = getAllVerticals()
     .map((v) => v.name)
     .join(', ');
+  // Launch window — derived from lib/verticals/launch.ts, never hand-typed,
+  // so the chat cannot promise a signup the gate in
+  // app/(product)/app/actions.ts will decline. The `/general` on-ramp is NOT
+  // appended as a standing exception: it is only mentioned when it is
+  // genuinely on sale. It is on `SIGNUP_ON_RAMP_ALLOWLIST` but has no Prisma
+  // `Vertical` enum, so signUpAction rejects it at actions.ts:75 before the
+  // allowlist is ever consulted — a hand-typed mention here would be the
+  // chat promising a checkout that returns "Pick a vertical to continue".
+  const onSaleNames = getAllVerticalsIncludingOnRamps()
+    .filter((v) => isVerticalOnSale(v.slug))
+    .map((v) => v.name);
+  const openForSignup =
+    onSaleNames.length > 0
+      ? onSaleNames.join(', ')
+      : 'NOTHING IS OPEN FOR SIGNUP TODAY';
   const { high, low } = regularPriceBand();
   const largestBand = SEAT_BANDS.SEATS_50_99;
 
@@ -203,6 +222,16 @@ export function buildMarketingSystemPrompt(
     'Do NOT invent specific dollar penalties on the fly; if they want the',
     'exact figure, point them at the ROI section of their vertical page or',
     'the calculator on /pricing.',
+    '',
+    '── WHICH LINES OF WORK ARE OPEN TODAY ──────────────────────────',
+    'We publish a page for every vertical, but we OPEN them one at a time',
+    'so each install gets a real service partner. Open for signup right',
+    `now: ${openForSignup}. Everything else has a real roadmap page and a`,
+    'waitlist — a person reaches out when we open. If the visitor works in',
+    'a line of work we have not opened, SAY SO PLAINLY and offer the list.',
+    'Do NOT tell them to start a trial; the signup gate will decline it and',
+    'a promise we cannot keep costs more than a lead. Never imply a start',
+    'date we have not committed to.',
     '',
     '── HOW YOU CAPTURE A LEAD ──────────────────────────────────────',
     'When the visitor shows real intent — they ask for a demo, want to',

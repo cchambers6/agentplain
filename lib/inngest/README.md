@@ -16,7 +16,7 @@ Single source of truth: the `functions: [...]` array in
 | --- | --- | --- | --- |
 | `agentplain-trial-warnings` | `functions/trial-expiration-warnings.ts` | cron `0 10 * * *` (UTC; ~06:00 ET) | `INNGEST_FN_DISABLE_AGENTPLAIN_TRIAL_WARNINGS` |
 | `agentplain-integration-renewal-sweep` | `functions/integration-renewal-sweep.ts` | cron `0 */2 * * *` | `INNGEST_FN_DISABLE_AGENTPLAIN_INTEGRATION_RENEWAL_SWEEP` |
-| `agentplain-process-webhook-event` | `functions/process-webhook-event.ts` | cron `*/5 * * * *` + on-demand event `agentplain/process-webhook-event.requested` | `INNGEST_FN_DISABLE_AGENTPLAIN_PROCESS_WEBHOOK_EVENT` |
+| `agentplain-process-webhook-event` | `functions/process-webhook-event.ts` | cron `*/15 * * * *` + on-demand event `agentplain/process-webhook-event.requested` (no production emitter yet) | `INNGEST_FN_DISABLE_AGENTPLAIN_PROCESS_WEBHOOK_EVENT` |
 
 **Adding a function = touch two files:** create
 `functions/<name>.ts` and import + push the exported function symbol

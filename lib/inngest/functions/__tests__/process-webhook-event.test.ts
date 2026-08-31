@@ -19,6 +19,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  PROCESS_WEBHOOK_EVENT_BATCH_LIMIT,
   PROCESS_WEBHOOK_EVENT_CRON,
   PROCESS_WEBHOOK_EVENT_FUNCTION_ID,
   PROCESS_WEBHOOK_EVENT_TRIGGER_EVENT,
@@ -34,8 +35,56 @@ describe('process-webhook-event — cron metadata', () => {
     );
   });
 
-  it('keeps the every-5-minute cron schedule', () => {
-    assert.equal(PROCESS_WEBHOOK_EVENT_CRON, '*/5 * * * *');
+  it('keeps the every-15-minute cron schedule', () => {
+    assert.equal(PROCESS_WEBHOOK_EVENT_CRON, '*/15 * * * *');
+  });
+
+  // The cadence is a cost control, not a preference. The managed
+  // Postgres scales to zero after 5 minutes idle, so any interval <= 5
+  // minutes leaves no idle gap and bills continuous compute — this one
+  // function then costs more than the whole free allowance. Pin the
+  // property, not just the literal, so a "let's make it snappier" edit
+  // has to argue with the reason rather than silently pass.
+  it('fires strictly less often than the 5-minute scale-to-zero idle timeout', () => {
+    const match = /^\*\/(\d+) \* \* \* \*$/.exec(PROCESS_WEBHOOK_EVENT_CRON);
+    assert.ok(
+      match,
+      `expected a minute-step cron, got ${PROCESS_WEBHOOK_EVENT_CRON}`,
+    );
+    const stepMinutes = Number(match![1]);
+    assert.ok(
+      stepMinutes > 5,
+      `cron step ${stepMinutes}m must exceed the 5m scale-to-zero idle ` +
+        'timeout or the database never scales down between fires',
+    );
+  });
+
+  // Folding into a wake window another cron already pays for is what
+  // makes this change free. If the step stops dividing evenly into the
+  // existing */15 slot, that assumption is gone.
+  it('shares a wake window with the existing */15 crons', () => {
+    const stepMinutes = Number(/^\*\/(\d+) /.exec(PROCESS_WEBHOOK_EVENT_CRON)![1]);
+    assert.equal(
+      stepMinutes % 15,
+      0,
+      'step must align with the */15 slot held by agentplain-scheduler-sweep ' +
+        'and b2b-sales-rep-pre-call-brief, or it buys a new wake window',
+    );
+  });
+
+  // The batch bound is a per-fire safety cap, NOT scaled with the
+  // interval — so the cadence and the bound together set the sustained
+  // drain ceiling. Pin the derived number so a future cadence change
+  // has to confront what it does to throughput.
+  it('documents the sustained drain ceiling implied by cadence x batch', () => {
+    const stepMinutes = Number(/^\*\/(\d+) /.exec(PROCESS_WEBHOOK_EVENT_CRON)![1]);
+    const firesPerHour = 60 / stepMinutes;
+    assert.equal(
+      firesPerHour * PROCESS_WEBHOOK_EVENT_BATCH_LIMIT,
+      100,
+      'sustained drain ceiling changed; if this is intended, update the ' +
+        'rationale on PROCESS_WEBHOOK_EVENT_BATCH_LIMIT too',
+    );
   });
 
   it('exposes the on-demand event name for dev-console triggers', () => {

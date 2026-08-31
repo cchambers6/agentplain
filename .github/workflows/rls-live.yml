@@ -60,15 +60,26 @@
 # Production migrations have been blocked since 2026-06-17; `migrate deploy`
 # belongs nowhere near them. If you find yourself adding a secret here, stop.
 #
-# COST
-# ----
-# Actions minutes are a real budget: ~1,245 min/month measured against the
-# 2,000-minute private-repo cap, and this repo is intended to go private. This
-# job is therefore NOT on every PR. It is path-filtered to the code that can
-# actually break tenant isolation at the database layer — the schema, the
-# migrations, the RLS wrapper, and the RLS tests themselves. See the trigger
-# block below and the cost note in the PR description for the measured
-# per-run figure.
+# COST — MEASURED, NOT ESTIMATED
+# ------------------------------
+# Actions minutes are a real budget: ~1,245 min/month against the 2,000-minute
+# private-repo cap, and this repo is intended to go private. ~755 min headroom.
+#
+#   Per run:   71s wall (2026-08-31, run 33396227348 on PR #472). GitHub bills
+#              each job rounded up to the minute, so 2 billed minutes. The two
+#              real costs are `npm ci` (31s) and container start (21s);
+#              everything this job exists to do — provision, apply 67
+#              migrations, both probes, the live suite and the negative control
+#              — is 4s of that.
+#   Frequency: path-filtered. Measured over 2026-08-01..08-31, `tests.yml`
+#              (unfiltered, every PR) ran 16 times; `schema-drift.yml` (filtered
+#              on prisma/**) ran twice. This filter is a superset of
+#              schema-drift's, so 2-4 runs/month.
+#   Total:     ~4-8 min/month, against ~32 min/month if it ran on every PR.
+#
+# Neither number is scary. The filter is still right, because outside these
+# paths the job has nothing new to say, and a check that runs where it cannot
+# find anything is how people learn to stop reading checks.
 #
 # RUN IT LOCALLY
 #   docker run --rm -p 5432:5432 -e POSTGRES_PASSWORD=postgres pgvector/pgvector:pg16

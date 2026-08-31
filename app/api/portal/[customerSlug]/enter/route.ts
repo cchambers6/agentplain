@@ -50,6 +50,7 @@ export async function GET(
 
   const session = await createPortalSession({
     portalConfigId: resolved.config.id,
+    workspaceId: resolved.workspaceId,
     clientId: consumed.clientId,
   });
 

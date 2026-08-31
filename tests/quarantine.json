@@ -134,12 +134,6 @@
       "reason": "REAL: the skill is catalog runtime:'live' but appears in neither SWEEP_DISPATCH_MANIFEST nor NON_SWEEP_LIVE_SKILLS — it claims to fire and nothing fires it. The property-management fleet card renders 'Watching — ready when triggered' on the back of that claim. Tracked as property-management/pm-collections in lib/claims/known-drift.ts with the same expiry."
     },
     {
-      "class": "OPEN-GAP",
-      "file": "tests/rls-memory-scale-isolation.test.ts",
-      "test": "every model with a workspaceId column has RLS enabled in a migration",
-      "reason": "REAL: PortalConfig carries a workspaceId and has no ENABLE ROW LEVEL SECURITY policy in any migration. The portal tree is the one place we hold the customer's OWN clients' data. Fixing it needs a migration, which does not belong in a gate-wiring PR — but it should be the next thing off this list, not the last."
-    },
-    {
       "class": "stale-fixture",
       "file": "tests/brand.test.ts",
       "test": "paper is #F7F4ED",

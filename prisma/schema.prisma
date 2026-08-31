@@ -936,6 +936,22 @@ model Workspace {
   /// per workspace through which the SMB owner gives THEIR end clients
   /// status, doc upload, and gated Plaino chat. See PortalConfig.
   portalConfig             PortalConfig?
+  /// The portal subtree, denormalized onto the workspace so every table in it
+  /// carries the tenant key its RLS policy checks (rather than joining up the
+  /// portalConfigId chain). These back-relations exist only because Prisma
+  /// requires both sides of a relation — the portal is still reached through
+  /// `portalConfig` in application code.
+  /// See 20260830000000_portal_team_outreach_rls.
+  portalClients            PortalClient[]
+  portalCases              PortalCase[]
+  portalCaseEvents         PortalCaseEvent[]
+  portalInvites            PortalInvite[]
+  portalSessions           PortalSession[]
+  portalThreads            PortalThread[]
+  portalMessages           PortalMessage[]
+  portalDocuments          PortalDocument[]
+  /// Wave-6 team join rows, denormalized for the same reason.
+  teamMemberships          TeamMembership[]
   /// Trial-guarantee time-savings ledger. One append-only row per action
   /// the fleet completed, valued in minutes via the calibration table.
   /// Drives the workspace counter + the Day-7 walk-away evaluation.
@@ -2817,6 +2833,12 @@ model Team {
 model TeamMembership {
   id           String     @id @default(uuid()) @db.Uuid
   teamId       String     @db.Uuid
+  /// Denormalized tenant key, mirroring Team.workspaceId. Team itself was
+  /// policied by 20260617000000_memory_scale_rls_tiering_byo; this join table
+  /// was missed because it carries no literal workspaceId column, which is
+  /// exactly the class the coverage test now catches by default.
+  /// See 20260830000000_portal_team_outreach_rls.
+  workspaceId  String     @db.Uuid
   userId       String     @db.Uuid
   /// Membership on the workspace — kept as a hard FK so removing a
   /// workspace-membership cascades the team-membership rows. (User-only
@@ -2824,12 +2846,14 @@ model TeamMembership {
   membershipId String     @db.Uuid
   joinedAt     DateTime   @default(now())
   team         Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  workspace    Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, userId])
   @@index([userId])
   @@index([membershipId])
+  @@index([workspaceId])
 }
 
 // Wave-6 — per-discipline approver routing. When a workspace assigns a
@@ -3022,6 +3046,15 @@ model PortalConfig {
 model PortalClient {
   id             String   @id @default(uuid()) @db.Uuid
   portalConfigId String   @db.Uuid
+  /// Denormalized tenant key. Every table in the portal subtree carries the
+  /// owning workspace directly so its RLS policy is the same plain
+  /// column-equality check every other tenant table uses, rather than a
+  /// correlated subquery up the portalConfigId chain. Same reasoning (and the
+  /// same backfill shape) as WebhookEvent.workspaceId in
+  /// 20260526000000_add_integration_rls. Kept in sync by the FK to
+  /// PortalConfig — a portal never changes workspace.
+  /// See 20260830000000_portal_team_outreach_rls.
+  workspaceId    String   @db.Uuid
   /// Citext so invites are case-insensitive on email. Unique per portal.
   email          String   @db.Citext
   name           String?
@@ -3029,6 +3062,7 @@ model PortalClient {
   updatedAt      DateTime @updatedAt
 
   portalConfig PortalConfig    @relation(fields: [portalConfigId], references: [id], onDelete: Cascade)
+  workspace    Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   cases        PortalCase[]
   invites      PortalInvite[]
   sessions     PortalSession[]
@@ -3037,6 +3071,7 @@ model PortalClient {
 
   @@unique([portalConfigId, email])
   @@index([portalConfigId])
+  @@index([workspaceId])
 }
 
 /// The trackable thing the end client follows: a legal matter, a tax-prep job,
@@ -3047,6 +3082,8 @@ model PortalCase {
   /// Nullable so a portal can show a case before it's linked to a specific
   /// client identity (e.g. created from an internal record before the invite).
   clientId       String?          @db.Uuid
+  /// Denormalized tenant key — see PortalClient.workspaceId.
+  workspaceId    String           @db.Uuid
   /// Human-facing reference the owner uses ("CASE-2026-014", "Tax-2025"),
   /// unique within the portal.
   reference      String
@@ -3056,6 +3093,7 @@ model PortalCase {
   updatedAt      DateTime         @updatedAt
 
   portalConfig PortalConfig      @relation(fields: [portalConfigId], references: [id], onDelete: Cascade)
+  workspace    Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   client       PortalClient?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
   events       PortalCaseEvent[]
   documents    PortalDocument[]
@@ -3064,6 +3102,7 @@ model PortalCase {
   @@unique([portalConfigId, reference])
   @@index([portalConfigId, status])
   @@index([clientId])
+  @@index([workspaceId])
 }
 
 /// One entry on a case's status timeline. Owner- or Plaino-authored; always
@@ -3072,15 +3111,21 @@ model PortalCase {
 model PortalCaseEvent {
   id         String      @id @default(uuid()) @db.Uuid
   caseId     String      @db.Uuid
+  /// Denormalized tenant key — see PortalClient.workspaceId. This one is two
+  /// FK hops from the tenant root (caseId -> PortalCase -> PortalConfig),
+  /// which is precisely why the column-name-based coverage test never saw it.
+  workspaceId String     @db.Uuid
   label      String
   detail     String?
   actor      PortalActor @default(OWNER)
   occurredAt DateTime    @default(now())
   createdAt  DateTime    @default(now())
 
-  case PortalCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  case      PortalCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([caseId, occurredAt])
+  @@index([workspaceId])
 }
 
 /// A magic-link invitation. Only the sha256 hash of the raw token is stored, so
@@ -3089,6 +3134,8 @@ model PortalInvite {
   id             String    @id @default(uuid()) @db.Uuid
   portalConfigId String    @db.Uuid
   clientId       String    @db.Uuid
+  /// Denormalized tenant key — see PortalClient.workspaceId.
+  workspaceId    String    @db.Uuid
   /// sha256(rawToken). The raw token only ever exists in the emailed URL.
   tokenHash      String    @unique
   email          String    @db.Citext
@@ -3097,10 +3144,12 @@ model PortalInvite {
   createdAt      DateTime  @default(now())
 
   portalConfig PortalConfig @relation(fields: [portalConfigId], references: [id], onDelete: Cascade)
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   client       PortalClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([portalConfigId])
   @@index([clientId])
+  @@index([workspaceId])
 }
 
 /// A live end-client session. Replaces the iron-session/User mechanism for end
@@ -3110,6 +3159,8 @@ model PortalSession {
   id             String    @id @default(uuid()) @db.Uuid
   portalConfigId String    @db.Uuid
   clientId       String    @db.Uuid
+  /// Denormalized tenant key — see PortalClient.workspaceId.
+  workspaceId    String    @db.Uuid
   tokenHash      String    @unique
   expiresAt      DateTime
   revokedAt      DateTime?
@@ -3117,10 +3168,12 @@ model PortalSession {
   lastSeenAt     DateTime  @default(now())
 
   portalConfig PortalConfig @relation(fields: [portalConfigId], references: [id], onDelete: Cascade)
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   client       PortalClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([clientId])
   @@index([portalConfigId])
+  @@index([workspaceId])
 }
 
 /// A chat thread between one end client and Plaino, optionally about a case.
@@ -3129,16 +3182,20 @@ model PortalThread {
   portalConfigId String   @db.Uuid
   clientId       String   @db.Uuid
   caseId         String?  @db.Uuid
+  /// Denormalized tenant key — see PortalClient.workspaceId.
+  workspaceId    String   @db.Uuid
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   portalConfig PortalConfig    @relation(fields: [portalConfigId], references: [id], onDelete: Cascade)
+  workspace    Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   client       PortalClient    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   case         PortalCase?     @relation(fields: [caseId], references: [id], onDelete: SetNull)
   messages     PortalMessage[]
 
   @@index([portalConfigId, clientId])
   @@index([clientId, updatedAt])
+  @@index([workspaceId])
 }
 
 /// One message in a portal thread. `body` is AES-256-GCM v1 ciphertext at rest
@@ -3149,6 +3206,9 @@ model PortalMessage {
   id             String                @id @default(uuid()) @db.Uuid
   threadId       String                @db.Uuid
   portalConfigId String                @db.Uuid
+  /// Denormalized tenant key — see PortalClient.workspaceId. Highest-volume
+  /// table in the subtree, which is why its policy must not be a subquery.
+  workspaceId    String                @db.Uuid
   sender         PortalActor
   /// AES-256-GCM v1 ciphertext (lib/security/encryption). Plaintext never lands.
   body           String
@@ -3162,9 +3222,11 @@ model PortalMessage {
 
   thread       PortalThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
   portalConfig PortalConfig @relation(fields: [portalConfigId], references: [id], onDelete: Cascade)
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([threadId, createdAt])
   @@index([approvalItemId])
+  @@index([workspaceId])
 }
 
 /// A document an end client (or the owner) uploaded through the portal. The
@@ -3176,6 +3238,8 @@ model PortalDocument {
   portalConfigId String           @db.Uuid
   clientId       String?          @db.Uuid
   caseId         String?          @db.Uuid
+  /// Denormalized tenant key — see PortalClient.workspaceId.
+  workspaceId    String           @db.Uuid
   filename       String
   contentType    String
   sizeBytes      Int
@@ -3188,12 +3252,14 @@ model PortalDocument {
   scannedAt      DateTime?
 
   portalConfig PortalConfig  @relation(fields: [portalConfigId], references: [id], onDelete: Cascade)
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   case         PortalCase?   @relation(fields: [caseId], references: [id], onDelete: SetNull)
   client       PortalClient? @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
   @@index([portalConfigId, scanStatus])
   @@index([caseId])
   @@index([clientId])
+  @@index([workspaceId])
 }
 
 // ── Design-partner outreach CRM-lite (send-path wave 2026-07-03) ──────────

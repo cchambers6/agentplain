@@ -17,9 +17,14 @@ import type {
 } from "@prisma/client";
 import { withSystemContext } from "@/lib/db/rls";
 
-/** Owner-side: find-or-create the client identity for an invite. */
+/** Owner-side: find-or-create the client identity for an invite.
+ *  `workspaceId` is the denormalized tenant key every portal row now carries
+ *  so its RLS policy is a plain column check — see PortalClient.workspaceId
+ *  and migration 20260830000000_portal_team_outreach_rls. It must be the
+ *  workspace that owns `portalConfigId`; callers resolve both together. */
 export async function findOrCreatePortalClient(args: {
   portalConfigId: string;
+  workspaceId: string;
   email: string;
   name?: string | null;
 }): Promise<PortalClient> {
@@ -39,7 +44,12 @@ export async function findOrCreatePortalClient(args: {
       return existing;
     }
     return tx.portalClient.create({
-      data: { portalConfigId: args.portalConfigId, email, name: args.name ?? null },
+      data: {
+        portalConfigId: args.portalConfigId,
+        workspaceId: args.workspaceId,
+        email,
+        name: args.name ?? null,
+      },
     });
   });
 }

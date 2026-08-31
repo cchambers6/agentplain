@@ -50,6 +50,7 @@ export async function POST(
   try {
     const result = await ingestPortalUpload({
       portalConfigId: ctx.brand.portalConfigId,
+      workspaceId: ctx.workspaceId,
       clientId: ctx.signedIn.clientId,
       caseId: caseId || null,
       filename: file.name,

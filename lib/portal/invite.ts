@@ -16,6 +16,10 @@ import type { PortalBrand } from "./config";
 
 export interface SendInviteArgs {
   brand: PortalBrand;
+  /** Workspace that owns `brand.portalConfigId`. Passed alongside the brand
+   *  rather than folded into it: PortalBrand is the client-facing subset and
+   *  must not grow internal workspace identifiers. */
+  workspaceId: string;
   appOrigin: string;
   email: string;
   name?: string | null;
@@ -34,12 +38,14 @@ export async function inviteClientToPortal(
 ): Promise<SendInviteResult> {
   const client = await findOrCreatePortalClient({
     portalConfigId: args.brand.portalConfigId,
+    workspaceId: args.workspaceId,
     email: args.email,
     name: args.name,
   });
 
   const { rawToken } = await createPortalInvite({
     portalConfigId: args.brand.portalConfigId,
+    workspaceId: args.workspaceId,
     clientId: client.id,
     email: args.email,
   });

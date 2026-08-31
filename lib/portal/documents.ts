@@ -46,6 +46,8 @@ export class PortalUploadError extends Error {
 
 export interface IngestUploadArgs {
   portalConfigId: string;
+  /** Denormalized tenant key for the new row — see PortalDocument.workspaceId. */
+  workspaceId: string;
   clientId?: string | null;
   caseId?: string | null;
   filename: string;
@@ -102,6 +104,7 @@ export async function ingestPortalUpload(
     tx.portalDocument.create({
       data: {
         portalConfigId: args.portalConfigId,
+        workspaceId: args.workspaceId,
         clientId: args.clientId ?? null,
         caseId: args.caseId ?? null,
         filename,

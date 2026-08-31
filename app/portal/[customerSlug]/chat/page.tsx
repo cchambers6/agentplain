@@ -18,6 +18,7 @@ export default async function PortalChatPage({
 
   const threadId = await ensurePortalThread({
     portalConfigId: ctx.brand.portalConfigId,
+    workspaceId: ctx.workspaceId,
     clientId: ctx.signedIn.clientId,
     caseId: null,
   });

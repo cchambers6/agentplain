@@ -102,6 +102,8 @@ export async function loadVisibleMessages(args: {
  */
 export async function ensurePortalThread(args: {
   portalConfigId: string;
+  /** Denormalized tenant key for the new row — see PortalThread.workspaceId. */
+  workspaceId: string;
   clientId: string;
   caseId?: string | null;
 }): Promise<string> {
@@ -118,6 +120,7 @@ export async function ensurePortalThread(args: {
     const created = await tx.portalThread.create({
       data: {
         portalConfigId: args.portalConfigId,
+        workspaceId: args.workspaceId,
         clientId: args.clientId,
         caseId: args.caseId ?? null,
       },
@@ -178,6 +181,7 @@ export async function runPortalChatTurn(
       data: {
         threadId: ctx.threadId,
         portalConfigId: ctx.portalConfigId,
+        workspaceId: ctx.workspaceId,
         sender: "CLIENT",
         body: encrypt(clientMessage),
         deliveryStatus: "DELIVERED",
@@ -220,6 +224,7 @@ export async function runPortalChatTurn(
       data: {
         threadId: ctx.threadId,
         portalConfigId: ctx.portalConfigId,
+        workspaceId: ctx.workspaceId,
         sender: "PLAINO",
         body: encrypt(draft),
         deliveryStatus: decision.ok ? "DELIVERED" : "PENDING_APPROVAL",

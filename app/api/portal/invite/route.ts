@@ -55,6 +55,7 @@ export async function POST(req: Request) {
 
   const result = await inviteClientToPortal({
     brand: toPortalBrand(config),
+    workspaceId: config.workspaceId,
     appOrigin: env.appPublicOrigin(),
     email: parsed.data.email,
     name: parsed.data.name ?? null,

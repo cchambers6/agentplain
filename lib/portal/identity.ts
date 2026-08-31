@@ -10,9 +10,17 @@
  * which we reuse for token generation + hashing).
  *
  * All access is scoped by portalConfigId: a token minted for one portal can
- * never resolve against another. These run via withSystemContext — portal
- * tables are not under the workspace RLS policies (an end client has no GUC
- * identity); the portalConfigId scope IS the isolation boundary.
+ * never resolve against another. These run via withSystemContext, and the
+ * portalConfigId scope is the boundary that actually decides what an end
+ * client sees — they have no GUC identity of their own.
+ *
+ * As of 20260830000000_portal_team_outreach_rls the portal tables ARE under
+ * row-level security (they carry a denormalized workspaceId and the standard
+ * "operator OR workspace match" policy). Because withSystemContext sets
+ * app.is_operator='true', that policy does not constrain these functions —
+ * it is the floor underneath them, not the gate in front of them. Every write
+ * below must therefore still supply the correct workspaceId itself: RLS will
+ * not catch a wrong one on an operator connection.
  */
 
 import { generateRawToken, hashToken } from "@/lib/auth/token";
@@ -40,6 +48,7 @@ export interface ResolvedClient {
  */
 export async function createPortalInvite(args: {
   portalConfigId: string;
+  workspaceId: string;
   clientId: string;
   email: string;
 }): Promise<MintedToken> {
@@ -49,6 +58,7 @@ export async function createPortalInvite(args: {
     tx.portalInvite.create({
       data: {
         portalConfigId: args.portalConfigId,
+        workspaceId: args.workspaceId,
         clientId: args.clientId,
         tokenHash: hashToken(rawToken),
         email: args.email,
@@ -95,6 +105,7 @@ export async function consumePortalInvite(args: {
  */
 export async function createPortalSession(args: {
   portalConfigId: string;
+  workspaceId: string;
   clientId: string;
 }): Promise<MintedToken> {
   const rawToken = generateRawToken();
@@ -103,6 +114,7 @@ export async function createPortalSession(args: {
     tx.portalSession.create({
       data: {
         portalConfigId: args.portalConfigId,
+        workspaceId: args.workspaceId,
         clientId: args.clientId,
         tokenHash: hashToken(rawToken),
         expiresAt,

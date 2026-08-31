@@ -13,6 +13,10 @@
  *      connect flow never requests a scope, so every call of that kind fails.
  *   3. The signup gate decides which verticals can take money using a rule
  *      that is not the readiness resolver, so the two can disagree silently.
+ *   4. (added 2026-08-30) A reader counts approval-queue rows by an
+ *      `agentSlug` no sink writes, so a customer-facing number is 0 forever.
+ *      Same failure, one layer lower: the surface claims to be reporting work
+ *      that its own query can never see. `approval-slug-parity.ts`.
  *
  * Each is invisible at runtime: no error, no log, no alert — the surface just
  * quietly lies. These checks turn each into a failing test.
@@ -27,7 +31,8 @@
 export type ClaimCheckId =
   | 'roster-capability'
   | 'connector-action-scope'
-  | 'vertical-reachability';
+  | 'vertical-reachability'
+  | 'approval-slug-parity';
 
 export interface ClaimViolation {
   /** Which check produced this. */

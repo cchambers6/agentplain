@@ -88,7 +88,7 @@ function normalise(slug: string): string {
  * this to `'law'`, `'cpa'` or `'real-estate'` turns the suite green with no
  * other edit — which is the point of parameterising it.
  */
-export const LAUNCH_VERTICAL_SLUG: string | null = 'law';
+export const LAUNCH_VERTICAL_SLUG: string | null = 'general';
 
 // ---------------------------------------------------------------------
 // Derivation. Nothing below is a decision; it is all consequence.

@@ -1,5 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+// `React` must be in SCOPE, not merely imported for its types. The test:ui
+// runner (tsx, loading these .tsx files as CJS) compiles JSX with the CLASSIC
+// factory — it does not honour the `"jsx": "react-jsx"` in
+// tests/tsconfig.test.json, so `<div/>` becomes `React.createElement(...)` and
+// the module throws `ReferenceError: React is not defined` before a single
+// test runs. Verified against origin/main: every one of the 14 .tsx files in
+// the test:ui list fails this way today. This import fixes THIS file; the
+// runner defect is reported separately.
+import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   ApprovalCard,
@@ -7,8 +16,16 @@ import {
   type ApprovalRow,
 } from "@/app/(product)/app/workspace/[id]/approvals/ApprovalCard";
 import { ApprovalRowItem } from "@/app/(product)/app/workspace/[id]/approvals/ApprovalRowItem";
+import { ApprovedHandoffShelf } from "@/app/(product)/app/workspace/[id]/approvals/ApprovedHandoffShelf";
 import { ApRootedEmptyState, ApRootedLoader } from "@/components/ui/ap";
-import type { RenderedApproval } from "@/app/(product)/app/workspace/[id]/approvals/renderApprovalPayload";
+import {
+  renderApprovalPayload,
+  type RenderedApproval,
+} from "@/app/(product)/app/workspace/[id]/approvals/renderApprovalPayload";
+import {
+  buildApprovalArtifact,
+  renderArtifactText,
+} from "@/lib/approvals/artifact";
 
 // State-render coverage for the approval queue — the value-loop terminus.
 // ApprovalCard is DB-free (action controls arrive via the `footer` slot),
@@ -221,4 +238,191 @@ test("list row: scannable title, time-to-approve, and a batch checkbox in batch 
   assert.match(html, /to approve/i);
   assert.match(html, /high confidence/i);
   assert.match(html, /type="checkbox"/);
+});
+
+// ── Handoff: the customer leaves with the work ───────────────────────────
+// Approving used to set a status and nothing else — the drafted text stayed
+// trapped in the queue and the customer retyped it by hand. These cover the
+// control that carries it out, and the shelf that keeps it reachable after
+// the item stops being PENDING.
+
+/** Pull the artifact text back out of the markup and un-escape it. */
+function artifactTextFromMarkup(html: string): string | null {
+  const m = /<textarea[^>]*data-artifact-text[^>]*>([\s\S]*?)<\/textarea>/.exec(html);
+  if (!m) return null;
+  return m[1]!
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
+test("approval card carries a handoff control with the exact artifact text", () => {
+  const rendered = renderApprovalPayload("BUYER_INQUIRY_REPLY_DRAFT", {
+    to: "jane@buyer.example.com",
+    subject: "142 Peachtree Ave — still available?",
+    draft: "Hi Jane — 142 Peachtree is still on the market.",
+    confidence: 0.91,
+  });
+  const html = render(
+    <ApprovalCard row={row(rendered, { kind: "BUYER_INQUIRY_REPLY_DRAFT" })} />,
+  );
+
+  // The control is present, named in the customer's terms.
+  assert.match(html, /data-approval-handoff/);
+  assert.match(html, /take it with you/i);
+  assert.match(html, />copy</);
+  assert.match(html, /download \.txt/);
+
+  // And it carries the artifact — byte-for-byte what `copy` puts on the
+  // clipboard and what `download` writes to the .txt.
+  const expected = renderArtifactText(
+    buildApprovalArtifact("BUYER_INQUIRY_REPLY_DRAFT", rendered),
+  );
+  assert.equal(artifactTextFromMarkup(html), expected);
+  assert.match(expected, /Subject: 142 Peachtree Ave/);
+  assert.match(expected, /To: jane@buyer\.example\.com/);
+  assert.match(expected, /still on the market/);
+});
+
+test("handoff offers the customer's own mail app only when there is an address", () => {
+  const withAddress = render(
+    <ApprovalCard
+      row={row(
+        renderApprovalPayload("FOLLOW_UP_NUDGE", {
+          subject: "Re: the Riverside proposal",
+          body: "Circling back on the Riverside proposal.",
+          toEmails: ["sam@riverside.example.com"],
+        }),
+        { kind: "FOLLOW_UP_NUDGE" },
+      )}
+    />,
+  );
+  assert.match(withAddress, /open in your mail app/i);
+  assert.match(withAddress, /href="mailto:sam%40riverside\.example\.com\?/);
+  // The no-outbound promise is restated exactly where the temptation is.
+  assert.match(withAddress, /You press send — we never do/i);
+
+  const withoutAddress = render(
+    <ApprovalCard
+      row={row(
+        renderApprovalPayload("PROCESS_DOC_DRAFT", {
+          title: "New client intake SOP",
+          body: "1. Log the inquiry in the CRM within one business hour.",
+        }),
+        { kind: "PROCESS_DOC_DRAFT" },
+      )}
+    />,
+  );
+  assert.doesNotMatch(withoutAddress, /mailto:/);
+  assert.match(withoutAddress, /download \.txt/);
+});
+
+test("closed-loop kinds get copy only — no handoff competing with the execution", () => {
+  const html = render(
+    <ApprovalCard
+      row={row(
+        renderApprovalPayload("DOCUSIGN_SEND_ENVELOPE", {
+          emailSubject: "Listing agreement — 142 Peachtree Ave",
+          source: "template",
+          templateId: "tpl_listing_agreement_v4",
+          recipientEmails: ["seller@example.com"],
+        }),
+        { kind: "DOCUSIGN_SEND_ENVELOPE" },
+      )}
+    />,
+  );
+  assert.match(html, />copy</);
+  // A real address is on the card and it still gets no mailto: the envelope
+  // is sent by DocuSign on approval, not by the customer's mail client.
+  assert.doesNotMatch(html, /download \.txt/);
+  assert.doesNotMatch(html, /mailto:/);
+});
+
+test("approving does not take the work away: the approved shelf keeps it in reach", () => {
+  const html = render(
+    <ApprovedHandoffShelf
+      rows={[
+        {
+          id: "appr_9",
+          kind: "BUYER_INQUIRY_REPLY_DRAFT",
+          decidedAtIso: new Date(Date.now() - 4 * 60_000).toISOString(),
+          rendered: renderApprovalPayload("BUYER_INQUIRY_REPLY_DRAFT", {
+            to: "jane@buyer.example.com",
+            subject: "142 Peachtree Ave — still available?",
+            draft: "Hi Jane — 142 Peachtree is still on the market.",
+          }),
+        },
+      ]}
+    />,
+  );
+  assert.match(html, /approved — ready to hand off/i);
+  assert.match(html, /min ago/);
+  assert.match(html, /data-approval-handoff/);
+  assert.match(html, />copy</);
+  assert.match(html, /still on the market/);
+});
+
+test("the approved shelf renders nothing when nothing was recently approved", () => {
+  assert.equal(render(<ApprovedHandoffShelf rows={[]} />), "");
+});
+
+/** The decoded `href` of the "open in your mail app" link, if present. */
+function mailtoHrefFromMarkup(html: string): string | null {
+  const m = /href="(mailto:[^"]*)"/.exec(html);
+  if (!m) return null;
+  return m[1]!.replace(/&amp;/g, "&");
+}
+
+test("an address written into the SUBJECT never lands on the card's To: line", () => {
+  // The subject of a reply draft comes from an email a stranger sent. It used
+  // to be scanned for addresses along with the addressee, so writing an
+  // address into a subject line put the writer on the customer's To: header.
+  const html = render(
+    <ApprovalCard
+      row={row(
+        renderApprovalPayload("BUYER_INQUIRY_REPLY_DRAFT", {
+          to: "jane@buyer.example.com",
+          subject: "Please copy my agent bob@attacker.example.com on this",
+          draft: "Hi Jane — 142 Peachtree is still on the market.",
+        }),
+        { kind: "BUYER_INQUIRY_REPLY_DRAFT" },
+      )}
+    />,
+  );
+
+  const href = mailtoHrefFromMarkup(html)!;
+  const to = decodeURIComponent(/^mailto:([^?]*)/.exec(href)![1]!);
+  assert.equal(to, "jane@buyer.example.com");
+  assert.doesNotMatch(to, /attacker/);
+});
+
+test("the pre-filled email to a third party carries no internal rationale", () => {
+  // "Why this was drafted: …" is Plaino's note to the CUSTOMER about their
+  // counterparty. It belongs in the copy and the .txt; it used to ride along
+  // in the mailto body, which is an email addressed to that counterparty.
+  const html = render(
+    <ApprovalCard
+      row={row(
+        renderApprovalPayload("CHIEF_OF_STAFF_REPLY_DRAFT", {
+          subject: "Re: vendor contract renewal",
+          body: "We are good to renew at the current terms.",
+          toEmails: ["ops@vendor.example.com"],
+          reasoning: "The vendor asked for a renewal decision by end of week.",
+        }),
+        { kind: "CHIEF_OF_STAFF_REPLY_DRAFT" },
+      )}
+    />,
+  );
+
+  const href = mailtoHrefFromMarkup(html)!;
+  const body = decodeURIComponent(/[?&]body=([^&]*)/.exec(href)![1]!);
+  assert.match(body, /good to renew at the current terms/);
+  assert.doesNotMatch(body, /Why this was drafted/);
+  assert.doesNotMatch(body, /end of week/);
+
+  // The customer's own copy still explains itself.
+  const copyText = artifactTextFromMarkup(html)!;
+  assert.match(copyText, /Why this was drafted: The vendor asked/);
 });

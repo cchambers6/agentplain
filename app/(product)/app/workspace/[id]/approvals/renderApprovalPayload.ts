@@ -20,6 +20,14 @@ export interface ProposedSlot {
 export interface RenderedApproval {
   kindLabel: string;
   recipientLine?: string;
+  /** The GENUINE recipients, discrete — never to be re-derived by parsing
+   *  `recipientLine`. That line is a humanized display string that also
+   *  carries the subject ("To: a@b.com    Re: <subject>"), and on reply-draft
+   *  kinds the subject comes from an inbound email a stranger sent. Anything
+   *  addressing a message (mailto, a handoff artifact) MUST read this field;
+   *  parsing addresses back out of the display string lets a stranger put
+   *  themselves on the To line by writing an address into their subject. */
+  recipients?: string[];
   title?: string;
   body: string[];
   metaLine?: string;
@@ -400,6 +408,7 @@ function renderReplyDraft(p: Record<string, unknown>): RenderedApproval {
   return {
     kindLabel: KIND_LABEL.BUYER_INQUIRY_REPLY_DRAFT,
     recipientLine,
+    recipients: recipientList(recipient),
     body: draft ? splitParagraphs(draft) : ["No draft body was attached."],
     metaLine: composeMeta({ threshold, confidence, tone }),
     inboundSummary,
@@ -492,6 +501,7 @@ function renderChiefOfStaffMeeting(p: Record<string, unknown>): RenderedApproval
     kindLabel: KIND_LABEL.CHIEF_OF_STAFF_MEETING,
     title: subject ?? "Proposed meeting time",
     recipientLine: attendeeLine,
+    recipients: pickAttendeeEmails(p),
     body: inviteBody
       ? splitParagraphs(inviteBody)
       : ["No invite body was drafted."],
@@ -530,6 +540,7 @@ function renderChiefOfStaffReplyDraft(
   return {
     kindLabel: KIND_LABEL.CHIEF_OF_STAFF_REPLY_DRAFT,
     recipientLine,
+    recipients: recipientList(recipient),
     body: body ? splitParagraphs(body) : ["No draft body was attached."],
     metaLine: composeMeta({ confidence, tone }),
     inboundSummary: reasoning,
@@ -604,6 +615,7 @@ function renderInboxTriage(p: Record<string, unknown>): RenderedApproval {
   return {
     kindLabel: `${KIND_LABEL.INBOX_TRIAGE} — ${priority}`,
     recipientLine,
+    recipients: recipientList(recipient),
     body: bodyLines,
     metaLine: composeMeta({ confidence, tone }),
     inboundSummary: reasoning,
@@ -644,6 +656,7 @@ function renderFollowUpNudge(p: Record<string, unknown>): RenderedApproval {
   return {
     kindLabel: KIND_LABEL.FOLLOW_UP_NUDGE,
     recipientLine,
+    recipients: recipientList(recipient),
     body: body ? splitParagraphs(body) : ["No nudge body was attached."],
     metaLine,
     inboundSummary: reasoning,
@@ -727,6 +740,9 @@ function renderSupportHandlerReplyDraft(
   return {
     kindLabel: KIND_LABEL.SUPPORT_HANDLER_REPLY_DRAFT,
     recipientLine: subject ? `Re: ${subject}` : undefined,
+    // No addressee on a support reply — the subject is all this line carries,
+    // and an empty list says so explicitly rather than inviting a re-parse.
+    recipients: [],
     body: bodyLines,
     metaLine,
     inboundSummary: reasoning,
@@ -929,6 +945,34 @@ function pickRecipientFromToEmails(
   return emails.join(", ");
 }
 
+/** The discrete-recipient counterpart to the humanized `recipientLine`.
+ *  Splits the comma-joined display form back into individual addresses and
+ *  drops anything with whitespace or a header separator in it, so a CR/LF or
+ *  a stray ":" can never survive into a To: header downstream. */
+function recipientList(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && !/[\s,;:<>"']/.test(s));
+}
+
+/** Attendee addresses, discrete — the counterpart of pickAttendeeLine. */
+function pickAttendeeEmails(p: Record<string, unknown>): string[] {
+  const raw = p.attendees;
+  if (!Array.isArray(raw)) return [];
+  const emails: string[] = [];
+  for (const a of raw) {
+    if (a && typeof a === "object") {
+      const email = (a as Record<string, unknown>).email;
+      if (typeof email === "string" && email.trim().length > 0) {
+        emails.push(email.trim());
+      }
+    }
+  }
+  return emails.filter((e) => !/[\s,;:<>"']/.test(e));
+}
+
 function pickChiefOfStaffSlots(p: Record<string, unknown>): ProposedSlot[] {
   const raw = p.candidateSlots;
   if (!Array.isArray(raw)) return [];
@@ -997,8 +1041,15 @@ function renderVoiceRecordingConsent(p: Record<string, unknown>): RenderedApprov
   const retentionDays = pickNumber(p, ["retentionDays"]);
   const twoParty = p.requireTwoPartyConsentPrompt === true;
 
+  // Two SEPARATE blocks, deliberately. The first states what approving does
+  // and stays true forever; the second is a promise about the CARD's pending
+  // state and stops being true the instant the owner approves. Splitting them
+  // lets lib/approvals/artifact.ts drop the second out of the handoff artifact
+  // — which only exists post-approval — without rewriting the sentence around
+  // it. The card still shows both, where both are correct.
   const body = [
-    "Approving this turns on call recording for your workspace. Recording stays off until you approve it here.",
+    "Approving this turns on call recording for your workspace.",
+    "Recording stays off until you approve it here.",
   ];
   if (typeof retentionDays === "number") {
     body.push(`Recordings are kept for ${retentionDays} days, then deleted.`);
@@ -1139,6 +1190,7 @@ function renderActivationDraft(p: Record<string, unknown>): RenderedApproval {
       ? `${KIND_LABEL.ACTIVATION_DRAFT} · ${recordTitle}`
       : KIND_LABEL.ACTIVATION_DRAFT,
     recipientLine,
+    recipients: recipientList(recipient),
     body: body ? splitParagraphs(body) : ["No draft body was attached."],
     metaLine: metaParts.join(" · "),
     inboundSummary: partyName ? `First draft for ${partyName}.` : undefined,
@@ -1179,6 +1231,7 @@ function renderDocuSignSend(p: Record<string, unknown>): RenderedApproval {
     title: subject ?? "Send envelope for signature",
     recipientLine:
       recipients.length > 0 ? `To: ${recipients.join(", ")}` : undefined,
+    recipients: recipients.filter((e) => !/[\s,;:<>"']/.test(e)),
     body: lines,
     metaLine: metaParts.join(" · "),
   };
@@ -1258,6 +1311,7 @@ function renderPortalClientMessage(p: Record<string, unknown>): RenderedApproval
   return {
     kindLabel: KIND_LABEL.PORTAL_CLIENT_MESSAGE,
     recipientLine: recipient ? `To your client: ${recipient}` : undefined,
+    recipients: recipientList(recipient),
     body: [
       "Awaiting your approval — your client sees this reply only after you approve it. Nothing has been sent.",
       ...(body ? splitParagraphs(body) : ["No draft body was attached."]),

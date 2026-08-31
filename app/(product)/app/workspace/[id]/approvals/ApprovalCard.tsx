@@ -9,7 +9,10 @@ import {
   resolveConfidence,
   type ConfidenceView,
 } from "@/lib/approvals/presentation";
+import { buildApprovalArtifact } from "@/lib/approvals/artifact";
+import type { WorkApprovalKind } from "@prisma/client";
 import type { RenderedApproval } from "./renderApprovalPayload";
+import { ApprovalHandoff } from "./ApprovalHandoff";
 
 // DB-free presentation for one queued approval. The action controls
 // (approve / edit / reject) live in `ApprovalsList.tsx` and are passed
@@ -124,6 +127,9 @@ export function ApprovalCard({
 }: ApprovalCardProps) {
   const { rendered } = row;
   const confidence = resolveConfidence(rendered);
+  // The take-it-with-you artifact. Pure + DB-free, so the card stays
+  // renderable in a unit test; the interactive half lives in ApprovalHandoff.
+  const artifact = buildApprovalArtifact(row.kind as WorkApprovalKind, rendered);
   // The highlight ring wins over the admin-priority border so the deep-link
   // target reads as "this one" even when it's also a critical admin card.
   const adminCardClass = highlighted
@@ -256,6 +262,8 @@ export function ApprovalCard({
           side; reject to discard the draft.
         </p>
       ) : null}
+
+      <ApprovalHandoff artifact={artifact} />
 
       {rendered.metaLine ? (
         <p className="mt-4 border-t border-rule pt-4 font-mono text-[11px] tracking-eyebrow uppercase text-mute">

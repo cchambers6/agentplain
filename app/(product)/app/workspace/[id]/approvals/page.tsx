@@ -5,6 +5,12 @@ import { ApEyebrow, ApRootedEmptyState } from "@/components/ui/ap";
 import { asDisciplineId } from "@/lib/disciplines";
 import { renderApprovalPayload } from "./renderApprovalPayload";
 import { ApprovalsList, type ApprovalRow } from "./ApprovalsList";
+import {
+  ApprovedHandoffShelf,
+  HANDOFF_SHELF_LIMIT,
+  HANDOFF_WINDOW_HOURS,
+  type ApprovedHandoffRow,
+} from "./ApprovedHandoffShelf";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -27,7 +33,13 @@ export default async function ApprovalsPage({ params, searchParams }: PageProps)
   const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
   const ctx = { userId: member.userId, workspaceId, isOperator: false };
 
-  const [items, totalPending] = await withRls(ctx, (tx) =>
+  // The queue is PENDING-only by design. But approving used to delete the
+  // work product from the screen along with the decision — the customer said
+  // yes to a drafted letter and was left with nothing to paste. So we also
+  // read back what was approved recently and keep its artifact in reach.
+  const handoffSince = new Date(Date.now() - HANDOFF_WINDOW_HOURS * 60 * 60 * 1000);
+
+  const [items, totalPending, approvedItems] = await withRls(ctx, (tx) =>
     Promise.all([
       tx.workApprovalQueueItem.findMany({
         where: { workspaceId, status: "PENDING" },
@@ -36,6 +48,15 @@ export default async function ApprovalsPage({ params, searchParams }: PageProps)
       }),
       tx.workApprovalQueueItem.count({
         where: { workspaceId, status: "PENDING" },
+      }),
+      tx.workApprovalQueueItem.findMany({
+        where: {
+          workspaceId,
+          status: "APPROVED",
+          decidedAt: { gte: handoffSince },
+        },
+        orderBy: { decidedAt: "desc" },
+        take: HANDOFF_SHELF_LIMIT,
       }),
     ]),
   );
@@ -46,6 +67,13 @@ export default async function ApprovalsPage({ params, searchParams }: PageProps)
     kind: item.kind,
     discipline: asDisciplineId(item.discipline),
     proposedAtIso: item.proposedAt.toISOString(),
+    rendered: renderApprovalPayload(item.kind, decryptPayloadForRead(item.payload)),
+  }));
+
+  const approvedRows: ApprovedHandoffRow[] = approvedItems.map((item) => ({
+    id: item.id,
+    kind: item.kind,
+    decidedAtIso: (item.decidedAt ?? item.proposedAt).toISOString(),
     rendered: renderApprovalPayload(item.kind, decryptPayloadForRead(item.payload)),
   }));
 
@@ -93,6 +121,11 @@ export default async function ApprovalsPage({ params, searchParams }: PageProps)
           />
         </>
       )}
+
+      {/* Rendered in BOTH branches on purpose: approving the last pending item
+          empties the queue, and that is exactly the moment the customer most
+          needs the thing they just approved to still be here. */}
+      <ApprovedHandoffShelf rows={approvedRows} />
     </div>
   );
 }

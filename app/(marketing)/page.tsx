@@ -370,9 +370,10 @@ export default function HomePage() {
         </div>
 
         <p className="mt-8 max-w-prose text-[13px] leading-relaxed text-mute">
-          The chain sweeps your inbox backlog every fifteen minutes,
-          picking up push events from your tools as they land. There is no
-          idle hour where the crew has stopped working.
+          Push events from your tools land in a queue as they arrive. The
+          chain works that queue in scheduled passes, in batches rather
+          than one message at a time — so nothing waits on someone
+          remembering to look.
         </p>
 
         {/* Two honest follow-on panels — what's true TODAY, with the

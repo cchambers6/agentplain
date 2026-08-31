@@ -169,7 +169,7 @@ export default function HowItWorksPage() {
         tone="deep"
         eyebrow="The loop, every fire"
         title="Five steps the crew runs on its own"
-        intro="The chain runs every five minutes against your backlog and reacts to push events as your tools connect. There is no idle hour where the crew has stopped working — and no step where it acts without you."
+        intro="The chain sweeps your backlog every fifteen minutes, picking up push events from your tools as they land. There is no idle hour where the crew has stopped working — and no step where it acts without you."
       >
         {/* The five steps as numbered plates — the `§ 01` document grammar
             that won the trust verticals (kaizen 2026-07-02 win 5). */}

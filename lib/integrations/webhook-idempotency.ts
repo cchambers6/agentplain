@@ -195,9 +195,11 @@ export interface RetryDecision {
  *   attempt 5 → wait  6 hours
  *   attempt 6 → DEADLETTER (operator triage)
  *
- * The cron sweep fires every 5 minutes, so the resolution is +/- 5 min.
- * Six attempts cover roughly a 9-hour transient window — enough for a
- * provider outage / token-refresh blip without piling on.
+ * The cron sweep fires every 15 minutes, so the resolution is +/- 15 min
+ * and the first two backoff steps (1 min, 5 min) are effectively
+ * rounded up to the next tick. Six attempts still cover roughly a
+ * 9-hour transient window — enough for a provider outage /
+ * token-refresh blip without piling on.
  */
 export function decideRetry(args: { attemptCount: number; now?: Date }): RetryDecision {
   const now = args.now ?? new Date();

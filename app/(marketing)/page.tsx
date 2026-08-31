@@ -370,8 +370,8 @@ export default function HomePage() {
         </div>
 
         <p className="mt-8 max-w-prose text-[13px] leading-relaxed text-mute">
-          The chain runs every five minutes against your inbox backlog and
-          reacts to push events as your tools are connected. There is no
+          The chain sweeps your inbox backlog every fifteen minutes,
+          picking up push events from your tools as they land. There is no
           idle hour where the crew has stopped working.
         </p>
 

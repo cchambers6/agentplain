@@ -9,9 +9,24 @@
  *      when a draft was produced) via `lib/skills/persist-artifacts.ts`
  *   5. Marks the WebhookEvent processed (or records the error for retry)
  *
- * Cron: every 5 minutes. Gmail Pub/Sub pushes typically arrive within
- * seconds; the 5-minute sweep ensures backlog drains promptly without
- * pummeling the LLM provider on every single Pub/Sub callback.
+ * Cron: every 15 minutes. Gmail Pub/Sub pushes typically arrive within
+ * seconds; this sweep is the backlog drain, not the delivery path, so
+ * its cadence trades worst-case drain latency (not freshness) against
+ * database compute.
+ *
+ * Why 15 and not 5: the managed Postgres this runs against scales to
+ * zero after 5 minutes idle. A `*\/5` cron has gaps exactly equal to
+ * that idle timeout, so the compute never scales down and the function
+ * bills continuous uptime on its own. `*\/15` folds into the wake
+ * window the existing `*\/15` pair (agentplain-scheduler-sweep,
+ * b2b-sales-rep-pre-call-brief) already pays for, at no marginal cost.
+ *
+ * NOTE: as of this change nothing in production emits
+ * PROCESS_WEBHOOK_EVENT_TRIGGER_EVENT — the receiver in
+ * `lib/integrations/webhook-idempotency.ts` writes the row but does not
+ * `inngest.send`. This cron is therefore the ONLY drain path today, and
+ * the batch bound below sets a hard throughput ceiling. Wiring the
+ * producer is the real fix; see the PR that landed this cadence.
  *
  * Per `feedback_cold_start_safe_agents.md`: the function reads durable
  * state on every fire. There is no in-memory cache across runs.
@@ -66,8 +81,13 @@ import {
 } from '@/lib/integrations/webhook-idempotency';
 
 export const PROCESS_WEBHOOK_EVENT_FUNCTION_ID = 'agentplain-process-webhook-event';
-/** Every 5 minutes (UTC). Drains backlog without hammering the LLM. */
-export const PROCESS_WEBHOOK_EVENT_CRON = '*/5 * * * *';
+/**
+ * Every 15 minutes (UTC). Drains backlog without hammering the LLM and
+ * without holding the database awake between fires — see the header for
+ * why the interval must stay strictly greater than the 5-minute
+ * scale-to-zero idle timeout.
+ */
+export const PROCESS_WEBHOOK_EVENT_CRON = '*/15 * * * *';
 /** On-demand trigger for smoke-testing from the Inngest dev console. */
 export const PROCESS_WEBHOOK_EVENT_TRIGGER_EVENT = 'agentplain/process-webhook-event.requested';
 
@@ -78,15 +98,30 @@ export interface ProcessWebhookEventResult {
 }
 
 /**
+ * How many events one sweep processes. 25 — small enough that one fire
+ * stays under any provider rate-limit budget (each event runs a full
+ * LLM skill chain), large enough that a backlog drains in a few fires.
+ *
+ * This bound is deliberately NOT scaled with the cron interval. It is a
+ * per-fire safety cap sized against provider rate limits and single-
+ * invocation duration, not against how often the fire happens. Moving
+ * to `*\/15` therefore lowers the sustained drain ceiling from
+ * 25 x 12 = 300 to 25 x 4 = 100 events/hour. That ceiling is
+ * documented rather than raised on purpose: tripling the batch would
+ * put 75 LLM chains in one invocation (step-timeout and rate-limit
+ * burst risk) and lengthen the fire itself, which erodes the very
+ * database-compute saving the cadence change buys. The correct fix for
+ * drain throughput is to emit PROCESS_WEBHOOK_EVENT_TRIGGER_EVENT from
+ * the receiver so backlog never accumulates — not a bigger batch.
+ */
+export const PROCESS_WEBHOOK_EVENT_BATCH_LIMIT = 25;
+
+/**
  * Sweep unprocessed WebhookEvent rows and run the skill chain on each.
  * Returns a summary the cron framework can log.
- *
- * `limit` caps how many events one sweep processes. Default 25 — small
- * enough that one fire stays under any provider rate-limit budget,
- * large enough that a backlog drains in a few fires.
  */
 export async function processUnprocessedWebhookEvents(
-  limit: number = 25,
+  limit: number = PROCESS_WEBHOOK_EVENT_BATCH_LIMIT,
 ): Promise<ProcessWebhookEventResult> {
   // `readyForProcessingFilter` excludes rows that are in their backoff
   // window or have been deadlettered. The provider filter is layered on
@@ -555,9 +590,10 @@ function buildAdapterForProvider(
 }
 
 /**
- * Inngest function — fires on a 5-minute cron AND on the on-demand
+ * Inngest function — fires on a 15-minute cron AND on the on-demand
  * `agentplain/process-webhook-event.requested` event (use from the dev
- * console to drain queued events ahead of the next tick).
+ * console to drain queued events ahead of the next tick). No production
+ * caller emits that event yet, so the cron is the live drain path.
  *
  * Disable-gate: set `INNGEST_FN_DISABLE_AGENTPLAIN_PROCESS_WEBHOOK_EVENT=true`
  * to pause without redeploying.

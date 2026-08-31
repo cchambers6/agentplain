@@ -28,6 +28,24 @@
  * consumer is picked up with no edit here — and a consumer pointed at a slug
  * that nothing produces fails the gate the day it is written.
  *
+ * WHAT THIS CHECK DOES **NOT** COVER — the sibling `kind` column:
+ * `WorkApprovalQueueItem.kind` has the identical failure mode (a filter on a
+ * `kind` no sink writes returns 0 forever) and is NOT guarded here. Measured
+ * 2026-08-31 against the post-#468 tree: **17 `kind` filter sites on
+ * `WorkApprovalQueueItem` across 8 distinct expressions** — `ACTIVATION_DRAFT`
+ * (3), file-local `KIND` (4: portal ×2, voice/recording ×2),
+ * `'PLAINO_INSTRUCTION'` (3), `"PLAINO_INSTRUCTION"` (1), `'LEAD_TRIAGE'` (2),
+ * `SUPPORT_HANDLER_KIND` (2), `SUPPORT_REPLY_KIND` (1),
+ * `"SUPPORT_HANDLER_REPLY_DRAFT"` (1). PR #468's body said "12 sites"; that
+ * count missed `fleet-health-check.ts:375`, both `LEAD_TRIAGE` dedup guards
+ * and `talk/page.tsx:163`, saw only 2 of the 4 file-local `KIND` sites, and
+ * counted `support/prisma-resolve-store.ts:57` — which is an in-JS
+ * `item.kind !== SUPPORT_REPLY_KIND` comparison, not a `where` filter at all.
+ * The corrected figure is recorded here rather than in a merged PR body so it
+ * is somewhere a future reader will actually look. Extending the extractor to
+ * the `kind` column is deliberately out of scope for now; this note exists so
+ * the gap is stated rather than assumed covered.
+ *
  * Per `lib/claims/types.ts`: the checker is PURE and dependency-injected. The
  * extractor takes file contents as an argument rather than reading the disk,
  * which is what makes the deliberate-failure fixtures in the test possible.
@@ -57,14 +75,43 @@ export interface ConsumedSlug {
   slug: string;
 }
 
-/** A usage whose slug is computed at runtime (`args.skillSlug`, a template
- *  literal, `{ in: [...] }`). Reported so the test can prove the extractor is
- *  not silently discarding the interesting cases. */
+/**
+ * An `agentSlug:` site the checker declines to judge. Two reasons:
+ *
+ *   `role: 'producer' | 'consumer'` — the site's role is known, but the slug
+ *     is computed at runtime (`args.skillSlug`, a template literal,
+ *     `{ in: [...] }`), so there is no string to compare.
+ *
+ *   `role: 'unclassified'` — the slug may well be a plain literal, but the
+ *     site sits in an object literal that is neither a `where` clause nor a
+ *     row builder (no `refTable` sibling). The commonest real shape is a
+ *     filter hoisted to a variable:
+ *
+ *         const filter = { agentSlug: 'x' };
+ *         await tx.workApprovalQueueItem.count({ where: filter });
+ *
+ *     The frame label is `filter`, not `where`, so the lexical scan cannot
+ *     tell that from an output mapping (`{ agentSlug: row.agentSlug }`).
+ *     Judging it would invent a fact; DROPPING it would shrink the checked
+ *     denominator with no signal, which is the failure mode that actually
+ *     matters — the gate stays green while it stops looking. So it is carried
+ *     out here instead, with `container` naming the identifier before the `{`
+ *     so a human can classify it in one glance.
+ *
+ * Nothing in `dynamic` is ever a violation. It exists so the non-vacuity test
+ * can prove the extractor is not silently discarding the interesting cases.
+ */
 export interface DynamicSlugRef {
   path: string;
   line: number;
-  role: 'producer' | 'consumer';
+  role: 'producer' | 'consumer' | 'unclassified';
   expression: string;
+  /** The identifier immediately preceding the enclosing `{` (`where`,
+   *  `filter`, `data`, `''` for an anonymous literal). Triage aid only. */
+  container: string;
+  /** Present when the expression DID resolve to a string but the site's role
+   *  did not. `undefined` means the expression itself was unresolvable. */
+  slug?: string;
 }
 
 export interface ApprovalSlugUsage {
@@ -131,14 +178,27 @@ export function checkApprovalSlugParity(
  *              list of blessed slugs.
  *   CONSUMER — an `agentSlug:` key with a `where` object anywhere above it.
  *
- * Everything else (`select: { agentSlug: true }`, interface members, output
- * mappings) is deliberately ignored: those neither promise nor produce rows.
+ * `select: { agentSlug: true }` projections and interface members are dropped
+ * outright — `agentSlug: true` / `agentSlug: string` names a column to read or
+ * a type, and neither promises nor produces rows.
+ *
+ * Everything else that matches neither shape — output mappings, and crucially
+ * a `where` object hoisted to a differently-named variable — is NOT dropped.
+ * It goes to `dynamic` with `role: 'unclassified'`. See `DynamicSlugRef`: the
+ * hoisted-filter case is invisible to a lexical `where`-label scan, and a
+ * check whose denominator can shrink without a signal is worse than one that
+ * reports what it could not classify.
  *
  * Identifier right-hand sides resolve against `const NAME = '...'` in the
  * same file, then by FOLLOWING THE IMPORT to the declaring module, and only
  * then against a repo-wide table by name — and that last step is taken only
- * when the name is unambiguous. Three different files declare a private
- * `const AGENT_SLUG` with three different values, and `PULSE_AGENT_SLUG`
+ * when the name is unambiguous. FOUR different files declare a private
+ * `const AGENT_SLUG` with four different values —
+ * `lib/integrations/docusign-mcp/approval-gate-prisma.ts`
+ * (`docusign-approval-gate`), `lib/portal/owner-approval-gate-prisma.ts`
+ * (`portal-owner-approval-gate`), `lib/voice/recording.ts`
+ * (`voice-recording-consent`) and `lib/voice/transcript-actions.ts`
+ * (`voice-transcript-actions`) — and `PULSE_AGENT_SLUG`
  * exists twice with two different values (the sweep's ACTIVATION slug
  * `analytics-weekly-pulse` and the sink's ROW slug
  * `analytics-weekly-pulse-general` — two namespaces, one name). Resolving
@@ -181,16 +241,20 @@ export function extractApprovalSlugUsage(
         ? ('consumer' as const)
         : site.siblingKeys.has('refTable')
           ? ('producer' as const)
-          : null;
-      if (!role) continue;
+          : ('unclassified' as const);
 
       const slug = resolveExpression(site.expression, local, imports, tables);
-      if (slug === null) {
+
+      // Carried out, never dropped. An unclassified site is not a violation,
+      // but a site that vanishes is a hole in the denominator nobody can see.
+      if (role === 'unclassified' || slug === null) {
         usage.dynamic.push({
           path: file.path,
           line: site.line,
           role,
           expression: site.expression,
+          container: site.containerLabel,
+          ...(slug === null ? {} : { slug }),
         });
         continue;
       }
@@ -391,6 +455,9 @@ interface AgentSlugSite {
   expression: string;
   /** Keys declared in the SAME object literal (may be declared after). */
   siblingKeys: Set<string>;
+  /** Identifier immediately preceding the enclosing `{`. `''` when the
+   *  literal is anonymous (an argument, an array element). */
+  containerLabel: string;
   /** Some enclosing object literal is a `where` clause. */
   inWhere: boolean;
   /** Some enclosing object literal is a Prisma `select` / `by` projection —
@@ -510,6 +577,7 @@ function scanAgentSlugSites(text: string): AgentSlugSite[] {
             line,
             expression,
             siblingKeys: frame.keys,
+            containerLabel: frame.label,
             inWhere: stack.some((f) => f.label === 'where'),
             inProjection: stack.some(
               (f) => f.label === 'select' || f.label === 'by',

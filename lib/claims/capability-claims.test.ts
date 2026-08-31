@@ -390,16 +390,30 @@ describe('claim-vs-code: approval-queue consumers vs. the slugs sinks write', ()
 
   it('is not vacuous — real sinks and real consumers were both found', () => {
     // A regex that stopped matching would pass the assertion above forever.
-    // These floors are deliberately loose: they prove the extractor is still
-    // reading the codebase without pinning a count that churns.
+    // The producer floor is deliberately loose — 23 sinks resolve today and
+    // that number churns as skills land. The CONSUMER floor is not, and must
+    // not be: there are only three of them.
     assert.ok(
       APPROVAL_SLUG_USAGE.producers.length >= 15,
       `expected the extractor to find the sink row builders, found ` +
         `${APPROVAL_SLUG_USAGE.producers.length}`,
     );
+    // Measured 2026-08-31: exactly 3 statically-resolvable consumers —
+    // finance-pulse's two counters (activity-snapshot.ts:120 invoice-chase-
+    // general, :127 month-end-close-cpa) and the rent-collection page
+    // (app/(product)/app/workspace/[id]/rent-collection/page.tsx:89).
+    // A floor of `>= 1` would let TWO of the three go dark: the extractor
+    // could stop seeing two thirds of the consumer side and this test would
+    // still be green. That is the shrinking-denominator failure the check
+    // exists to prevent, so the floor tracks the real count. Raise it when a
+    // consumer is added; only lower it with the removal in the same diff.
     assert.ok(
-      APPROVAL_SLUG_USAGE.consumers.length >= 1,
-      'expected at least one statically-resolvable agentSlug filter',
+      APPROVAL_SLUG_USAGE.consumers.length >= 3,
+      `expected the extractor to still see all three statically-resolvable ` +
+        `agentSlug filters, found ${APPROVAL_SLUG_USAGE.consumers.length}: ` +
+        `${APPROVAL_SLUG_USAGE.consumers
+          .map((c) => `${c.path}:${c.line}=${c.slug}`)
+          .join(', ')}`,
     );
 
     // The two halves of the real defect, both still visible to the extractor:
@@ -531,6 +545,78 @@ describe('claim-vs-code: approval-queue consumers vs. the slugs sinks write', ()
     assert.deepEqual(usage.consumers, []);
     assert.equal(usage.dynamic.length, 1);
     assert.equal(usage.dynamic[0].role, 'consumer');
+    assert.deepEqual(checkApprovalSlugParity(usage), []);
+  });
+
+  it('BLIND SPOT M5: a filter hoisted out of `where` is carried out, not dropped', () => {
+    // Audit finding M5. The lexical scan labels an object-literal frame with
+    // the identifier before its `{`, so `where: { agentSlug: 'x' }` is seen
+    // and `const filter = { agentSlug: 'x' }` is not — even though the second
+    // reaches Prisma as a `where` one line later. Before this was fixed the
+    // site was dropped on the floor: not a consumer, not a producer, and NOT
+    // in `dynamic` either. Zero current exposure (no such site exists in the
+    // tree today), but a checked denominator that can shrink with no signal
+    // is the failure mode that matters — the gate goes quiet, not red.
+    const usage = extractApprovalSlugUsage([
+      {
+        path: 'lib/skills/chase/sink.ts',
+        text: `const row = { agentSlug: 'chase-general', refTable: 'D' };`,
+      },
+      {
+        path: 'lib/skills/pulse/snapshot.ts',
+        text:
+          `const filter = { agentSlug: 'chase-realestate' };\n` +
+          `const n = await tx.workApprovalQueueItem.count({ where: filter });`,
+      },
+    ]);
+
+    // Still not judged — claiming it is a filter would be inventing a fact.
+    assert.deepEqual(
+      usage.consumers.map((c) => c.slug),
+      [],
+      'a hoisted filter must not be judged as a consumer — the scan cannot ' +
+        'tell it from an output mapping',
+    );
+
+    // But it MUST be visible.
+    const hoisted = usage.dynamic.filter(
+      (d) => d.path === 'lib/skills/pulse/snapshot.ts',
+    );
+    assert.equal(
+      hoisted.length,
+      1,
+      'the hoisted filter vanished from the extractor output entirely — ' +
+        'this is M5 regressing, and it is silent by construction',
+    );
+    assert.equal(hoisted[0].role, 'unclassified');
+    assert.equal(hoisted[0].container, 'filter');
+    assert.equal(hoisted[0].expression, `'chase-realestate'`);
+    assert.equal(
+      hoisted[0].slug,
+      'chase-realestate',
+      'the slug resolved fine; it was the SITE that could not be classified, ' +
+        'and reporting the resolved value is what makes the entry triageable',
+    );
+
+    // Unclassified is never a violation.
+    assert.deepEqual(checkApprovalSlugParity(usage), []);
+  });
+
+  it('an anonymous output mapping is unclassified too, and still not a violation', () => {
+    // The honest cost of M5's fix: `{ agentSlug: row.agentSlug }` is now
+    // reported rather than dropped. It is noise in a bucket nothing judges,
+    // which is the correct trade against a hole nothing can see.
+    const usage = extractApprovalSlugUsage([
+      {
+        path: 'lib/x/reader.ts',
+        text: `const out = { agentSlug: row.agentSlug };`,
+      },
+    ]);
+    assert.deepEqual(usage.producers, []);
+    assert.deepEqual(usage.consumers, []);
+    assert.equal(usage.dynamic.length, 1);
+    assert.equal(usage.dynamic[0].role, 'unclassified');
+    assert.equal(usage.dynamic[0].slug, undefined);
     assert.deepEqual(checkApprovalSlugParity(usage), []);
   });
 });

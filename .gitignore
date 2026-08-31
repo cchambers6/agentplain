@@ -35,8 +35,63 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# claude worktrees
-.claude/worktrees/
+# ─────────────────────────────────────────────────────────────────────────
+# Agent scratch — never committable.
+#
+# 2026-08-31: two files sat untracked-but-NOT-ignored in this PUBLIC repo,
+# each carrying a hardcoded GitHub token on line 1:
+#
+#   .claude/check-flatsbo-prs.mjs   const TOKEN = 'ghs_…'   (mtime 2026-07-19)
+#   output-file                     a bare ghs_…            (mtime 2026-08-02)
+#
+# `git check-ignore` returned nothing for either, and `.claude/` is a TRACKED
+# directory — so a single `git add -A` would have published a GitHub
+# credential to a public repository. Both were `ghs_` App-installation tokens
+# with a ~1h TTL and both were already expired when found (probed against
+# api.github.com: HTTP 401, twice). The credential was dead. The MECHANISM
+# was live, and the mechanism is what these rules close.
+#
+# For whoever edits this next: deny by default in the places agents write,
+# then re-admit named exceptions. A list of the two filenames that leaked is
+# not a control — the next agent will pick a different name.
+
+# `.claude/` cannot be ignored wholesale: `.claude/agents/` holds reviewed,
+# committed config. So deny the directory's contents and re-admit only that.
+# Everything else an agent drops there — scratch .mjs, scraped JSON, launch
+# configs, token dumps — is ignored from here on. This supersedes the older
+# `.claude/worktrees/` line, which it fully covers.
+.claude/*
+!.claude/agents/
+
+# Ad-hoc output sinks: an agent invents a filename, redirects a secret into
+# it, and never cleans up. `output-file` was exactly this shape. Every rule
+# here is root-anchored so the tracked `outputs/` tree stays tracked.
+/output-file
+/output-file.*
+/out
+/out.*
+/tmp-*
+/.tmp-*
+
+# Root-level dot-prefixed agent scripts and probes. `.get-token.mjs` — which
+# mints a fleet token — and `.mk-pr.mjs` are live examples on disk today, and
+# neither was ignored before this change. Real root dotfiles (.gitignore,
+# .eslintrc.json, .env.example) carry other extensions and are unaffected.
+/.*.mjs
+/.*.cjs
+/.*probe*
+
+# Secret-shaped filenames anywhere in the tree.
+*.token
+token.txt
+tokens.txt
+*-token.txt
+*_token.txt
+*.credentials
+credentials.json
+
+# A blessed place for scratch, so nobody has to invent a root-level filename.
+/.agent-scratch/
 
 # prisma generated
 /prisma/generated/

@@ -19,18 +19,36 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { WorkApprovalKind } from "@prisma/client";
 import { renderApprovalPayload } from "@/app/(product)/app/workspace/[id]/approvals/renderApprovalPayload";
 import {
   ARTIFACT_EMPTY_NOTICE,
   CLOSED_LOOP_KINDS,
   RENDERER_FALLBACK_BLOCKS,
+  artifactBodyBlocks,
   artifactMailtoHref,
   buildApprovalArtifact,
   extractRecipients,
+  isCardChromeBlock,
   isRendererFallbackBlock,
   renderArtifactText,
 } from "@/lib/approvals/artifact";
+
+/** The producer. Read as SOURCE by the fallback guard below, so that the
+ *  strings this module claims to strip are checked against the module that
+ *  actually emits them rather than against a copy of themselves. */
+const RENDERER_SOURCE_PATH = path.join(
+  process.cwd(),
+  "app",
+  "(product)",
+  "app",
+  "workspace",
+  "[id]",
+  "approvals",
+  "renderApprovalPayload.ts",
+);
 
 /** Model vendor stays invisible on every customer surface. Standing
  *  product constraint — the artifact is a customer surface. */
@@ -186,7 +204,15 @@ const FIXTURES: Record<string, Fixture> = {
       confidence: 0.87,
       reasoning: "The vendor asked for a renewal decision by end of week.",
     },
-    expect: ["ops@vendor.example.com", "countersigned copy Monday", "end of week"],
+    // Every `expect` string here is WORK PRODUCT. It deliberately no longer
+    // names "end of week", which lives only in `reasoning`: an expectation
+    // satisfied by Plaino's internal rationale proves the artifact carried
+    // the fleet's notes, not the customer's letter.
+    expect: [
+      "ops@vendor.example.com",
+      "good to renew at the current terms",
+      "countersigned copy Monday",
+    ],
   },
   CHIEF_OF_STAFF_TODO: {
     payload: {
@@ -381,10 +407,14 @@ const FIXTURES: Record<string, Fixture> = {
       recipientEmails: ["seller@example.com"],
       documentNames: ["Listing agreement.pdf"],
     },
+    // A closed-loop artifact is a record of the ACTION. It names the
+    // envelope, the template and the signer — never the card's "Nothing has
+    // been sent" promise, which is false the moment this is copyable.
     expect: [
       "Listing agreement — 142 Peachtree Ave",
       "tpl_listing_agreement_v4",
-      "Nothing has been sent",
+      "seller@example.com",
+      "DocuSign — send for signature",
     ],
   },
   DOCUSIGN_VOID_ENVELOPE: {
@@ -392,7 +422,11 @@ const FIXTURES: Record<string, Fixture> = {
       envelopeId: "env_9f3a2c",
       voidedReason: "The seller changed the commission split before signing.",
     },
-    expect: ["env_9f3a2c", "changed the commission split", "Nothing has been voided"],
+    expect: [
+      "env_9f3a2c",
+      "changed the commission split",
+      "DocuSign — void envelope",
+    ],
   },
   CONNECTOR_WRITE_ACTION: {
     payload: {
@@ -579,7 +613,81 @@ test("an empty payload yields the empty notice — never a fallback dressed as c
   assert.ok(artifact.filename.length > 0);
 });
 
-test("every renderer fallback line this module knows about is actually rejected", () => {
+// ── The fallback guard, anchored to the PRODUCER ─────────────────────────
+//
+// The previous version of this test compared RENDERER_FALLBACK_BLOCKS against
+// isRendererFallbackBlock — the module's own list against the module's own
+// matcher. It passed no matter what either of them said, and it duly stayed
+// green while one entry carried a mojibake em dash (U+00E2 U+20AC U+201D in
+// place of U+2014) and therefore never matched the renderer's real output.
+// "Plaino is still drafting — refresh shortly." shipped into artifacts.
+//
+// Both directions are now checked against renderApprovalPayload itself.
+
+/** Lines the renderer emits for an EMPTY payload that are legitimately not
+ *  placeholders. Each is scaffolding or fixed consent copy that carries real
+ *  meaning; anything else appearing here means the module missed a fallback. */
+const STRUCTURAL_EMPTY_LINES: readonly RegExp[] = [
+  // INBOX_TRIAGE labels the classification it made; the label is scaffolding
+  // and the value beside it is real.
+  /^Priority: /,
+  // PLAINO_INSTRUCTION heading above the customer's own words.
+  /^Customer instruction:$/,
+  // VOICE_RECORDING_CONSENT is a fixed-copy consent card: these two lines ARE
+  // the terms being agreed to, not a stand-in for missing content.
+  /^Approving this turns on call recording for your workspace\./,
+  /^A recording disclosure is spoken whenever/,
+];
+
+test("every placeholder the RENDERER emits for an empty payload is recognised here", () => {
+  const unrecognised: Array<{ kind: string; line: string }> = [];
+
+  const probe = (kindName: string, rendered: { body: string[] }) => {
+    for (const raw of rendered.body) {
+      const line = raw.trim();
+      if (line.length === 0) continue;
+      if (isRendererFallbackBlock(line)) continue;
+      if (isCardChromeBlock(line)) continue;
+      if (STRUCTURAL_EMPTY_LINES.some((re) => re.test(line))) continue;
+      unrecognised.push({ kind: kindName, line });
+    }
+  };
+
+  for (const kind of ALL_KINDS) {
+    probe(kind, renderApprovalPayload(WorkApprovalKind[kind], {}));
+  }
+  // The renderer's `default:` arm, which only a not-yet-rendered enum value
+  // reaches in production. Its line is a placeholder too.
+  probe(
+    "«unhandled kind»",
+    renderApprovalPayload("A_KIND_THE_RENDERER_DOES_NOT_KNOW" as WorkApprovalKind, {}),
+  );
+
+  assert.deepEqual(
+    unrecognised,
+    [],
+    "renderApprovalPayload emits a line for an empty payload that the artifact " +
+      "would happily copy to the customer as if it were their work product",
+  );
+});
+
+test("every fallback string this module carries still exists in the renderer", () => {
+  // Read the producer's source rather than a copy of it. Some fallbacks sit
+  // on defensive branches that no payload can reach (FINANCE_PULSE's
+  // "No body attached." among them), so emitted-output alone cannot confirm
+  // the whole list — but a typo, a re-worded placeholder, or a mojibake byte
+  // sequence all fail right here.
+  const source = readFileSync(RENDERER_SOURCE_PATH, "utf8");
+  const missing = RENDERER_FALLBACK_BLOCKS.filter((line) => !source.includes(line));
+  assert.deepEqual(
+    missing,
+    [],
+    "these strings are not in renderApprovalPayload.ts, so nothing they claim " +
+      "to strip is actually being stripped",
+  );
+
+  // And the module's own matcher agrees with its own list, which is the only
+  // thing the old version of this test proved.
   for (const line of RENDERER_FALLBACK_BLOCKS) {
     assert.ok(isRendererFallbackBlock(line), `not rejected: ${line}`);
   }
@@ -587,6 +695,31 @@ test("every renderer fallback line this module knows about is actually rejected"
     isRendererFallbackBlock("Hi Jane — the house is still available."),
     false,
   );
+});
+
+test("no artifact block is a renderer placeholder, for any kind, empty or full", () => {
+  for (const kind of ALL_KINDS) {
+    for (const payload of [{}, FIXTURES[kind]!.payload]) {
+      const artifact = buildApprovalArtifact(
+        WorkApprovalKind[kind],
+        renderApprovalPayload(WorkApprovalKind[kind], payload),
+      );
+      const isEmptyProbe = Object.keys(payload).length === 0;
+      for (const block of artifact.blocks) {
+        assert.equal(
+          isCardChromeBlock(block),
+          false,
+          `${kind}: card chrome reached the artifact: ${JSON.stringify(block)}`,
+        );
+        if (isEmptyProbe && block === ARTIFACT_EMPTY_NOTICE) continue;
+        assert.equal(
+          isRendererFallbackBlock(block),
+          false,
+          `${kind}: placeholder reached the artifact: ${JSON.stringify(block)}`,
+        );
+      }
+    }
+  }
 });
 
 test("structure is first-class: text is derived from blocks, not parsed back out", () => {
@@ -599,14 +732,254 @@ test("structure is first-class: text is derived from blocks, not parsed back out
   );
   // Provenance stays STRUCTURED on `refs` — a later unit turns this into
   // durable graph nodes and must not re-parse a flattened blob.
+  //
+  // And the retrieval score is GONE. The on-screen renderer labels citations
+  // "(similarity 0.91)", which is a fine debugging affordance on a card and
+  // machine exhaust on a surface the customer pastes into a client email.
   assert.deepEqual(
     artifact.refs.map((r) => r.label),
-    [
-      "Owner statements — export path (similarity 0.91)",
-      "Reports tab overview (similarity 0.78)",
-    ],
+    ["Owner statements — export path", "Reports tab overview"],
   );
+  for (const ref of artifact.refs) {
+    assert.doesNotMatch(ref.label, /similarity/i, "retrieval score is not copyable");
+  }
+  assert.doesNotMatch(renderArtifactText(artifact), /similarity/i);
   const text = renderArtifactText(artifact);
   assert.match(text, /Based on:/);
   assert.match(text, /Subject: Cannot export the owner statement/);
+});
+
+// ── Recipient integrity ──────────────────────────────────────────────────
+//
+// `recipientLine` is a DISPLAY string that concatenates the addressee and the
+// subject: "To: jane@buyer.example.com    Re: <subject>". On every reply-draft
+// kind that subject arrived in an email a stranger sent. The artifact used to
+// run a global address regex over the whole line, so a stranger who wrote an
+// address into their subject was silently added to the customer's To: header
+// — the customer approves a reply to Jane, opens their mail app, and sends it
+// with an outsider on the line.
+
+/** The `to` part of a mailto: href, before the query string. */
+function mailtoTo(href: string): string {
+  const m = /^mailto:([^?]*)/.exec(href);
+  return decodeURIComponent(m?.[1] ?? "");
+}
+
+test("an address in the SUBJECT never becomes a recipient", () => {
+  const rendered = renderApprovalPayload(WorkApprovalKind.BUYER_INQUIRY_REPLY_DRAFT, {
+    to: "jane@buyer.example.com",
+    subject: "Please copy my agent bob@attacker.example.com on this",
+    draft: "Hi Jane — 142 Peachtree is still on the market.",
+  });
+  // The display line does carry the address, because the subject does.
+  assert.match(rendered.recipientLine ?? "", /bob@attacker\.example\.com/);
+
+  const artifact = buildApprovalArtifact(
+    WorkApprovalKind.BUYER_INQUIRY_REPLY_DRAFT,
+    rendered,
+  );
+  assert.equal(artifact.recipient, "jane@buyer.example.com");
+
+  const href = artifactMailtoHref(artifact);
+  assert.ok(href);
+  assert.equal(
+    mailtoTo(href),
+    "jane@buyer.example.com",
+    "a stranger's address reached the mailto To: line",
+  );
+  assert.doesNotMatch(
+    renderArtifactText(artifact),
+    /^To: .*attacker/m,
+    "a stranger's address reached the To: line of the copied text",
+  );
+  // The subject itself still reads as the stranger wrote it — quoting their
+  // words back is correct; addressing them is not. This is the ONE place the
+  // string is allowed to appear.
+  assert.match(href, /subject=[^&]*attacker/);
+});
+
+test("a header-injection subject never reaches the recipient or the mailto To:", () => {
+  for (const subject of [
+    "Renewal%0ABcc: evil@attacker.example.com",
+    "Renewal\r\nBcc: evil@attacker.example.com",
+    "Renewal\nTo: evil@attacker.example.com",
+  ]) {
+    const artifact = buildApprovalArtifact(
+      WorkApprovalKind.CHIEF_OF_STAFF_REPLY_DRAFT,
+      renderApprovalPayload(WorkApprovalKind.CHIEF_OF_STAFF_REPLY_DRAFT, {
+        subject,
+        body: "We are good to renew at the current terms.",
+        toEmails: ["ops@vendor.example.com"],
+      }),
+    );
+    assert.equal(
+      artifact.recipient,
+      "ops@vendor.example.com",
+      `subject ${JSON.stringify(subject)} altered the recipient`,
+    );
+
+    const href = artifactMailtoHref(artifact)!;
+    assert.equal(mailtoTo(href), "ops@vendor.example.com");
+    // Nothing raw survives into the addressee: no second address, no bare
+    // CR/LF, and no naked %0A a mail client could read back as a header break.
+    const to = /^mailto:([^?]*)/.exec(href)![1]!;
+    assert.doesNotMatch(to, /attacker/);
+    assert.doesNotMatch(to, /[\r\n]|%0[AaDd]/);
+    // And the encoded subject cannot break out of its own parameter either.
+    const subjectParam = /[?&]subject=([^&]*)/.exec(href)?.[1] ?? "";
+    assert.doesNotMatch(subjectParam, /[\r\n]/);
+  }
+});
+
+test("the renderer hands over discrete recipients; the artifact does not re-parse", () => {
+  const rendered = renderApprovalPayload(WorkApprovalKind.FOLLOW_UP_NUDGE, {
+    subject: "Re: proposal — cc backup@attacker.example.com",
+    body: "Circling back on the Riverside proposal.",
+    toEmails: ["sam@riverside.example.com"],
+  });
+  assert.deepEqual(rendered.recipients, ["sam@riverside.example.com"]);
+  assert.equal(
+    buildApprovalArtifact(WorkApprovalKind.FOLLOW_UP_NUDGE, rendered).recipient,
+    "sam@riverside.example.com",
+  );
+
+  // Every kind that shows an addressee now states it discretely. A kind that
+  // shows "To: …" without a `recipients` array has re-opened the parse path.
+  for (const kind of ALL_KINDS) {
+    const r = renderApprovalPayload(WorkApprovalKind[kind], FIXTURES[kind]!.payload);
+    if (r.recipientLine && /^\s*To\b/i.test(r.recipientLine)) {
+      assert.ok(
+        Array.isArray(r.recipients),
+        `${kind}: shows an addressee but does not expose it discretely`,
+      );
+    }
+  }
+});
+
+test("extractRecipients reads the addressee segment only, never the subject", () => {
+  // The legacy path, kept for a RenderedApproval that predates `recipients`.
+  assert.deepEqual(
+    extractRecipients("To: jane@buyer.example.com    Re: ask bob@attacker.example.com"),
+    ["jane@buyer.example.com"],
+  );
+  // A line with no addressee label addresses nobody, whatever it contains.
+  assert.deepEqual(extractRecipients("Re: ask bob@attacker.example.com"), []);
+});
+
+// ── Provenance is for the customer, not for their counterparty ───────────
+//
+// "Why this was drafted: The vendor asked for a renewal decision by end of
+// week." is useful in the customer's own copy and is the fleet's internal
+// note about the vendor. It used to ride along in the mailto body, which is
+// a pre-filled email TO that vendor.
+
+/** The decoded `body=` parameter of a mailto: href. */
+function mailtoBody(href: string): string {
+  const m = /[?&]body=([^&]*)/.exec(href);
+  return decodeURIComponent((m?.[1] ?? "").replace(/\+/g, "%20"));
+}
+
+test("no provenance block reaches the mailto body, for any kind", () => {
+  let checked = 0;
+  for (const kind of ALL_KINDS) {
+    const artifact = buildApprovalArtifact(
+      WorkApprovalKind[kind],
+      renderApprovalPayload(WorkApprovalKind[kind], FIXTURES[kind]!.payload),
+    );
+    const href = artifactMailtoHref(artifact);
+    if (!href) continue;
+    checked += 1;
+    const body = mailtoBody(href);
+    for (const block of artifact.provenanceBlocks) {
+      assert.equal(
+        body.includes(block),
+        false,
+        `${kind}: internal provenance is in the outbound draft: ${JSON.stringify(block)}`,
+      );
+    }
+    assert.doesNotMatch(body, /^Why this was drafted:/m, `${kind}: rationale leaked`);
+    assert.doesNotMatch(body, /^In reply to:/m, `${kind}: inbound summary leaked`);
+  }
+  assert.ok(checked > 0, "no kind produced a mailto — the assertion proved nothing");
+});
+
+test("provenance stays in the customer's own copy and download", () => {
+  const artifact = buildApprovalArtifact(
+    WorkApprovalKind.CHIEF_OF_STAFF_REPLY_DRAFT,
+    renderApprovalPayload(
+      WorkApprovalKind.CHIEF_OF_STAFF_REPLY_DRAFT,
+      FIXTURES.CHIEF_OF_STAFF_REPLY_DRAFT!.payload,
+    ),
+  );
+  assert.deepEqual(artifact.provenanceBlocks, [
+    "Why this was drafted: The vendor asked for a renewal decision by end of week.",
+  ]);
+
+  // Copy / download: the customer's own record, rationale included.
+  const copyText = renderArtifactText(artifact);
+  assert.match(copyText, /Why this was drafted: The vendor asked/);
+  assert.match(copyText, /end of week/);
+
+  // Outbound: the same work product, none of the reasoning.
+  const outbound = renderArtifactText(artifact, { includeProvenance: false });
+  assert.match(outbound, /good to renew at the current terms/);
+  assert.doesNotMatch(outbound, /end of week/);
+  assert.doesNotMatch(mailtoBody(artifactMailtoHref(artifact)!), /end of week/);
+
+  // `blocks` is untouched — the structure keeps everything; only the
+  // audience-specific flattening drops it.
+  assert.ok(artifact.blocks.includes(artifact.provenanceBlocks[0]!));
+  assert.deepEqual(
+    artifactBodyBlocks(artifact, false),
+    artifact.blocks.filter((b) => b !== artifact.provenanceBlocks[0]),
+  );
+});
+
+// ── Closed-loop kinds are a record of the ACTION, not of the card ────────
+//
+// "Awaiting your approval — Plaino will send this envelope … Nothing has been
+// sent." is the right thing under a pair of approve/reject buttons. Copied
+// out of an artifact AFTER approving, it is UI chrome and it is false.
+
+test("closed-loop artifacts carry the action, never the card's pending promise", () => {
+  for (const kind of ALL_KINDS) {
+    if (!CLOSED_LOOP_KINDS.has(kind)) continue;
+    const artifact = buildApprovalArtifact(
+      WorkApprovalKind[kind],
+      renderApprovalPayload(WorkApprovalKind[kind], FIXTURES[kind]!.payload),
+    );
+    const text = renderArtifactText(artifact);
+    assert.doesNotMatch(text, /Awaiting your approval/, `${kind}: card chrome copied`);
+    assert.doesNotMatch(text, /Nothing has been sent/, `${kind}: stale promise copied`);
+    assert.doesNotMatch(text, /Nothing has been voided/, `${kind}: stale promise copied`);
+    assert.match(
+      artifact.blocks[0] ?? "",
+      /^Action: /,
+      `${kind}: artifact does not say what was authorised`,
+    );
+  }
+});
+
+test("a thin closed-loop payload yields an honest artifact, not card chrome", () => {
+  // Before: DOCUSIGN_SEND_ENVELOPE's only block was the pending-state promise,
+  // and copying it handed the customer a sentence about the card.
+  const thin = buildApprovalArtifact(
+    WorkApprovalKind.DOCUSIGN_SEND_ENVELOPE,
+    renderApprovalPayload(WorkApprovalKind.DOCUSIGN_SEND_ENVELOPE, {}),
+  );
+  assert.deepEqual(thin.blocks, ["Action: DocuSign — send for signature"]);
+  assert.doesNotMatch(renderArtifactText(thin), /Awaiting your approval/);
+
+  // With substance, the artifact is about the envelope.
+  const real = buildApprovalArtifact(
+    WorkApprovalKind.DOCUSIGN_SEND_ENVELOPE,
+    renderApprovalPayload(
+      WorkApprovalKind.DOCUSIGN_SEND_ENVELOPE,
+      FIXTURES.DOCUSIGN_SEND_ENVELOPE!.payload,
+    ),
+  );
+  const text = renderArtifactText(real);
+  assert.match(text, /Subject: Listing agreement — 142 Peachtree Ave/);
+  assert.match(text, /To: seller@example\.com/);
+  assert.match(text, /From template: tpl_listing_agreement_v4/);
 });

@@ -367,3 +367,62 @@ test("approving does not take the work away: the approved shelf keeps it in reac
 test("the approved shelf renders nothing when nothing was recently approved", () => {
   assert.equal(render(<ApprovedHandoffShelf rows={[]} />), "");
 });
+
+/** The decoded `href` of the "open in your mail app" link, if present. */
+function mailtoHrefFromMarkup(html: string): string | null {
+  const m = /href="(mailto:[^"]*)"/.exec(html);
+  if (!m) return null;
+  return m[1]!.replace(/&amp;/g, "&");
+}
+
+test("an address written into the SUBJECT never lands on the card's To: line", () => {
+  // The subject of a reply draft comes from an email a stranger sent. It used
+  // to be scanned for addresses along with the addressee, so writing an
+  // address into a subject line put the writer on the customer's To: header.
+  const html = render(
+    <ApprovalCard
+      row={row(
+        renderApprovalPayload("BUYER_INQUIRY_REPLY_DRAFT", {
+          to: "jane@buyer.example.com",
+          subject: "Please copy my agent bob@attacker.example.com on this",
+          draft: "Hi Jane — 142 Peachtree is still on the market.",
+        }),
+        { kind: "BUYER_INQUIRY_REPLY_DRAFT" },
+      )}
+    />,
+  );
+
+  const href = mailtoHrefFromMarkup(html)!;
+  const to = decodeURIComponent(/^mailto:([^?]*)/.exec(href)![1]!);
+  assert.equal(to, "jane@buyer.example.com");
+  assert.doesNotMatch(to, /attacker/);
+});
+
+test("the pre-filled email to a third party carries no internal rationale", () => {
+  // "Why this was drafted: …" is Plaino's note to the CUSTOMER about their
+  // counterparty. It belongs in the copy and the .txt; it used to ride along
+  // in the mailto body, which is an email addressed to that counterparty.
+  const html = render(
+    <ApprovalCard
+      row={row(
+        renderApprovalPayload("CHIEF_OF_STAFF_REPLY_DRAFT", {
+          subject: "Re: vendor contract renewal",
+          body: "We are good to renew at the current terms.",
+          toEmails: ["ops@vendor.example.com"],
+          reasoning: "The vendor asked for a renewal decision by end of week.",
+        }),
+        { kind: "CHIEF_OF_STAFF_REPLY_DRAFT" },
+      )}
+    />,
+  );
+
+  const href = mailtoHrefFromMarkup(html)!;
+  const body = decodeURIComponent(/[?&]body=([^&]*)/.exec(href)![1]!);
+  assert.match(body, /good to renew at the current terms/);
+  assert.doesNotMatch(body, /Why this was drafted/);
+  assert.doesNotMatch(body, /end of week/);
+
+  // The customer's own copy still explains itself.
+  const copyText = artifactTextFromMarkup(html)!;
+  assert.match(copyText, /Why this was drafted: The vendor asked/);
+});

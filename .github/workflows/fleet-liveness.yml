@@ -10,12 +10,76 @@
 # Deliberate-failure test: dispatch with simulate_stale=true. That MUST
 # produce a red run and a [DRILL]-prefixed fleet-down issue; anything else
 # means the alarm is broken.
+#
+# ── SCHEDULE DISABLED 2026-08-31 ──────────────────────────────────────────────
+#
+# WHY. This alarm had failed every scheduled run since 2026-08-12 — 258 red runs
+# in the 07-31..08-30 window, all of them false. Measured on 2026-08-31:
+#
+#   * The last commit on `ops/heartbeat` is 2026-08-12T01:27:03Z. The last real
+#     heartbeat commit is 2026-08-12T01:19:32Z. Run #260 reported
+#     "fleet-liveness: stale (age 468.1 h)" and exited 1.
+#   * The fleet is NOT dead. Every enabled scheduled task has a `lastRunAt` from
+#     2026-08-31: agentplain-watchdog 13:10:03Z, morning-brief 12:05:25Z,
+#     loop-heartbeat 13:02:16Z, librarian-rollup 10:06:29Z,
+#     chiron-demo-readiness-watchdog 06:00:54Z. The alarm was reporting a dead
+#     fleet while the fleet was running. That is a false positive, not a catch.
+#
+# TWO INDEPENDENT DEFECTS, BOTH IN THE WRITER-SIDE CONTRACT, NEITHER IN THIS FILE:
+#
+#   1. THE WRITER CANNOT RUN. The publish step lives in
+#      C:\Users\conne\Claude\Scheduled\agentplain-watchdog\SKILL.md as a bare
+#      ```bash``` block invoking `node C:/agentplain/.get-token.mjs`. The only
+#      bash tool that prompt establishes is `mcp__workspace__bash`, an isolated
+#      Linux container in which `C:/agentplain` does not exist (verified:
+#      `ls C:/agentplain` -> "No such file or directory"). The same SKILL.md
+#      already warns, in step 4, "never bash — different filesystems". So the
+#      publish has failed on every run since the task was created
+#      (SKILL.md CreationTimeUtc 2026-08-12T01:29:53Z — ~2 min after the last
+#      heartbeat landed), and the prompt says "if it fails, report the error and
+#      move on", which made that failure silent.
+#      `scripts/ops/publish-heartbeat.mjs` itself is fine: `--dry-run` exits 0
+#      and emits a complete payload.
+#
+#   2. THE THRESHOLD MEASURES A CADENCE THAT NO LONGER EXISTS.
+#      STALE_THRESHOLD_HOURS = 2 is documented as "4 missed 30-min beats" and was
+#      calibrated when agentplain-watchdog ran `0,30 * * * *` (48/day). That task
+#      is now `0 9,17 * * *` — twice daily, with a 16 h gap between the 17:00 and
+#      the 09:00 beat. Even with defect 1 repaired, a 2 h threshold against a
+#      16 h legitimate gap is red roughly 16 h out of every 24 by construction.
+#
+# WHY DISABLED RATHER THAN RETUNED. Re-tuning the threshold alone would leave a
+# still-permanently-red alarm, because nothing writes the branch at all. Fixing
+# the writer means editing an unversioned scheduled-task prompt outside this
+# repo, in an execution environment this change cannot test — and shipping an
+# unverifiable "fix" to an alarm is how the alarm got here. A broken alarm is
+# worse than no alarm: it trains everyone to ignore the channel. So it is off,
+# on the record, rather than quietly red.
+#
+# `workflow_dispatch` is deliberately KEPT: it costs zero scheduled minutes,
+# preserves the simulate_stale drill, and is how the fix below gets verified.
+#
+# RESTORE WHEN BOTH ARE TRUE — and not before:
+#   (a) agentplain-watchdog (or whichever task owns it) publishes heartbeats from
+#       an on-host execution path, proven by two consecutive commits on
+#       `ops/heartbeat` less than one watchdog interval apart; AND
+#   (b) STALE_THRESHOLD_HOURS in scripts/ops/fleet-liveness-check.mjs is raised
+#       above the writer's largest legitimate gap (currently 16 h; 20 h leaves
+#       margin for GHA's best-effort cron).
+# Then re-enable the schedule at `7 */6 * * *` or daily — hourly polling of a
+# twice-daily signal buys nothing and cost 258 billable minutes a month.
+#
+# Verify the restore with: `gh workflow run fleet-liveness.yml` (green), then
+# `-f simulate_stale=true` (MUST go red). An alarm that cannot be shown to fire
+# is not an alarm.
+# ──────────────────────────────────────────────────────────────────────────────
 
 name: fleet-liveness
 
 on:
-  schedule:
-    - cron: "7 * * * *" # hourly; GHA cron is best-effort, 2 h threshold absorbs delay
+  # DISABLED 2026-08-31 — see the block above. Do not re-enable without (a) and (b).
+  # schedule:
+  #   - cron: "7 * * * *" # hourly; GHA cron is best-effort, 2 h threshold absorbs delay
   workflow_dispatch:
     inputs:
       simulate_stale:

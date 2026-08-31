@@ -1,4 +1,4 @@
-# Audit-queue seeder — every 30 min.
+# Audit-queue seeder — every 6 h (was every 30 min until 2026-08-31).
 #
 # Gathers regression signals (CI failures, Vercel deploy failures, brand-gate
 # drift, stale-but-green PRs, E2E failures) and renders audit-queue INBOX
@@ -9,17 +9,43 @@
 # CANNOT write to it. So THIS workflow runs the seeder for VISIBILITY only: it
 # posts found signals to the job summary and uploads them as an artifact.
 #
-# The authoritative write to the real INBOX happens from a LOCAL 30-min cadence
-# (a scheduled task / `/loop`) where the seeder has BOTH a GitHub token AND the
-# INBOX on disk. That local run's `gatherCiFailures()` also catches anything THIS
-# job (or the nightly E2E job) flags as a failed workflow run — so signals reach
-# the autofire task even though CI can't touch the local file. Docs: docs/e2e/README.md.
+# The authoritative write to the real INBOX is supposed to happen from a LOCAL
+# run of the seeder, where it has BOTH a GitHub token AND the INBOX on disk.
+# That local run's `gatherCiFailures()` also catches anything THIS job (or the
+# nightly E2E job) flags as a failed workflow run — so signals reach the autofire
+# task even though CI can't touch the local file. Docs: docs/e2e/README.md.
+#
+# CORRECTION 2026-08-31: the paragraph above used to claim that local write runs
+# "every 30 min". It does not run at all. The only reference to this seeder under
+# C:\Users\conne\Claude\Scheduled\ is `audit-fire-manual-rerun-1pm`, a one-time
+# task with `enabled: false` and `lastRunAt: 2026-06-16`. The consumer,
+# agentplain-audit-queue-autofire, is `0 13 * * *` (ONCE DAILY) and builds its
+# queue by reading INBOX.md / WORKING_STATE.md — it never invokes this script.
+# Do not restore a 30-min cadence on the strength of the old sentence.
+#
+# ── CADENCE: every 6 h, and why not something rounder ─────────────────────────
+# scripts/audit-queue-seeder.ts sets `WINDOW_MS = 8 * 60 * 60 * 1000` — an 8 h
+# lookback over CI runs and commit statuses. That window, not taste, is the
+# binding constraint: a gap between runs LONGER than 8 h silently drops signals
+# that aged out, and a gap SHORTER than 8 h re-reports what the previous run
+# already saw. Every 30 min re-scanned the same 8 h window 16 times over.
+#
+# 6 h sits just inside the window, leaving 2 h of deliberate overlap to absorb
+# GitHub's best-effort cron drift, and lines up with agentplain-librarian-rollup
+# (`0 */6 * * *`), which is what actually processes the INBOX. Nothing here is
+# time-critical: this job writes no authoritative state, and its signals are all
+# re-derivable from the GitHub API on the next run.
+#
+# Measured cost: 633 runs in 2026-07-31..08-30 at 37-50 s each. GitHub bills each
+# job rounded UP to the whole minute, so those sub-minute runs cost 633 billable
+# minutes/month — 59% of the repo's ~1,076. At 6 h that is ~122.
+# Raise the cadence only if WINDOW_MS is lowered to match.
 
 name: audit-queue-seeder
 
 on:
   schedule:
-    - cron: "*/30 * * * *" # every 30 minutes
+    - cron: "0 */6 * * *" # every 6 h — inside the seeder's 8 h WINDOW_MS lookback (see above)
   workflow_dispatch:
 
 concurrency:

@@ -8,8 +8,10 @@ import {
   ApRootedEmptyState,
 } from "@/components/ui/ap";
 import { withWorkspace } from "@/lib/auth";
+import { verticalSlugFromEnum } from "@/lib/auth/vertical-enum";
 import { withRls } from "@/lib/db";
 import { env } from "@/lib/env";
+import { trialPeriodDaysForVertical } from "@/lib/billing/facts";
 import { getWorkspaceBudgetSnapshot } from "@/lib/billing/budget";
 import { recommendBudgetCapUsd } from "@/lib/billing/recommendations";
 import { formatMicroCentsAsUsd } from "@/lib/billing/usage/pricing";
@@ -115,7 +117,13 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
     : null;
   const hasPaymentMethod = Boolean(subscription?.defaultPaymentMethodId);
   const currentSeats = subscription?.seats ?? 1;
-  const trialDays = env.stripeTrialPeriodDays();
+  // Per-vertical trial, from the same source the signup path used
+  // (`lib/billing/facts.ts`). The global `env.stripeTrialPeriodDays()` told
+  // every CPA/Law workspace 7 when Stripe had given them 14 — filed as P1-11
+  // on 2026-07-02 ("the page has the workspace in hand and never consults it").
+  const trialDays = trialPeriodDaysForVertical(
+    verticalSlugFromEnum(workspace.vertical),
+  );
   const billingEnabled = env.stripeBillingEnabled();
   const checkoutEnabled = env.stripeCheckoutEnabled();
 

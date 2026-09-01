@@ -203,6 +203,7 @@ export async function signUpAction(
         tier: selectedTier,
         appOrigin: env.appPublicOrigin(),
         trialPeriodDays: trialPeriodDaysForVertical(verticalSlug),
+        verticalSlug,
       });
       return {
         ok: true,
@@ -226,12 +227,15 @@ export async function signUpAction(
           workspaceName: signUpResult.workspace.name,
           email,
           verticalTier: verticalTierFromTier(selectedTier),
+          // Same per-vertical trial as the Checkout path above. Without
+          // this the degrade path silently hands CPA/Law 7 days.
+          trialPeriodDays: trialPeriodDaysForVertical(verticalSlug),
         },
         { id: signUpResult.workspace.id },
       );
       return {
         ok: true,
-        notice: `Check ${email}. Your trial started — add your card from billing once you sign in. The sign-in link is valid for 15 minutes.`,
+        notice: `Check ${email}. Your ${trialPeriodDaysForVertical(verticalSlug)}-day trial started — add your card from billing once you sign in. The sign-in link is valid for 15 minutes.`,
       };
     }
   }
@@ -239,21 +243,30 @@ export async function signUpAction(
   // Trial-first default (STRIPE_CHECKOUT_ENABLED unset/false): provision a
   // Stripe Customer + a `trialing` Subscription with NO card. The customer
   // adds a card before trial end from /settings/billing; the trial-warning
-  // cron nudges them as day-14 approaches. This is also the dev/preview +
-  // `BILLING_PROVIDER=test` path.
+  // cron nudges them as the end of their per-vertical trial approaches
+  // (7 days by default, 14 for CPA + Law — `lib/billing/facts.ts`). This is
+  // also the dev/preview + `BILLING_PROVIDER=test` path.
+  //
+  // NOTE: this is the SHIPPED DEFAULT branch (`STRIPE_BILLING_ENABLED`
+  // unset — see `lib/env.ts`). Omitting `trialPeriodDays` here made
+  // `provisioning.ts` fall back to the global 7, so CPA and Law were given
+  // 7 days in Stripe while pricing, the FAQ and their own vertical pages
+  // promised 14. That is charging someone earlier than we told them.
+  const trialDays = trialPeriodDaysForVertical(verticalSlug);
   await provisionTrialSubscriptionSafe(
     {
       workspaceId: signUpResult.workspace.id,
       workspaceName: signUpResult.workspace.name,
       email,
       verticalTier: verticalTierFromTier(selectedTier),
+      trialPeriodDays: trialDays,
     },
     { id: signUpResult.workspace.id },
   );
 
   return {
     ok: true,
-    notice: `Check ${email}. Your ${env.stripeTrialPeriodDays()}-day trial just started — no card needed yet. The sign-in link is valid for 15 minutes.`,
+    notice: `Check ${email}. Your ${trialDays}-day trial just started — no card needed yet. The sign-in link is valid for 15 minutes.`,
   };
 }
 

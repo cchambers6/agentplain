@@ -6,9 +6,12 @@
 // must never block on Stripe being down. If provisioning fails, the
 // workspace still exists; the cron + the next billing-page render
 // surface the missing-subscription state and we retry. Per the block-F
-// trial-first mandate, no card is collected at signup — the trial is
-// `env.stripeTrialPeriodDays()` (14 by default) and the trial-end flow
-// drives card-on-file capture before day-14.
+// trial-first mandate, no card is collected at signup — the trial length
+// is whatever the caller passes as `trialPeriodDays`, which MUST be
+// `trialPeriodDaysForVertical(slug)` from `lib/billing/facts.ts` (7 by
+// default; 14 for CPA + Law). It falls back to `env.stripeTrialPeriodDays()`
+// (7 by default) only when the caller omits it. The trial-end flow drives
+// card-on-file capture before the trial ends.
 
 import type {
   Prisma,
@@ -44,9 +47,11 @@ export interface ProvisionTrialSubscriptionInput {
    *  feedback_max_friction_reduction_for_trials rule #6 there is no
    *  minimum-seats requirement. */
   seats?: number;
-  /** Trial length in days. Defaults to `env.stripeTrialPeriodDays()`
-   *  (14 per the block-F trial-first mandate). Passed explicitly by
-   *  tests for determinism. */
+  /** Trial length in days. Production callers MUST pass
+   *  `trialPeriodDaysForVertical(verticalSlug)` from `lib/billing/facts.ts`
+   *  (7 default, 14 for CPA + Law) so the vertical's ratified trial is
+   *  honoured. Falls back to `env.stripeTrialPeriodDays()` (7 by default)
+   *  when omitted. Passed explicitly by tests for determinism. */
   trialPeriodDays?: number;
   /** Override for tests; the live caller uses `getBillingProvider()`. */
   provider?: BillingProvider;
@@ -62,8 +67,8 @@ export interface ProvisionTrialSubscriptionResult {
 }
 
 /**
- * Creates a Stripe Customer + a `trialing`-status Subscription with
- * 30-day `trial_period_days`, persists the Subscription row, and
+ * Creates a Stripe Customer + a `trialing`-status Subscription using the
+ * caller-supplied `trial_period_days`, persists the Subscription row, and
  * updates Workspace.stripeCustomerId / .stripeSubscriptionId. Caller
  * should run this AFTER the workspace-creation transaction commits —
  * the Stripe API calls are network IO and don't belong in a DB tx.
@@ -85,7 +90,8 @@ export async function provisionTrialSubscription(
     email: input.email,
   });
 
-  // 2. Subscription with the configured trial (14 days by default). Per
+  // 2. Subscription with the caller's per-vertical trial (7 by default,
+  //    14 for CPA + Law — see `lib/billing/facts.ts`). Per
   //    the trial-first mandate, no payment method is collected here — the
   //    customer adds a card before trial end from /settings/billing.
   const sub = await provider.createSubscription({

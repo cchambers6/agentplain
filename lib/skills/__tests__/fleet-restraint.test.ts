@@ -77,7 +77,13 @@ const NON_SKILL_DIRS = ['config', 'prompts', 'scheduler', '__tests__'];
 /** Files that legitimately mint ids for demo/fixture data. Excluded from the
  *  mint search so a CORRECT skill is not flagged because a sibling fixture
  *  generator happens to mint a field of the same name. */
-const FIXTURE_FILE = /(^|[\\/])(fixtures?|demo|seed|json-fetcher)[^\\/]*\.ts$/i;
+// NOTE: `json-fetcher.ts` is deliberately NOT excluded. It is a production
+// fetcher implementation exported from each skill's `index.ts` (the manual
+// CSV/JSON import path used while an MCP is in flight), not a fixture — and it
+// is exactly where a manual-import adapter would mint ids for records that
+// arrive without one. Excluding it created a silent fail-open across 15 of the
+// 30 skill directories. Round-2 audit caught this; do not re-add it.
+const FIXTURE_FILE = /(^|[\\/])(fixtures?|demo|seed)[^\\/]*\.ts$/i;
 
 /** Anything that makes a value fresh per run, not just randomUUID. */
 const MINT_FNS = String.raw`randomUUID|crypto\.randomUUID|uuidv4|uuidV4|uuid4|nanoid|createId|cuid`;
@@ -163,9 +169,11 @@ function collectRefIdSites(skill: string, root: string): RefIdSite[] {
         if (!m) return;
         const expression = m[2].trim().replace(/[,;]\s*$/, '');
         // Take the trailing identifier, tolerating close-brackets from a
-        // single-line object literal (`({ refId: d.draftId })`). A previous
-        // revision used lastIndexOf('.') and produced the property "draftId })",
-        // which matched nothing ΓÇö the classifier silently found zero.
+        // single-line object literal (`({ refId: d.draftId })`), which a plain
+        // lastIndexOf('.') would render as the property `draftId })`.
+        // Sinks on `main` are multi-line and parse correctly either way: this
+        // guards the single-line shape and the synthetic fixtures below. It is
+        // NOT a claim that main was ever mis-parsed. It was not.
         const pm = /([A-Za-z_$][\w$]*)\s*[)}\]\s]*$/.exec(expression);
         const property = pm ? pm[1] : expression;
         sites.push({ skill, file, line: idx + 1, expression, property });
@@ -191,7 +199,9 @@ function expressionIsFresh(expression: string): boolean {
 function mintSiteFor(skill: string, prop: string, root: string): string | null {
   const esc = prop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const pattern = new RegExp(
-    String.raw`(?:(?:const|let|var)\s+)?${esc}\s*[:=]\s*(?:await\s+)?(?:${MINT_FNS})\s*\(`,
+    // \b matters: without it, a truncated property name like `a` matched
+    // `metadat[a]: randomUUID(` and reported a stable refId as an offender.
+    String.raw`(?:(?:const|let|var)\s+)?\b${esc}\s*[:=]\s*(?:await\s+)?(?:${MINT_FNS})\s*\(`,
   );
   for (const file of sourceFiles(join(root, skill))) {
     if (FIXTURE_FILE.test(file)) continue;
@@ -306,10 +316,17 @@ describe('Fleet Restraint — one draft per real event', () => {
     assert.deepEqual(nullable, ['chief-of-staff-scheduler:proposalId']);
   });
 
-  it('the ratchet is non-vacuous', () => {
-    assert.ok(
-      Object.keys(KNOWN_UNSTABLE_REFID).length > 0,
-      'emptying the list must not be the way to make this pass',
+  it('the ratchet accounts for every live offender and nothing else', () => {
+    // Strictly stronger than the old `length > 0` non-vacuity check, and it
+    // reaches a LEGAL ZERO STATE. The previous form turned this suite
+    // unconditionally red on the day the seventh skill was fixed — a standard
+    // with no green finish line gets its assertion deleted, which is how a
+    // gate stops being read. Emptying the list while offenders remain is
+    // already caught by the KNOWN-entry test above.
+    assert.equal(
+      findOffenders(SKILLS_ROOT).length,
+      Object.keys(KNOWN_UNSTABLE_REFID).length,
+      'the ratchet must name exactly the live offenders — no more, no fewer',
     );
   });
 

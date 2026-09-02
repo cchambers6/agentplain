@@ -10,8 +10,9 @@
 // helper creates the Stripe Customer, persists `Workspace.stripeCustomerId`
 // (RLS-scoped via the system context — the signup flow has no user
 // session yet), then opens a subscription-mode Stripe Checkout Session
-// with `subscription_data.trial_period_days` (env.stripeTrialPeriodDays,
-// 14 by default) and
+// with `subscription_data.trial_period_days` (the caller passes
+// `trialPeriodDaysForVertical(slug)` from `lib/billing/facts.ts` — 7 by
+// default, 14 for CPA + Law) and
 // `payment_method_collection="always"`. The customer enters their card
 // in Stripe-hosted UI; the underlying subscription is created by
 // Checkout (Stripe fires `customer.subscription.created`) and the
@@ -72,7 +73,8 @@ export interface CreateTrialCheckoutForSignupResult {
 /**
  * Creates a Stripe Customer for the freshly-signed-up workspace, persists
  * `Workspace.stripeCustomerId`, and returns a Stripe-hosted Checkout
- * Session URL configured with `trial_period_days` (14 by default) +
+ * Session URL configured with the caller's per-vertical `trial_period_days`
+ * (7 by default, 14 for CPA + Law — see `lib/billing/facts.ts`) +
  * `payment_method_collection="always"`. The caller redirects the browser
  * to that URL.
  *

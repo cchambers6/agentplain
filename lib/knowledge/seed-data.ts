@@ -178,7 +178,8 @@ draft → DraftReply (subject + body + Gmail draft id).`,
     body: `Three swappable ports keep lib/skills/ provider-neutral per feedback_no_silent_vendor_lock.md
 and project_living_portable_architecture.md.
 
-LlmProvider (lib/llm/types.ts): one production model-provider adapter (lib/llm/anthropic-provider.ts);
+LlmProvider (lib/llm/types.ts): one production model-provider adapter, kept vendor-anonymous on this
+retrievable surface and resolved from lib/llm/ by getLlmProvider();
 test TestLlmProvider (lib/llm/test-provider.ts) with canned + heuristic outputs. getLlmProvider() reads
 LLM_PROVIDER env (test forces test mode) and the production provider key's presence.
 
@@ -646,7 +647,7 @@ Q1. Why do we exist? — Professional services people spend 60-70% of their week
 Q2. What is agentplain? — AI ops layer that runs as a fleet of agents inside your professional services firm. CRITICAL: page 1 of any marketing surface mentions ALL 10 verticals (real estate, mortgage, insurance, property management, title & escrow, recruiting, home services contractors, CPAs, law firms, RIAs). Don't lose a CPA on page one because the hero only said "for realtors."
 Q3. What does the app do? Can everyone use it? — One unified product. 1-seat solo to N-seat workspace.
 Q4. What makes it unique? — Vertical-aware; you stay in control (drafts, never auto-sends); integrates with what you already use; built BY agents; compliance-first.
-Q5. How easy is it to use? — Sign up free, pick your vertical, connect Gmail or CRM in 60 seconds, see drafts within minutes.
+Q5. How easy is it to use? — Start a free trial (card captured at signup), pick your vertical, connect Gmail or CRM in 60 seconds, see drafts within minutes.
 Q6. Why should anyone believe us? — Eat-our-own-cooking; counsel-reviewed compliance corpus; flatsbo brokerage v0; ROI math anchored in concrete per-vertical examples (15-50x per workflow, plus avoided regulatory violations a draft-then-approve loop keeps from ever sending).
 Q7. ROI? — 15-50x per workflow anchored in $2,900-$10,600/mo value vs $99-$199/mo subscription, on top of the regulatory penalties (TCPA, fair-housing, RESPA, SEC Marketing Rule, EEOC, etc.) that auto-execution competitors can't promise to dodge.
 Q8. Future of work? — Humans focus on what only humans can do; AI handles what AI is better at.
@@ -657,17 +658,17 @@ Q9. Why now? — Models got good enough in 2025; vendor APIs stabilized; complia
   {
     slug: 'service-partnership-positioning',
     title: 'Service partnership positioning — agentplain sells the partner who runs AI for you',
-    body: `LOCKED 2026-05-15 in response to Anthropic's Claude for Small Business launch (2026-05-13).
+    body: `LOCKED 2026-05-15 in response to a major model vendor's small-business toolkit launch (2026-05-13).
 
 agentplain is not selling AI. agentplain is selling THE PARTNER WHO RUNS AI FOR YOU.
 
-- Anthropic Claude for SMB: "Here's the toolkit. 15 workflows, 15 skills, 8 connectors. Free with your Claude license. Go run it." → DIY AI ops.
+- Model-vendor small-business toolkit: "Here's the toolkit. 15 workflows, 15 skills, 8 connectors. Free with your existing model license. Go run it." → DIY AI ops.
 - agentplain: "We install. We run. We customize. You stay focused on serving your customers." → Managed AI ops.
 
-This is not a marketing slogan — it's the operational shape of the product, the pricing justification, and the moat against Anthropic's free-tier commoditization of the tool layer.
+This is not a marketing slogan — it's the operational shape of the product, the pricing justification, and the moat against model-vendor free-tier commoditization of the tool layer.
 
 Why this is the right answer:
-1. Anthropic commoditized the TOOL, not the SERVICE. Anthropic isn't a services company.
+1. The model vendors commoditized the TOOL, not the SERVICE. A model vendor isn't a services company.
 2. SMB owners are time-starved, not budget-starved. $99-$199/seat is a rounding error vs. the time cost of learning to be an AI ops person.
 3. Aligns with the locked mission verbatim — "doing the work" IS service partnership.
 4. Vertical-specific knowledge substrate IS the codified service expertise.
@@ -686,7 +687,7 @@ Acceptable framings: "the platform we run for you", "managed AI ops", "your AI o
 THREE customer-facing tiers + a separate /custom path:
 
 REGULAR — $99-$199/seat (ladder by volume). Standard managed AI ops + onboarding bundled in. "We install. We run. We customize standard skills for you."
-PARTNER — $199-$299/seat (ladder by volume). Named-service-partner with 4 hrs/mo reserved time. "Same as Regular, plus your named partner with reserved hours each month for skill iteration, deeper integration, and monthly business review."
+PARTNER — $199-$299/seat (ladder by volume). Named service partner with priority email/chat support and a quarterly async check-in. "Same as Regular, plus your named partner for skill iteration and deeper integration, with priority email/chat support and a quarterly async check-in." NO reserved human hours and NO scheduled calls — those are Max-only, per lib/billing/facts.ts (PARTNER_SUPPORT / CONNER_TIME_TIERS), ratified 2026-06-14.
 MAX — AD-HOC quote-based. High-intensity service / multi-state ops / white-label / dedicated team. NOT a fixed published price-per-seat.
 
 Plus /custom for bespoke capability builds ($5K-$15K + $200-$500/mo maintenance). /custom and Max differ in shape: Max = MORE SERVICE INTENSITY at standard skill scope; /custom = BUILD NEW CAPABILITIES we don't have yet. A customer can be on Max AND have a /custom engagement.
@@ -700,7 +701,7 @@ Per-tier ladder (verbatim from lib/pricing/tiers.ts):
 | 50-99 seats | $99     | $199    | quote |
 | 100+ seats  | enterprise quote | enterprise quote | quote |
 
-First month free across Regular + Partner. Month-to-month from day one. NO per-vertical pricing differentiation. NO freemium tier.
+Free trial across Regular + Partner — 7 days by default, 14 days for CPA + Law — with the card captured at signup via Stripe Checkout and a 14-day money-back guarantee (per lib/billing/facts.ts, ratified 2026-06-14; this SUPERSEDES the retired "first month free" framing). Month-to-month from day one. NO per-vertical pricing differentiation. NO freemium tier.
 
 Stripe schema: zero changes required. Regular + Partner Products + Prices already provisioned. Max bills via Stripe Invoices using the existing /custom Products as the invoicing path.
 
@@ -730,7 +731,7 @@ Audit checklist for any price-mentioning surface: "is this a real human-cost ser
 
 Locked decisions:
 1. NO pilot fees. Period. The $1,500/$2,750/$4,500 pilot model was killed 2026-05-09. Don't propose them again until past 20 paid customers.
-2. First month free across all three tiers. Card on file at signup, $0 charged month 1, per-seat kicks in month 2.
+2. Free trial across all three tiers — 7 days by default, 14 days for CPA + Law (per lib/billing/facts.ts, ratified 2026-06-14; this SUPERSEDES the retired "first month free / $0 charged month 1" framing). Card captured at signup via Stripe Checkout; the first charge lands when the trial ends, backed by a 14-day money-back guarantee.
 3. Month-to-month from day one. No annual lock-in required. Annual SKUs exist as a discount choice, not a default.
 4. Self-serve signup, no sales call required.
 5. NO credit-card-required-to-see-pricing. Pricing is on the public marketing page.
@@ -768,7 +769,7 @@ Acceptable: "agentplain — AI ops rooted in your reality", "We put down roots i
     title: 'MCP-first integration architecture — every integration is an MCP server',
     body: `LOCKED 2026-05-12. Every customer-facing integration in agentplain is an MCP (Model Context Protocol) server scoped to a customer workspace. Customer clicks "Connect" in the marketplace UI → OAuth flow handled by the per-MCP server → callback wires the credential into a customer-scoped MCP instance. Skills call MCP tools (mcp.call('gmail', 'list_messages', ...)) instead of importing vendor SDKs directly.
 
-The customer experience: "as easy as clicking the plug in in Claude" — Claude's integration model (MCP) is the model. User browses a marketplace, clicks Connect, OAuth happens, done. No per-tool engineering visible to the customer.
+The customer experience: "as easy as clicking the plug-in in your AI app" — the open connector standard (MCP) is the model. User browses a marketplace, clicks Connect, OAuth happens, done. No per-tool engineering visible to the customer.
 
 What this locks:
 1. Skills consume MCP tools, NOT vendor SDKs.

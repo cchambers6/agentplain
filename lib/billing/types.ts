@@ -1,7 +1,8 @@
 // BillingProvider abstraction.
 //
 // Phase 1 (manual-invoice for the first ~5 high-touch customers) and
-// Phase 2 (self-serve per-seat subscription with 30-day trial) both
+// Phase 2 (self-serve per-seat subscription with the per-vertical trial
+// from `lib/billing/facts.ts` — 7 days default, 14 for CPA + Law) both
 // flow through this interface. Per `feedback_no_silent_vendor_lock` +
 // `feedback_runner_portability`, every Stripe SDK call lives behind
 // these methods; routes/pages NEVER import the `stripe` package

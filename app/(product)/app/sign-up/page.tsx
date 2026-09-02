@@ -39,9 +39,12 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   // Trial-honesty: the headline copy must match the ACTUAL configured flow,
   // not a stale promise. A card is only collected at signup when billing is
   // live AND the Checkout-at-signup variant is on; the #241 scaffold default
-  // is trial-first / no-card. Trial length reads from env (default 14), so a
-  // dashboard change never leaves the copy lying. See app/(product)/app/
-  // actions.ts for the matching server branches.
+  // is trial-first / no-card. Trial length reads from env, whose default is
+  // TRIAL_PERIOD_DAYS = 7 (`lib/billing/facts.ts`) — NOT 14. This surface
+  // renders before a vertical is chosen, so it shows the default; CPA and Law
+  // resolve to 14 once the vertical is selected and the signup action calls
+  // `trialPeriodDaysForVertical()`. See app/(product)/app/actions.ts for the
+  // matching server branches.
   const trialDays = env.stripeTrialPeriodDays();
   const cardAtSignup =
     env.stripeBillingEnabled() && env.stripeCheckoutEnabled();

@@ -53,6 +53,11 @@ export interface CreateTrialCheckoutForSignupInput {
    *  while the default is 7. Falls back to `env.stripeTrialPeriodDays()`
    *  when omitted. */
   trialPeriodDays?: number;
+  /** Vertical slug the customer signed up under. Echoed back on the
+   *  Checkout `success_url` as `?vertical=` so the confirmation page can
+   *  derive the SAME trial length from `trialPeriodDaysForVertical()`
+   *  without doing a DB read (that page is deliberately DB-free). */
+  verticalSlug?: string;
   /** Override for tests; live caller uses `getBillingProvider()`. */
   provider?: BillingProvider;
   /** Override for tests; live caller uses `withSystemContext`. */
@@ -127,7 +132,10 @@ export async function createTrialCheckoutForSignup(
   const baseOrigin = input.appOrigin.replace(/\/$/, "");
   const successUrl =
     `${baseOrigin}/app/sign-up/checkout-success` +
-    `?session_id={CHECKOUT_SESSION_ID}&workspace=${encodeURIComponent(input.workspaceId)}`;
+    `?session_id={CHECKOUT_SESSION_ID}&workspace=${encodeURIComponent(input.workspaceId)}` +
+    (input.verticalSlug
+      ? `&vertical=${encodeURIComponent(input.verticalSlug)}`
+      : "");
   const cancelUrl =
     `${baseOrigin}/app/sign-up?cancelled=1&workspace=${encodeURIComponent(input.workspaceId)}`;
 

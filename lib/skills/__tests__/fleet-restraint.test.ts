@@ -4,88 +4,111 @@
  * THE FLEET RESTRAINT STANDARD.
  *
  * Outcome owned: a customer receives ONE draft per real event — not one per
- * cron tick, and not exactly one ever.
+ * scheduled fire, and not exactly one ever.
  *
  * Owner: Fleet Restraint.  Auditor: Cost & Run Truth.  Escalation: open-issue
- * until green, then block-merge.
+ * until the ratchet reaches zero, then block-merge.
  *
  * ── WHAT THIS ASSERTS, AND WHY IT IS SHAPED THIS WAY ──────────────────────
  *
  * A recurring skill dedupes iff BOTH hold:
  *
- *   (1) its approval `refId` is a STABLE DOMAIN IDENTIFIER — an id that names
- *       the thing in the customer's world (invoice, lease, thread, lead), so
- *       the same real event yields the same refId on every run; AND
+ *   (1) its approval `refId` is a STABLE DOMAIN IDENTIFIER — an id naming the
+ *       thing in the customer's world (invoice, lease, thread, lead, matter),
+ *       so the same real event yields the same refId on every run; AND
  *   (2) something reads prior-run state keyed on that refId before inserting.
  *
  * (1) is the load-bearing half and it is the half that is broken. A guard on
  * an always-fresh refId can NEVER match — so adding dedupe queries without
- * first making the refId stable buys exactly nothing. That ordering is the
- * point of this check.
+ * first making the refId stable buys exactly nothing. This check enforces
+ * that ordering. **It verifies (1) only; (2) is unverified — see `blindTo`.**
  *
- * Measured on origin/main @ 53afc7e: four sinks pass a UUID minted DURING the
- * run (`randomUUID()` → `draftId` / `proposalId`) as the refId. Each of those
- * four already carries a stable domain id in the same payload object — so the
- * fix is a field swap, not new plumbing:
+ * Measured on origin/main @ 53afc7e: SEVEN sinks pass an id minted DURING the
+ * run as the refId. Each already carries a stable domain id in the same
+ * payload, so the remediation is a field swap, not new plumbing:
  *
  *   invoice-chase-general                      draftId    → invoiceId
  *   property-management-rent-collection-chase  draftId    → leaseId
  *   follow-up-chaser-general                   proposalId → sourceThreadId
- *   chief-of-staff-scheduler                   proposalId → sourceThreadId (nullable — needs a fallback)
+ *   chief-of-staff-scheduler                   proposalId → sourceThreadId  (NULLABLE — needs a fallback)
+ *   home-services-estimate-followup            draftId    → estimateId
+ *   inbox-triage-general                       proposalId → sourceMessageId
+ *   process-doc-drafter-general                proposalId → patternKey
  *
- * `lead-triage-realestate` is the proof the pattern works: `refId:
- * args.triaged.leadId` plus a findFirst guard on
- * (workspaceId, kind, refId, status) returning `skippedDuplicate`.
+ * TWO proven-good controls, both pinned below — stable refId AND a prior-run
+ * guard: `lead-triage-realestate` (refId=leadId; findFirst → skippedDuplicate)
+ * and `law-intake-conflict-screen` (refId=matterId; the intake fetcher
+ * excludes any matter that already has a row).
+ *
+ * NULLABLE-KEY FALLBACK, already proven in this repo: four writers outside
+ * `lib/skills` key on a CONTENT FINGERPRINT plus a find-or-create guard —
+ * `lib/portal/owner-approval-gate-prisma.ts`, `lib/voice/recording.ts`,
+ * `lib/integrations/approval/approval-gate-prisma.ts`,
+ * `lib/integrations/docusign-mcp/approval-gate-prisma.ts`. That is the shape
+ * `chief-of-staff-scheduler` should adopt where `sourceThreadId` is null.
  *
  * ── WHY STATIC, NOT BEHAVIOURAL ───────────────────────────────────────────
  *
  * Same reasoning as lib/tenancy/tenant-reachability.test.ts: reading source
  * needs no database, no adapters and no fixtures, so it runs in the fast lane
- * on every PR. It is also BLIND in ways that are written into `blindTo` below
- * rather than discovered later.
+ * on every PR. It is BLIND in ways written into `blindTo` rather than
+ * discovered later.
  *
- * ── DELIBERATE-FAILURE PROOF ──────────────────────────────────────────────
+ * ── SELF-PROOF ────────────────────────────────────────────────────────────
  *
- * `proveItCanFail` builds a synthetic sink that passes a run-minted id and
- * asserts the classifier flags it. `proveItDiscriminates` builds one that
- * passes a domain id and asserts it does NOT. A checker that has never been
- * seen to fire is not evidence.
+ * The deliberate-failure fixtures are SYNTHETIC TREES built in a temp dir, so
+ * the proof is independent of production source. An earlier revision asserted
+ * the classifier against `invoice-chase-general` itself, which meant applying
+ * this file's own prescribed remediation turned its self-proof red. A proof
+ * coupled to the defect it exists to remove is not a proof.
  */
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readdirSync, readFileSync, statSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 
 const SKILLS_ROOT = join(process.cwd(), 'lib', 'skills');
 
+/** Non-skill directories under lib/skills. */
+const NON_SKILL_DIRS = ['config', 'prompts', 'scheduler', '__tests__'];
+
+/** Files that legitimately mint ids for demo/fixture data. Excluded from the
+ *  mint search so a CORRECT skill is not flagged because a sibling fixture
+ *  generator happens to mint a field of the same name. */
+const FIXTURE_FILE = /(^|[\\/])(fixtures?|demo|seed|json-fetcher)[^\\/]*\.ts$/i;
+
+/** Anything that makes a value fresh per run, not just randomUUID. */
+const MINT_FNS = String.raw`randomUUID|crypto\.randomUUID|uuidv4|uuidV4|uuid4|nanoid|createId|cuid`;
+
 /**
- * Skills whose refId is a run-minted UUID today. Each entry names the stable
- * domain id that is ALREADY present in the same payload, so the remediation is
- * unambiguous and reviewable.
+ * Skills whose refId is minted per run today, keyed `skill:property` so a
+ * SECOND broken refId in an already-listed skill is not silently excused.
+ * `stableTarget` names the domain id ALREADY on that payload, so remediation
+ * is unambiguous; `nullableTarget` marks the one target that can be null.
  *
- * This is a RATCHET, not a suppression list: the test fails if an entry here
- * is fixed but left listed (dead entry), and fails if a NEW skill joins the
- * class without being added deliberately. Same shape as KNOWN_TENANCY_DRIFT.
+ * RATCHET, not suppression: fails on a new offender, on an entry fixed but
+ * left listed, and on an emptied list. Same shape as KNOWN_TENANCY_DRIFT.
  */
-const KNOWN_UNSTABLE_REFID: Readonly<Record<string, string>> = {
-  // Named in the Item Register's A-05.
-  'invoice-chase-general': 'invoiceId',
-  'property-management-rent-collection-chase': 'leaseId',
-  'follow-up-chaser-general': 'sourceThreadId',
-  'chief-of-staff-scheduler': 'sourceThreadId', // nullable — needs a fallback key
-  // FOUND BY THIS CHECK ON ITS FIRST RUN, 2026-09-01 — not on anyone's list.
-  // `inbox-triage-general` is `defaultEnabled` and fired by
-  // process-webhook-event, so it is among the most-fired skills in the fleet.
-  // `home-services-estimate-followup` is the killer skill of the vertical
-  // measured as CHEAPEST to make reachable — lighting it without this fix
-  // arms a daily un-deduped chaser.
-  // `process-doc-drafter-general` already computes `patternKey` — described in
-  // its own types as "the same value the skill clustered on" — and does not
-  // use it as the refId, which is why it re-proposes the same SOP weekly.
-  'home-services-estimate-followup': 'estimateId',
-  'inbox-triage-general': 'sourceMessageId',
-  'process-doc-drafter-general': 'patternKey',
+interface DriftEntry {
+  stableTarget: string;
+  nullableTarget?: true;
+}
+const KNOWN_UNSTABLE_REFID: Readonly<Record<string, DriftEntry>> = {
+  'invoice-chase-general:draftId': { stableTarget: 'invoiceId' },
+  'property-management-rent-collection-chase:draftId': { stableTarget: 'leaseId' },
+  'follow-up-chaser-general:proposalId': { stableTarget: 'sourceThreadId' },
+  // sourceThreadId is `string | null` on MeetingProposal and TodoProposal —
+  // this one needs the content-fingerprint fallback named in the header.
+  'chief-of-staff-scheduler:proposalId': { stableTarget: 'sourceThreadId', nullableTarget: true },
+  'home-services-estimate-followup:draftId': { stableTarget: 'estimateId' },
+  // Fired by process-webhook-event per inbound message, NOT by a cron sweep —
+  // its duplication risk is webhook redelivery/replay, not a scheduled tick.
+  'inbox-triage-general:proposalId': { stableTarget: 'sourceMessageId' },
+  // patternKey is described in its own types as "the same value the skill
+  // clustered on" — the dedupe key is already computed and unused.
+  'process-doc-drafter-general:proposalId': { stableTarget: 'patternKey' },
 };
 
 interface RefIdSite {
@@ -93,84 +116,143 @@ interface RefIdSite {
   file: string;
   line: number;
   expression: string;
-  /** The identifier the refId reads, e.g. `draftId` from `draft.draftId`. */
   property: string;
 }
 
-function listSkillDirs(): string[] {
-  return readdirSync(SKILLS_ROOT)
-    .filter((name) => {
-      if (name.startsWith('_') || name.startsWith('.')) return false;
+function listSkillDirs(root: string): string[] {
+  return readdirSync(root)
+    .filter((n) => !n.startsWith('_') && !n.startsWith('.'))
+    .filter((n) => {
       try {
-        return statSync(join(SKILLS_ROOT, name)).isDirectory();
+        return statSync(join(root, n)).isDirectory();
       } catch {
         return false;
       }
     })
-    .filter((name) => !['config', 'prompts', 'scheduler'].includes(name))
+    .filter((n) => !NON_SKILL_DIRS.includes(n))
     .sort();
 }
 
-function sourceFiles(dir: string): string[] {
+function sourceFiles(dir: string, recurse = true): string[] {
   const out: string[] = [];
-  const walk = (d: string) => {
-    for (const e of readdirSync(d, { withFileTypes: true })) {
-      const p = join(d, e.name);
-      if (e.isDirectory()) walk(p);
-      else if (e.name.endsWith('.ts') && !e.name.endsWith('.test.ts')) out.push(p);
-    }
-  };
-  walk(dir);
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) {
+      if (recurse) out.push(...sourceFiles(p));
+    } else if (e.name.endsWith('.ts') && !e.name.endsWith('.test.ts')) out.push(p);
+  }
   return out;
 }
 
-/** Strip line and block comments so a doc-comment mentioning `refId:` is not
- *  counted as a call site. This is the trap that made the bypass scanner count
- *  its own documentation (Outcome_Owners.md §9). */
+/** Replace comments with an EQUAL NUMBER OF NEWLINES so reported line numbers
+ *  stay true. (A previous revision collapsed block comments to '', which made
+ *  every reported line short by the height of the file's doc header.) */
 function stripComments(src: string): string {
-  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ''))
+    .replace(/(^|[^:])\/\/.*$/gm, '$1');
 }
 
-function collectRefIdSites(skill: string): RefIdSite[] {
+function collectRefIdSites(skill: string, root: string): RefIdSite[] {
   const sites: RefIdSite[] = [];
-  for (const file of sourceFiles(join(SKILLS_ROOT, skill))) {
-    const raw = readFileSync(file, 'utf8');
-    const lines = stripComments(raw).split('\n');
-    lines.forEach((line, idx) => {
-      const m = /(^|[^A-Za-z])refId\s*:\s*([^,\n]+)/.exec(line);
-      if (!m) return;
-      const expression = m[2].trim().replace(/[,;]$/, '');
-      const prop = expression.includes('.')
-        ? expression.slice(expression.lastIndexOf('.') + 1).trim()
-        : expression;
-      sites.push({ skill, file, line: idx + 1, expression, property: prop });
-    });
+  for (const file of sourceFiles(join(root, skill))) {
+    stripComments(readFileSync(file, 'utf8'))
+      .split('\n')
+      .forEach((line, idx) => {
+        const m = /(^|[^A-Za-z])refId\s*:\s*([^,\n]+)/.exec(line);
+        if (!m) return;
+        const expression = m[2].trim().replace(/[,;]\s*$/, '');
+        // Take the trailing identifier, tolerating close-brackets from a
+        // single-line object literal (`({ refId: d.draftId })`). A previous
+        // revision used lastIndexOf('.') and produced the property "draftId })",
+        // which matched nothing ΓÇö the classifier silently found zero.
+        const pm = /([A-Za-z_$][\w$]*)\s*[)}\]\s]*$/.exec(expression);
+        const property = pm ? pm[1] : expression;
+        sites.push({ skill, file, line: idx + 1, expression, property });
+      });
   }
   return sites;
 }
 
-/** True when `prop` is assigned from a value minted during the run. */
-function isRunMinted(skill: string, prop: string): boolean {
+/** Freshness visible in the refId EXPRESSION itself — a timestamp, a date, or
+ *  an inline mint. Catches `refId: \`${x.id}-${Date.now()}\`` which no
+ *  property-assignment search would see. */
+function expressionIsFresh(expression: string): boolean {
+  return new RegExp(`Date\\.now\\s*\\(|new Date\\s*\\(|${MINT_FNS}`).test(expression);
+}
+
+/**
+ * Is `prop` assigned from a per-run mint anywhere in the skill (excluding
+ * fixture/demo generators)? Covers BOTH the object-literal form
+ * (`draftId: randomUUID()`) and the ALIAS form (`const draftId = randomUUID()`
+ * … `refId: draftId`), which is live on main at lib/skills/draft.ts.
+ * Returns the matching file so a false positive is diagnosable.
+ */
+function mintSiteFor(skill: string, prop: string, root: string): string | null {
+  const esc = prop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const pattern = new RegExp(
-    `${prop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*randomUUID\\s*\\(`,
+    String.raw`(?:(?:const|let|var)\s+)?${esc}\s*[:=]\s*(?:await\s+)?(?:${MINT_FNS})\s*\(`,
   );
-  for (const file of sourceFiles(join(SKILLS_ROOT, skill))) {
-    if (pattern.test(stripComments(readFileSync(file, 'utf8')))) return true;
+  for (const file of sourceFiles(join(root, skill))) {
+    if (FIXTURE_FILE.test(file)) continue;
+    if (pattern.test(stripComments(readFileSync(file, 'utf8')))) return file;
   }
-  return false;
+  return null;
+}
+
+/** All offenders in a tree, as `skill:property` with a diagnosable reason. */
+function findOffenders(root: string): { key: string; detail: string }[] {
+  const out: { key: string; detail: string }[] = [];
+  for (const skill of listSkillDirs(root)) {
+    for (const site of collectRefIdSites(skill, root)) {
+      const key = `${skill}:${site.property}`;
+      if (out.some((o) => o.key === key)) continue;
+      if (expressionIsFresh(site.expression)) {
+        out.push({
+          key,
+          detail: `${site.file}:${site.line} refId: ${site.expression} — fresh in the expression itself`,
+        });
+        continue;
+      }
+      const mint = mintSiteFor(skill, site.property, root);
+      if (mint) {
+        out.push({
+          key,
+          detail: `${site.file}:${site.line} refId: ${site.expression} — "${site.property}" minted at ${mint}`,
+        });
+      }
+    }
+  }
+  return out;
+}
+
+// ── Synthetic trees, so the self-proof is not coupled to production source ──
+
+function makeTree(
+  skills: Record<string, Record<string, string>>,
+): { root: string; cleanup: () => void } {
+  const root = mkdtempSync(join(tmpdir(), 'fleet-restraint-'));
+  for (const [skill, files] of Object.entries(skills)) {
+    mkdirSync(join(root, skill), { recursive: true });
+    for (const [name, body] of Object.entries(files)) {
+      writeFileSync(join(root, skill, name), body, 'utf8');
+    }
+  }
+  return { root, cleanup: () => rmSync(root, { recursive: true, force: true }) };
 }
 
 // ── The standard ───────────────────────────────────────────────────────────
 
 describe('Fleet Restraint — one draft per real event', () => {
-  const skills = listSkillDirs();
-  const withRefId = skills.filter((s) => collectRefIdSites(s).length > 0);
+  const skills = listSkillDirs(SKILLS_ROOT);
+  const withRefId = skills.filter((s) => collectRefIdSites(s, SKILLS_ROOT).length > 0);
 
   it('states its own coverage (found-nothing must differ from examined-nothing)', () => {
     assert.ok(skills.length >= 20, `expected the skills tree, saw ${skills.length}`);
     assert.ok(
-      withRefId.length > 0,
-      'examined zero approval-writing skills — the scan is broken, not the fleet',
+      withRefId.length >= 15,
+      `examined only ${withRefId.length} approval-writing skills — the scan is ` +
+        `broken, not the fleet. (15 on origin/main @ 53afc7e.)`,
     );
     // eslint-disable-next-line no-console
     console.log(
@@ -179,39 +261,49 @@ describe('Fleet Restraint — one draft per real event', () => {
   });
 
   it('every unstable refId is a KNOWN entry — no new skill joins the class silently', () => {
-    const offenders: string[] = [];
-    for (const skill of withRefId) {
-      for (const site of collectRefIdSites(skill)) {
-        if (isRunMinted(skill, site.property)) {
-          offenders.push(`${skill} (${site.expression})`);
-          break;
-        }
-      }
-    }
-    const unexpected = offenders.filter(
-      (o) => !Object.keys(KNOWN_UNSTABLE_REFID).some((k) => o.startsWith(`${k} `)),
-    );
+    const offenders = findOffenders(SKILLS_ROOT);
+    const unexpected = offenders.filter((o) => !(o.key in KNOWN_UNSTABLE_REFID));
     assert.deepEqual(
-      unexpected,
+      unexpected.map((o) => `${o.key} — ${o.detail}`),
       [],
-      `New skill(s) writing approvals with a run-minted refId. A refId that is ` +
-        `fresh every run cannot dedupe — one draft per cron tick reaches the ` +
-        `customer. Use a stable domain id.\n  ${unexpected.join('\n  ')}`,
+      'New approval refId(s) that change every run. A refId minted per run ' +
+        'cannot dedupe, so one draft per fire reaches the customer. Use a ' +
+        'stable domain id already on the payload.',
     );
   });
 
   it('no KNOWN entry is stale — fixing one without delisting it fails here', () => {
-    const stale: string[] = [];
-    for (const skill of Object.keys(KNOWN_UNSTABLE_REFID)) {
-      const sites = collectRefIdSites(skill);
-      assert.ok(sites.length > 0, `${skill}: listed but writes no refId — delist it`);
-      if (!sites.some((s) => isRunMinted(skill, s.property))) stale.push(skill);
-    }
+    const live = new Set(findOffenders(SKILLS_ROOT).map((o) => o.key));
+    const stale = Object.keys(KNOWN_UNSTABLE_REFID).filter((k) => !live.has(k));
     assert.deepEqual(
       stale,
       [],
-      `Fixed but still listed in KNOWN_UNSTABLE_REFID — remove: ${stale.join(', ')}`,
+      `Fixed but still listed in KNOWN_UNSTABLE_REFID — delist: ${stale.join(', ')}`,
     );
+  });
+
+  it('every prescribed stableTarget really exists on that skill', () => {
+    const missing: string[] = [];
+    for (const [key, entry] of Object.entries(KNOWN_UNSTABLE_REFID)) {
+      const skill = key.slice(0, key.lastIndexOf(':'));
+      const present = sourceFiles(join(SKILLS_ROOT, skill)).some((f) =>
+        new RegExp(`\\b${entry.stableTarget}\\s*:`).test(stripComments(readFileSync(f, 'utf8'))),
+      );
+      if (!present) missing.push(`${key} → ${entry.stableTarget}`);
+    }
+    assert.deepEqual(
+      missing,
+      [],
+      'Prescribed stable target does not exist on that payload — the ' +
+        'remediation this file prescribes would not compile.',
+    );
+  });
+
+  it('exactly one entry is flagged nullable (chief-of-staff needs a fallback)', () => {
+    const nullable = Object.entries(KNOWN_UNSTABLE_REFID)
+      .filter(([, e]) => e.nullableTarget)
+      .map(([k]) => k);
+    assert.deepEqual(nullable, ['chief-of-staff-scheduler:proposalId']);
   });
 
   it('the ratchet is non-vacuous', () => {
@@ -221,33 +313,108 @@ describe('Fleet Restraint — one draft per real event', () => {
     );
   });
 
-  it('lead-triage-realestate is the proven-good control', () => {
-    const sites = collectRefIdSites('lead-triage-realestate');
-    assert.ok(sites.length > 0, 'control skill writes no refId — scan is broken');
-    assert.ok(
-      sites.every((s) => !isRunMinted('lead-triage-realestate', s.property)),
-      'the control skill must use a stable domain id (leadId)',
-    );
+  it('both proven-good controls use a stable domain id', () => {
+    for (const control of ['lead-triage-realestate', 'law-intake-conflict-screen']) {
+      const sites = collectRefIdSites(control, SKILLS_ROOT);
+      assert.ok(sites.length > 0, `${control}: writes no refId — scan is broken`);
+      const bad = findOffenders(SKILLS_ROOT).filter((o) => o.key.startsWith(`${control}:`));
+      assert.deepEqual(bad, [], `${control} must remain a proven-good control`);
+    }
   });
 });
 
-describe('Fleet Restraint — the checker itself', () => {
-  it('proveItCanFail: a run-minted id is flagged', () => {
-    assert.equal(isRunMinted('invoice-chase-general', 'draftId'), true);
+describe('Fleet Restraint — the checker itself, proven on synthetic trees', () => {
+  it('proveItCanFail: object-literal mint is flagged', () => {
+    const t = makeTree({
+      'zz-object-literal': {
+        'skill.ts': 'export const d = () => ({ draftId: randomUUID(), invoiceId: inv.id });',
+        'sink.ts': 'export const w = (d) => ({ refId: d.draftId });',
+      },
+    });
+    try {
+      assert.deepEqual(findOffenders(t.root).map((o) => o.key), ['zz-object-literal:draftId']);
+    } finally {
+      t.cleanup();
+    }
   });
 
-  it('proveItDiscriminates: a domain id is not flagged', () => {
-    assert.equal(isRunMinted('invoice-chase-general', 'invoiceId'), false);
-    assert.equal(isRunMinted('lead-triage-realestate', 'leadId'), false);
+  it('proveItCanFail: ALIAS form is flagged (the form live at lib/skills/draft.ts)', () => {
+    const t = makeTree({
+      'zz-alias': {
+        'skill.ts': 'const draftId = randomUUID();\nexport const d = { draftId, invoiceId: inv.id };',
+        'sink.ts': 'export const w = (d) => ({ refId: d.draftId });',
+      },
+    });
+    try {
+      assert.deepEqual(findOffenders(t.root).map((o) => o.key), ['zz-alias:draftId']);
+    } finally {
+      t.cleanup();
+    }
+  });
+
+  it('proveItCanFail: non-UUID freshness in the expression is flagged', () => {
+    const t = makeTree({
+      'zz-timestamp': {
+        'sink.ts': 'export const w = (x) => ({ refId: `${x.id}-${Date.now()}` });',
+      },
+    });
+    try {
+      assert.equal(findOffenders(t.root).length, 1);
+    } finally {
+      t.cleanup();
+    }
+  });
+
+  it('proveItDiscriminates: a stable domain id is NOT flagged', () => {
+    const t = makeTree({
+      'zz-stable': {
+        'skill.ts': 'export const d = (inv) => ({ invoiceId: inv.invoiceId });',
+        'sink.ts': 'export const w = (d) => ({ refId: d.invoiceId });',
+      },
+    });
+    try {
+      assert.deepEqual(findOffenders(t.root), []);
+    } finally {
+      t.cleanup();
+    }
+  });
+
+  it('proveItDiscriminates: a fixture generator minting the same field is NOT a false positive', () => {
+    const t = makeTree({
+      'zz-fixture-victim': {
+        'sink.ts': 'export const w = (rec) => ({ refId: rec.invoiceId });',
+        'fixtures.ts': 'export const f = () => ({ invoiceId: randomUUID() });',
+      },
+    });
+    try {
+      assert.deepEqual(findOffenders(t.root), []);
+    } finally {
+      t.cleanup();
+    }
+  });
+
+  it('proveItDiscriminates: a doc-comment mentioning refId is not a call site', () => {
+    const t = makeTree({
+      'zz-comment-only': {
+        'sink.ts': '/**\n * refId: draftId is what we used to do.\n */\nexport const w = (d) => ({ refId: d.invoiceId });',
+        'skill.ts': 'export const d = { draftId: randomUUID() };',
+      },
+    });
+    try {
+      assert.deepEqual(findOffenders(t.root), []);
+    } finally {
+      t.cleanup();
+    }
   });
 
   it('blindTo is stated, not discovered later', () => {
     const blindTo = [
-      'runtime behaviour — this reads source, so a refId assembled dynamically is invisible',
-      'whether the prior-run GUARD exists; this checks refId stability only, which is step 1 of 2',
-      'WorkApprovalQueueItem has no @@unique on (workspaceId, kind, refId) — 4 indexes, 0 unique constraints. The database-level fix needs a migration, which is queued behind the 2026-06-17 deploy wall',
-      'skills that write approvals through a helper that names the field something other than refId',
+      'STEP 2 IS UNVERIFIED — this checks refId stability only; it does not assert a prior-run guard exists',
+      'runtime behaviour — reads source, so a refId assembled through a helper or an untracked alias chain is invisible',
+      'scope — only lib/skills/<dir>/**; root-level lib/skills/*.ts (e.g. persist-artifacts.ts, itself an approval writer) and the ~7 approval writers outside lib/skills entirely are unexamined',
+      'WorkApprovalQueueItem has 4 @@index and 0 @@unique — the durable DB fix (partial unique on workspaceId+kind+refId where status=PENDING) needs a migration queued behind the 2026-06-17 deploy wall',
+      'two proposals derived from the same thread in one run would collapse under a thread-keyed refId; this cannot be tested without a runtime',
     ];
-    assert.ok(blindTo.length >= 3, 'a standard with no stated blind spots is not finished');
+    assert.ok(blindTo.length >= 5, 'a standard with no stated blind spots is not finished');
   });
 });

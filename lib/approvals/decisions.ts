@@ -12,6 +12,7 @@
 // on mobile) and do the durable work only. Surface concerns (FormData parsing,
 // revalidatePath/redirect, JSON responses) stay in the callers.
 
+import type { Prisma } from "@prisma/client";
 import { withRls, type RlsContext } from "@/lib/db";
 import {
   captureDraftEditSignal,
@@ -58,6 +59,96 @@ function clipNote(s: string): string {
   return s.slice(0, LEARNED_NOTE_MAX_CHARS - 1).trimEnd() + "…";
 }
 
+export interface ApplyApprovalDecisionParams {
+  workspaceId: string;
+  itemId: string;
+  decision: ApprovalDecision;
+  reason: string | null;
+  /**
+   * The human this decision is attributed to.
+   *
+   * Passed EXPLICITLY rather than read off the RLS context, because the
+   * two callers do not agree on where the actor lives. The customer
+   * surfaces (web + mobile) run under the deciding member's own context,
+   * so actor == ctx.userId. The operator support surface
+   * (lib/support/prisma-resolve-store.ts) runs under the system-operator
+   * RLS grant, where ctx.userId is null and the real actor is the
+   * authenticated operator. Parameterising the actor is what lets one
+   * function serve both without either lying about who decided.
+   */
+  actorUserId: string | null;
+  /** Merged into the audit row payload. Lets a surface record how the
+   *  decision was taken without forking the audit action name. */
+  auditPayloadExtra?: Record<string, unknown>;
+}
+
+/**
+ * THE approval state transition. Every path that moves a
+ * WorkApprovalQueueItem out of PENDING must go through here, because this
+ * is the only place that pairs the status write with the
+ * `work_approval.<decision>` AuditLog row. A surface that flips the status
+ * itself produces an approval with no evidence a human decided it, which
+ * is the evidentiary basis of the product's standing "agents draft, a
+ * human approves" promise.
+ *
+ * Takes an ALREADY-OPEN transaction rather than opening its own. That is
+ * deliberate: the operator support path must update the queue item, the
+ * SupportRequest, and the audit row atomically, and it can only do that
+ * if this function joins its transaction instead of starting a second
+ * one.
+ *
+ * Throws ApprovalDecisionError(NOT_FOUND | ALREADY_DECIDED). The
+ * ALREADY_DECIDED check runs inside the caller's transaction, so a
+ * concurrent second decision loses the race here rather than overwriting
+ * the first one's outcome.
+ */
+export async function applyApprovalDecisionTx(
+  tx: Prisma.TransactionClient,
+  params: ApplyApprovalDecisionParams,
+): Promise<{ kind: string; agentSlug: string }> {
+  if (!VALID_DECISIONS.includes(params.decision)) {
+    throw new ApprovalDecisionError("INVALID", `Invalid decision: ${params.decision}`);
+  }
+
+  const item = await tx.workApprovalQueueItem.findFirst({
+    where: { id: params.itemId, workspaceId: params.workspaceId },
+  });
+  if (!item) throw new ApprovalDecisionError("NOT_FOUND", "Item not found");
+  if (item.status !== "PENDING") {
+    throw new ApprovalDecisionError(
+      "ALREADY_DECIDED",
+      `Item already decided (${item.status})`,
+    );
+  }
+
+  await tx.workApprovalQueueItem.update({
+    where: { id: params.itemId },
+    data: {
+      status: params.decision,
+      decidedAt: new Date(),
+      decidedByUserId: params.actorUserId,
+      decisionReason: params.reason,
+    },
+  });
+
+  await tx.auditLog.create({
+    data: {
+      actorUserId: params.actorUserId,
+      workspaceId: params.workspaceId,
+      action: `work_approval.${params.decision.toLowerCase()}`,
+      targetTable: "WorkApprovalQueueItem",
+      targetId: params.itemId,
+      payload: {
+        kind: item.kind,
+        agentSlug: item.agentSlug,
+        ...(params.auditPayloadExtra ?? {}),
+      },
+    },
+  });
+
+  return { kind: item.kind, agentSlug: item.agentSlug };
+}
+
 export interface DecideApprovalParams {
   workspaceId: string;
   itemId: string;
@@ -74,44 +165,19 @@ export async function decideApproval(
   ctx: RlsContext,
   params: DecideApprovalParams,
 ): Promise<void> {
-  if (!VALID_DECISIONS.includes(params.decision)) {
-    throw new ApprovalDecisionError("INVALID", `Invalid decision: ${params.decision}`);
-  }
   const reason = params.reason ?? null;
 
-  await withRls(ctx, async (tx) => {
-    const item = await tx.workApprovalQueueItem.findFirst({
-      where: { id: params.itemId, workspaceId: params.workspaceId },
-    });
-    if (!item) throw new ApprovalDecisionError("NOT_FOUND", "Item not found");
-    if (item.status !== "PENDING") {
-      throw new ApprovalDecisionError(
-        "ALREADY_DECIDED",
-        `Item already decided (${item.status})`,
-      );
-    }
-
-    await tx.workApprovalQueueItem.update({
-      where: { id: params.itemId },
-      data: {
-        status: params.decision,
-        decidedAt: new Date(),
-        decidedByUserId: ctx.userId,
-        decisionReason: reason,
-      },
-    });
-
-    await tx.auditLog.create({
-      data: {
-        actorUserId: ctx.userId,
-        workspaceId: params.workspaceId,
-        action: `work_approval.${params.decision.toLowerCase()}`,
-        targetTable: "WorkApprovalQueueItem",
-        targetId: params.itemId,
-        payload: { kind: item.kind, agentSlug: item.agentSlug },
-      },
-    });
-  });
+  await withRls(ctx, (tx) =>
+    applyApprovalDecisionTx(tx, {
+      workspaceId: params.workspaceId,
+      itemId: params.itemId,
+      decision: params.decision,
+      reason,
+      // Customer surfaces decide as themselves, so the actor IS the RLS
+      // identity here. The operator support path is the case that is not.
+      actorUserId: ctx.userId,
+    }),
+  );
 
   if (params.decision === "REJECTED" && reason && reason.trim().length > 0) {
     try {

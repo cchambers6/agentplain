@@ -13,14 +13,18 @@
  * never see Prisma or Inngest. They see the ports. These bindings are the
  * one place the vendor SDKs are wired in.
  *
- * RLS: all reads/writes go through withSystemContext (operator tier). The
- * operator action authenticates the human first (requireUser + isOperator)
- * and passes the operator's userId down; the DB context itself is the
- * system-operator grant the rest of the operator surfaces use.
+ * RLS: all reads/writes go through `withOperatorContext` (operator tier).
+ * The operator action authenticates the human first (requireUser +
+ * isOperator) and passes the operator's userId down; the DB context itself
+ * is the system-operator grant the rest of the operator surfaces use.
+ * Because the DB identity and the deciding human are therefore DIFFERENT,
+ * every decision write passes the operator id as an explicit actor rather
+ * than letting the shared approval core read it off the RLS context.
  */
 
-import type { Prisma } from "@prisma/client";
-import { withSystemContext } from "../db/rls";
+import type { Prisma, PrismaClient } from "@prisma/client";
+import { SYSTEM_OPERATOR_CONTEXT, withRls } from "../db/rls";
+import { applyApprovalDecisionTx } from "../approvals/decisions";
 import { decryptPayloadForRead } from "../security/payload-crypto";
 import { inngest } from "../inngest/client";
 import {
@@ -37,11 +41,29 @@ const SUPPORT_REPLY_KIND = "SUPPORT_HANDLER_REPLY_DRAFT" as const;
 
 export class PrismaSupportReplyStore implements SupportReplyStore {
   readonly name = "prisma" as const;
+  private readonly client: PrismaClient | undefined;
+
+  /** `client` is an injection seam only. Production constructs this with
+   *  no arguments and gets the shared singleton, exactly as before. It
+   *  exists because these three methods are the audited write path and
+   *  had no way to be exercised without a live database. */
+  constructor(config: { client?: PrismaClient } = {}) {
+    this.client = config.client;
+  }
+
+  /** Operator tier: the human is authenticated upstream (requireUser +
+   *  isOperator) and their id is carried as an explicit actor argument;
+   *  the DB grant itself is the system-operator context. */
+  private withOperatorContext<T>(
+    fn: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    return withRls(SYSTEM_OPERATOR_CONTEXT, fn, { client: this.client });
+  }
 
   async loadDraftContext(
     queueItemId: string,
   ): Promise<SupportReplyDraftContext | null> {
-    return withSystemContext(async (tx) => {
+    return this.withOperatorContext(async (tx) => {
       const item = await tx.workApprovalQueueItem.findUnique({
         where: { id: queueItemId },
         select: {
@@ -92,15 +114,33 @@ export class PrismaSupportReplyStore implements SupportReplyStore {
     sentBody: string;
     emailMessageId: string | null;
   }): Promise<void> {
-    await withSystemContext(async (tx) => {
-      await tx.workApprovalQueueItem.update({
-        where: { id: args.queueItemId },
-        data: {
-          status: "APPROVED",
-          decidedAt: new Date(),
-          decidedByUserId: args.operatorUserId,
-          decisionReason: "approved + sent via /operator/support",
-        },
+    await this.withOperatorContext(async (tx) => {
+      // Route the PENDING -> APPROVED transition through the shared
+      // approval core rather than flipping the status here. Two things
+      // come with it that this path previously lacked:
+      //
+      //   1. a `work_approval.approved` AuditLog row keyed to
+      //      (WorkApprovalQueueItem, queueItemId). The
+      //      `support_reply.approved_sent` row written below is keyed to
+      //      the SupportRequest, so every consumer that reads the
+      //      approval-decision stream by its own target shape saw
+      //      nothing for this path.
+      //   2. an ALREADY_DECIDED guard evaluated INSIDE this transaction.
+      //      resolve-reply.ts checks the status too, but it checks it in
+      //      a separate earlier transaction, so two concurrent submits
+      //      could both read PENDING. Now the second one loses here and
+      //      the whole transaction rolls back instead of re-approving.
+      //
+      // Throws ApprovalDecisionError; resolve-reply.ts surfaces it as
+      // PERSIST_FAILED so the operator sees it rather than a silent
+      // double-approve.
+      await applyApprovalDecisionTx(tx, {
+        workspaceId: args.workspaceId,
+        itemId: args.queueItemId,
+        decision: "APPROVED",
+        reason: "approved + sent via /operator/support",
+        actorUserId: args.operatorUserId,
+        auditPayloadExtra: { surface: "operator/support", sent: true },
       });
       await tx.supportRequest.update({
         where: { id: args.supportRequestId },
@@ -135,15 +175,19 @@ export class PrismaSupportReplyStore implements SupportReplyStore {
     operatorUserId: string;
     reason: string | null;
   }): Promise<void> {
-    await withSystemContext(async (tx) => {
-      await tx.workApprovalQueueItem.update({
-        where: { id: args.queueItemId },
-        data: {
-          status: "REJECTED",
-          decidedAt: new Date(),
-          decidedByUserId: args.operatorUserId,
-          decisionReason: args.reason ?? "rejected via /operator/support",
-        },
+    await this.withOperatorContext(async (tx) => {
+      // Same shared core as the approve path. The guard matters here for
+      // a second reason: this update was previously unconditional, so a
+      // reject arriving after an approve would silently flip an APPROVED
+      // item to REJECTED -- rewriting the decision record of a reply the
+      // customer had already received.
+      await applyApprovalDecisionTx(tx, {
+        workspaceId: args.workspaceId,
+        itemId: args.queueItemId,
+        decision: "REJECTED",
+        reason: args.reason ?? "rejected via /operator/support",
+        actorUserId: args.operatorUserId,
+        auditPayloadExtra: { surface: "operator/support", sent: false },
       });
       // The draft is archived; the request returns to OPEN for manual
       // handling — unless it was already RESOLVED by another path.

@@ -330,6 +330,12 @@ async function searchKnowledge(
       k: 5,
       contextKinds: ["SKILL", "CUSTOMER", "VERTICAL", "COMPLIANCE"],
       jurisdictions: WORKSPACE_JURISDICTIONS,
+      // Tenant scope in the scan, alongside (not instead of) RLS. k is
+      // only 5 here, which is exactly where an RLS post-filter hurts
+      // most: the ANN scan can spend all 5 slots on other tenants'
+      // CUSTOMER rows, RLS drops them, and the customer's own grounding
+      // silently disappears from their own support answer.
+      workspaceId: ctx.workspaceId,
     });
     if (!result.ok) return [];
     return result.value.map((hit) => ({

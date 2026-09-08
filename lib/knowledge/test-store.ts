@@ -231,9 +231,18 @@ export class TestKnowledgeStore implements IKnowledgeStore {
     const wanted = input.contextKinds && input.contextKinds.length > 0 ? new Set(input.contextKinds) : null;
     const jurisdictions =
       input.jurisdictions && input.jurisdictions.length > 0 ? new Set(input.jurisdictions) : null;
+    // Explicit tenant scope. Mirrors the pgvector store's `$6` predicate:
+    // NULL-workspace rows (the shared substrate) are ALWAYS eligible; a
+    // tenant row must match. Null/omitted = no tenant predicate. This is
+    // narrowing applied IN the scan, on top of the `visible()` context
+    // check, which is the analogue of the RLS post-filter.
+    const workspaceScope = input.workspaceId ?? null;
     const hits: KnowledgeSearchHit[] = [];
     for (const e of this.embeddings.values()) {
       if (!visible(e.workspaceId, this.context)) continue;
+      if (workspaceScope !== null && e.workspaceId !== null && e.workspaceId !== workspaceScope) {
+        continue;
+      }
       if (wanted && !wanted.has(e.contextKind)) continue;
       const doc = e.documentId ? this.docs.get(e.documentId) : null;
       if (input.verticalSlug != null) {

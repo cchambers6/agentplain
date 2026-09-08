@@ -132,7 +132,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           );
         }
         const store = getKnowledgeStore(rlsContext);
-        const result = await store.search(sp.data);
+        // Tenant scope comes from the HEADER, never from the JSON-RPC
+        // params (searchParamsSchema has no workspaceId, so zod strips
+        // any the caller tries to inject) -- same rule the upsert branch
+        // below applies. Header absent = operator context = no tenant
+        // predicate, which matches `rlsContext` exactly.
+        const result = await store.search({
+          ...sp.data,
+          workspaceId: rlsContext.workspaceId,
+        });
         return respond(requestId, result, (hits) => ({
           hits: hits.map((h) => ({
             embeddingId: h.embeddingId,

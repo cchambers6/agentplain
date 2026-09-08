@@ -171,6 +171,25 @@ export interface KnowledgeSearchInput {
   k?: number;
   /** Subset of context kinds to return. Default: all. */
   contextKinds?: ContextKind[];
+  /**
+   * Tenant scope for the search. When set, only rows whose
+   * `Embedding.workspaceId` is NULL (the shared substrate: SKILL /
+   * VERTICAL / COMPLIANCE / CROSS_CUSTOMER) or equal to this id are
+   * eligible. Omitted / null = no tenant predicate at all (operator and
+   * corpus-maintenance callers, which legitimately read across tenants).
+   *
+   * This is DEFENSE IN DEPTH ALONGSIDE the `embedding_read` RLS policy,
+   * NOT a replacement for it. RLS remains the security boundary. The
+   * reason this predicate has to exist as well is RECALL, not secrecy:
+   * an ANN index scan (ivfflat) picks its candidate set BEFORE row-level
+   * security is applied, so an RLS-only filter is a POST-filter. It
+   * drops other tenants' rows after `LIMIT k` has already been spent on
+   * them, and a workspace holding a small share of the corpus silently
+   * gets a fraction of k -- sometimes zero -- with no error. Pushing the
+   * tenant predicate into the scan is what makes top-k mean top-k for
+   * this tenant.
+   */
+  workspaceId?: string | null;
   /** When set, only return rows whose KnowledgeDocument.verticalSlug
    *  matches (NULL verticalSlug rows are EXCLUDED). Used for vertical-
    *  scoped lookups in the categorize / draft skills. */

@@ -78,6 +78,10 @@ export class TestKnowledgeStore implements IKnowledgeStore {
   private readonly embeddings = new Map<string, StoredEmbedding>();
   private readonly bySource = new Map<string, string>(); // `${sourceType}:${sourceId}` → embeddingId
   private context: TestKnowledgeStoreContext = TEST_OPERATOR_CONTEXT;
+  /** Every `search()` input this store has received, in order. Test-only
+   *  observation surface; see the note in `search()`. Callers that want a
+   *  clean slate use `resetSearchCalls()`. */
+  readonly searchCalls: KnowledgeSearchInput[] = [];
 
   constructor(embedder: IEmbeddingProvider) {
     this.embedder = embedder;
@@ -88,6 +92,13 @@ export class TestKnowledgeStore implements IKnowledgeStore {
    *  subsequent search() calls. */
   setContext(ctx: TestKnowledgeStoreContext): void {
     this.context = { workspaceId: ctx.workspaceId, isOperator: ctx.isOperator };
+  }
+
+  /** Clear the recorded `search()` inputs. The store is a process
+   *  singleton in `test` mode, so tests that assert on call ARGUMENTS
+   *  must reset between cases or they read a previous case's call. */
+  resetSearchCalls(): void {
+    this.searchCalls.length = 0;
   }
 
   async upsert(input: KnowledgeUpsertInput): Promise<KnowledgeResult<KnowledgeUpsertResult>> {
@@ -218,6 +229,19 @@ export class TestKnowledgeStore implements IKnowledgeStore {
   }
 
   async search(input: KnowledgeSearchInput): Promise<KnowledgeResult<KnowledgeSearchHit[]>> {
+    // Test affordance, deliberately NOT behaviour: record what the caller
+    // asked for so a test can pin the ARGUMENTS a call site passes, not
+    // just the rows that come back.
+    //
+    // Needed because the pgvector tenant predicate fixes a RECALL defect,
+    // not an isolation defect: in Postgres the ivfflat scan picks its
+    // candidate set before RLS runs, so an RLS-only filter spends `k` on
+    // other tenants' rows and then drops them. An exact in-memory store
+    // has no ANN stage and no LIMIT-before-filter, so it CANNOT reproduce
+    // that failure -- a purely results-based test here would pass whether
+    // or not the call site passes `workspaceId`, which is exactly the
+    // vacuously-green shape this suite exists to eliminate.
+    this.searchCalls.push(input);
     const k = clampK(input.k);
     const emb = await this.embedder.embed(input.query);
     if (!emb.ok) return emb;

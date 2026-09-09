@@ -85,6 +85,23 @@ const deleteParamsSchema = z
     message: 'must provide embeddingId or documentId',
   });
 
+/**
+ * Is this string a UUID?
+ *
+ * Deliberately delegates to the SAME zod check `upsertParamsSchema` uses
+ * for `workspaceId`, rather than introducing a second hand-rolled regex.
+ * A divergent definition is how a value passes one gate and fails the
+ * next, which is precisely the shape of the bug being fixed here.
+ *
+ * Note the empty-string case: `headers.get()` yields `''` for a header
+ * that is present but empty, and `''` is falsy, so the old ternary below
+ * treated it as ABSENT and escalated the call to operator context --
+ * cross-tenant read visibility from a blank header. It is now rejected.
+ */
+function isUuid(value: string): boolean {
+  return z.string().uuid().safeParse(value).success;
+}
+
 // ── Route handlers ──────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -117,6 +134,32 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const { method, params, id } = parsedReq.data;
   const requestId = id ?? null;
   const workspaceHeader = req.headers.get(MCP_WORKSPACE_HEADER);
+  // Validate the header BEFORE it reaches any query. It is the only
+  // caller-controlled value that flows into SQL as a typed parameter:
+  // `PgvectorKnowledgeStore.search` binds it to `$6::uuid`, and the
+  // upsert branch below assigns it straight onto `up.data.workspaceId`,
+  // overwriting the value `upsertParamsSchema` already checked with
+  // `z.string().uuid()` -- so the schema's guarantee does not survive
+  // that assignment.
+  //
+  // Before the tenant predicate existed, a garbage header was inert: it
+  // reached no cast, matched nothing, and returned an empty result. Now
+  // Postgres raises 22P02 (invalid_text_representation) on the cast and
+  // the route answers 500 with a generic internal error. The route is
+  // operator-key gated so this is not a DoS, but it turns a silent empty
+  // result into an error, and a 500 is the least diagnosable way to tell
+  // a caller its header is malformed. Answer -32602 instead, which is
+  // what every other bad-input branch in this switch returns.
+  if (workspaceHeader !== null && !isUuid(workspaceHeader)) {
+    return NextResponse.json(
+      jsonRpcError(
+        requestId,
+        -32602,
+        `Invalid ${MCP_WORKSPACE_HEADER} header: expected a UUID`,
+      ),
+      { status: 400 },
+    );
+  }
   const rlsContext = workspaceHeader
     ? { userId: null, workspaceId: workspaceHeader, isOperator: false }
     : { userId: null, workspaceId: null, isOperator: true };

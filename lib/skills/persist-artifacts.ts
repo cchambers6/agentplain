@@ -28,7 +28,13 @@ import type { Prisma } from '@prisma/client';
 import type { ComplianceFlag } from '../agents/sentinel';
 import { withRls, type RlsContext } from '../db';
 import { notifyApprovalQueued } from '../push';
-import { encryptPayloadForWrite } from '../security/payload-crypto';
+import {
+  decryptPayloadForRead,
+  encryptPayloadForWrite,
+} from '../security/payload-crypto';
+import { randomUUID } from 'node:crypto';
+import { isAcceptedStatus } from '../approvals/executors';
+import { dispatchApprovalExecutorsForInsert } from '../approvals/dispatch';
 import { getVerticalContent } from '../verticals';
 import type { AgentLoopWork } from '../verticals/types';
 import { categoryToApprovalKind, type OfficeAdminApprovalPayload } from './office-admin';
@@ -276,8 +282,17 @@ async function writeArtifacts(
         priorDecision: decision,
       });
     }
+    // SEAM 1 of 3 (site 1 of 2). Hooked at the CREATE call, not at a decision
+    // function: rows on this path are born AUTO_APPROVED and never pass
+    // through decideApproval, so a dispatch wired to the decision functions
+    // misses this entirely.
+    const data = await withExecutorArtifacts({
+      workspaceId,
+      row: approval,
+      decision,
+    });
     const created = await tx.workApprovalQueueItem.create({
-      data: { ...approval, ...decision },
+      data,
       select: { id: true },
     });
     approvalId = created.id;
@@ -299,8 +314,19 @@ async function writeArtifacts(
       severity: extractTopComplianceSeverity(record.outcome),
       tx,
     });
+    // SEAM 1 of 3 (site 2 of 2). THE SITE THAT GETS MISSED. This one
+    // consults only `applyApprovalThreshold` -- it never sees
+    // `applyBoundedExecuteDecision` and never sees any decision function --
+    // so hooking the decision functions instead of both `create` calls
+    // silently drops every auto-approved compliance flag. Two create sites,
+    // two hooks; do not collapse them.
+    const complianceData = await withExecutorArtifacts({
+      workspaceId,
+      row: complianceApproval,
+      decision,
+    });
     await tx.workApprovalQueueItem.create({
-      data: { ...complianceApproval, ...decision },
+      data: complianceData,
       select: { id: true },
     });
     approvalsWritten += 1;
@@ -310,6 +336,75 @@ async function writeArtifacts(
     handoffsWritten: handoffs.length,
     approvalsWritten,
     approvalId,
+  };
+}
+
+/**
+ * Run approval executors for a row that is about to be BORN accepted, and
+ * fold whatever they produce into the row's own payload.
+ *
+ * ATOMICITY BY CONSTRUCTION. The artifact and the accepted row become one
+ * INSERT, so there is no window in which an AUTO_APPROVED row exists without
+ * its artifact -- stronger than joining the transaction, and it issues no
+ * additional query against the caller's transaction client. That second
+ * property is load-bearing: this function is driven in several suites with
+ * narrow transaction stubs that implement `create` and nothing else, and a
+ * seam that silently required `findFirst`/`updateMany` would break every
+ * caller that did not anticipate it.
+ *
+ * The id is minted here rather than left to the database default so the
+ * executor context can carry a real, stable item id BEFORE the insert. That
+ * matters for the admission criterion's idempotency rule: an executor keyed
+ * on the row id must see the id the row will actually have.
+ *
+ * PENDING rows are skipped -- nothing has been accepted, so there is nothing
+ * to execute. `isAcceptedStatus` covers APPROVED and AUTO_APPROVED together,
+ * because every consumer in this repo treats them as one class.
+ *
+ * Note which executors can fire here: only those whose `routes` include
+ * 'machine'. The mailbox executor deliberately does not, because an
+ * auto-approval is a confidence score rather than a human act.
+ */
+async function withExecutorArtifacts(args: {
+  workspaceId: string;
+  row: Prisma.WorkApprovalQueueItemUncheckedCreateInput;
+  decision: ApprovalThresholdDecision;
+}): Promise<Prisma.WorkApprovalQueueItemUncheckedCreateInput> {
+  const base = { ...args.row, ...args.decision };
+  if (!isAcceptedStatus(args.decision.status)) return base;
+
+  const itemId = randomUUID();
+  const decrypted = decryptPayloadForRead(args.row.payload);
+  const plain =
+    decrypted && typeof decrypted === 'object' && !Array.isArray(decrypted)
+      ? (decrypted as Record<string, unknown>)
+      : {};
+
+  const { payloadPatch } = await dispatchApprovalExecutorsForInsert(
+    { userId: null, workspaceId: args.workspaceId, isOperator: true },
+    {
+      workspaceId: args.workspaceId,
+      itemId,
+      applied: {
+        kind: String(args.row.kind),
+        agentSlug: args.row.agentSlug,
+        refTable: args.row.refTable,
+        refId: args.row.refId,
+        payload: plain,
+      },
+      // No human decided this one. Recording null rather than inventing an
+      // actor is what keeps the audit trail honest about auto-approval.
+      actorUserId: null,
+      route: 'machine',
+      status: args.decision.status as 'APPROVED' | 'AUTO_APPROVED',
+    },
+  );
+
+  if (Object.keys(payloadPatch).length === 0) return { ...base, id: itemId };
+  return {
+    ...base,
+    id: itemId,
+    payload: encryptPayloadForWrite({ ...plain, ...payloadPatch }),
   };
 }
 

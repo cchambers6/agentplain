@@ -8,19 +8,24 @@
  * What it does (per project_stripe_both_surfaces lines 47–54 +
  * feedback_no_quick_fixes — the right fix, not the cheap one):
  *
- *   1. For each tier (regular / plus / max):
- *      - Find or create the `Product` (lookup_key = `agentplain_<tier>`).
- *   2. For each (tier, seat band):
- *      - Find or create the recurring `Price` (lookup_key =
- *        `agentplain_<tier>_seats_<band>_monthly`) attached to the
- *        tier's Product, with the per-seat unit amount from
- *        `PER_SEAT_MONTHLY_USD_CENTS`.
+ *   1. Find or create ONE `Product` (lookup_key = `agentplain_flat`).
+ *   2. Find or create ONE recurring `Price` (lookup_key =
+ *      `agentplain_flat_monthly`) attached to it, with the flat unit
+ *      amount from `MONTHLY_PRICE_USD_CENTS` in `lib/billing/facts.ts`.
  *   3. Print a summary mapping lookup_key → price id / product id so
  *      Conner can sanity-check the dashboard.
  *
+ * FLAT PRICE (ratified by Conner). This script previously created 3
+ * Products x 5 seat bands = 15 Prices. It now creates 1 x 1.
+ *
+ * IT DOES NOT ARCHIVE THE 15 RETIRED PRICES. Existing subscriptions are
+ * still attached to them and Stripe keeps billing and emitting webhooks
+ * against them for the life of each subscription;
+ * `lib/billing/webhook-dispatch.ts` still parses their lookup keys.
+ * Retiring them is a separate, deliberate migration in Stripe.
+ *
  * Why lookup_keys instead of hardcoded ids:
- *   * No 15-env-var brittleness (or 6 env vars for the legacy
- *     3-tier × 2-cadence layout that this script supersedes).
+ *   * No env-var brittleness.
  *   * Idempotent — re-run the script and existing rows are reused.
  *   * Stripe-native — the BillingProvider reads them at runtime via
  *     `prices.list({lookup_keys: [...]})`.
@@ -44,21 +49,12 @@
 
 import Stripe from "stripe";
 import {
-  PER_SEAT_MONTHLY_USD_CENTS,
-  SEAT_BAND_ORDER,
-  TIER_ORDER,
-  lookupKeyFor,
-  tierProductLookupKey,
+  FLAT_MONTHLY_LOOKUP_KEY,
+  FLAT_PRODUCT_LOOKUP_KEY,
+  MONTHLY_PRICE_USD_CENTS,
   tierProductName,
-  type TierName,
 } from "../../lib/pricing/tiers";
 import { STRIPE_API_VERSION } from "../../lib/billing/stripe-provider";
-
-// First seat-band lookup_key per tier — used as the real-time-consistent
-// pointer back to the tier's Product when products.search hasn't yet
-// indexed a freshly-created Product (the source of the
-// duplicate-product bug fixed in fix/stripe-e2e-gaps-2026-05-18).
-const FIRST_BAND = SEAT_BAND_ORDER[0];
 
 interface RunOptions {
   dryRun: boolean;
@@ -121,75 +117,71 @@ async function main(): Promise<void> {
     `[setup-products] mode=${opts.dryRun ? "dry-run" : "apply"} target=${keyMode.toUpperCase()} stripe-api=${STRIPE_API_VERSION}`,
   );
 
-  const productByTier = new Map<TierName, Stripe.Product>();
-
-  // --- Products -----------------------------------------------------
-  for (const tier of TIER_ORDER) {
-    const productLookup = tierProductLookupKey(tier);
-    const productName = tierProductName(tier);
+  // --- Product (exactly one, flat pricing) --------------------------
+  let product: Stripe.Product | null = null;
+  const productName = tierProductName();
+  {
     // Prefer the price→product pointer: `prices.list({lookup_keys})` uses
     // the lookup_key index which is real-time consistent, so this reliably
     // finds the existing Product even immediately after a previous run.
     // Fall back to products.search (which has async index latency) only
-    // when no price exists yet for the tier (fresh account / partial run).
+    // when no price exists yet (fresh account / partial run).
     const existing =
-      (await findProductByExistingPrice(stripe, tier)) ??
-      (await findProductByMetadata(stripe, productLookup));
+      (await findProductByExistingPrice(stripe)) ??
+      (await findProductByMetadata(stripe, FLAT_PRODUCT_LOOKUP_KEY));
     if (existing) {
       const nameDrift = existing.name !== productName;
       console.log(
-        `[products] reuse  ${tier.padEnd(7)} → ${existing.id}  (name="${existing.name}"${
+        `[products] reuse  flat    → ${existing.id}  (name="${existing.name}"${
           nameDrift ? ` ← drifted, expected "${productName}"` : ""
         })`,
       );
       if (nameDrift) {
         // Don't auto-rename — Stripe Product names show on Checkout +
         // invoices and live by operator discretion. Surface the drift so
-        // Conner can rename manually in the dashboard if desired. This
-        // matters for the 2026-05-15 Plus → "agentplain Partner" rename;
-        // the on-disk enum stays `plus`, only the display string changed.
+        // Conner can rename manually in the dashboard if desired.
         console.log(
-          `[products]   note: dashboard name does not match tierProductName("${tier}"). Rename in Stripe if you want the display to match.`,
+          `[products]   note: dashboard name does not match tierProductName(). Rename in Stripe if you want the display to match.`,
         );
       }
-      productByTier.set(tier, existing);
-      continue;
-    }
-    if (opts.dryRun) {
+      product = existing;
+    } else if (opts.dryRun) {
       console.log(
-        `[products] create ${tier.padEnd(7)} → (dry-run) name="${productName}"`,
+        `[products] create flat    → (dry-run) name="${productName}"`,
       );
-      continue;
+    } else {
+      product = await stripe.products.create({
+        name: productName,
+        metadata: { agentplain_lookup_key: FLAT_PRODUCT_LOOKUP_KEY },
+      });
+      console.log(
+        `[products] create flat    → ${product.id}  (name="${product.name}")`,
+      );
     }
-    const created = await stripe.products.create({
-      name: productName,
-      metadata: { agentplain_tier: tier, agentplain_lookup_key: productLookup },
-    });
-    console.log(
-      `[products] create ${tier.padEnd(7)} → ${created.id}  (name="${created.name}")`,
-    );
-    productByTier.set(tier, created);
   }
 
-  // --- Prices -------------------------------------------------------
-  for (const tier of TIER_ORDER) {
-    const product = productByTier.get(tier);
-    for (const band of SEAT_BAND_ORDER) {
-      const key = lookupKeyFor(tier, band);
-      const unitAmount = PER_SEAT_MONTHLY_USD_CENTS[tier][band];
-      const existing = await findPriceByLookupKey(stripe, key);
-      if (existing) {
-        if (existing.unit_amount === unitAmount) {
-          console.log(
-            `[prices]   reuse  ${key.padEnd(34)} → ${existing.id}  ($${unitAmount / 100}/seat/mo)`,
-          );
-          continue;
-        }
+  // --- Price (exactly one, flat monthly) ----------------------------
+  //
+  // The 15 retired `agentplain_<tier>_<band>_monthly` Prices are LEFT
+  // ALONE. Existing subscriptions bill against them; archiving them here
+  // would be an unreviewed change to live customers' billing.
+  {
+    const key = FLAT_MONTHLY_LOOKUP_KEY;
+    const unitAmount = MONTHLY_PRICE_USD_CENTS;
+    const existing = await findPriceByLookupKey(stripe, key);
+    let needsCreate = true;
+    if (existing) {
+      if (existing.unit_amount === unitAmount) {
+        console.log(
+          `[prices]   reuse  ${key.padEnd(28)} → ${existing.id}  ($${unitAmount / 100}/mo flat)`,
+        );
+        needsCreate = false;
+      } else {
         // Stripe Prices are immutable — to change the amount we archive
         // the old and create a new one carrying the same lookup_key.
         // The runtime then resolves to the new id automatically.
         console.log(
-          `[prices]   bump   ${key.padEnd(34)} : old=${existing.id} ($${(existing.unit_amount ?? 0) / 100}) → new $${unitAmount / 100}`,
+          `[prices]   bump   ${key.padEnd(28)} : old=${existing.id} ($${(existing.unit_amount ?? 0) / 100}) → new $${unitAmount / 100}`,
         );
         if (!opts.dryRun) {
           await stripe.prices.update(existing.id, {
@@ -198,32 +190,29 @@ async function main(): Promise<void> {
           });
         }
       }
+    }
+    if (needsCreate) {
       if (opts.dryRun) {
         console.log(
-          `[prices]   create ${key.padEnd(34)} → (dry-run) $${unitAmount / 100}/seat/mo`,
+          `[prices]   create ${key.padEnd(28)} → (dry-run) $${unitAmount / 100}/mo flat`,
         );
-        continue;
-      }
-      if (!product) {
-        throw new Error(
-          `Cannot create price ${key}: product for tier ${tier} not provisioned`,
+      } else {
+        if (!product) {
+          throw new Error(`Cannot create price ${key}: product not provisioned`);
+        }
+        const created = await stripe.prices.create({
+          product: product.id,
+          currency: "usd",
+          unit_amount: unitAmount,
+          recurring: { interval: "month" },
+          lookup_key: key,
+          metadata: { agentplain_pricing_model: "flat-monthly" },
+          nickname: `${productName} — flat monthly`,
+        });
+        console.log(
+          `[prices]   create ${key.padEnd(28)} → ${created.id}  ($${unitAmount / 100}/mo flat)`,
         );
       }
-      const created = await stripe.prices.create({
-        product: product.id,
-        currency: "usd",
-        unit_amount: unitAmount,
-        recurring: { interval: "month" },
-        lookup_key: key,
-        metadata: {
-          agentplain_tier: tier,
-          agentplain_seat_band: band,
-        },
-        nickname: `${tierProductName(tier)} — ${band.toLowerCase()}`,
-      });
-      console.log(
-        `[prices]   create ${key.padEnd(34)} → ${created.id}  ($${unitAmount / 100}/seat/mo)`,
-      );
     }
   }
 
@@ -258,14 +247,12 @@ async function findProductByMetadata(
 
 async function findProductByExistingPrice(
   stripe: Stripe,
-  tier: TierName,
 ): Promise<Stripe.Product | null> {
-  // Use the (tier, first-band) Price's `product` pointer to find the
-  // tier's Product. prices.list filters via the real-time-consistent
-  // lookup_keys index, so this returns the canonical Product even
-  // immediately after creation.
+  // Use the flat Price's `product` pointer to find the Product.
+  // prices.list filters via the real-time-consistent lookup_keys index,
+  // so this returns the canonical Product even immediately after creation.
   const list = await stripe.prices.list({
-    lookup_keys: [lookupKeyFor(tier, FIRST_BAND)],
+    lookup_keys: [FLAT_MONTHLY_LOOKUP_KEY],
     active: true,
     limit: 1,
     expand: ["data.product"],

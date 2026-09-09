@@ -22,10 +22,10 @@ import type {
   WorkspaceVerticalTier,
 } from "@prisma/client";
 import {
-  lookupKeyFor,
+  FLAT_MONTHLY_LOOKUP_KEY,
+  LEGACY_LOOKUP_KEYS,
   seatBandForSeats,
   type TierName,
-  TIER_ORDER,
 } from "@/lib/pricing/tiers";
 import type { DbTransactionClient } from "@/lib/db";
 import { subscriptionStatusFromProvider } from "./provisioning";
@@ -173,9 +173,13 @@ async function syncSubscription(
   const verticalTier: WorkspaceVerticalTier = tierFromKey
     ? verticalTierEnumFromTier(tierFromKey)
     : workspace.verticalTier;
+  // Seat band is RECORD-KEEPING ONLY under flat pricing — it no longer
+  // selects a price. Clamp to the top recorded band instead of letting
+  // `seatBandForSeats` throw at 100+: a flat-priced workspace can legally
+  // carry any seat count, and throwing here would fail the whole webhook.
   const seatBand: PrismaSeatBand = seatBandFromKey
     ? seatBandFromKey
-    : seatBandForSeats(seats);
+    : seatBandForSeats(Math.min(Math.max(seats, 1), 99));
 
   const status: PrismaSubscriptionStatus = subscriptionStatusFromProvider(
     (sub.status as ProviderSubscriptionStatus) ?? "active",
@@ -609,29 +613,50 @@ function epochToDate(seconds: number | null | undefined): Date | null {
   return new Date(seconds * 1000);
 }
 
-function tierFromLookupKey(key: string | null | undefined): TierName | null {
+// ── Lookup-key reverse parsing — BACK-COMPAT WINDOW ────────────────────────
+//
+// These read a `lookup_key` off a LIVE Stripe webhook, so they see whatever
+// shape the subscription was created with — not whatever shape the current
+// code issues. After the flat-price change there are two shapes in flight:
+//
+//   1. `agentplain_flat_monthly`               — the new canonical key
+//   2. `agentplain_<tier>_<band>_monthly`      — the 15 retired keys, still
+//                                                sent by every subscription
+//                                                created before the change
+//
+// BOTH MUST PARSE. Existing subscriptions keep their old Price for the life
+// of the subscription; Stripe will send key shape (2) indefinitely until
+// each one is migrated in Stripe itself. Deleting the legacy branch would
+// silently reset those workspaces' tier and seat band on the next webhook,
+// because both call sites fall back to workspace defaults on `null`.
+//
+// Legacy shapes are matched against `legacyLookupKeyFor()`, NOT against
+// `lookupKeyFor()` — the latter now returns the flat key and would match
+// nothing. `tests/billing-lookup-key-backcompat.test.ts` pins both shapes.
+//
+// The flat key carries no tier and no band, so both functions return `null`
+// for it. That is correct and intentional: the callers then keep the
+// workspace's existing `verticalTier` and derive the band from the Stripe
+// item quantity, which is exactly the desired behaviour under flat pricing.
+
+export function tierFromLookupKey(
+  key: string | null | undefined,
+): TierName | null {
   if (!key) return null;
-  for (const tier of TIER_ORDER) {
-    if (key.startsWith(`agentplain_${tier}_seats_`)) return tier;
+  if (key === FLAT_MONTHLY_LOOKUP_KEY) return null;
+  for (const legacy of LEGACY_LOOKUP_KEYS) {
+    if (key === legacy.key) return legacy.tier;
   }
   return null;
 }
 
-function seatBandFromLookupKey(
+export function seatBandFromLookupKey(
   key: string | null | undefined,
 ): PrismaSeatBand | null {
   if (!key) return null;
-  // Match every (tier, band) shape we issue via lookupKeyFor().
-  for (const tier of TIER_ORDER) {
-    for (const band of [
-      "SEATS_1",
-      "SEATS_2_9",
-      "SEATS_10_24",
-      "SEATS_25_49",
-      "SEATS_50_99",
-    ] as const) {
-      if (key === lookupKeyFor(tier, band)) return band;
-    }
+  if (key === FLAT_MONTHLY_LOOKUP_KEY) return null;
+  for (const legacy of LEGACY_LOOKUP_KEYS) {
+    if (key === legacy.key) return legacy.band as PrismaSeatBand;
   }
   return null;
 }

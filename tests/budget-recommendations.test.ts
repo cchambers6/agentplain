@@ -52,20 +52,30 @@ describe('resolveWorkspaceMrr — input resolution', () => {
     assert.deepEqual(inputs, {
       tier: 'regular',
       seats: 1,
-      mrrUsd: 199,
+      mrrUsd: 99,
       source: 'subscription',
     } satisfies WorkspaceMrrInputs);
   });
 
-  it('multi-seat MRR scales by the seat band × seats', () => {
-    // 10 seats → SEATS_10_24 band → $149/seat → $1490 MRR.
+  it('MRR does NOT scale by seats — the price is flat', () => {
+    // Was: 10 seats → SEATS_10_24 band → $149/seat → $1490 MRR.
+    // Now: flat $99 regardless of seat count. Seats are still reported.
     const inputs = resolveWorkspaceMrr({
       verticalTier: 'REGULAR',
       tierPriceUsdMonthly: null,
       subscription: { tier: 'REGULAR', seats: 10 },
     });
-    assert.equal(inputs.mrrUsd, 149 * 10);
+    assert.equal(inputs.mrrUsd, 99);
     assert.equal(inputs.seats, 10);
+    // Explicit: 10 seats costs exactly what 1 seat costs.
+    assert.equal(
+      inputs.mrrUsd,
+      resolveWorkspaceMrr({
+        verticalTier: 'REGULAR',
+        tierPriceUsdMonthly: null,
+        subscription: { tier: 'REGULAR', seats: 1 },
+      }).mrrUsd,
+    );
   });
 
   it('falls back to the manual-invoice price when no Subscription', () => {
@@ -82,13 +92,13 @@ describe('resolveWorkspaceMrr — input resolution', () => {
     } satisfies WorkspaceMrrInputs);
   });
 
-  it('falls back to ladder pricing at 1 seat when nothing else', () => {
+  it('falls back to the flat list price when nothing else', () => {
     const inputs = resolveWorkspaceMrr({
       verticalTier: 'REGULAR',
       tierPriceUsdMonthly: null,
       subscription: null,
     });
-    assert.equal(inputs.mrrUsd, 199);
+    assert.equal(inputs.mrrUsd, 99);
     assert.equal(inputs.source, 'workspace-default');
   });
 
@@ -104,14 +114,14 @@ describe('resolveWorkspaceMrr — input resolution', () => {
 });
 
 describe('recommendBudgetCapUsdFromRow', () => {
-  it('Regular 1 seat → $60', () => {
+  it('Regular 1 seat → $30 (flat $99 MRR × 0.30)', () => {
     assert.equal(
       recommendBudgetCapUsdFromRow({
         verticalTier: 'REGULAR',
         tierPriceUsdMonthly: null,
         subscription: { tier: 'REGULAR', seats: 1 },
       }),
-      60,
+      30,
     );
   });
 

@@ -3,7 +3,10 @@ import { ApEyebrow, PlainoScene } from "@/components/ui/ap";
 import { getAllVerticals, getVerticalContent } from "@/lib/verticals";
 import { TIER_ORDER, type TierName } from "@/lib/pricing/tiers";
 import { PLAINO_PARTNER } from "@/lib/onboarding/service-partner";
-import { env } from "@/lib/env";
+import {
+  CARD_REQUIRED_AT_SIGNUP,
+  trialPeriodDaysForVertical,
+} from "@/lib/billing/facts";
 import { trialHeadline } from "@/lib/billing/trial-copy";
 import { SignUpForm } from "./SignUpForm";
 
@@ -36,15 +39,21 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
     name: v.name,
   }));
 
-  // Trial-honesty: the headline copy must match the ACTUAL configured flow,
-  // not a stale promise. A card is only collected at signup when billing is
-  // live AND the Checkout-at-signup variant is on; the #241 scaffold default
-  // is trial-first / no-card. Trial length reads from env (default 14), so a
-  // dashboard change never leaves the copy lying. See app/(product)/app/
-  // actions.ts for the matching server branches.
-  const trialDays = env.stripeTrialPeriodDays();
-  const cardAtSignup =
-    env.stripeBillingEnabled() && env.stripeCheckoutEnabled();
+  // Trial-honesty: the headline copy must match the RATIFIED policy, and
+  // it must match what every other surface says.
+  //
+  // SSOT FIX: this previously read `env.stripeTrialPeriodDays()` and derived
+  // `cardAtSignup` from two env flags. Both are env-configurable, so the
+  // signup page could state a trial length and a card policy that contradict
+  // every marketing page — which read `lib/billing/facts.ts`. The policy is
+  // ratified (7 days; 14 for CPA + Law; card captured at signup), so it must
+  // come from the billing SSOT, not from a dashboard toggle.
+  //
+  // Trial length is now VERTICAL-AWARE, matching the pricing page: a visitor
+  // who lands on /app/sign-up?vertical=cpa is told 14 days, because that is
+  // what they will actually get.
+  const trialDays = trialPeriodDaysForVertical(defaultVerticalSlug);
+  const cardAtSignup = CARD_REQUIRED_AT_SIGNUP;
 
   return (
     <div className="container-wide py-16">

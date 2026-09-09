@@ -24,6 +24,34 @@
  *   Node: (tenantId, typeSlug, naturalKey)
  *   Edge: (tenantId, fromEntityId, relType, toEntityId)
  *
+ * IDENTITY IS CANONICALISED AT THE PORT BOUNDARY
+ *
+ *   `upsertEntity` and `getEntity` run `spec.naturalKey` through
+ *   `naturalKeyFor(typeSlug, ...)` themselves. The alternative - a
+ *   contract clause saying "the caller must pre-normalize" - was
+ *   rejected, for the same reason this port has no `create()`: it makes
+ *   correctness depend on every caller remembering, and the ones that
+ *   forget are invisible until someone counts. Four case/whitespace
+ *   spellings of one firm produced FOUR rows before this, and
+ *   `graph-ledger-fetcher.nodesToLedger` skips its dedup pass on the
+ *   strength of the guarantee this block makes.
+ *
+ *   It also has to happen here rather than in a caller because the port
+ *   has a second implementation coming. A PrismaGraphStore whose
+ *   @@unique sits on an un-normalized string cannot enforce this at all
+ *   - the database would hold all four rows and no index would object.
+ *
+ *   Safe to apply unconditionally because `naturalKeyFor` is idempotent:
+ *   normalizing an already-normalized key is a no-op, so the one
+ *   production caller that already normalizes (`projections.partyNode`)
+ *   is unaffected.
+ *
+ *   COST, stated rather than hidden: the key space is now the folded
+ *   space. A type whose natural key is an opaque external id would lose
+ *   the distinction between "AB-123" and "AB_123". `party` is the only
+ *   declared type slug today; a type that needs raw ids must declare a
+ *   pass-through rule in `naturalKeyFor`, not bypass this call.
+ *
  * PRECEDENCE
  *
  *   A repeat write always advances `lastSeenAt` - corroboration is
@@ -38,6 +66,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { naturalKeyFor } from './normalize';
 import { mayOverwrite } from './provenance';
 import type {
   EdgeSpec,
@@ -68,6 +97,13 @@ export interface EdgeListQuery {
 
 /**
  * Read/write port over the entity graph. Writes are upsert-only.
+ *
+ * CONTRACT: an implementation MUST canonicalise `naturalKey` through
+ * `naturalKeyFor(typeSlug, ...)` on both `upsertEntity` and `getEntity`,
+ * so that (tenantId, typeSlug, naturalKey) holds exactly one row per
+ * identity regardless of how the caller spelled it. The caller is NOT
+ * required to pre-normalize; a caller that does is harmless because
+ * `naturalKeyFor` is idempotent.
  *
  * Every method takes `tenantId` explicitly. Nothing in this layer reads
  * an ambient context and nothing here escalates to an operator or system
@@ -161,10 +197,17 @@ export class InMemoryGraphStore implements GraphStore {
   async upsertEntity(spec: NodeSpec): Promise<GraphNode> {
     const tenantId = requireNonEmpty(spec.tenantId, 'tenantId');
     const typeSlug = requireNonEmpty(spec.typeSlug, 'typeSlug');
-    // An empty natural key is `naturalKeyFor` saying "not identifiable".
+    // Canonicalise, then reject. `.trim()` alone is normalization too -
+    // just the weakest possible version, and the reason a whitespace-only
+    // variant used to collapse while a case variant did not.
+    //
+    // An empty result is `naturalKeyFor` saying "not identifiable".
     // Accepting it would make every unidentifiable input collide on one
     // row, which reads downstream as a real, heavily-corroborated entity.
-    const naturalKey = requireNonEmpty(spec.naturalKey, 'naturalKey');
+    const naturalKey = requireNonEmpty(
+      naturalKeyFor(typeSlug, spec.naturalKey ?? ''),
+      'naturalKey',
+    );
     const label = requireNonEmpty(spec.label, 'label');
 
     const key = entityKey(tenantId, typeSlug, naturalKey);
@@ -275,8 +318,15 @@ export class InMemoryGraphStore implements GraphStore {
   }
 
   async getEntity(lookup: EntityLookup): Promise<GraphNode | null> {
+    // Reads canonicalise on the same rule as writes. If only the write
+    // side normalized, a caller holding the raw display name could not
+    // find the row it had just written.
     const found = this.nodesByKey.get(
-      entityKey(lookup.tenantId, lookup.typeSlug, lookup.naturalKey),
+      entityKey(
+        lookup.tenantId,
+        lookup.typeSlug,
+        naturalKeyFor(lookup.typeSlug, lookup.naturalKey ?? ''),
+      ),
     );
     return found ? { ...found } : null;
   }

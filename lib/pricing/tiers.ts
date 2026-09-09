@@ -277,18 +277,142 @@ export function legacyLookupKeyFor(tier: TierName, band: SeatBand): string {
   return `agentplain_${tier}_${band.toLowerCase()}_monthly`;
 }
 
-/** All 15 retired keys, with the tier and band each one decodes to. */
+/**
+ * How many keys were ever issued under the retired shape. A CLOSED SET.
+ * 3 tiers x 5 seat bands were live from the first Stripe setup run until
+ * the flat-price collapse; no sixteenth key was ever issued, so this
+ * number can never legitimately grow OR shrink.
+ */
+export const LEGACY_LOOKUP_KEY_COUNT = 15;
+
+/**
+ * All 15 retired keys, with the tier and band each one decodes to.
+ *
+ * ===================================================================
+ * FROZEN LITERAL. DO NOT DERIVE THIS FROM `TIER_ORDER`, FROM
+ * `SEAT_BAND_ORDER`, FROM `legacyLookupKeyFor()`, OR FROM ANY OTHER
+ * PRESENT-DAY CONSTANT. DO NOT REMOVE AN ENTRY.
+ * ===================================================================
+ *
+ * WHY THIS IS WRITTEN OUT LONGHAND INSTEAD OF GENERATED:
+ *
+ * This list is not a description of what agentplain sells. It is a
+ * description of WHAT STRIPE ALREADY HOLDS -- a fixed historical fact
+ * about rows in someone else's database that we cannot edit and did not
+ * write. It is data about the past.
+ *
+ * It was previously built as:
+ *
+ *     TIER_ORDER.flatMap((tier) =>
+ *       SEAT_BAND_ORDER.map((band) => ...))
+ *
+ * which quietly made a historical fact a FUNCTION OF TODAY'S CONSTANTS.
+ * Both of those arrays are documented three screens above as vestigial,
+ * surviving only because the Prisma enums they mirror cannot be dropped
+ * until the migration lane unblocks. A cleanup migration collapsing
+ * `WorkspaceVerticalTier` is anticipated, not hypothetical -- and on the
+ * day someone trims `TIER_ORDER` to one member, the derived list would
+ * have silently gone from 15 keys to 5. Nothing would throw. Stripe
+ * would keep sending the other 10 forever, `tierFromLookupKey` would
+ * start returning `null` for them, and both call sites in
+ * `lib/billing/webhook-dispatch.ts` fall back to workspace defaults on
+ * `null` -- so every legacy workspace on a dropped tier would have its
+ * tier and seat band silently RESET on its next Stripe webhook. Silent,
+ * data-corrupting, and indistinguishable from normal operation.
+ *
+ * Writing the keys out as literals removes that coupling entirely: a
+ * future collapse of `TIER_ORDER` or `SEAT_BAND_ORDER` now CANNOT reach
+ * this set. `Object.freeze` blocks the runtime shrink (`.pop()`,
+ * `.splice()`) as well. The count and the parseability of every entry
+ * are pinned in `tests/billing-lookup-key-backcompat.test.ts`, which
+ * runs on every PR via `.github/workflows/tests.yml`.
+ *
+ * `legacyLookupKeyFor()` above is retained for callers that need to
+ * FORMAT a key, and the test cross-checks it against these literals --
+ * but this array must never be built from it. If the two ever disagree,
+ * THESE LITERALS ARE RIGHT, because Stripe holds these exact strings.
+ */
 export const LEGACY_LOOKUP_KEYS: readonly {
   tier: TierName;
   band: SeatBand;
   key: string;
-}[] = TIER_ORDER.flatMap((tier) =>
-  SEAT_BAND_ORDER.map((band) => ({
-    tier,
-    band,
-    key: legacyLookupKeyFor(tier, band),
-  })),
-);
+}[] = Object.freeze([
+  Object.freeze({
+    tier: "regular" as TierName,
+    band: "SEATS_1" as SeatBand,
+    key: "agentplain_regular_seats_1_monthly",
+  }),
+  Object.freeze({
+    tier: "regular" as TierName,
+    band: "SEATS_2_9" as SeatBand,
+    key: "agentplain_regular_seats_2_9_monthly",
+  }),
+  Object.freeze({
+    tier: "regular" as TierName,
+    band: "SEATS_10_24" as SeatBand,
+    key: "agentplain_regular_seats_10_24_monthly",
+  }),
+  Object.freeze({
+    tier: "regular" as TierName,
+    band: "SEATS_25_49" as SeatBand,
+    key: "agentplain_regular_seats_25_49_monthly",
+  }),
+  Object.freeze({
+    tier: "regular" as TierName,
+    band: "SEATS_50_99" as SeatBand,
+    key: "agentplain_regular_seats_50_99_monthly",
+  }),
+  Object.freeze({
+    tier: "plus" as TierName,
+    band: "SEATS_1" as SeatBand,
+    key: "agentplain_plus_seats_1_monthly",
+  }),
+  Object.freeze({
+    tier: "plus" as TierName,
+    band: "SEATS_2_9" as SeatBand,
+    key: "agentplain_plus_seats_2_9_monthly",
+  }),
+  Object.freeze({
+    tier: "plus" as TierName,
+    band: "SEATS_10_24" as SeatBand,
+    key: "agentplain_plus_seats_10_24_monthly",
+  }),
+  Object.freeze({
+    tier: "plus" as TierName,
+    band: "SEATS_25_49" as SeatBand,
+    key: "agentplain_plus_seats_25_49_monthly",
+  }),
+  Object.freeze({
+    tier: "plus" as TierName,
+    band: "SEATS_50_99" as SeatBand,
+    key: "agentplain_plus_seats_50_99_monthly",
+  }),
+  Object.freeze({
+    tier: "max" as TierName,
+    band: "SEATS_1" as SeatBand,
+    key: "agentplain_max_seats_1_monthly",
+  }),
+  Object.freeze({
+    tier: "max" as TierName,
+    band: "SEATS_2_9" as SeatBand,
+    key: "agentplain_max_seats_2_9_monthly",
+  }),
+  Object.freeze({
+    tier: "max" as TierName,
+    band: "SEATS_10_24" as SeatBand,
+    key: "agentplain_max_seats_10_24_monthly",
+  }),
+  Object.freeze({
+    tier: "max" as TierName,
+    band: "SEATS_25_49" as SeatBand,
+    key: "agentplain_max_seats_25_49_monthly",
+  }),
+  Object.freeze({
+    tier: "max" as TierName,
+    band: "SEATS_50_99" as SeatBand,
+    key: "agentplain_max_seats_50_99_monthly",
+  }),
+]);
 
 // ── Tier <-> Prisma enum bridge ────────────────────────────────────────────
 //

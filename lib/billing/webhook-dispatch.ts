@@ -630,9 +630,19 @@ function epochToDate(seconds: number | null | undefined): Date | null {
 // silently reset those workspaces' tier and seat band on the next webhook,
 // because both call sites fall back to workspace defaults on `null`.
 //
-// Legacy shapes are matched against `legacyLookupKeyFor()`, NOT against
+// Legacy shapes are matched against `LEGACY_LOOKUP_KEYS`, NOT against
 // `lookupKeyFor()` — the latter now returns the flat key and would match
 // nothing. `tests/billing-lookup-key-backcompat.test.ts` pins both shapes.
+//
+// `LEGACY_LOOKUP_KEYS` is a FROZEN LITERAL of exactly 15 strings and is
+// deliberately NOT derived from `TIER_ORDER` / `SEAT_BAND_ORDER`. That
+// matters here specifically: both functions below fall back to `null` on an
+// unrecognised key, and both call sites above then fall back to workspace
+// defaults. So anything that shrinks the legacy set does not surface as an
+// error — it surfaces as a legacy workspace's tier and seat band being
+// silently RESET on its next webhook. While the set was derived, a future
+// migration collapsing the vestigial `WorkspaceVerticalTier` enum (which is
+// anticipated) would have done exactly that. Do not re-derive it.
 //
 // The flat key carries no tier and no band, so both functions return `null`
 // for it. That is correct and intentional: the callers then keep the

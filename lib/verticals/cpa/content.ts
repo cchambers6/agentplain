@@ -2,7 +2,13 @@ import type { VerticalContent } from "../types";
 import {
   TRIAL_PERIOD_DAYS_EXTENDED,
   MONEY_BACK_GUARANTEE_DAYS,
+  MONTHLY_PRICE_USD_CENTS,
 } from "../../billing/facts";
+
+// One flat price for every vertical and every customer. READ, never
+// restated: hardcoding "$99" here is exactly how the retired per-seat
+// ladder outlived the engine that stopped producing it.
+const FLAT = "$" + MONTHLY_PRICE_USD_CENTS / 100;
 
 // Source: `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.4 (accounting
 // firms, 2–10 person, composite 34). Fleet shape and operational pain
@@ -16,7 +22,7 @@ import {
 // subset of firms that do assurance work; pure tax-and-bookkeeping shops
 // can ignore that row.
 //
-// Pricing: recommended at Partner tier per `project_stripe_both_surfaces.md`
+// Pricing: ONE flat price, per `lib/billing/facts.ts`. Not tier-derived.
 // (2026-05-15 — three customer-facing tiers Regular / Partner / Max). Partner
 // is the recommended starting tier for CPA practices because tax-season
 // cadence benefits from priority support and a quarterly async check-in
@@ -46,7 +52,7 @@ export const cpa: VerticalContent = {
     },
     {
       q: "How much does agentplain cost for a CPA firm?",
-      a: `CPA firms are recommended at the Partner tier — priority support and a quarterly async check-in with your service team — $299 per seat per month for a solo CPA, sliding to $199 per seat at scale. Every tier is per seat and month-to-month. CPA firms get the extended ${TRIAL_PERIOD_DAYS_EXTENDED}-day free trial (card at signup) so one real doc-chase cycle runs before billing starts, plus a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
+      a: `${FLAT} per month. One flat price — the same whether you are a solo CPA or a multi-partner firm, and the same across every vertical. Month-to-month, and it includes priority support and a quarterly async check-in with your service team. CPA firms get the extended ${TRIAL_PERIOD_DAYS_EXTENDED}-day free trial (card at signup) so one real doc-chase cycle runs before billing starts, plus a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
     },
     {
       q: "What happens to my clients' tax data?",
@@ -293,13 +299,13 @@ export const cpa: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "12x–18x",
-    inputCost: "Partner tier · $299 per seat (solo), sliding to $199 per seat (50–99 seats) — 14-day free trial, card at signup",
-    outputValue: "$42,000 / yr in tax-season hour reclamation per staff seat",
+    multiplier: "9x sourced / 35x modeled",
+    inputCost: `${FLAT}/month flat — ${TRIAL_PERIOD_DAYS_EXTENDED}-day free trial, card at signup`,
+    outputValue: "$10,400 / yr sourced per staff member; ~$42,000 / yr modeled",
     math:
-      "Tax season = 80-hour weeks. Doc-chase consumes ~25% of staff hours through 8 weeks (per b2b_vertical_opportunity_analysis_2026-04-27.md §3.4 — \"document chase consumes the front office for 8 weeks a year\"). 0.25 × 80 hours × 8 weeks × $65/hr loaded = $10,400 per staff per season. Add onboarding-letter automation and books-recon reclamation: total ~$42k/yr (~$3,500/mo) per staff seat. Solo case: against the Partner-tier solo seat ($299/mo) = ~12x ROI. At-scale case: same per-staff value against the 50-seat-band price ($199/mo) = ~18x. Customers needing bespoke compliance corpora, white-label, or 100+ seats route to Max (quote-based) or /custom (capability build).",
+      "Tax season = 80-hour weeks. Doc-chase consumes ~25% of staff hours through 8 weeks (per b2b_vertical_opportunity_analysis_2026-04-27.md §3.4 — \"document chase consumes the front office for 8 weeks a year\"). 0.25 × 80 hours × 8 weeks × $65/hr loaded = $10,400 per staff per season. That sourced figure alone, against the flat ${FLAT}/month ($1,188/yr), is ~9x per staff member. A further ~$31,600/yr is MODELED from onboarding-letter automation and books-recon reclamation, which would take the headline to ~$42k/yr (~35x) — that portion is operator-modeled and is NOT yet backed by shipped capability, so the sourced 9x is the number to stand behind. Because the price is flat, each additional staff member raises the return on an unchanged bill.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (Partner tier per 2026-05-15 ratification; per-seat ladder $299→$199 — priority support + quarterly async check-in, NO reserved human hours per the 2026-06-14 trial-policy ratification). ROI band per `project_pricing_value_anchor.md` (Partner-tier value scales with Regular's $2,900–$10,600/mo per seat plus the named-partner overlay). Doc-chase share cited from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.4. Staff-loading rate is operator-modeled — flagged in capability inbox for primary-research validation.",
+      "Pricing per `lib/billing/facts.ts` (`MONTHLY_PRICE_USD_CENTS`) — ONE flat monthly price, the same for every customer and every vertical, whatever the headcount. Trial + money-back mechanics per the same module. Support model per `PARTNER_SUPPORT` in `lib/billing/facts.ts`: priority email/chat and a quarterly async check-in, and explicitly NO reserved human hours. ROI band per `project_pricing_value_anchor.md`. The onboarding-letter and books-recon components of the $42k figure are operator-modeled and not backed by shipped capability — flagged in capability inbox. Doc-chase share cited from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.4. Staff-loading rate is operator-modeled — flagged in capability inbox for primary-research validation.",
     violationAvoidance:
       "Tax and advisory correspondence is governed by the AICPA Code of Professional Conduct and Treasury Circular 230 — a preparer position that understates a client's liability carries an IRC §6694 penalty of $1,000 (unreasonable position) or $5,000 (willful or reckless conduct) per return, on top of Circular 230 censure, suspension, or disbarment from practice before the IRS. The fleet drafts client letters, engagement notes, and filing-ready work; a credentialed person approves before anything is sent or filed, so a Circular 230 slip is corrected at the draft stage rather than assessed as a preparer penalty. That avoided exposure is real ROI the 12x–18x hours math leaves out, and it only holds because nothing auto-executes.",
   },

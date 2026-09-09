@@ -26,6 +26,7 @@ import {
   faqPageJsonLd,
 } from "@/lib/seo/structured-data";
 import { alternatesFor } from "@/lib/seo/metadata";
+import { MONTHLY_PRICE_USD_CENTS } from "@/lib/billing/facts";
 import TrustSection from "@/components/trust/TrustSection";
 import { getAllVerticals, getVerticalContent } from "@/lib/verticals";
 import { tokens } from "@/lib/brand/tokens";
@@ -370,10 +371,9 @@ export default function HomePage() {
         </div>
 
         <p className="mt-8 max-w-prose text-[13px] leading-relaxed text-mute">
-          Push events from your tools land in a queue as they arrive. The
-          chain works that queue in scheduled passes, in batches rather
-          than one message at a time — so nothing waits on someone
-          remembering to look.
+          The chain runs every five minutes against your inbox backlog and
+          reacts to push events as your tools are connected. There is no
+          idle hour where the crew has stopped working.
         </p>
 
         {/* Two honest follow-on panels — what's true TODAY, with the
@@ -611,10 +611,10 @@ export default function HomePage() {
             </div>
             <div>
               <p className="font-mono text-3xl text-ink md:text-4xl">
-                $99–$199
+                ${MONTHLY_PRICE_USD_CENTS / 100}
               </p>
               <p className="mt-2 font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-                per seat per month
+                a month, flat, any team size
               </p>
             </div>
           </div>
@@ -645,16 +645,16 @@ export default function HomePage() {
       <TrustSection />
 
       {/* Q6/Q7 — Pricing + ROI under the service-partnership lock.
-          Three tiers (Regular / Partner / Max) reframe the per-seat ladder
-          as the entry price for a service partnership, not a self-serve
-          plan. /custom remains a separate surface for bespoke engagements
-          outside the tier ladder. */}
+          ONE FLAT PRICE (`MONTHLY_PRICE_USD_CENTS`) is the entry price for a
+          service partnership, not a self-serve plan. It does not vary by
+          headcount, tier, or vertical. /custom remains a separate surface for
+          bespoke engagements and is a different product, not a tier. */}
       <Section
         id="pricing"
         tone="deep"
         eyebrow="Pricing + ROI"
         title="Affordable access to enterprise-grade tools — with the service team that runs them."
-        intro="Three ways to partner with us. Every tier includes the fleet, the per-vertical compliance corpus, and a service team that installs, reviews, and customizes alongside you. The calculator below is anchored to Regular; Partner adds priority support and a quarterly check-in; Max is quoted to scope."
+        intro="One price. It includes the fleet, the per-vertical compliance corpus, and a service team that installs, reviews, and customizes alongside you — and it does not change with the size of your firm. Run your own numbers in the calculator below."
       >
         <RoiCalculator />
 

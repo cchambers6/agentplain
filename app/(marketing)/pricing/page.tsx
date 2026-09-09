@@ -6,9 +6,11 @@ import JsonLd from "@/components/seo/JsonLd";
 import { FaqList, pricingFaqItems } from "@/components/FAQ";
 import { faqPageJsonLd } from "@/lib/seo/structured-data";
 import { alternatesFor } from "@/lib/seo/metadata";
-import { tierLadderBands } from "@/lib/pricing/tiers";
+
 import {
+  ANNUAL_PRICE_USD_CENTS,
   MONEY_BACK_GUARANTEE_DAYS,
+  MONTHLY_PRICE_USD_CENTS,
   PARTNER_SUPPORT,
   TRIAL_PERIOD_DAYS,
   TRIAL_PERIOD_DAYS_EXTENDED,
@@ -22,30 +24,37 @@ import {
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    `Three per-seat service-partnership tiers, month-to-month. Regular $199→$99, Partner $299→$199, Max quoted. ${TRIAL_PERIOD_DAYS}-day free trial, card at signup, ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee. Custom engagements on /custom.`,
+    `One flat price: $${MONTHLY_PRICE_USD_CENTS / 100}/month, any team size, every vertical. Month-to-month, ${TRIAL_PERIOD_DAYS}-day free trial, card at signup, ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee. Custom engagements on /custom.`,
   alternates: alternatesFor("/pricing"),
 };
 
-// Pricing page. Anchored to the service-partnership three-tier model
-// (ratified 2026-05-15 — supersedes the 2026-05-12 single-tier customer
-// surface). The Plus / Max tier enum on disk maps to Partner / Max
-// surfacing; the Plus per-seat numbers in `project_stripe_both_surfaces.md`
-// HISTORICAL block back the Partner ladder.
+// Pricing page. ONE FLAT PRICE — `MONTHLY_PRICE_USD_CENTS` in
+// `lib/billing/facts.ts`. This page's information architecture WAS three
+// columns x five volume bands; that whole shape is retired. Under flat
+// pricing the two self-serve columns rendered the identical number, so the
+// comparison grid was showing a choice that no longer existed.
+//
+// What survives, and why:
+//   * The quoted-engagement path. Law and RIA are quote-gated
+//     (`isSelfServeTier("max") === false`). That is a different SALES MOTION,
+//     not a different price, and this page must not imply otherwise.
+//   * /custom. Bespoke capability builds ($5K-$15K + maintenance) are a
+//     DIFFERENT PRODUCT and are unaffected by the flat-price change.
+//   * The Partner support difference (priority email/chat + a quarterly async
+//     check-in, and explicitly NO reserved hours). Real difference in SERVICE,
+//     not in price — so it reads as an included feature, not a second column.
 //
 // Story-arc per `feedback_everything_tells_a_story.md`:
-//   1. What does this cost?      → three-tier grid + ROI calc
-//   2. Which tier is for me?     → "When to choose what" guidance
-//   3. What ships with every tier? → guarantees list
-//   4. What if I need more?      → /custom link (engagement, not a tier)
-//   5. Why should I trust it?    → cited memory rules
+//   1. What does this cost?        → the one price + ROI calc
+//   2. Does it change as I grow?   → no; stated plainly
+//   3. What ships with it?         → guarantees list
+//   4. What if I need more?        → /custom link (engagement, not a tier)
+//   5. Why should I trust it?      → cited memory rules
 
-type Band = { band: string; price: string };
-
-// Derived from the canonical per-seat ladder in `lib/pricing/tiers.ts` so the
-// pricing page can never drift from billing (the Partner 2–9 / 10–24 bands
-// were previously hand-typed $10 low here).
-const regularBands: Band[] = tierLadderBands("regular");
-const partnerBands: Band[] = tierLadderBands("plus");
+// The one price, read from the billing SSOT. Formatted once, used everywhere
+// on this page, so /pricing can never drift from what Stripe actually charges.
+const MONTHLY = `$${MONTHLY_PRICE_USD_CENTS / 100}`;
+const ANNUAL = `$${(ANNUAL_PRICE_USD_CENTS / 100).toLocaleString("en-US")}`;
 
 const sharedGuarantees = [
   "A service partner who installs the fleet and runs reviews",
@@ -71,19 +80,26 @@ const objections: { q: string; a: string }[] = [
   },
   {
     q: "What if my volume is unpredictable?",
-    a: "Your price doesn't move with it. The fee is flat per seat — no metered usage line, no overage charges. A heavy month is our cost to manage, not yours. The usage page in your workspace shows the fleet's last-30-day activity, so what it's doing is never a mystery; if usage outgrows your plan, your service partner raises it as a conversation, never as a surprise on the invoice.",
+    a: "Your price doesn't move with it. The fee is one flat monthly amount — no metered usage line, no overage charges. A heavy month is our cost to manage, not yours. The usage page in your workspace shows the fleet's last-30-day activity, so what it's doing is never a mystery; if usage outgrows your plan, your service partner raises it as a conversation, never as a surprise on the invoice.",
   },
   {
     q: "What if I need help?",
-    a: `A human answers, and the channel is stated up front. Every tier gets email and chat support at ${PARTNER_SUPPORT.supportEmail}; Regular adds the monthly review, where tuning questions get worked. Partner gets priority support — a faster line — plus the quarterly async check-in. Max scopes its support shape to the engagement, including named service hours.`,
+    a: `A human answers, and the channel is stated up front. Every customer gets email and chat support at ${PARTNER_SUPPORT.supportEmail}, plus the monthly review where tuning questions get worked. Firms with higher stakes get priority support — a faster line — and the quarterly async check-in. Scoped engagements set their support shape in the written engagement, including named service hours.`,
   },
 ];
 
+// What the partnership looks like in practice. NOT a plan chooser: there is
+// ONE price and one Stripe Price, so there is nothing here to pick between on
+// the way to checkout. This block used to be a three-column
+// "which tier is for me" comparison, which under flat pricing described a
+// choice the customer cannot actually make. It now describes how the SERVICE
+// shapes itself around a firm — and names the one genuine fork, which is
+// whether you buy online or get scoped.
 const whenToChoose = [
   {
-    tier: "Regular",
-    headline: "Standard service partnership.",
-    body: "Most local-business shops fit here. A service partner installs the fleet, runs the monthly review, handles tuning between reviews over email and chat. Your day-to-day stays inside the workspace.",
+    tier: "Most firms",
+    headline: "Install, review, tune.",
+    body: "A service partner installs the fleet, runs the monthly review, and handles tuning between reviews over email and chat. Your day-to-day stays inside the workspace you log into. This is the standard shape and it is what most local-business shops get.",
     examples: [
       "Solo or small-team realtor / mortgage broker / CPA",
       "Steady weekly ops, predictable case mix",
@@ -91,9 +107,9 @@ const whenToChoose = [
     ],
   },
   {
-    tier: "Partner",
+    tier: "Higher stakes",
     headline: "Priority support + a quarterly check-in.",
-    body: "Higher stakes or higher week-over-week change. Everything in Regular, plus priority support — a faster line when something needs attention — and a quarterly async check-in with your service team to step back and tune.",
+    body: "When the cost of a bad draft is high, or your operation changes week over week, the partnership adds priority support — a faster line when something needs attention — and a quarterly async check-in with your service team to step back and tune. Included, not an upcharge.",
     examples: [
       "Litigation, wealth management, broker-of-record-heavy comms",
       "Multi-team firm with growth or restructure in flight",
@@ -101,9 +117,9 @@ const whenToChoose = [
     ],
   },
   {
-    tier: "Max",
-    headline: "Ad-hoc service partnership.",
-    body: "Your ops don't fit the productized shape. Different cadence, different deliverables, quoted to the engagement. Sales-led — talk to us about what you need.",
+    tier: "Scoped engagement",
+    headline: "When the standard shape isn't the right shape.",
+    body: "Some operations don't fit the productized shape — different cadence, different deliverables, a written engagement. Law and RIA go this way by default. Sales-led: talk to us about what you need and scope drives the quote, not headcount.",
     examples: [
       "Non-standard compliance posture",
       "Cross-vertical ops in a single firm",
@@ -121,7 +137,7 @@ const SBM_COMPARISON: { dimension: string; diy: string; us: string }[] = [
   {
     dimension: "Cost",
     diy: "The subscription is cheap — but the real cost is the months of configuration time, plus per-skill engineering you do (or hire) to make it do your job.",
-    us: "One bundled flat fee, per seat, month-to-month. The skills, agents, and integrations come pre-built — no engineering line item.",
+    us: "One bundled flat fee, month-to-month, whatever your headcount. The skills, agents, and integrations come pre-built — no engineering line item.",
   },
   {
     dimension: "Time to value",
@@ -156,15 +172,14 @@ export default function PricingPage() {
         <div className="relative container-wide py-20 md:py-28">
           <span className="dateline mb-6 inline-block">Plans · 2026</span>
           <h1 className="max-w-4xl font-display text-5xl leading-[1.05] text-ink md:text-7xl md:leading-[1.02]">
-            Three ways to partner.
+            {MONTHLY} a month.
             <br />
-            <span className="text-clay">
-              Affordable access to the team that runs it.
-            </span>
+            <span className="text-clay">That&rsquo;s the whole price list.</span>
           </h1>
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-ink-soft md:text-xl">
-            Every tier is a service partnership: we install the fleet, run
-            reviews, and customize alongside you. Per seat, month-to-month.{" "}
+            One price, the same for every firm and every vertical — it does
+            not change with the number of people you put on it. We install the
+            fleet, run reviews, and customize alongside you. Month-to-month.{" "}
             {TRIAL_PERIOD_DAYS}-day free trial, card at signup.{" "}
             <Link
               href="/guarantee"
@@ -194,40 +209,31 @@ export default function PricingPage() {
       </section>
 
       <Section
-        eyebrow="The three tiers"
-        title="Same fleet, different service shape."
-        intro="Pick the cadence and depth of partnership your shop needs. Switch up or down as your ops evolve."
+        eyebrow="The price"
+        title="One price. However big you get."
+        intro="There is no seat rate, no volume ladder, and no plan to compare against another plan. A solo operator and a forty-person firm pay the same."
       >
-        <span className="dateline mb-8 inline-block">Service-partnership tiers</span>
-        <div className="grid gap-px overflow-hidden border border-rule bg-rule lg:grid-cols-3">
+        <span className="dateline mb-8 inline-block">The whole price list</span>
+        <div className="grid gap-px overflow-hidden border border-rule bg-rule lg:grid-cols-2">
           <TierColumn
-            name="Regular"
-            tagline="Standard service partnership."
-            description="A service partner installs, runs a monthly review, tunes between reviews. Day-to-day in the workspace you log into."
-            bands={regularBands}
+            name="The subscription"
+            tagline="One price. Any size firm."
+            description="A service partner installs the fleet, runs a monthly review, and tunes between reviews. Day-to-day it drafts in the workspace you log into. Priority support and a quarterly async check-in with your service team are included — and so is every person you add."
+            price={MONTHLY}
+            priceNote={`a month · ${ANNUAL} a year · any team size`}
             ctaLabel="Start free trial"
             ctaHref="/app/sign-up"
             ctaStyle="primary"
-            footnote={`${TRIAL_PERIOD_DAYS}-day free trial. Month-to-month. Per seat.`}
-          />
-          <TierColumn
-            name="Partner"
-            tagline="Priority support + a quarterly check-in."
-            description="Everything in Regular, plus priority support and a quarterly async check-in with your service team — for shops that want a faster line and a regular pulse on the fleet."
-            bands={partnerBands}
-            ctaLabel="Talk to a service partner"
-            ctaHref="mailto:hello@agentplain.com?subject=agentplain%20Partner%20tier%20interest"
-            ctaStyle="secondary"
-            footnote={`${TRIAL_PERIOD_DAYS}-day free trial. Month-to-month. Per seat.`}
+            footnote={`${TRIAL_PERIOD_DAYS}-day free trial. Month-to-month. One flat price.`}
             featured
           />
           <TierColumn
-            name="Max"
-            tagline="Ad-hoc service partnership."
-            description="Non-standard scope. Different cadence, different deliverables, quoted to the engagement."
-            quotedNote="Quoted per engagement"
+            name="Scoped engagement"
+            tagline="When the standard shape isn't the right shape."
+            description="Some firms — law and RIA especially — are scoped rather than bought off the page: different cadence, different deliverables, a written engagement. Scope drives the quote, not headcount."
+            quotedNote="Quoted to scope"
             ctaLabel="Talk to us"
-            ctaHref="mailto:hello@agentplain.com?subject=agentplain%20Max%20tier%20inquiry"
+            ctaHref="mailto:hello@agentplain.com?subject=agentplain%20engagement%20inquiry"
             ctaStyle="secondary"
             footnote="Sales-led — no self-checkout."
           />
@@ -239,14 +245,14 @@ export default function PricingPage() {
         tone="deep"
         eyebrow="ROI"
         title="The math, not the vibes."
-        intro="Enter your own numbers. The calculator is pure client-side; you can audit the formula in view-source. Conservative inputs are 8–15 hr/wk on systematic ops at a $75–$150/hr productive-hour opportunity cost. Calculator anchors to Regular; Partner is the same automation at a higher per-seat price for priority support and a quarterly check-in."
+        intro="Enter your own numbers. The calculator is pure client-side; you can audit the formula in view-source. Conservative inputs are 8–15 hr/wk on systematic ops at a $75–$150/hr productive-hour opportunity cost. The calculator compares your recovered hours against the one flat monthly price — because the price does not scale with headcount, every person you add improves the ratio."
       >
         <RoiCalculator />
       </Section>
 
       <Section
-        eyebrow="When to choose what"
-        title="Match the cadence to your week."
+        eyebrow="What the partnership looks like"
+        title="Same price. The service shapes itself to your week."
       >
         <div className="grid gap-px overflow-hidden border border-rule bg-rule md:grid-cols-3">
           {whenToChoose.map((row) => (
@@ -470,15 +476,16 @@ function SbmCompareRow({
   );
 }
 
-// Pricing-page tier column. Inlined here for the same reason the homepage
-// inlines TierCard — the existing `components/PricingTier.tsx` models a
-// single-price tier, and the service-partnership tiers need per-seat
-// ladders inside each column.
+// Pricing-page column. Inlined here for the same reason the homepage inlines
+// TierCard. It used to render a per-seat volume ladder inside each column via
+// `bands`, every row suffixed "/seat/mo"; under flat pricing that ladder is a
+// single row and the two self-serve columns showed the same number. One price.
 function TierColumn({
   name,
   tagline,
   description,
-  bands,
+  price,
+  priceNote,
   quotedNote,
   ctaLabel,
   ctaHref,
@@ -489,7 +496,10 @@ function TierColumn({
   name: string;
   tagline: string;
   description: string;
-  bands?: Band[];
+  /** The one flat price, pre-formatted (e.g. "$99"). */
+  price?: string;
+  /** Cadence line under the price. */
+  priceNote?: string;
   quotedNote?: string;
   ctaLabel: string;
   ctaHref: string;
@@ -530,24 +540,14 @@ function TierColumn({
         {description}
       </p>
 
-      {bands ? (
-        <div className="mt-6 grid gap-px overflow-hidden border border-rule bg-rule">
-          {bands.map((row) => (
-            <div
-              key={row.band}
-              className="flex items-baseline justify-between bg-paper px-3 py-2.5"
-            >
-              <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-                {row.band}
-              </span>
-              <span className="font-display text-lg text-ink">
-                {row.price}
-                <span className="ml-1 font-mono text-[10px] tracking-eyebrow uppercase text-mute">
-                  /seat/mo
-                </span>
-              </span>
-            </div>
-          ))}
+      {price ? (
+        <div className="mt-6 border border-rule bg-paper px-5 py-6">
+          <p className="font-display text-5xl leading-none text-ink">{price}</p>
+          {priceNote ? (
+            <p className="mt-3 font-mono text-[10px] tracking-eyebrow uppercase text-mute">
+              {priceNote}
+            </p>
+          ) : null}
         </div>
       ) : null}
 

@@ -14,15 +14,14 @@ import { getWorkspaceBudgetSnapshot } from "@/lib/billing/budget";
 import { recommendBudgetCapUsd } from "@/lib/billing/recommendations";
 import { formatMicroCentsAsUsd } from "@/lib/billing/usage/pricing";
 import {
-  PER_SEAT_MONTHLY_USD_CENTS,
   SEAT_BANDS,
   TIER_ORDER,
   TIER_TAGLINE,
   tierDisplayName,
   tierFromVerticalTier,
-  monthlyChargeUsdCents,
   type TierName,
 } from "@/lib/pricing/tiers";
+import { MONTHLY_PRICE_USD_CENTS } from "@/lib/billing/facts";
 import {
   addPaymentMethodAction,
   cancelSubscriptionAction,
@@ -110,9 +109,10 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
   const tier: TierName = subscription
     ? tierFromVerticalTier(subscription.tier)
     : tierFromVerticalTier(workspace.verticalTier);
-  const charge = subscription
-    ? monthlyChargeUsdCents(tier, subscription.seats)
-    : null;
+  // Read the price directly. `monthlyChargeUsdCents(tier, seats)` is a
+  // deprecated shim whose tier and seat arguments are both ignored, and whose
+  // `perSeatCents` and `totalCents` fields now return the SAME number.
+  const monthlyCents = subscription ? MONTHLY_PRICE_USD_CENTS : null;
   const hasPaymentMethod = Boolean(subscription?.defaultPaymentMethodId);
   const currentSeats = subscription?.seats ?? 1;
   const trialDays = env.stripeTrialPeriodDays();
@@ -124,7 +124,7 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
   // explicit cap on this workspace. Max (quote-based) has no productized price,
   // so no recommendation.
   const monthlyRevenueUsd =
-    charge && tier !== "max" ? charge.totalCents / 100 : null;
+    monthlyCents !== null && tier !== "max" ? monthlyCents / 100 : null;
   const recommendedBudgetUsd =
     monthlyRevenueUsd !== null ? recommendBudgetCapUsd(monthlyRevenueUsd) : null;
 
@@ -135,7 +135,8 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
         Your plan and invoices.
       </h1>
       <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
-        Per-seat, monthly, month-to-month.{" "}
+        One flat price, monthly, month-to-month — it does not change with the
+        number of people on the workspace.{" "}
         {checkoutEnabled
           ? `First ${trialDays} days on us — card collected at signup, charged only when the trial ends. Cancel before day ${trialDays} to owe nothing.`
           : `First ${trialDays} days on us — add a card any time before your trial ends and your subscription rolls over without a gap.`}
@@ -237,8 +238,14 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
                       <p className="mt-1 font-display text-xl text-ink">
                         {subscription.seats}
                       </p>
+                      {/* Seats are RECORD-KEEPING under flat pricing. This
+                          line used to read `{perSeatCents}/seat/mo`, which
+                          after the collapse rendered "$99/seat/mo" beside a
+                          "$99" monthly total — implying seats x $99 while
+                          billing $99. Both came from the same shim and were
+                          the same number. */}
                       <p className="mt-1 text-[13px] text-ink-soft">
-                        {formatCents(charge?.perSeatCents ?? 0)}/seat/mo
+                        included — the price is the same at any team size
                       </p>
                     </div>
                     <div>
@@ -246,7 +253,7 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
                         monthly
                       </p>
                       <p className="mt-1 font-display text-xl text-ink">
-                        {formatCents(charge?.totalCents ?? 0)}
+                        {formatCents(MONTHLY_PRICE_USD_CENTS)}
                       </p>
                       <p className="mt-1 text-[13px] text-ink-soft">
                         Next charge {formatDate(subscription.currentPeriodEnd)}
@@ -567,9 +574,13 @@ function TierCard({
 }) {
   const bullets = TIER_BULLETS[tier].bullets;
   const isMax = tier === "max";
+  // One flat price for every self-serve plan. This read
+  // `from ${formatCents(PER_SEAT_MONTHLY_USD_CENTS[tier].SEATS_50_99)}/seat`,
+  // which after the flat-price collapse printed the SAME label on both plan
+  // cards ("from $99/seat") — a plan comparison with no difference in it.
   const priceLabel = isMax
     ? "Quote-based"
-    : `from ${formatCents(PER_SEAT_MONTHLY_USD_CENTS[tier].SEATS_50_99)}/seat`;
+    : `${formatCents(MONTHLY_PRICE_USD_CENTS)}/month`;
 
   return (
     <div className="bg-paper p-6 md:p-7">
@@ -579,7 +590,7 @@ function TierCard({
         </p>
       ) : (
         <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-          {tier === "regular" ? "standard service" : tier === "plus" ? "with a named partner" : "custom"}
+          {tier === "regular" ? "standard service" : tier === "plus" ? "with priority support" : "custom"}
         </p>
       )}
       <p className="mt-2 font-display text-2xl leading-tight text-ink">

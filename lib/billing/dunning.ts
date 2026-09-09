@@ -36,9 +36,9 @@ import type { EmailProvider } from "@/lib/email";
 import { withSystemContext as defaultWithSystemContext } from "@/lib/db";
 import type { SystemContextRunner } from "@/lib/billing/provisioning";
 import {
-  monthlyChargeUsdCents,
   tierFromVerticalTier,
 } from "@/lib/pricing/tiers";
+import { MONTHLY_PRICE_USD_CENTS } from "@/lib/billing/facts";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -209,7 +209,6 @@ export async function findDunningCandidates(
         .filter((s): s is DunningStage => s !== null);
 
       const tier = tierFromVerticalTier(sub.tier);
-      const charge = monthlyChargeUsdCents(tier, sub.seats);
 
       out.push({
         workspaceId: sub.workspace.id,
@@ -221,7 +220,7 @@ export async function findDunningCandidates(
         currentPeriodEnd: sub.currentPeriodEnd,
         firstFailedAt,
         stagesSent,
-        amountUsdCents: charge.totalCents,
+        amountUsdCents: MONTHLY_PRICE_USD_CENTS,
       });
     }
     return out;

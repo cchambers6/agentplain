@@ -2,7 +2,13 @@ import type { VerticalContent } from "../types";
 import {
   TRIAL_PERIOD_DAYS,
   MONEY_BACK_GUARANTEE_DAYS,
+  MONTHLY_PRICE_USD_CENTS,
 } from "../../billing/facts";
+
+// One flat price for every vertical and every customer. READ, never
+// restated: hardcoding "$99" here is exactly how the retired per-seat
+// ladder outlived the engine that stopped producing it.
+const FLAT = "$" + MONTHLY_PRICE_USD_CENTS / 100;
 
 // Source: `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.2 (insurance
 // brokerages — composite 35, tied #1 in the ranked analysis). The fleet
@@ -36,7 +42,7 @@ export const insurance: VerticalContent = {
     },
     {
       q: "How much does agentplain cost for an agency?",
-      a: `Insurance is recommended at the Regular tier — $199 per seat per month for a solo producer, sliding to $99 per seat at 50+ seats. Every tier is per seat and month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
+      a: `${FLAT} per month. One flat price — the same whether you are a solo producer or a multi-CSR agency, and the same across every vertical. Month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
     },
     {
       q: "Does the fleet send anything to clients or carriers on its own?",
@@ -264,13 +270,13 @@ export const insurance: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "11x–23x",
-    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — 7-day free trial, card at signup",
-    outputValue: "$27,000 / yr per CSR seat saved",
+    multiplier: "23x+",
+    inputCost: `${FLAT}/month flat — ${TRIAL_PERIOD_DAYS}-day free trial, card at signup`,
+    outputValue: "$27,000 / yr saved per CSR",
     math:
-      "1 CSR @ $52k all-in × 30% of day on COIs (per b2b_vertical_opportunity_analysis_2026-04-27.md §3.2) = $15,600/yr in COI labor alone. Add renewal-prep reclamation (~$11,400/yr) and the per-CSR value is ~$27k/yr (~$2,250/mo) returned. Solo case: against the Regular-tier solo seat ($199/mo) = ~11x ROI. At-scale case: same per-CSR value against the 50-seat-band price ($99/mo) = ~23x. Multi-CSR agencies typically see the at-scale economics.",
+      "1 CSR @ $52k all-in × 30% of day on COIs (per b2b_vertical_opportunity_analysis_2026-04-27.md §3.2) = $15,600/yr in COI labor alone. Add renewal-prep reclamation (~$11,400/yr) and the per-CSR value is ~$27k/yr (~$2,250/mo) returned. Against the flat ${FLAT}/month ($1,188/yr) that is ~23x for a single CSR. Because the price does not scale with headcount, every additional CSR raises the return rather than the bill: a 3-CSR agency reclaiming ~$81k/yr against the same $1,188/yr runs past 65x.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (Regular tier per the 2026-05-15 three-tier ratification — Regular is the default entry path; agencies wanting named-service-partner reserved time can step up to Partner ($299→$199/seat), and high-intensity engagements route to Max (quote-based)). ROI band per `project_pricing_value_anchor.md` (Regular-tier value $2,900–$10,600/mo per seat). COI labor share per `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.2 (\"one CSR can spend 30%+ of the day on it\"). Salary midpoint based on US BLS 2024 SOC 13-2053 (claims/policy processing clerks) — flagged in capability inbox as a primary-research target before first design partner ratifies the math.",
+      "Pricing per `lib/billing/facts.ts` (`MONTHLY_PRICE_USD_CENTS`) — ONE flat monthly price, the same for every customer and every vertical, whatever the headcount. Trial + money-back mechanics per the same module. ROI band per `project_pricing_value_anchor.md` (value $2,900–$10,600/mo). COI labor share per `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.2 (\"one CSR can spend 30%+ of the day on it\"). Salary midpoint based on US BLS 2024 SOC 13-2053 (claims/policy processing clerks) — flagged in capability inbox as a primary-research target before first design partner ratifies the math.",
     violationAvoidance:
       "Claims and policy correspondence falls under each state's adoption of the NAIC Unfair Claims Settlement Practices Act (Model Law 900) — penalties run from $1,000 to as much as $25,000 per violation, up to suspension or revocation of the insurer's license, and replacement-cost mis-statements draw their own state market-conduct fines. A tool that auto-sends a CSR's claim update can commit an unfair-claims violation in a single message; agentplain's fleet drafts the update and a licensed human approves it before it leaves, keeping the per-violation exposure off the books. That downside the approval gate removes is value the 11x–23x hours math never captures — and an auto-send competitor cannot promise to dodge it.",
   },

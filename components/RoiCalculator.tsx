@@ -5,23 +5,23 @@ import { useMemo, useState } from "react";
 import { tokens } from "@/lib/brand/tokens";
 import {
   MONEY_BACK_GUARANTEE_DAYS,
-  PER_SEAT_MONTHLY_USD_CENTS,
   TIER_TAGLINE,
   TRIAL_PERIOD_DAYS,
   TRIAL_PERIOD_DAYS_EXTENDED,
   tierDisplayName,
   type TierName,
 } from "@/lib/pricing/tiers";
+import { MONTHLY_PRICE_USD_CENTS } from "@/lib/billing/facts";
 
 // Interactive ROI calculator. Anchored to the three customer-facing tiers
 // per the 2026-05-15 amendment to `project_stripe_both_surfaces.md`, updated
 // for the 2026-06-14 Partner ratification:
 //
 //   Regular — standard managed AI ops. Automation math.
-//   Partner — same automation math; Partner adds priority support and a
-//             quarterly async check-in (not dollarized here). Its higher
-//             per-seat price makes the ROI multiple read lower than Regular
-//             for the same reclaimed hours — which is honest.
+//   Partner — SAME automation math and the SAME price; Partner adds priority
+//             support and a quarterly async check-in (not dollarized here).
+//             Under flat pricing the ROI multiple is identical to Regular's,
+//             because the cost side of the ratio is identical.
 //   Max     — quote-based; no math, CTA into /custom?type=max.
 //
 // Per `feedback_no_guesses_no_estimates.md`, the Regular productive-hour rate
@@ -34,34 +34,16 @@ import {
 // no third-party dependencies. The math is documented inline so a customer
 // can audit it from view-source.
 
-interface TierBand {
-  /** Inclusive seat-count lower bound for this band. */
-  min: number;
-  /** Per-seat price for this band, in USD. */
-  price: number;
-}
-
-// Regular + Partner per-seat ladders. Reads from `lib/pricing/tiers` so
-// the calculator stays in lockstep with billing checkout. Max is omitted
-// — the calculator displays a CTA for it rather than math.
-function ladderForTier(tier: "regular" | "plus"): TierBand[] {
-  const row = PER_SEAT_MONTHLY_USD_CENTS[tier];
-  return [
-    { min: 1, price: row.SEATS_1 / 100 },
-    { min: 2, price: row.SEATS_2_9 / 100 },
-    { min: 10, price: row.SEATS_10_24 / 100 },
-    { min: 25, price: row.SEATS_25_49 / 100 },
-    { min: 50, price: row.SEATS_50_99 / 100 },
-  ];
-}
-
-function priceForSeats(tier: "regular" | "plus", seats: number): number {
-  const ladder = ladderForTier(tier);
-  for (let i = ladder.length - 1; i >= 0; i--) {
-    if (seats >= ladder[i].min) return ladder[i].price;
-  }
-  return ladder[0].price;
-}
+// The subscription cost is ONE FLAT PRICE, independent of seats and tier.
+//
+// WAS: a `ladderForTier()` / `priceForSeats()` pair that read the five seat
+// bands out of `PER_SEAT_MONTHLY_USD_CENTS` and a `subscription = perSeat *
+// seats` multiplication. After the flat-price collapse every band cell holds
+// the same number, so the ladder lookup became a no-op AND the multiplication
+// became a live arithmetic ERROR: a 10-seat firm was shown a $990/month
+// subscription cost against a real bill of $99, which understated its ROI by
+// 10x. Nothing threw — the numbers were all valid, just wrong.
+const FLAT_MONTHLY_USD = MONTHLY_PRICE_USD_CENTS / 100;
 
 // Conservative default inputs aligned with `project_pricing_value_anchor.md`
 // (8-15 hr/wk on systematic ops; $75-$150/hr productive-hour rate). We pick
@@ -99,8 +81,9 @@ export default function RoiCalculator() {
       return null;
     }
     const clampedSeats = Math.min(Math.max(seats, 1), 99);
-    const perSeat = priceForSeats(tier, clampedSeats);
-    const subscription = perSeat * clampedSeats;
+    // Flat: the bill does not multiply by headcount.
+    const perSeat = FLAT_MONTHLY_USD;
+    const subscription = FLAT_MONTHLY_USD;
     const automationValuePerSeat = hours * rate * WEEKS_PER_MONTH;
     const automationValue = automationValuePerSeat * clampedSeats;
     const value = automationValue;
@@ -180,7 +163,7 @@ export default function RoiCalculator() {
                 <Row
                   label="Subscription cost"
                   value={fmtDollars(result.subscription)}
-                  detail={`${result.clampedSeats} seat${result.clampedSeats > 1 ? "s" : ""} @ ${fmtDollars(result.perSeat)}/seat · ${TRIAL_PERIOD_DAYS}-day free trial`}
+                  detail={`flat, at any team size · ${TRIAL_PERIOD_DAYS}-day free trial`}
                 />
                 <Row
                   label="Automation value recovered"

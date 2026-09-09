@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { ApHeritageButton, ApHeritageField } from "@/components/ui/ap";
 import {
-  PER_SEAT_MONTHLY_USD_CENTS,
   TIER_TAGLINE,
   tierDisplayName,
   type TierName,
 } from "@/lib/pricing/tiers";
+import { MONTHLY_PRICE_USD_CENTS } from "@/lib/billing/facts";
 import { trialCardPolicy } from "@/lib/billing/trial-copy";
 import {
   signUpAction,
@@ -36,15 +36,25 @@ const PICKER_OPTIONS: ReadonlyArray<{
   headline: string;
   priceLabel: string;
 }> = [
+  // Both self-serve options are the SAME price — flat pricing removed the
+  // price half of the tier concept while leaving the support difference
+  // intact. These labels previously read "from $X/seat" off
+  // `PER_SEAT_MONTHLY_USD_CENTS`, which after the collapse rendered the
+  // IDENTICAL string on both cards ("from $99/seat"), implying a price
+  // comparison between two options that cost the same. The differentiator is
+  // stated in words instead.
+  //
+  // NOTE: which tiers appear here is a PURCHASABILITY question governed by
+  // `SELF_SERVE_TIERS`, deliberately untouched.
   {
     tier: "regular",
     headline: tierDisplayName("regular"),
-    priceLabel: `from $${PER_SEAT_MONTHLY_USD_CENTS.regular.SEATS_50_99 / 100}/seat`,
+    priceLabel: `$${MONTHLY_PRICE_USD_CENTS / 100}/month`,
   },
   {
     tier: "plus",
     headline: tierDisplayName("plus"),
-    priceLabel: `from $${PER_SEAT_MONTHLY_USD_CENTS.plus.SEATS_50_99 / 100}/seat`,
+    priceLabel: `$${MONTHLY_PRICE_USD_CENTS / 100}/month · priority support`,
   },
   {
     tier: "max",

@@ -8,9 +8,9 @@ import {
 import { recommendBudgetCapUsd } from "@/lib/billing/recommendations";
 import { formatMicroCentsAsUsd } from "@/lib/billing/usage/pricing";
 import {
-  monthlyChargeUsdCents,
   tierFromVerticalTier,
 } from "@/lib/pricing/tiers";
+import { MONTHLY_PRICE_USD_CENTS } from "@/lib/billing/facts";
 import { BudgetSummary } from "../settings/billing/BudgetSummary";
 import { UsagePanel } from "../settings/billing/UsagePanel";
 
@@ -45,11 +45,10 @@ export default async function UsageDashboardPage({ params }: PageProps) {
   const tier = subscription
     ? tierFromVerticalTier(subscription.tier)
     : tierFromVerticalTier(workspace.verticalTier);
-  const charge = subscription
-    ? monthlyChargeUsdCents(tier, subscription.seats)
-    : null;
+  // Read the price directly rather than through the deprecated
+  // `monthlyChargeUsdCents` shim, whose tier and seat arguments are ignored.
   const monthlyRevenueUsd =
-    charge && tier !== "max" ? charge.totalCents / 100 : null;
+    subscription && tier !== "max" ? MONTHLY_PRICE_USD_CENTS / 100 : null;
   const recommendedBudgetUsd =
     monthlyRevenueUsd !== null ? recommendBudgetCapUsd(monthlyRevenueUsd) : null;
 

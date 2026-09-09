@@ -52,7 +52,16 @@ import type { KnowledgeUpsertInput } from './types';
 import { getAllVerticals, getAllVerticalsIncludingOnRamps } from '../verticals';
 import type { VerticalContent } from '../verticals/types';
 import { listCorpusVerticals, loadCorpusFor } from '../agents/sentinel';
-import { tierDisplayName, type TierName } from '../pricing/tiers';
+import { isSelfServeTier, tierDisplayName, type TierName } from '../pricing/tiers';
+// The price is READ, never restated. Hardcoding "$99" into a doctrine row is
+// exactly how the retired per-seat ladder survived in this corpus after the
+// engine had already moved on.
+import { ANNUAL_PRICE_USD_CENTS, MONTHLY_PRICE_USD_CENTS } from '../billing/facts';
+
+/** Flat monthly price rendered as whole dollars, e.g. "99". */
+const FLAT_MONTHLY_DOLLARS = String(MONTHLY_PRICE_USD_CENTS / 100);
+/** Flat annual price rendered with a thousands separator, e.g. "1,188". */
+const FLAT_ANNUAL_DOLLARS = (ANNUAL_PRICE_USD_CENTS / 100).toLocaleString('en-US');
 
 // ── SKILL corpus ────────────────────────────────────────────────────────
 
@@ -351,7 +360,17 @@ function chunkVertical(v: VerticalContent): KnowledgeUpsertInput[] {
     sourceType: 'vertical_content',
     sourceId: `vertical:${v.slug}:hero`,
     title: `${v.name} — hero & value proposition`,
-    body: `Vertical: ${v.name}. Tier: ${v.tier}. Mission audience: ${v.missionSubject ?? v.name}.
+    // NOTE: this row is contextKind VERTICAL, which IS in the customer chat's
+    // retrieval set. It previously interpolated the raw Prisma tier enum
+    // ("Tier: max"), which leaked internal identity into a customer-visible
+    // answer AND implied a price distinction that no longer exists. Pricing is
+    // flat; the only thing the tier still encodes is the sales motion.
+    body: `Vertical: ${v.name}. Mission audience: ${v.missionSubject ?? v.name}.
+Pricing: ${
+      isSelfServeTier(v.tier as TierName)
+        ? `flat $${FLAT_MONTHLY_DOLLARS}/month ($${FLAT_ANNUAL_DOLLARS}/year), the same price as every other vertical.`
+        : `quote-based engagement — this vertical is not self-serve purchasable. The underlying subscription is the same flat $${FLAT_MONTHLY_DOLLARS}/month ($${FLAT_ANNUAL_DOLLARS}/year) as every other vertical.`
+    }
 Eyebrow: ${v.hero.eyebrow}
 Headline: ${v.hero.headline}
 Value prop: ${v.hero.valueProp}`,
@@ -647,8 +666,8 @@ Q2. What is agentplain? — AI ops layer that runs as a fleet of agents inside y
 Q3. What does the app do? Can everyone use it? — One unified product. 1-seat solo to N-seat workspace.
 Q4. What makes it unique? — Vertical-aware; you stay in control (drafts, never auto-sends); integrates with what you already use; built BY agents; compliance-first.
 Q5. How easy is it to use? — Sign up free, pick your vertical, connect Gmail or CRM in 60 seconds, see drafts within minutes.
-Q6. Why should anyone believe us? — Eat-our-own-cooking; counsel-reviewed compliance corpus; flatsbo brokerage v0; ROI math anchored in concrete per-vertical examples (15-50x per workflow, plus avoided regulatory violations a draft-then-approve loop keeps from ever sending).
-Q7. ROI? — 15-50x per workflow anchored in $2,900-$10,600/mo value vs $99-$199/mo subscription, on top of the regulatory penalties (TCPA, fair-housing, RESPA, SEC Marketing Rule, EEOC, etc.) that auto-execution competitors can't promise to dodge.
+Q6. Why should anyone believe us? — Eat-our-own-cooking; counsel-reviewed compliance corpus; flatsbo brokerage running in production today; ROI math anchored in concrete per-vertical examples (15-50x per workflow, plus avoided regulatory violations a draft-then-approve loop keeps from ever sending).
+Q7. ROI? — 15-50x per workflow anchored in $2,900-$10,600/mo value vs the flat $${FLAT_MONTHLY_DOLLARS}/mo subscription, on top of the regulatory penalties (TCPA, fair-housing, RESPA, SEC Marketing Rule, EEOC, etc.) that auto-execution competitors can't promise to dodge.
 Q8. Future of work? — Humans focus on what only humans can do; AI handles what AI is better at.
 Q9. Why now? — Models got good enough in 2025; vendor APIs stabilized; compliance frameworks clear; demand real.`,
     source: 'memory/project_agentplain_mission_and_positioning.md',
@@ -668,7 +687,7 @@ This is not a marketing slogan — it's the operational shape of the product, th
 
 Why this is the right answer:
 1. Anthropic commoditized the TOOL, not the SERVICE. Anthropic isn't a services company.
-2. SMB owners are time-starved, not budget-starved. $99-$199/seat is a rounding error vs. the time cost of learning to be an AI ops person.
+2. SMB owners are time-starved, not budget-starved. A flat $${FLAT_MONTHLY_DOLLARS}/month is a rounding error vs. the time cost of learning to be an AI ops person.
 3. Aligns with the locked mission verbatim — "doing the work" IS service partnership.
 4. Vertical-specific knowledge substrate IS the codified service expertise.
 5. /custom engagements are the natural extension of the service relationship.
@@ -680,64 +699,61 @@ Acceptable framings: "the platform we run for you", "managed AI ops", "your AI o
   {
     slug: 'pricing-three-tier-2026-05-15',
     title:
-      "agentplain pricing — three customer-facing tiers (Regular / Partner / Max), ratified 2026-05-15",
-    body: `LOCKED 2026-05-15. Supersedes the 2026-05-12 simplified Regular-only model.
+      `agentplain pricing — one flat price, $${FLAT_MONTHLY_DOLLARS}/month for every customer and every vertical`,
+    body: `LOCKED. Supersedes the 2026-05-15 three-tier seat-based model and every earlier ladder.
 
-THREE customer-facing tiers + a separate /custom path:
+ONE FLAT PRICE: $${FLAT_MONTHLY_DOLLARS}/month. $${FLAT_ANNUAL_DOLLARS}/year. That is the entire price list.
 
-REGULAR — $99-$199/seat (ladder by volume). Standard managed AI ops + onboarding bundled in. "We install. We run. We customize standard skills for you."
-PARTNER — $199-$299/seat (ladder by volume). Named-service-partner with 4 hrs/mo reserved time. "Same as Regular, plus your named partner with reserved hours each month for skill iteration, deeper integration, and monthly business review."
-MAX — AD-HOC quote-based. High-intensity service / multi-state ops / white-label / dedicated team. NOT a fixed published price-per-seat.
+It does not vary by seat count, by volume, by tier, or by vertical. One price, one line on the invoice, whatever the headcount. A solo operator and a 40-person firm pay the same $${FLAT_MONTHLY_DOLLARS}/month.
 
-Plus /custom for bespoke capability builds ($5K-$15K + $200-$500/mo maintenance). /custom and Max differ in shape: Max = MORE SERVICE INTENSITY at standard skill scope; /custom = BUILD NEW CAPABILITIES we don't have yet. A customer can be on Max AND have a /custom engagement.
+The number lives in lib/billing/facts.ts (MONTHLY_PRICE_USD_CENTS) and is pinned by tests/billing-pricing.test.ts. Changing it is Conner's call, not an agent's.
 
-Per-tier ladder (verbatim from lib/pricing/tiers.ts):
-| Volume      | Regular | Partner | Max   |
-| 1 seat      | $199    | $299    | quote |
-| 2-9 seats   | $179    | $279    | quote |
-| 10-24 seats | $149    | $249    | quote |
-| 25-49 seats | $119    | $219    | quote |
-| 50-99 seats | $99     | $199    | quote |
-| 100+ seats  | enterprise quote | enterprise quote | quote |
+Why flat: ratified by Conner — "We need flat costs. Tiering based on vertical won't be received by the market." The price is anchored to the WEAKEST vertical, not the strongest, so it survives a budget review everywhere: law floor $3,000/yr (2.5x), real-estate floor $4,000/yr (3.4x), CPA floor $7,000/yr (5.9x).
 
-First month free across Regular + Partner. Month-to-month from day one. NO per-vertical pricing differentiation. NO freemium tier.
+Separate from the subscription: /custom for bespoke capability builds ($5K-$15K + $200-$500/mo maintenance). That is a DIFFERENT PRODUCT — building new capabilities that don't exist yet — and it is unaffected by flat pricing. It still quotes.
 
-Stripe schema: zero changes required. Regular + Partner Products + Prices already provisioned. Max bills via Stripe Invoices using the existing /custom Products as the invoicing path.
+Law and RIA remain quote-based engagements. That is a different SALES MOTION, not a different price; when they are quoted, the $${FLAT_MONTHLY_DOLLARS}/month subscription is what the engagement is built on top of.
 
-BANNED FRAMINGS: 3-column tier comparisons that mention a "vertical→tier" mapping (the 2026-05-12 simplified model is superseded). Single-tier-Regular-only is also superseded. Always cite the 2026-05-15 ratification when referencing pricing.`,
-    source: 'memory/project_stripe_both_surfaces.md',
-    ratified: '2026-05-15',
+Card is captured at signup. 7-day trial (14 days for CPA and Law). 14-day money-back guarantee. Cancel anytime. Month-to-month from day one. NO freemium tier.
+
+Stripe: ONE Product and ONE Price, resolved by the lookup key agentplain_flat_monthly. The 15 retired per-(tier, band) lookup keys are still parsed for pre-existing subscriptions and must not be deleted.
+
+BANNED FRAMINGS: any per-seat or "/seat" price, any volume ladder or seat-band table, any multi-column tier price comparison, "Regular tier"/"Partner tier"/"Max tier" as PRICE distinctions, "$199 → $99", "$299 → $199", "sliding to", and "first month free" (dead — the trial is the on-ramp, not a free month).`,
+    source: 'lib/billing/facts.ts',
+    ratified: '2026-09-09',
   },
   {
     slug: 'pricing-low-friction-over-margin',
     title: 'Pricing companion rule — low friction over margin (no nickel-and-diming)',
-    body: `Companion rule to the three-tier pricing lock. Don't price per-unit on things that cost agentplain pennies. Bundle into the seat fee. Add-ons that have real human-cost are OK; AI-feature paywalls aren't.
+    body: `Companion rule to the flat-price lock. Don't price per-unit on things that cost agentplain pennies. Bundle into the flat monthly price. Add-ons that have real human-cost are OK; AI-feature paywalls aren't.
 
 Two principles:
-1. AI features cost cents — listing copy, room staging, contract drafting, mortgage Q&A, etc. Marginal cost sub-dollar → bundle into the flat seat fee. Use "included" or "free with your seat". Do NOT use per-room / per-photo / per-disclosure unit pricing.
+1. AI features cost cents — listing copy, room staging, contract drafting, mortgage Q&A, etc. Marginal cost sub-dollar → bundle into the flat $${FLAT_MONTHLY_DOLLARS}/month. Use "included" or "included in your subscription". Do NOT use per-room / per-photo / per-disclosure unit pricing.
 2. Real human services CAN have add-on fees. Pro photography, escrow handling, attorney/title services, premium MLS upgrades, paid social spend — these have real cost-per-unit. Add-on pricing is fine here, transparent, opt-in.
 
-Banned phrases in customer-facing copy: "$X per room" / "$X per photo" / "$X per disclosure" / "Premium feature" / "Upgrade to unlock" for sub-dollar-cost AI capabilities.
+Banned phrases in customer-facing copy: "$X per room" / "$X per photo" / "$X per disclosure" / "Premium feature" / "Upgrade to unlock" for sub-dollar-cost AI capabilities. Also banned: "free with your seat" and any other framing that prices by the seat — there is no seat fee, there is one flat monthly price.
 
-Audit checklist for any price-mentioning surface: "is this a real human-cost service or a sub-dollar AI feature?" If AI → bundle into seat fee OR make explicitly free. If human service → add-on, but always opt-in.`,
+Audit checklist for any price-mentioning surface: "is this a real human-cost service or a sub-dollar AI feature?" If AI → included in the flat price OR make explicitly free. If human service → add-on, but always opt-in.`,
     source: 'memory/feedback_low_friction_over_margin.md',
     ratified: '2026-04-27',
   },
   {
     slug: 'pricing-max-friction-reduction',
     title: 'Pricing companion rule — max friction reduction for trials',
-    body: `Companion rule to the three-tier pricing lock. At the current stage (pre-PMF, hunting for first 20 paid customers), every pricing decision passes the "does this make 'try it' easier or harder?" test. If harder, kill it unless load-bearing for unit economics or compliance.
+    body: `Companion rule to the flat-price lock. At the current stage (pre-PMF, hunting for first 20 paid customers), every pricing decision passes the "does this make 'try it' easier or harder?" test. If harder, kill it unless load-bearing for unit economics or compliance.
 
 Locked decisions:
 1. NO pilot fees. Period. The $1,500/$2,750/$4,500 pilot model was killed 2026-05-09. Don't propose them again until past 20 paid customers.
-2. First month free across all three tiers. Card on file at signup, $0 charged month 1, per-seat kicks in month 2.
-3. Month-to-month from day one. No annual lock-in required. Annual SKUs exist as a discount choice, not a default.
+2. A free TRIAL is the on-ramp — 7 days by default, 14 for CPA and Law. "First month free" is DEAD and must never be restated; a card IS captured at signup and the first charge lands when the trial ends. Backstop is the 14-day money-back guarantee.
+3. Month-to-month from day one. No annual lock-in required.
 4. Self-serve signup, no sales call required.
-5. NO credit-card-required-to-see-pricing. Pricing is on the public marketing page.
-6. NO minimum-seat requirement. Solo realtor = 1 seat workspace = supported.
+5. NO credit-card-required-to-see-pricing. Pricing is public on the marketing page. NOTE: a card IS required to START THE TRIAL — those are two different claims and copy must not blur them.
+6. NO minimum-seat requirement. Solo realtor = supported, at the same flat price as everyone else.
 7. NO setup fees, NO implementation fees, NO professional services fees for standard onboarding.
 
-Load-bearing (don't kill): per-seat pricing, tier differentiation (Regular/Partner/Max), annual discount, /custom SKU.`,
+Load-bearing (don't kill): the ONE flat price, the trial-length split (7 / 14 for CPA + Law), the money-back guarantee, the quote-only sales motion for law and RIA, and the /custom SKU.
+
+RETIRED, do not reinstate: per-seat pricing, volume ladders, and tier price differentiation (Regular/Partner/Max). Tier names still exist in the database as sales-motion identity; they are NOT price distinctions.`,
     source: 'memory/feedback_max_friction_reduction_for_trials.md',
     ratified: '2026-05-09',
   },

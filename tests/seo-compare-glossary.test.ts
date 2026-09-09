@@ -7,6 +7,7 @@ import {
   getComparison,
 } from "@/lib/marketing/comparisons";
 import { GLOSSARY_TERMS } from "@/lib/marketing/glossary";
+import { MONTHLY_PRICE_USD_CENTS } from "@/lib/billing/facts";
 import {
   organizationJsonLd,
   webSiteJsonLd,
@@ -65,13 +66,22 @@ describe("aeo — comparison pages", () => {
     }
   });
 
-  it("pricing claims cite only the locked $99–$299 ladder (+ cited regulatory figures)", () => {
-    // Seat prices must be the locked ladder. The single non-price figure
-    // allowed is the HUD first-offense fair-housing civil penalty — a cited
-    // regulatory amount (24 CFR 180.671, 2025 inflation adjustment), sourced
-    // in docs/marketing/compare-pages-2026-07-08/RESEARCH-NOTES.md. Any new
+  it("pricing claims cite ONLY the one flat price (+ cited regulatory figures)", () => {
+    // Pricing is flat: exactly ONE price may appear. $199 and $299 were rungs
+    // of the retired per-seat ladder and are removed from this allowlist —
+    // leaving them would have let a dead price return through the one test
+    // that specifically polices dollar figures on the comparison pages.
+    //
+    // The single non-price figure allowed is the HUD first-offense
+    // fair-housing civil penalty — a cited regulatory amount (24 CFR 180.671,
+    // 2025 inflation adjustment), sourced in
+    // docs/marketing/compare-pages-2026-07-08/RESEARCH-NOTES.md. Any new
     // dollar figure needs a source note there before it lands here.
-    const ALLOWED = ["$99", "$199", "$299", "$26,262"];
+    //
+    // NOTE on the extractor: /\$[\d,]+/g includes "," in its character class,
+    // so "$99," (price followed by a comma) does NOT equal "$99". Keep prices
+    // clear of a trailing comma in copy.
+    const ALLOWED = [`$${MONTHLY_PRICE_USD_CENTS / 100}`, "$26,262"];
     for (const c of getAllComparisons()) {
       const blob = deepStrings(c).join(" ");
       const dollars = blob.match(/\$[\d,]+/g) ?? [];

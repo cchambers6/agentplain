@@ -2,7 +2,13 @@ import type { VerticalContent } from "../types";
 import {
   TRIAL_PERIOD_DAYS,
   MONEY_BACK_GUARANTEE_DAYS,
+  MONTHLY_PRICE_USD_CENTS,
 } from "../../billing/facts";
+
+// One flat price for every vertical and every customer. READ, never
+// restated: hardcoding "$99" here is exactly how the retired per-seat
+// ladder outlived the engine that stopped producing it.
+const FLAT = "$" + MONTHLY_PRICE_USD_CENTS / 100;
 
 // Source: `b2b_vertical_opportunity_analysis_2026-04-27.md` notes property
 // management as a roadmap-fit vertical (operating-model analog to realty).
@@ -36,7 +42,7 @@ export const propertyManagement: VerticalContent = {
     },
     {
       q: "How much does agentplain cost for a property-management company?",
-      a: `Property management is recommended at the Regular tier — $199 per seat per month for a solo operator, sliding to $99 per seat at 50+ seats. Every tier is per seat and month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
+      a: `${FLAT} per month. One flat price — the same whether you are a solo operator or a multi-PM portfolio, and the same across every vertical. Month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
     },
     {
       q: "I run Buildium — how does agentplain connect to it?",
@@ -283,13 +289,13 @@ export const propertyManagement: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "15x",
-    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — 7-day free trial, card at signup",
+    multiplier: "30x",
+    inputCost: `${FLAT}/month flat — ${TRIAL_PERIOD_DAYS}-day free trial, card at signup`,
     outputValue: "$36,000 / yr saved on PM-hour and delinquency reclamation",
     math:
-      "1 PM @ $48k all-in × ~25% of day on tenant inbound and maintenance routing = $12k/yr per PM in labor reclamation. At 3 PMs that is $36k against 3 Regular-tier seats at $199/mo solo ($7,164/yr) — ~5x at three PMs, sliding to ~15x+ as a portfolio grows past 25 seats and per-seat drops to $119/mo. Delinquency-day compression of 2 days/month at $200/door in rent float × 200 doors = $80k/yr additional in worst-case operations (modeled as upside, not committed).",
+      `1 PM @ $48k all-in × ~25% of day on tenant inbound and maintenance routing = $12k/yr per PM in labor reclamation. At 3 PMs that is $36k/yr against the flat ${FLAT}/month ($1,188/yr) = ~30x. The price does not scale with headcount, so a growing portfolio raises the multiple on an unchanged bill rather than adding seats to the invoice. Delinquency-day compression of 2 days/month at $200/door in rent float × 200 doors = $80k/yr additional in worst-case operations (modeled as upside, not committed).`,
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (Regular tier per the 2026-05-15 three-tier ratification — Regular is the default entry path; PM operations wanting named-service-partner reserved time can step up to Partner ($299→$199/seat), and high-intensity multi-state portfolios route to Max (quote-based)). ROI band per `project_pricing_value_anchor.md`. PM-hour distribution and delinquency-float math pending primary-research validation — flagged in capability inbox. Buildium/AppFolio market dynamics referenced from public segment reporting; specific savings claims are operator-modeled, not customer-attested.",
+      "Pricing per `lib/billing/facts.ts` (`MONTHLY_PRICE_USD_CENTS`) — ONE flat monthly price, the same for every customer and every vertical, whatever the headcount. Trial + money-back mechanics per the same module. ROI band per `project_pricing_value_anchor.md`. PM-hour distribution and delinquency-float math pending primary-research validation — flagged in capability inbox. Buildium/AppFolio market dynamics referenced from public segment reporting; specific savings claims are operator-modeled, not customer-attested.",
     violationAvoidance:
       "Tenant communications carry Fair Housing Act exposure (first-offense HUD civil penalty of $26,262, 2025 inflation-adjusted, 24 CFR §180.671) plus each state's landlord-tenant notice, disclosure, and timing rules — an improper eviction or entry notice is its own per-violation liability. An auto-sent tenant reply can become a fair-housing or improper-notice violation instantly; agentplain's fleet drafts the reply and holds it for a property manager to approve before it sends, so fair-housing-risky or improper-notice language is caught at the draft stage — keeping the per-violation penalty off the ledger. (A property-management fair-housing pass is loaded and activates after counsel review; today the safeguard is the human approval gate, which depends on nothing going out without a person.) That avoided downside is real ROI the 15x hours math leaves out.",
   },

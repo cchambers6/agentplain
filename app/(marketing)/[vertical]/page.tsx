@@ -91,7 +91,7 @@ export default function VerticalPage({
         data={verticalServiceJsonLd(content)}
       />
       {/* Product payload — softened ROI band (15–50× cap; 107× never emitted)
-          + a real per-seat Offer from the locked pricing ladder. */}
+          + a single flat-price Offer read from the billing SSOT. */}
       <JsonLd
         id={`ld-vertical-product-${content.slug}`}
         data={verticalProductJsonLd(content)}

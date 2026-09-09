@@ -6,11 +6,12 @@ import HeroBackdrop from "@/components/marketing/HeroBackdrop";
 import DesignPartnerGrid from "@/components/trust/DesignPartnerGrid";
 import { getAllVerticals } from "@/lib/verticals";
 import { alternatesFor } from "@/lib/seo/metadata";
+import { MONTHLY_PRICE_USD_CENTS } from "@/lib/billing/facts";
 
 export const metadata: Metadata = {
   title: "Verticals",
   description:
-    "One managed AI fleet, ten verticals — real estate to RIA. Per-seat service partnership from $99/seat; bespoke scope on /custom. Run for you.",
+    "One managed AI fleet, ten verticals — real estate to RIA. One flat price, the same for every firm; bespoke scope on /custom. Run for you.",
   alternates: alternatesFor("/verticals"),
 };
 
@@ -43,9 +44,11 @@ export default function VerticalsIndexPage() {
             human keeps the relationships.
           </p>
           <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-mute">
-            Three service-partnership tiers cover every vertical — Regular
-            $199 → $99, Partner $299 → $199, Max quoted to scope. 7-day free
-            trial (14 days for CPA &amp; Law), card at signup. Month-to-month.
+            One price covers every vertical — $
+            {MONTHLY_PRICE_USD_CENTS / 100} a month, whatever the size of your
+            firm. Law and RIA are quoted to scope rather than bought online.
+            7-day free trial (14 days for CPA &amp; Law), card at signup.
+            Month-to-month.
           </p>
         </div>
       </section>
@@ -53,7 +56,7 @@ export default function VerticalsIndexPage() {
       <Section
         eyebrow="The ten"
         title="Pick your vertical."
-        intro="Every vertical lands at the same three-tier ladder. Vertical-aware compliance corpus, JTBD tables, and integration roadmap are scoped per vertical — the tier choice (Regular / Partner / Max) is about cadence and depth of service partnership, not which vertical you're in."
+        intro="Every vertical lands at the same flat price. The vertical-aware compliance corpus, JTBD tables, and integration roadmap are scoped per vertical — what differs between firms is the cadence and depth of the service partnership, never the price."
       >
         <Grid items={all} />
 

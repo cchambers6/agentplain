@@ -1,5 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { MONTHLY_PRICE_USD_CENTS } from "@/lib/billing/facts";
 
 import {
   organizationJsonLd,
@@ -58,11 +59,27 @@ describe("seo — Organization + SoftwareApplication", () => {
     // 2026-06-11: the isBasedOn Claude/Anthropic node was removed — the
     // underlying model is not named in crawler-facing structured data.
     assert.ok(app.isBasedOn === undefined, "must NOT declare an isBasedOn model node");
-    // Offers span the self-serve ladder; must be a real price band.
+    // ONE flat price => ONE Offer. This assertion used to require an
+    // `AggregateOffer` with a lowPrice/highPrice band; under flat pricing that
+    // shape published `lowPrice: 99, highPrice: 99, offerCount: 10` — ten
+    // identical "offers" and a range with no range in it. `AggregateOffer` is
+    // defined by schema.org as an aggregate over MULTIPLE offers, so it is now
+    // semantically wrong, not merely redundant.
     const offers = app.offers as Record<string, unknown>;
-    assert.equal(offers["@type"], "AggregateOffer");
-    assert.ok((offers.lowPrice as number) >= 99, "low price floor is $99/seat");
-    assert.ok((offers.highPrice as number) >= (offers.lowPrice as number));
+    assert.equal(offers["@type"], "Offer");
+    assert.equal(
+      offers.price,
+      MONTHLY_PRICE_USD_CENTS / 100,
+      "the published Offer must be the flat price from the billing SSOT",
+    );
+    assert.equal(offers.priceCurrency, "USD");
+    assert.equal(
+      offers.unitText,
+      undefined,
+      'no "per seat per month" unitText — the price is not per seat',
+    );
+    assert.equal(offers.lowPrice, undefined, "a single Offer has no price band");
+    assert.equal(offers.highPrice, undefined, "a single Offer has no price band");
   });
 
   it("is vendor-invisible — no AI model/provider name in any payload", () => {
@@ -117,13 +134,22 @@ describe("seo — per-vertical Product payloads", () => {
         assert.equal(
           product.offers,
           undefined,
-          `${v.slug} is Max (quoted) — must NOT publish an invented seat price`,
+          `${v.slug} is quote-only — must NOT publish a price for a scoped engagement`,
         );
       } else {
         const offers = product.offers as Record<string, unknown>;
-        assert.ok(offers, `${v.slug} self-serve tier must publish an Offer`);
-        assert.equal(offers["@type"], "AggregateOffer");
-        assert.ok((offers.lowPrice as number) > 0);
+        assert.ok(offers, `${v.slug} must publish an Offer`);
+        assert.equal(offers["@type"], "Offer");
+        assert.equal(
+          offers.price,
+          MONTHLY_PRICE_USD_CENTS / 100,
+          `${v.slug} must publish the ONE flat price, not a per-seat band`,
+        );
+        assert.equal(
+          offers.unitText,
+          undefined,
+          `${v.slug} must not carry a per-seat unitText`,
+        );
       }
     }
   });

@@ -2,7 +2,13 @@ import type { VerticalContent } from "../types";
 import {
   TRIAL_PERIOD_DAYS,
   MONEY_BACK_GUARANTEE_DAYS,
+  MONTHLY_PRICE_USD_CENTS,
 } from "../../billing/facts";
+
+// One flat price for every vertical and every customer. READ, never
+// restated: hardcoding "$99" here is exactly how the retired per-seat
+// ladder outlived the engine that stopped producing it.
+const FLAT = "$" + MONTHLY_PRICE_USD_CENTS / 100;
 
 // Source: realty-recruiter-assistant precedent in `realty_vertical_spec_v1_2026-05-03.md`
 // §2.2 (deferred-V1 recruiter shape) generalized to standalone recruiting
@@ -37,7 +43,7 @@ export const recruiting: VerticalContent = {
     },
     {
       q: "How much does agentplain cost for a recruiting firm?",
-      a: `Recruiting is recommended at the Regular tier — $199 per seat per month for a solo recruiter, sliding to $99 per seat at 50+ seats. Every tier is per seat and month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
+      a: `${FLAT} per month. One flat price — the same whether you are a solo recruiter or a ten-desk team, and the same across every vertical. Month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
     },
     {
       q: "Does the fleet send outreach to candidates on its own?",
@@ -293,13 +299,13 @@ export const recruiting: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "23x",
-    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — 7-day free trial, card at signup",
+    multiplier: "45x+",
+    inputCost: `${FLAT}/month flat — ${TRIAL_PERIOD_DAYS}-day free trial, card at signup`,
     outputValue: "$54,000 / yr per recruiter in cycle-time and placement-rate reclamation",
     math:
-      "1 recruiter @ 30% of week on sourcing + outreach drafting (~12 hours) × $75/hr loaded = $46,800/yr in labor reclamation. Add response-rate lift from substantiated outreach (modeled at +20% to placements) → $7k/yr at 2 placements baseline. Total ~$54k/yr per recruiter against the solo Regular-tier seat at $199/mo ($2,388/yr) = ~23x at one recruiter; team-of-10 on the $149 band runs ~30x+ on the same inputs.",
+      "1 recruiter @ 30% of week on sourcing + outreach drafting (~12 hours) × $75/hr loaded = $46,800/yr in labor reclamation. Add response-rate lift from substantiated outreach (modeled at +20% to placements) → $7k/yr at 2 placements baseline. Total ~$54k/yr per recruiter against the flat ${FLAT}/month ($1,188/yr) = ~45x at one recruiter. The price does not scale with desks, so a team of ten reclaiming ~$540k/yr against the same $1,188/yr runs into the hundreds of x on the same inputs.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (Regular tier per the 2026-05-15 three-tier ratification — Regular is the default entry path; recruiting shops wanting named-service-partner reserved time can step up to Partner ($299→$199/seat), and high-intensity exec-search engagements route to Max (quote-based)). ROI band per `project_pricing_value_anchor.md` (Regular-tier value $2,900–$10,600/mo per seat). Time-allocation estimates pending primary-research validation — flagged in capability inbox. Response-rate-lift claim is operator-modeled, not customer-attested.",
+      "Pricing per `lib/billing/facts.ts` (`MONTHLY_PRICE_USD_CENTS`) — ONE flat monthly price, the same for every customer and every vertical, whatever the headcount. Trial + money-back mechanics per the same module. ROI band per `project_pricing_value_anchor.md` (value $2,900–$10,600/mo). Time-allocation estimates pending primary-research validation — flagged in capability inbox. Response-rate-lift claim is operator-modeled, not customer-attested.",
     violationAvoidance:
       "Candidate outreach and screening fall under EEOC enforcement of Title VII and a growing patchwork of state and local Ban-the-Box laws — Title VII compensatory-and-punitive damages are capped at $50,000 to $300,000 per claimant by employer size (Civil Rights Act of 1991), and a single discriminatory phrasing or a premature criminal-history question is enough to trigger a claim. Auto-execution sends the screening question before anyone checks it; agentplain's fleet drafts the outreach and screening copy and a recruiter reviews and approves every draft before it sends, so a problematic message never goes out by machine. That avoided claim is downside the 23x hours math never captures, and only a human-approval loop can stand behind it.",
   },

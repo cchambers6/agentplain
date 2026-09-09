@@ -30,6 +30,7 @@ import type { PrismaClient } from '@prisma/client';
 
 import { PrismaSupportReplyStore } from './prisma-resolve-store';
 import { ApprovalDecisionError } from '../approvals/decisions';
+import { decryptPayloadForRead } from '../security/payload-crypto';
 
 const WORKSPACE_ID = 'aaaa1111-2222-4333-8444-555555555555';
 const OPERATOR_ID = 'user-operator-1';
@@ -122,6 +123,33 @@ class FakeSupportPrisma {
       if (!row) throw new Error(`approval ${args.where.id} not found`);
       Object.assign(row, args.data);
       return row;
+    },
+    /**
+     * The CONDITIONAL update the approval core now uses instead of a
+     * read-then-write.
+     *
+     * The predicate is evaluated HERE, at write time, against the row as it
+     * currently stands -- which is the property that makes the transition
+     * atomic under READ COMMITTED and is exactly what the old `findFirst` +
+     * unconditional `update` pair could not do. A fake that ignored
+     * `where.status` and always returned `{ count: 1 }` would let the tests
+     * below pass over the defect they exist to catch, so the predicate is
+     * modelled rather than stubbed.
+     */
+    updateMany: async (args: {
+      where: { id: string; workspaceId?: string; status?: string };
+      data: Partial<FakeApproval>;
+    }) => {
+      const row = this.approvals.find((r) => r.id === args.where.id);
+      if (!row) return { count: 0 };
+      if (args.where.workspaceId && row.workspaceId !== args.where.workspaceId) {
+        return { count: 0 };
+      }
+      if (args.where.status && row.status !== args.where.status) {
+        return { count: 0 };
+      }
+      Object.assign(row, args.data);
+      return { count: 1 };
     },
   };
 
@@ -226,6 +254,53 @@ describe('PrismaSupportReplyStore.recordResolved - audit evidence', () => {
     await store.recordResolved(resolvedArgs);
     assert.equal(db.rlsCalls.length, 1);
     assert.equal(db.rlsCalls[0].isOperator, 'true');
+  });
+
+  /**
+   * SEAM 3 of 3. `/operator/support` never calls `decideApproval`, so a
+   * dispatch wired only there would leave this whole surface executing
+   * nothing -- which is how it came to be the one route that already
+   * performs an irreversible external action (a real email) while producing
+   * no `work_approval.approved` row at all.
+   *
+   * Asserts the ARTIFACT LANDED, not merely that dispatch was called. An
+   * executor failure here is swallowed by design, so "it did not throw" is
+   * exactly the evidence that would be worthless.
+   */
+  it('SEAM 3: approving here writes the durable handoff artifact', async () => {
+    const priorKey = process.env.ENCRYPTION_KEY;
+    // The payload write re-encrypts; the suite otherwise needs no key.
+    process.env.ENCRYPTION_KEY = 'a'.repeat(64);
+    try {
+      const { db, store } = seeded();
+      await store.recordResolved(resolvedArgs);
+
+      const raw = db.approvals[0].payload;
+      const decoded = decryptPayloadForRead(raw) as Record<string, unknown>;
+      const stored = decoded.plainoApprovalArtifact as
+        | { v: number; fingerprint: string; artifact: { blocks: string[] } }
+        | undefined;
+
+      assert.ok(
+        stored,
+        'the operator-support approval left no artifact on the row -- ' +
+          `payload keys were: ${JSON.stringify(Object.keys(decoded))}`,
+      );
+      assert.equal(stored!.v, 1);
+      assert.equal(typeof stored!.fingerprint, 'string');
+      assert.ok(stored!.fingerprint.length === 64, 'fingerprint should be a sha256 hex');
+
+      // And it carries the drafted reply the operator approved.
+      const text = stored!.artifact.blocks.join('\n');
+      assert.match(text, /Try reconnecting|reconnect/i);
+
+      // The skill's own payload fields survived the merge -- the store must
+      // MERGE, never replace, or the card would render empty afterwards.
+      assert.equal(decoded.body, 'Try reconnecting.');
+    } finally {
+      if (priorKey === undefined) delete process.env.ENCRYPTION_KEY;
+      else process.env.ENCRYPTION_KEY = priorKey;
+    }
   });
 });
 

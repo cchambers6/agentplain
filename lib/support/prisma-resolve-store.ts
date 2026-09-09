@@ -25,6 +25,7 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { SYSTEM_OPERATOR_CONTEXT, withRls } from "../db/rls";
 import { applyApprovalDecisionTx } from "../approvals/decisions";
+import { dispatchApprovalExecutors } from "../approvals/dispatch";
 import { decryptPayloadForRead } from "../security/payload-crypto";
 import { inngest } from "../inngest/client";
 import {
@@ -114,7 +115,7 @@ export class PrismaSupportReplyStore implements SupportReplyStore {
     sentBody: string;
     emailMessageId: string | null;
   }): Promise<void> {
-    await this.withOperatorContext(async (tx) => {
+    const applied = await this.withOperatorContext(async (tx) => {
       // Route the PENDING -> APPROVED transition through the shared
       // approval core rather than flipping the status here. Two things
       // come with it that this path previously lacked:
@@ -128,13 +129,27 @@ export class PrismaSupportReplyStore implements SupportReplyStore {
       //   2. an ALREADY_DECIDED guard evaluated INSIDE this transaction.
       //      resolve-reply.ts checks the status too, but it checks it in
       //      a separate earlier transaction, so two concurrent submits
-      //      could both read PENDING. Now the second one loses here and
-      //      the whole transaction rolls back instead of re-approving.
+      //      could both read PENDING.
+      //
+      //      NOTE ON WHAT MAKES THAT GUARD ACTUALLY HOLD. An earlier
+      //      version of this comment claimed the in-transaction check was
+      //      enough on its own. It was not, and the claim survived two
+      //      rounds of review. applyApprovalDecisionTx used to do a
+      //      `findFirst` then an unconditional `update` by id; under
+      //      READ COMMITTED (which is what this runs at -- `isolationLevel`
+      //      appears nowhere in this repo) both transactions read PENDING,
+      //      the second blocked on the row lock, re-read the new version
+      //      and applied ANYWAY, because it never re-evaluated status.
+      //      Two audit rows, second decision overwriting the first.
+      //      The guard holds now because the status predicate moved INTO
+      //      the WHERE clause of a conditional updateMany. See the
+      //      CONCURRENCY note in lib/approvals/decisions.ts before
+      //      changing either side.
       //
       // Throws ApprovalDecisionError; resolve-reply.ts surfaces it as
       // PERSIST_FAILED so the operator sees it rather than a silent
       // double-approve.
-      await applyApprovalDecisionTx(tx, {
+      const decided = await applyApprovalDecisionTx(tx, {
         workspaceId: args.workspaceId,
         itemId: args.queueItemId,
         decision: "APPROVED",
@@ -165,6 +180,31 @@ export class PrismaSupportReplyStore implements SupportReplyStore {
           } satisfies Prisma.InputJsonValue,
         },
       });
+      return decided;
+    });
+
+    // SEAM 3 of 3. This path never calls `decideApproval`, so dispatching
+    // from there alone would leave every /operator/support approval with no
+    // execution -- which is exactly how this surface came to be the one route
+    // that already performed an irreversible external action while producing
+    // no `work_approval.approved` row.
+    //
+    // Outside the transaction and non-throwing, like the human path: by the
+    // time we get here the reply email has ALREADY been sent to the customer.
+    // Rolling back an approval whose side effect is already in someone's
+    // inbox would be a lie in the opposite direction.
+    await dispatchApprovalExecutors(SYSTEM_OPERATOR_CONTEXT, {
+      workspaceId: args.workspaceId,
+      itemId: args.queueItemId,
+      applied,
+      actorUserId: args.operatorUserId,
+      route: "operator-support",
+      status: "APPROVED",
+      // Same injection seam the store itself uses. Without this the dispatch
+      // would reach past the injected client to the real Prisma singleton --
+      // and because executor failures are swallowed by design, it would fail
+      // silently in every test while still looking wired.
+      client: this.client,
     });
   }
 
@@ -181,6 +221,12 @@ export class PrismaSupportReplyStore implements SupportReplyStore {
       // reject arriving after an approve would silently flip an APPROVED
       // item to REJECTED -- rewriting the decision record of a reply the
       // customer had already received.
+      //
+      // That is now blocked in BOTH orderings, which is the part the
+      // original claim glossed. Sequentially, the findFirst catches it.
+      // CONCURRENTLY, only the conditional updateMany does -- a reject
+      // racing an approve used to read PENDING, block on the lock, and
+      // then overwrite the committed APPROVED row.
       await applyApprovalDecisionTx(tx, {
         workspaceId: args.workspaceId,
         itemId: args.queueItemId,

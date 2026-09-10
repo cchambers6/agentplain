@@ -22,6 +22,10 @@
  * Reads blobs from origin/main rather than the working tree on purpose:
  * the working tree is a shared, dirty branch, and the claim being tested
  * is about what is on main.
+ *
+ * Because CI checks out shallow, the suite fetches `origin/main` itself
+ * when the ref is missing, and reports which ref it used. It never falls
+ * back to another ref and never skips -- see `prepareRef` below.
  */
 
 import { describe, it } from 'node:test';
@@ -58,6 +62,88 @@ function git(args: string[]): string {
     maxBuffer: 64 * 1024 * 1024,
   });
 }
+
+/**
+ * Make `origin/main` resolvable, or say loudly why it is not.
+ *
+ * `.github/workflows/tests.yml` runs `actions/checkout@v4` with no
+ * `fetch-depth`, so CI clones at the default depth of 1. A depth-1 clone
+ * carries only the PR ref; `refs/remotes/origin/main` does not exist, and
+ * every `git show origin/main:<file>` below returns "fatal: invalid object
+ * name 'origin/main'". That is precisely what happened on run 34392908317:
+ * 116 failures, all of them this one missing ref.
+ *
+ * The fix is to fetch the ref the suite already names, NOT to soften what
+ * the suite verifies. Specifically:
+ *
+ *   - It still verifies against `origin/main` and nothing else. There is no
+ *     merge-base fallback and no HEAD~ fallback, because a fallback that
+ *     degrades to the working tree reintroduces the exact class this file
+ *     exists to prevent -- a shared, dirty tree fooling the invariant.
+ *   - It fetches ONLY when the ref is already missing. On any ordinary
+ *     clone `origin/main` resolves, so this is a no-op and costs nothing.
+ *     That also confines `--depth=1` to repositories that are already
+ *     shallow: running it against a complete clone would write a
+ *     `.git/shallow` boundary and truncate a developer's history.
+ *   - An explicit refspec is used rather than `git fetch origin main`,
+ *     which updates FETCH_HEAD but leaves `refs/remotes/origin/main`
+ *     absent -- a silent no-op that would look like the fix worked.
+ *   - When the fetch fails, this does NOT skip and does NOT substitute
+ *     another ref. `rev-parse` still throws, the precondition below still
+ *     fails, and the fetch's own stderr is attached to the failure.
+ */
+interface RefPrep {
+  attempted: boolean;
+  ok: boolean;
+  detail: string;
+}
+
+function prepareRef(): RefPrep {
+  try {
+    const sha = git(['rev-parse', '--verify', '--quiet', `${REF}^{commit}`]).trim();
+    return {
+      attempted: false,
+      ok: true,
+      detail: `${REF} already present at ${sha.slice(0, 12)} -- no fetch performed`,
+    };
+  } catch {
+    // Absent. Only a shallow checkout gets here.
+  }
+  try {
+    git([
+      'fetch',
+      '--no-tags',
+      '--depth=1',
+      'origin',
+      '+refs/heads/main:refs/remotes/origin/main',
+    ]);
+    const sha = git(['rev-parse', '--verify', `${REF}^{commit}`]).trim();
+    return {
+      attempted: true,
+      ok: true,
+      detail:
+        `${REF} was absent (shallow checkout); fetched ` +
+        `+refs/heads/main:refs/remotes/origin/main --depth=1 -> ` +
+        `${sha.slice(0, 12)}`,
+    };
+  } catch (err) {
+    const e = err as { stderr?: string; message?: string };
+    const why = (e.stderr || e.message || String(err)).trim().split('\n').join(' | ');
+    return {
+      attempted: true,
+      ok: false,
+      detail: `${REF} was absent and the fetch FAILED: ${why}`,
+    };
+  }
+}
+
+/**
+ * Run once, at import, so the ref is ready before any blob read and the
+ * outcome is reported exactly once.
+ */
+const REF_PREP: RefPrep = prepareRef();
+// eslint-disable-next-line no-console
+console.log(`topology-truth: ref preparation -- ${REF_PREP.detail}`);
 
 /** Blob text at REF, or null when the path does not exist there. */
 function blobAt(file: string): string | null {
@@ -117,8 +203,14 @@ describe('topology-truth -- preconditions', () => {
     let sha = '';
     assert.doesNotThrow(() => {
       sha = git(['rev-parse', REF]).trim();
-    }, `cannot resolve ${REF}. Fetch it; do not skip this suite.`);
+    }, `cannot resolve ${REF}. ${REF_PREP.detail}. Fetch it; do not skip this suite.`);
     assert.match(sha, /^[0-9a-f]{40}$/, `${REF} did not resolve to a sha`);
+    // Named out loud: a reader must never have to guess which ref the 100+
+    // assertions below were verified against.
+    assert.ok(
+      REF_PREP.ok,
+      `ref preparation did not succeed: ${REF_PREP.detail}`,
+    );
   });
 
   it('every declared dispatchSite parses as <file>:<symbol>', () => {

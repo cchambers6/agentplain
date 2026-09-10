@@ -54,6 +54,13 @@ export async function retrieveCustomerContext(
     query: args.query,
     k: clampK(args.k),
     contextKinds: ['CUSTOMER'],
+    // (b') Tenant scope bound INTO the vector scan. Without this the ANN
+    // index returns the global top-k CUSTOMER rows and RLS (layer b) then
+    // drops the foreign ones AFTER k was spent on them -- so a workspace
+    // with a small share of the CUSTOMER corpus gets a fraction of k, or
+    // nothing, and (c) below sees an empty list rather than a leak. The
+    // failure was silent recall loss, not a visible error.
+    workspaceId: args.workspaceId,
   });
   if (!search.ok) {
     // Retrieval is best-effort — never fail the loop because the

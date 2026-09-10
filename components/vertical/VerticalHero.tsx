@@ -1,6 +1,10 @@
 import Link from "next/link";
 import type { VerticalContent } from "@/lib/verticals/types";
-import { tierLadderBands, type TierName } from "@/lib/pricing/tiers";
+import {
+  isSelfServeTier,
+  tierLadderBands,
+  type TierName,
+} from "@/lib/pricing/tiers";
 import { tokens } from "@/lib/brand/tokens";
 import { verticalSceneName } from "@/components/ui/ap";
 import HeroBackdrop from "@/components/marketing/HeroBackdrop";
@@ -34,6 +38,26 @@ export default function VerticalHero({
     content.status === "on-ramp"
       ? "/app/sign-up"
       : `/app/sign-up?vertical=${content.slug}`;
+
+  // SELF-SERVE GUARD (live defect fix).
+  //
+  // This hero rendered an unconditional "Start free trial" CTA to
+  // /app/sign-up?vertical=<slug> with NO `isSelfServeTier` check. A visitor
+  // on a quote-only vertical (law is max-tier) therefore landed on signup
+  // with no `?tier=` param, `resolveDefaultTier` defaulted them to
+  // `regular`, and they could complete a self-serve purchase on a vertical
+  // that is supposed to route through operator triage.
+  //
+  // `components/vertical/VerticalCta.tsx` already does this check; the hero
+  // was the hole. Quote-only verticals now route to /custom, matching the
+  // CTA block further down the page.
+  //
+  // Kept independent of the flat-price change ON PURPOSE: flat pricing
+  // removes the price half of the tier concept, but `isSelfServeTier` still
+  // gates the SALES MOTION, so this fix survives the copy PR.
+  const selfServe = isSelfServeTier(content.tier as TierName);
+  const primaryCtaHref = selfServe ? signUpHref : `/custom?type=${content.tier}`;
+  const primaryCtaLabel = selfServe ? "Start free trial" : "Request a quote";
 
   const sceneName = verticalSceneName(content.slug);
 
@@ -84,8 +108,8 @@ export default function VerticalHero({
         </p>
 
         <div className="mt-10 flex flex-wrap items-center gap-4">
-          <Link href={signUpHref} className="btn-primary">
-            Start free trial
+          <Link href={primaryCtaHref} className="btn-primary">
+            {primaryCtaLabel}
             <span aria-hidden>→</span>
           </Link>
           <Link href="#pricing" className="btn-secondary">

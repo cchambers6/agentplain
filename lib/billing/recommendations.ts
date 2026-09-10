@@ -37,8 +37,7 @@
 
 import type { WorkspaceVerticalTier } from '@prisma/client';
 import {
-  perSeatMonthlyUsdCents,
-  seatBandForSeats,
+  MONTHLY_PRICE_USD_CENTS,
   tierFromVerticalTier,
   type TierName,
 } from '@/lib/pricing/tiers';
@@ -81,18 +80,22 @@ export interface WorkspaceMrrRow {
   subscription: { tier: WorkspaceVerticalTier; seats: number } | null;
 }
 
-/** Per-seat charge × seats in whole USD, clamping out-of-ladder (100+) seat
- *  counts to the top band so we never throw on a custom/large workspace. */
-function safeMonthlyChargeUsd(tier: TierName, seats: number): number {
-  const clampedForBand = Math.min(99, Math.max(1, seats));
-  const band = seatBandForSeats(clampedForBand);
-  const perSeatCents = perSeatMonthlyUsdCents(tier, band);
-  return (perSeatCents * Math.max(1, seats)) / 100;
+/** The workspace's monthly charge in whole USD.
+ *
+ *  FLAT PRICE. This used to be `perSeatCents × seats` off the volume ladder;
+ *  under flat pricing subscription MRR is the same $99 regardless of tier and
+ *  seat count, so the multiplication is gone. `tier` and `seats` are retained
+ *  in the signature because callers still report them alongside the figure.
+ *  Never throws — there is no ladder top to fall off. */
+function safeMonthlyChargeUsd(_tier: TierName, _seats: number): number {
+  return MONTHLY_PRICE_USD_CENTS / 100;
 }
 
 /** Resolve (tier, MRR, seats) from a selected workspace row. Prefers the live
  *  Subscription; falls back to the workspace's manual-invoice price; finally
- *  to ladder pricing at 1 seat. */
+ *  to the flat list price. The manual-invoice override still wins over the
+ *  flat price — hand-invoiced workspaces are a real thing and are not
+ *  affected by the flat-price ratification. */
 export function resolveWorkspaceMrr(row: WorkspaceMrrRow): WorkspaceMrrInputs {
   const sub = row.subscription;
   if (sub) {

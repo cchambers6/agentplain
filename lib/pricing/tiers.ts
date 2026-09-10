@@ -1,54 +1,104 @@
-// Canonical per-seat pricing ladder for agentplain.
+// Canonical pricing for agentplain. ONE FLAT PRICE.
 //
-// Source of truth: orchestrator memory `project_stripe_both_surfaces.md`
-// (locked 2026-05-09, three-tier customer-facing surfacing reinstated
-// 2026-05-15 — Regular / Partner / Max). The ladder rows below mirror the
-// underlying enum (regular / plus / max) — `plus` is the on-disk identity
-// for the customer-facing "Partner" tier; the display layer renders that
-// translation via `tierDisplayName` so the DB enum, Stripe Product, and
-// Subscription rows stay stable while marketing copy reads "Partner".
+// Ratified by Conner: "We need flat costs. Tiering based on vertical won't
+// be received by the market." The per-seat ladder with volume bands, and
+// per-vertical tier assignment as a PRICE input, are retired.
 //
-// Stripe Products + Prices are NOT hardcoded by id — they're resolved by
-// `lookup_key` (see `lookupKeyFor` below) so this file is the single
-// source of truth and the setup script is idempotent against rerun.
+// THE NUMBER LIVES IN `lib/billing/facts.ts` (`MONTHLY_PRICE_USD_CENTS`),
+// not here. That module is the leaf SSOT with no billing/pricing imports,
+// so `lib/env.ts` and this file can both read it without a cycle. This file
+// re-exports it below so existing `@/lib/pricing/tiers` importers resolve
+// the price unchanged.
 //
-// Max is quote-based per `project_stripe_both_surfaces.md` (2026-05-15
-// amendment) — `PER_SEAT_MONTHLY_USD_CENTS.max` rows exist for SDK
-// contract continuity but `isSelfServeTier` returns false for max so
-// customer flows never reach Stripe Checkout for it. Max prospects flow
-// through `/custom?type=max` → `Inquiry` row → operator triage → manual
-// workspace provisioning.
+// WHAT SURVIVED THE COLLAPSE, AND WHY:
 //
-// Per `feedback_no_quick_fixes`: the lookup-key strategy is the right
-// fix, not the cheap one. 15 hardcoded env vars are vendor lock and
-// brittle. Lookup keys live on the Price object inside Stripe and
-// survive Price archival/replacement.
+//   * `TierName` / `TIER_ORDER` / `SELF_SERVE_TIERS` / `isSelfServeTier`
+//     are NO LONGER PRICE INPUTS, but they are NOT dead. They are welded to
+//     the Prisma `WorkspaceVerticalTier` enum (REGULAR/PLUS/MAX), and
+//     collapsing the enum needs a migration — five migrations are already
+//     stuck behind the failed `20260618000003_client_portal` and production
+//     has not deployed since 2026-06-17. So the union stays.
+//     Their REMAINING job is the SALES MOTION, not the price: `max` is
+//     quote-based and `isSelfServeTier("max") === false` keeps law out of
+//     self-serve Checkout. Widening that would put a quote-only vertical
+//     on sale, which is Conner's decision and not an agent's — so this
+//     change deliberately leaves the gate exactly where it was.
+//
+//   * `SEAT_BANDS` / `SEAT_BAND_ORDER` / `seatBandForSeats` survive for the
+//     same migration reason: the Prisma `SeatBand` enum and the persisted
+//     `Subscription.seatBand` / `Subscription.seats` columns cannot be
+//     dropped without a migration. They are now RECORD-KEEPING ONLY. No
+//     price reads them.
+//
+//   * `PER_SEAT_MONTHLY_USD_CENTS`, `perSeatMonthlyUsdCents`,
+//     `monthlyChargeUsdCents` and `tierLadderBands` are kept as SHIMS that
+//     return the flat price. Deleting them would break ~10 call sites, four
+//     of which render to customers. A shim is cheaper than that cascade.
+//
+// Stripe Products + Prices are still resolved by `lookup_key`, never by
+// hardcoded id, so this file stays the single source of truth and the setup
+// script stays idempotent against rerun. `lookupKeyFor()` now returns ONE
+// canonical flat key; `legacyLookupKeyFor()` + `LEGACY_LOOKUP_KEYS` retain
+// the 15 retired keys so `lib/billing/webhook-dispatch.ts` can keep parsing
+// webhooks for subscriptions that were created before this change.
 
 import type { SeatBand, WorkspaceVerticalTier } from "@prisma/client";
-// Trial / money-back facts live in the billing SSOT and are re-exported below
-// so existing `@/lib/pricing/tiers` importers keep working unchanged.
+// Price + trial / money-back facts live in the billing SSOT and are
+// re-exported below so existing `@/lib/pricing/tiers` importers keep
+// working unchanged.
 import {
+  ANNUAL_PRICE_USD_CENTS,
   MONEY_BACK_GUARANTEE_DAYS,
+  MONTHLY_PRICE_USD_CENTS,
   TRIAL_PERIOD_DAYS,
   TRIAL_PERIOD_DAYS_EXTENDED,
+  monthlyPriceUsdCents,
   trialPeriodDaysForVertical,
 } from "@/lib/billing/facts";
 
+// The price SSOT, re-exported for the existing importer surface.
+export {
+  ANNUAL_PRICE_USD_CENTS,
+  MONEY_BACK_GUARANTEE_DAYS,
+  MONTHLY_PRICE_USD_CENTS,
+  TRIAL_PERIOD_DAYS,
+  TRIAL_PERIOD_DAYS_EXTENDED,
+  monthlyPriceUsdCents,
+  trialPeriodDaysForVertical,
+};
+
+// ── Tier identity (NOT a price input) ──────────────────────────────────────
+
+// Vestigial as a price dimension; live as a sales-motion + DB-identity
+// dimension. Mirrors the Prisma `WorkspaceVerticalTier` enum, which cannot
+// be collapsed without a migration (see header).
 export type TierName = "regular" | "plus" | "max";
 
 export const TIER_ORDER: readonly TierName[] = ["regular", "plus", "max"];
 
-// Tiers a customer can self-serve subscribe to via Stripe Checkout. Max is
-// quote-based (no Stripe Product surfaced) per the 2026-05-15 amendment to
-// `project_stripe_both_surfaces.md`. Code that drives sign-up, billing-page
-// upgrade CTAs, and the operator tier override consults this — direct
-// equality checks against `"max"` would drift if a fourth tier landed.
+// Tiers a customer can self-serve subscribe to via Stripe Checkout. `max`
+// stays quote-based: it is a DIFFERENT SALES MOTION, not a different price.
+// `/custom` bespoke scope ($5K-$15K + maintenance) is a genuinely different
+// product and is unaffected by the flat-price change.
+//
+// DELIBERATELY UNCHANGED by the flat-price collapse. Flat pricing dissolves
+// the PRICE half of the tier concept, not the quote-only gate. Widening this
+// to include `max` would make law (the max-tier vertical) self-serve
+// purchasable — putting a vertical on sale, which is Conner's call.
 export const SELF_SERVE_TIERS: readonly TierName[] = ["regular", "plus"];
 
 export function isSelfServeTier(t: TierName): boolean {
   return SELF_SERVE_TIERS.includes(t);
 }
 
+// ── Seat bands (RECORD-KEEPING ONLY — no longer price-bearing) ──────────────
+
+// VESTIGIAL FOR PRICING. `enum SeatBand`, `Subscription.seatBand` and
+// `Subscription.seats` remain in `prisma/schema.prisma` and are still
+// written, because dropping them requires a migration and the migration
+// lane is blocked behind the failed `20260618000003_client_portal`
+// (five migrations queued; production last deployed 2026-06-17). Nothing
+// below is read to compute a price any more.
 export const SEAT_BAND_ORDER: readonly SeatBand[] = [
   "SEATS_1",
   "SEATS_2_9",
@@ -60,15 +110,11 @@ export const SEAT_BAND_ORDER: readonly SeatBand[] = [
 export interface SeatBandRange {
   band: SeatBand;
   minSeats: number;
-  /** undefined for the open-ended top of the ladder (50–99 in current spec). */
   maxSeats: number;
   /** Human-friendly band label, e.g. "1 seat" / "2–9 seats". */
   label: string;
 }
 
-// The seat-count ranges per band. The 100+ row in the canonical table is
-// handled out-of-band (custom build engagement) — not part of the
-// self-serve ladder.
 export const SEAT_BANDS: Record<SeatBand, SeatBandRange> = {
   SEATS_1: { band: "SEATS_1", minSeats: 1, maxSeats: 1, label: "1 seat" },
   SEATS_2_9: { band: "SEATS_2_9", minSeats: 2, maxSeats: 9, label: "2–9 seats" },
@@ -92,90 +138,288 @@ export const SEAT_BANDS: Record<SeatBand, SeatBandRange> = {
   },
 };
 
-// Per-seat monthly USD price in cents. Mirrors project_stripe_both_surfaces
-// lines 17–26 exactly. Cells:
-//
-//   Volume        Regular   Plus     Max
-//   1 seat        $199      $299     $499
-//   2–9           $179      $279     $449
-//   10–24         $149      $249     $399
-//   25–49         $119      $219     $349
-//   50–99         $99       $199     $299
-//
-// `* 100` keeps the spec readable while persisting cents for Stripe.
+// ── Price accessors (all flat; tier + seat arguments are vestigial) ─────────
+
+/**
+ * SHIM. Every cell is the one flat price. Retained because eight modules
+ * still read it, four of them customer-rendering. Reading any cell is
+ * equivalent to reading `MONTHLY_PRICE_USD_CENTS` — the shape survives so
+ * the copy PR can retire the call sites one at a time.
+ *
+ * @deprecated Read `MONTHLY_PRICE_USD_CENTS` from `@/lib/billing/facts`.
+ */
 export const PER_SEAT_MONTHLY_USD_CENTS: Record<
   TierName,
   Record<SeatBand, number>
-> = {
-  regular: {
-    SEATS_1: 199 * 100,
-    SEATS_2_9: 179 * 100,
-    SEATS_10_24: 149 * 100,
-    SEATS_25_49: 119 * 100,
-    SEATS_50_99: 99 * 100,
-  },
-  plus: {
-    SEATS_1: 299 * 100,
-    SEATS_2_9: 279 * 100,
-    SEATS_10_24: 249 * 100,
-    SEATS_25_49: 219 * 100,
-    SEATS_50_99: 199 * 100,
-  },
-  max: {
-    SEATS_1: 499 * 100,
-    SEATS_2_9: 449 * 100,
-    SEATS_10_24: 399 * 100,
-    SEATS_25_49: 349 * 100,
-    SEATS_50_99: 299 * 100,
-  },
-};
-
-// Marketing display label per seat band — the customer-facing band name
-// rendered on every pricing surface ("Solo (1 seat)" reads warmer than the
-// enum-derived "1 seat"). Kept here, not in the renderers, so the homepage,
-// /pricing, and the vertical pricing banner all show identical band labels.
-const SEAT_BAND_DISPLAY_LABEL: Record<SeatBand, string> = {
-  SEATS_1: "Solo (1 seat)",
-  SEATS_2_9: "2–9 seats",
-  SEATS_10_24: "10–24 seats",
-  SEATS_25_49: "25–49 seats",
-  SEATS_50_99: "50–99 seats",
-};
+> = Object.fromEntries(
+  TIER_ORDER.map((tier) => [
+    tier,
+    Object.fromEntries(
+      SEAT_BAND_ORDER.map((band) => [band, MONTHLY_PRICE_USD_CENTS]),
+    ) as Record<SeatBand, number>,
+  ]),
+) as Record<TierName, Record<SeatBand, number>>;
 
 export interface TierLadderRow {
   band: string;
-  /** Whole-dollar per-seat price formatted for display, e.g. "$199". */
+  /** Whole-dollar price formatted for display, e.g. "$99". */
   price: string;
 }
 
-// The per-seat ladder for a tier, formatted for marketing display. SINGLE
-// SOURCE OF TRUTH so the homepage, /pricing, and the vertical pricing banner
-// can never drift from PER_SEAT_MONTHLY_USD_CENTS. Before this helper the
-// Partner 2–9 and 10–24 bands had been hand-typed $10 low on the homepage
-// ($269/$239 vs the canonical $279/$249) — a silent under-quote. Deriving
-// the bands makes that class of drift unrepresentable.
-export function tierLadderBands(tier: TierName): TierLadderRow[] {
-  return SEAT_BAND_ORDER.map((band) => ({
-    band: SEAT_BAND_DISPLAY_LABEL[band],
-    price: `$${PER_SEAT_MONTHLY_USD_CENTS[tier][band] / 100}`,
-  }));
+/**
+ * SHIM. The ladder is now a single rung. Returns ONE row so the marketing
+ * renderers that `.map()` over it keep working while showing one price.
+ *
+ * @deprecated The concept of a ladder is retired. Render the flat price.
+ */
+export function tierLadderBands(_tier?: TierName): TierLadderRow[] {
+  return [
+    { band: "Flat monthly", price: `$${MONTHLY_PRICE_USD_CENTS / 100}` },
+  ];
 }
 
-// Trial + money-back policy (ratified 2026-06-14) now lives in the billing
-// SSOT `@/lib/billing/facts`. Re-exported here so the many existing
-// `@/lib/pricing/tiers` importers keep resolving these names unchanged.
-//   Default 7 days; CPA + Law get 14. Card captured at signup via Stripe
-//   Checkout. 14-day money-back guarantee, independent of trial length.
-export {
-  MONEY_BACK_GUARANTEE_DAYS,
-  TRIAL_PERIOD_DAYS,
-  TRIAL_PERIOD_DAYS_EXTENDED,
-  trialPeriodDaysForVertical,
-};
+/**
+ * Seat band for a seat count. RECORD-KEEPING ONLY — no price reads this.
+ * Still throws above the ladder so seat input validation keeps its shape.
+ */
+export function seatBandForSeats(seats: number): SeatBand {
+  if (seats < 1) {
+    throw new Error(`seatBandForSeats: seats must be >= 1, got ${seats}`);
+  }
+  if (seats >= 100) {
+    throw new Error(
+      "seatBandForSeats: 100+ seats falls outside the recorded seat bands " +
+        "— route to a custom engagement.",
+    );
+  }
+  if (seats === 1) return "SEATS_1";
+  if (seats <= 9) return "SEATS_2_9";
+  if (seats <= 24) return "SEATS_10_24";
+  if (seats <= 49) return "SEATS_25_49";
+  return "SEATS_50_99";
+}
 
-// Trial-end warning thresholds (days remaining). Cron at 06:00 ET emits
-// one in-app banner + one email per threshold per subscription.
-export const TRIAL_WARNING_THRESHOLDS_DAYS: readonly number[] = [7, 3, 1];
+/**
+ * SHIM. Arguments are ignored; the price is flat.
+ *
+ * @deprecated Call `monthlyPriceUsdCents()` from `@/lib/billing/facts`.
+ */
+export function perSeatMonthlyUsdCents(
+  _tier?: TierName,
+  _band?: SeatBand,
+): number {
+  return MONTHLY_PRICE_USD_CENTS;
+}
+
+/**
+ * The monthly charge. FLAT — independent of tier and of seat count.
+ *
+ * Kept (rather than deleted) because it has six call sites, four of which
+ * render to a customer: the billing settings page, the usage page, the
+ * dunning mailer and the trial-expiration warning mailer. The return shape
+ * is preserved so none of them need to change in this PR.
+ *
+ * `perSeatCents` and `totalCents` are now EQUAL and both equal the flat
+ * price. `band` is reported for record-keeping only.
+ *
+ * Behaviour change: this no longer throws at 100+ seats. Under a flat price
+ * a 100-seat workspace owes exactly the same $99, so throwing would break
+ * four rendering surfaces to defend a ladder that no longer exists. The
+ * recorded band clamps to the top band instead.
+ */
+export function monthlyChargeUsdCents(
+  _tier?: TierName,
+  seats?: number,
+): { band: SeatBand; perSeatCents: number; totalCents: number } {
+  const n = typeof seats === "number" && seats >= 1 ? seats : 1;
+  const band = seatBandForSeats(Math.min(n, 99));
+  return {
+    band,
+    perSeatCents: MONTHLY_PRICE_USD_CENTS,
+    totalCents: MONTHLY_PRICE_USD_CENTS,
+  };
+}
+
+// ── Stripe lookup keys ─────────────────────────────────────────────────────
+
+/**
+ * The ONE canonical Stripe `lookup_key` for the flat monthly Price.
+ * `scripts/stripe/setup-products.ts` is the only writer.
+ */
+export const FLAT_MONTHLY_LOOKUP_KEY = "agentplain_flat_monthly";
+
+/** The Stripe Product lookup key backing the flat Price. */
+export const FLAT_PRODUCT_LOOKUP_KEY = "agentplain_flat";
+
+/**
+ * The canonical lookup key. Arguments are accepted and IGNORED so the
+ * existing `priceIdFor(tier, band)` provider signatures keep compiling;
+ * every (tier, band) now resolves to the single flat Price.
+ */
+export function lookupKeyFor(_tier?: TierName, _band?: SeatBand): string {
+  return FLAT_MONTHLY_LOOKUP_KEY;
+}
+
+export function allLookupKeys(): { key: string }[] {
+  return [{ key: FLAT_MONTHLY_LOOKUP_KEY }];
+}
+
+// ── Retired lookup keys — BACK-COMPAT WINDOW, DO NOT DELETE ────────────────
+//
+// Subscriptions created before the flat-price change carry Prices whose
+// `lookup_key` is one of the 15 retired `agentplain_<tier>_<band>_monthly`
+// strings. Stripe keeps sending those on every webhook for the life of the
+// subscription. `lib/billing/webhook-dispatch.ts` parses them, so these
+// must survive until every legacy subscription has been migrated in Stripe.
+
+/** The retired per-(tier, band) key shape. Parsing only — never issued. */
+export function legacyLookupKeyFor(tier: TierName, band: SeatBand): string {
+  return `agentplain_${tier}_${band.toLowerCase()}_monthly`;
+}
+
+/**
+ * How many keys were ever issued under the retired shape. A CLOSED SET.
+ * 3 tiers x 5 seat bands were live from the first Stripe setup run until
+ * the flat-price collapse; no sixteenth key was ever issued, so this
+ * number can never legitimately grow OR shrink.
+ */
+export const LEGACY_LOOKUP_KEY_COUNT = 15;
+
+/**
+ * All 15 retired keys, with the tier and band each one decodes to.
+ *
+ * ===================================================================
+ * FROZEN LITERAL. DO NOT DERIVE THIS FROM `TIER_ORDER`, FROM
+ * `SEAT_BAND_ORDER`, FROM `legacyLookupKeyFor()`, OR FROM ANY OTHER
+ * PRESENT-DAY CONSTANT. DO NOT REMOVE AN ENTRY.
+ * ===================================================================
+ *
+ * WHY THIS IS WRITTEN OUT LONGHAND INSTEAD OF GENERATED:
+ *
+ * This list is not a description of what agentplain sells. It is a
+ * description of WHAT STRIPE ALREADY HOLDS -- a fixed historical fact
+ * about rows in someone else's database that we cannot edit and did not
+ * write. It is data about the past.
+ *
+ * It was previously built as:
+ *
+ *     TIER_ORDER.flatMap((tier) =>
+ *       SEAT_BAND_ORDER.map((band) => ...))
+ *
+ * which quietly made a historical fact a FUNCTION OF TODAY'S CONSTANTS.
+ * Both of those arrays are documented three screens above as vestigial,
+ * surviving only because the Prisma enums they mirror cannot be dropped
+ * until the migration lane unblocks. A cleanup migration collapsing
+ * `WorkspaceVerticalTier` is anticipated, not hypothetical -- and on the
+ * day someone trims `TIER_ORDER` to one member, the derived list would
+ * have silently gone from 15 keys to 5. Nothing would throw. Stripe
+ * would keep sending the other 10 forever, `tierFromLookupKey` would
+ * start returning `null` for them, and both call sites in
+ * `lib/billing/webhook-dispatch.ts` fall back to workspace defaults on
+ * `null` -- so every legacy workspace on a dropped tier would have its
+ * tier and seat band silently RESET on its next Stripe webhook. Silent,
+ * data-corrupting, and indistinguishable from normal operation.
+ *
+ * Writing the keys out as literals removes that coupling entirely: a
+ * future collapse of `TIER_ORDER` or `SEAT_BAND_ORDER` now CANNOT reach
+ * this set. `Object.freeze` blocks the runtime shrink (`.pop()`,
+ * `.splice()`) as well. The count and the parseability of every entry
+ * are pinned in `tests/billing-lookup-key-backcompat.test.ts`, which
+ * runs on every PR via `.github/workflows/tests.yml`.
+ *
+ * `legacyLookupKeyFor()` above is retained for callers that need to
+ * FORMAT a key, and the test cross-checks it against these literals --
+ * but this array must never be built from it. If the two ever disagree,
+ * THESE LITERALS ARE RIGHT, because Stripe holds these exact strings.
+ */
+export const LEGACY_LOOKUP_KEYS: readonly {
+  tier: TierName;
+  band: SeatBand;
+  key: string;
+}[] = Object.freeze([
+  Object.freeze({
+    tier: "regular" as TierName,
+    band: "SEATS_1" as SeatBand,
+    key: "agentplain_regular_seats_1_monthly",
+  }),
+  Object.freeze({
+    tier: "regular" as TierName,
+    band: "SEATS_2_9" as SeatBand,
+    key: "agentplain_regular_seats_2_9_monthly",
+  }),
+  Object.freeze({
+    tier: "regular" as TierName,
+    band: "SEATS_10_24" as SeatBand,
+    key: "agentplain_regular_seats_10_24_monthly",
+  }),
+  Object.freeze({
+    tier: "regular" as TierName,
+    band: "SEATS_25_49" as SeatBand,
+    key: "agentplain_regular_seats_25_49_monthly",
+  }),
+  Object.freeze({
+    tier: "regular" as TierName,
+    band: "SEATS_50_99" as SeatBand,
+    key: "agentplain_regular_seats_50_99_monthly",
+  }),
+  Object.freeze({
+    tier: "plus" as TierName,
+    band: "SEATS_1" as SeatBand,
+    key: "agentplain_plus_seats_1_monthly",
+  }),
+  Object.freeze({
+    tier: "plus" as TierName,
+    band: "SEATS_2_9" as SeatBand,
+    key: "agentplain_plus_seats_2_9_monthly",
+  }),
+  Object.freeze({
+    tier: "plus" as TierName,
+    band: "SEATS_10_24" as SeatBand,
+    key: "agentplain_plus_seats_10_24_monthly",
+  }),
+  Object.freeze({
+    tier: "plus" as TierName,
+    band: "SEATS_25_49" as SeatBand,
+    key: "agentplain_plus_seats_25_49_monthly",
+  }),
+  Object.freeze({
+    tier: "plus" as TierName,
+    band: "SEATS_50_99" as SeatBand,
+    key: "agentplain_plus_seats_50_99_monthly",
+  }),
+  Object.freeze({
+    tier: "max" as TierName,
+    band: "SEATS_1" as SeatBand,
+    key: "agentplain_max_seats_1_monthly",
+  }),
+  Object.freeze({
+    tier: "max" as TierName,
+    band: "SEATS_2_9" as SeatBand,
+    key: "agentplain_max_seats_2_9_monthly",
+  }),
+  Object.freeze({
+    tier: "max" as TierName,
+    band: "SEATS_10_24" as SeatBand,
+    key: "agentplain_max_seats_10_24_monthly",
+  }),
+  Object.freeze({
+    tier: "max" as TierName,
+    band: "SEATS_25_49" as SeatBand,
+    key: "agentplain_max_seats_25_49_monthly",
+  }),
+  Object.freeze({
+    tier: "max" as TierName,
+    band: "SEATS_50_99" as SeatBand,
+    key: "agentplain_max_seats_50_99_monthly",
+  }),
+]);
+
+// ── Tier <-> Prisma enum bridge ────────────────────────────────────────────
+//
+// Unchanged. The Prisma `WorkspaceVerticalTier` enum still has three
+// members and cannot lose one without a migration, so both directions stay
+// total. Under flat pricing the value no longer selects a price; it records
+// which sales motion the workspace arrived through.
 
 const TIER_FROM_VERTICAL_TIER: Record<WorkspaceVerticalTier, TierName> = {
   REGULAR: "regular",
@@ -197,62 +441,15 @@ export function verticalTierFromTier(t: TierName): WorkspaceVerticalTier {
   return VERTICAL_TIER_FROM_TIER[t];
 }
 
-export function seatBandForSeats(seats: number): SeatBand {
-  if (seats < 1) {
-    throw new Error(`seatBandForSeats: seats must be >= 1, got ${seats}`);
-  }
-  if (seats >= 100) {
-    throw new Error(
-      "seatBandForSeats: 100+ seats falls outside the self-serve ladder " +
-        "(project_stripe_both_surfaces line 26) — route to custom-build engagement.",
-    );
-  }
-  if (seats === 1) return "SEATS_1";
-  if (seats <= 9) return "SEATS_2_9";
-  if (seats <= 24) return "SEATS_10_24";
-  if (seats <= 49) return "SEATS_25_49";
-  return "SEATS_50_99";
-}
+// ── Trial warnings + display naming ────────────────────────────────────────
 
-export function perSeatMonthlyUsdCents(
-  tier: TierName,
-  band: SeatBand,
-): number {
-  return PER_SEAT_MONTHLY_USD_CENTS[tier][band];
-}
-
-export function monthlyChargeUsdCents(
-  tier: TierName,
-  seats: number,
-): { band: SeatBand; perSeatCents: number; totalCents: number } {
-  const band = seatBandForSeats(seats);
-  const perSeatCents = perSeatMonthlyUsdCents(tier, band);
-  return { band, perSeatCents, totalCents: perSeatCents * seats };
-}
-
-// Stripe `lookup_key` for the Price object backing (tier, band) at monthly
-// cadence. The prefix `agentplain_` namespaces against any future
-// product Conner runs in the same Stripe account.
-export function lookupKeyFor(tier: TierName, band: SeatBand): string {
-  const suffix = band.toLowerCase(); // e.g. "seats_10_24"
-  return `agentplain_${tier}_${suffix}_monthly`;
-}
-
-export function allLookupKeys(): { tier: TierName; band: SeatBand; key: string }[] {
-  const out: { tier: TierName; band: SeatBand; key: string }[] = [];
-  for (const tier of TIER_ORDER) {
-    for (const band of SEAT_BAND_ORDER) {
-      out.push({ tier, band, key: lookupKeyFor(tier, band) });
-    }
-  }
-  return out;
-}
+// Trial-end warning thresholds (days remaining). Cron at 06:00 ET emits
+// one in-app banner + one email per threshold per subscription.
+export const TRIAL_WARNING_THRESHOLDS_DAYS: readonly number[] = [7, 3, 1];
 
 // Customer-facing tier name. The DB enum is regular/plus/max for stable
 // identity; the marketing/app surface renders "Partner" for plus per the
-// 2026-05-15 brand decision. Stripe Product name follows the display
-// translation so an operator reading invoices sees "agentplain Partner",
-// not "agentplain Plus".
+// 2026-05-15 brand decision.
 const TIER_DISPLAY_NAME: Record<TierName, string> = {
   regular: "Regular",
   plus: "Partner",
@@ -263,17 +460,18 @@ export function tierDisplayName(tier: TierName): string {
   return TIER_DISPLAY_NAME[tier];
 }
 
-export function tierProductName(tier: TierName): string {
-  return `agentplain ${tierDisplayName(tier)}`;
+export function tierProductName(_tier?: TierName): string {
+  return "agentplain";
 }
 
-export function tierProductLookupKey(tier: TierName): string {
-  return `agentplain_${tier}`;
+export function tierProductLookupKey(_tier?: TierName): string {
+  return FLAT_PRODUCT_LOOKUP_KEY;
 }
 
-// Headline tagline for each tier. Ratified 2026-06-14: Partner no longer
-// includes reserved Conner hours — it is self-serve + AI + priority email
-// + quarterly async check-in template. Conner time is Max/Custom only.
+// Headline tagline. Ratified 2026-06-14: Partner does not include reserved
+// Conner hours. NOTE: these describe tier DIFFERENCES that flat pricing has
+// dissolved for regular/plus. Rewriting them is customer copy and belongs to
+// the follow-up copy PR, not to this engine change.
 export const TIER_TAGLINE: Record<TierName, string> = {
   regular: "Standard managed AI ops + onboarding bundled.",
   plus: "Everything in Regular, plus priority support and a quarterly async check-in with your service team.",

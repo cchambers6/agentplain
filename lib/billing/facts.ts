@@ -21,6 +21,39 @@
 // tiers.ts`) can import it without a cycle. `lib/pricing/tiers.ts` re-exports
 // the trial / money-back constants below so existing importers keep working.
 
+// ── Price ────────────────────────────────────────────────────────────────
+//
+// FLAT PRICE. Ratified by Conner: "We need flat costs. Tiering based on
+// vertical won't be received by the market." Per-seat rates and volume
+// bands are retired; there is ONE price and it lives on the next line.
+//
+// $99/month = $1,188/year. Derived against measured delivered value and
+// anchored to the WEAKEST vertical, not the strongest — law floor
+// $3,000/yr (2.5x), real-estate floor $4,000/yr (3.4x), CPA floor
+// $7,000/yr (5.9x). $149/mo would put a law customer at the floor at
+// 1.7x, which does not survive a budget review.
+//
+// CHANGING THIS NUMBER IS CONNER'S CALL, NOT AN AGENT'S. It is pinned in
+// `tests/billing-pricing.test.ts` so a silent edit fails the gate.
+
+/** The one price. Monthly, in USD cents, for every customer and every vertical. */
+export const MONTHLY_PRICE_USD_CENTS = 9900;
+
+/** Annualised list price in USD cents (12 x monthly). No annual discount. */
+export const ANNUAL_PRICE_USD_CENTS = MONTHLY_PRICE_USD_CENTS * 12;
+
+/**
+ * The flat monthly charge in USD cents. Takes no arguments BY DESIGN — the
+ * price does not vary by tier, seat count, seat band, or vertical. Callers
+ * that still thread a tier or a seat count are passing vestigial arguments.
+ */
+export function monthlyPriceUsdCents(): number {
+  return MONTHLY_PRICE_USD_CENTS;
+}
+
+/** Pricing model discriminator. Was "per-seat-banded" before the flat-price ratification. */
+export const PRICING_MODEL = "flat-monthly" as const;
+
 // ── Trial ────────────────────────────────────────────────────────────────
 
 /** Default trial length in days (ratified 2026-06-14). */
@@ -88,6 +121,9 @@ export const PARTNER_SUPPORT = {
 
 /** Convenience bundle for surfaces that want the whole policy at once. */
 export const BILLING_FACTS = {
+  pricingModel: PRICING_MODEL,
+  monthlyPriceUsdCents: MONTHLY_PRICE_USD_CENTS,
+  annualPriceUsdCents: ANNUAL_PRICE_USD_CENTS,
   trialPeriodDays: TRIAL_PERIOD_DAYS,
   trialPeriodDaysExtended: TRIAL_PERIOD_DAYS_EXTENDED,
   extendedTrialVerticalSlugs: EXTENDED_TRIAL_VERTICAL_SLUGS,

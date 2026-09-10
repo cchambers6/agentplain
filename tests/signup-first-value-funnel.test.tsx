@@ -44,8 +44,13 @@ test("FIX 3 — focused approval card renders the clay highlight ring", () => {
   const base = row({ kindLabel: "Reply draft", body: ["draft body"] });
   const highlighted = render(<ApprovalCard row={base} highlighted />);
   const normal = render(<ApprovalCard row={base} />);
-  assert.match(highlighted, /ring-clay/);
-  assert.doesNotMatch(normal, /ring-clay/);
+  // Matched on the CARD's ring utility (`ring-2 ring-clay …`), not the bare
+  // token. Every card now also contains `focus-visible:ring-clay` on the
+  // ApprovalHandoff buttons, which is a focus affordance on a button and not
+  // a highlight on the card — a bare /ring-clay/ negative assertion collides
+  // with it and reports a highlight that is not being drawn.
+  assert.match(highlighted, /ring-2 ring-clay/);
+  assert.doesNotMatch(normal, /ring-2 ring-clay/);
 });
 
 test("FIX 2 — first-fire skipped/failed row links the ABSOLUTE approvals queue", () => {

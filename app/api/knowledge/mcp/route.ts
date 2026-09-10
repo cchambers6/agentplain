@@ -64,9 +64,29 @@ const searchParamsSchema = z.object({
   verticalSlug: z.string().min(1).nullable().optional(),
 });
 
+/**
+ * The canonical UUID text form, as Postgres accepts it for a `uuid` cast:
+ * 32 hex digits in 8-4-4-4-12 groups, case-insensitive.
+ *
+ * Deliberately NOT `z.string().uuid()`. Zod additionally enforces the RFC
+ * 9562 version (`[1-5]`) and variant (`[89ab]`) nibbles, which Postgres
+ * does not: `00000000-0000-0000-0000-00000000000a` is a perfectly
+ * storable `@db.Uuid` value that `z.string().uuid()` rejects. 23 of the
+ * 33 distinct UUID literals in this repo are of exactly that shape.
+ *
+ * The header gate below exists for one reason -- to stop a value Postgres
+ * cannot cast from reaching `$6::uuid` and raising 22P02 -- so its
+ * accepted set must be the set Postgres accepts, and no narrower. A
+ * narrower gate does not fail safe: it 400s a legitimate tenant.
+ */
+const UUID_TEXT_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** One definition, shared by the upsert params and the workspace header. */
+const workspaceUuidSchema = z.string().regex(UUID_TEXT_RE, 'expected a UUID');
+
 const upsertParamsSchema = z.object({
   contextKind: contextKindSchema,
-  workspaceId: z.string().uuid().nullable().optional(),
+  workspaceId: workspaceUuidSchema.nullable().optional(),
   title: z.string().min(1),
   body: z.string().min(1),
   sourceUrl: z.string().url().nullable().optional(),
@@ -86,20 +106,21 @@ const deleteParamsSchema = z
   });
 
 /**
- * Is this string a UUID?
+ * Is this string a workspace id Postgres will accept as `uuid`?
  *
- * Deliberately delegates to the SAME zod check `upsertParamsSchema` uses
- * for `workspaceId`, rather than introducing a second hand-rolled regex.
- * A divergent definition is how a value passes one gate and fails the
- * next, which is precisely the shape of the bug being fixed here.
+ * Delegates to the SAME `workspaceUuidSchema` that `upsertParamsSchema`
+ * uses for `workspaceId`, rather than introducing a second hand-rolled
+ * regex. A divergent definition is how a value passes one gate and fails
+ * the next, which is precisely the shape of the bug being fixed here.
  *
  * Note the empty-string case: `headers.get()` yields `''` for a header
  * that is present but empty, and `''` is falsy, so the old ternary below
  * treated it as ABSENT and escalated the call to operator context --
- * cross-tenant read visibility from a blank header. It is now rejected.
+ * cross-tenant read visibility from a blank header. `''` has no hex
+ * groups, so it is rejected here.
  */
 function isUuid(value: string): boolean {
-  return z.string().uuid().safeParse(value).success;
+  return workspaceUuidSchema.safeParse(value).success;
 }
 
 // ── Route handlers ──────────────────────────────────────────────────────
@@ -139,7 +160,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // `PgvectorKnowledgeStore.search` binds it to `$6::uuid`, and the
   // upsert branch below assigns it straight onto `up.data.workspaceId`,
   // overwriting the value `upsertParamsSchema` already checked with
-  // `z.string().uuid()` -- so the schema's guarantee does not survive
+  // `workspaceUuidSchema` -- so the schema's guarantee does not survive
   // that assignment.
   //
   // Before the tenant predicate existed, a garbage header was inert: it

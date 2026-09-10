@@ -90,7 +90,11 @@ export async function runSkill(
     if (!lead.email) {
       draftSkippedReason = 'missing-email';
     } else {
-      const draft = renderFirstTouchDraft({ lead, category, routing });
+      // NOTE: `routing` is deliberately NOT passed. The first-touch body
+      // is lead-facing; the routing decision is operator-facing and rides
+      // the approval payload's structured `routing` field instead. See
+      // `renderFirstTouchDraft` below.
+      const draft = renderFirstTouchDraft({ lead, category });
       if (input.persister && draft.confidence >= persistThreshold) {
         firstTouchDraft = await persistDraft(input.persister, {
           workspaceId: input.workspaceId,
@@ -313,18 +317,40 @@ function inferSpecialty(lead: LeadRecord): string | null {
 
 // ── Draft rendering ─────────────────────────────────────────────────────
 
+/**
+ * NOTE — `DraftArgs` carries NO `routing`, and that omission is the
+ * containment mechanism, not an oversight.
+ *
+ * The `body` this renderer produces is a genuine outbound artifact: it is
+ * handed to `DraftPersister.persistDraft`, which writes it into the
+ * broker's own Gmail / M365 Drafts folder (see `./drafts-persister.ts`).
+ * One click from a human and the lead reads it verbatim. Anything the
+ * routing object holds — the assigned agent's name, and the rationale
+ * explaining why the brokerage picked them — is internal and must never
+ * be in reach of that string.
+ *
+ * Keeping `routing` out of the renderer's parameter list makes that
+ * structural rather than aspirational: the body cannot leak a value the
+ * function was never given. A deletion inside `pickBody` would only be a
+ * fact about today's code; a missing parameter is a compile error for
+ * whoever tries to reintroduce it.
+ *
+ * Operator visibility is unaffected — see `./prisma-approval-sink.ts`,
+ * which puts the whole `routing` object on the approval payload, and
+ * `app/(product)/app/workspace/[id]/approvals/renderApprovalPayload.ts`,
+ * which renders it on its own line on the card.
+ */
 interface DraftArgs {
   lead: LeadRecord;
   category: LeadCategory;
-  routing: LeadRouting;
 }
 
 function renderFirstTouchDraft(args: DraftArgs): LeadFirstTouchDraft {
-  const { lead, category, routing } = args;
+  const { lead, category } = args;
   const firstName = lead.fullName.split(/\s+/)[0] || '{{operator: first name}}';
   const propAnchor = pickPropertyAnchor(lead);
   const subject = pickSubject({ lead, category, propAnchor });
-  const body = pickBody({ lead, category, routing, firstName, propAnchor });
+  const body = pickBody({ lead, category, firstName, propAnchor });
   // Real-estate first-touch is conversational. Tone = casual across
   // categories; the broker-of-record reviews before sending.
   const tone: LeadFirstTouchDraft['tone'] = 'casual';
@@ -376,12 +402,10 @@ function pickSubject(args: {
 function pickBody(args: {
   lead: LeadRecord;
   category: LeadCategory;
-  routing: LeadRouting;
   firstName: string;
   propAnchor: string;
 }): string {
-  const { lead, category, routing, firstName, propAnchor } = args;
-  const routingLine = routingMention(routing);
+  const { lead, category, firstName, propAnchor } = args;
   const askForPreapproval =
     !lead.statedFinancing ||
     /need|not preapproved/i.test(lead.statedFinancing) ||
@@ -407,8 +431,6 @@ function pickBody(args: {
           : 'For next steps, we can pull a short list of homes that match what ' +
             'you described and walk through a couple together this week.',
         '',
-        routingLine,
-        '',
         'Talk soon,',
         '{{operator: signature}}',
       ].join('\n');
@@ -429,8 +451,6 @@ function pickBody(args: {
           'work for a 15-minute call to map out what you are looking for? ' +
           '{{operator: propose two slots that respect your calendar}}.',
         '',
-        routingLine,
-        '',
         'Thanks,',
         '{{operator: signature}}',
       ].join('\n');
@@ -447,8 +467,6 @@ function pickBody(args: {
           'at homes or talk through the sell side, just reply to any of those ' +
           'notes and we will pick up live.',
         '',
-        routingLine,
-        '',
         'Talk soon,',
         '{{operator: signature}}',
       ].join('\n');
@@ -463,28 +481,48 @@ function pickBody(args: {
         'Whenever you are closer to making a move — even just exploring — ' +
           'reply to any one of those and we will pick up the thread.',
         '',
-        routingLine,
-        '',
         'Thanks,',
         '{{operator: signature}}',
       ].join('\n');
   }
 }
 
-function routingMention(routing: LeadRouting): string {
-  // Surface routing context as an operator-only merge comment — the
-  // routing decision should not leak into copy the lead sees. The
-  // broker's queue UI displays this separately; in the email body we
-  // keep it as an HTML comment-style marker so a human review catches
-  // any accidental leak.
-  if (routing.type === 'agent') {
-    return `{{operator-only — internal: routed to ${routing.agentName} (${routing.rationale})}}`;
-  }
-  if (routing.type === 'drip') {
-    return `{{operator-only — internal: enroll in "${routing.campaignName}" drip campaign}}`;
-  }
-  return `{{operator-only — internal: ${routing.rationale}}}`;
-}
+/*
+ * REMOVED — `routingMention()`.
+ *
+ * It returned `{{operator-only — internal: routed to <agent> (<rationale>)}}`
+ * and `pickBody` spliced that string into the first-touch body of every
+ * category. The comment that justified it claimed:
+ *
+ *   "in the email body we keep it as an HTML comment-style marker so a
+ *    human review catches any accidental leak"
+ *
+ * That claim was FALSE on both halves. `{{...}}` is not HTML comment
+ * syntax (`<!-- -->` is), and the body is assembled with `.join('\n')`
+ * and persisted as a plain-text draft — there is no HTML document for a
+ * comment to hide inside and no renderer that would strip it. The marker
+ * was ordinary visible prose sitting three lines above the signature.
+ * `persistDraft` writes that body straight into the broker's Gmail /
+ * M365 Drafts folder, so a broker who did not notice and delete it sent
+ * the lead the assigned agent's name and the brokerage's internal reason
+ * for picking them.
+ *
+ * The routing decision is not lost: `prisma-approval-sink.ts` puts the
+ * full structured `routing` object on the approval payload, and the
+ * approvals card renders the routed agent / campaign and the rationale
+ * on their own lines. That is the operator's surface. It was always the
+ * operator's surface; the body copy was a redundant second channel that
+ * happened to point at the lead.
+ *
+ * Not fixed with a regex strip over the body on purpose: a strip is a
+ * filter that has to be correct forever against a string that is still
+ * being constructed wrong, and this repo already parked a PR after four
+ * audit rounds of exactly that. Withholding the data from the renderer
+ * removes the class instead of policing it.
+ *
+ * Pinned by `skill.test.ts` — "internal routing rationale never reaches
+ * the outbound body", which sweeps every routing outcome x category.
+ */
 
 // ── Persistence ─────────────────────────────────────────────────────────
 

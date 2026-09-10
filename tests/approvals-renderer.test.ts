@@ -190,3 +190,138 @@ describe("approvals payload renderer", () => {
     }
   });
 });
+
+/**
+ * LEAD_TRIAGE routing visibility.
+ *
+ * `lib/skills/lead-triage-realestate/skill.ts` used to splice the routing
+ * decision into the first-touch email body, where the lead could read it.
+ * The containment fix removes it from the body entirely, which makes THIS
+ * card the operator's only view of where a lead was routed. These tests
+ * pin that view: if the card stops rendering the routed agent or the
+ * rationale, the operator has lost the decision and nobody would notice,
+ * because the body no longer carries a redundant copy.
+ *
+ * Companion pin (the other half of the same invariant):
+ * `lib/skills/lead-triage-realestate/skill.test.ts` - "internal routing
+ * rationale never reaches the outbound body".
+ */
+describe("approvals payload renderer - LEAD_TRIAGE routing visibility", () => {
+  const AGENT = "Zephyrine Quillfeather-Okonkwo";
+  const RATIONALE =
+    'Specialty match: Zephyrine Quillfeather-Okonkwo carries "luxury" specialty per the roster.';
+
+  it("renders the routed agent and the rationale for the operator", () => {
+    const out = renderApprovalPayload("LEAD_TRIAGE", {
+      leadName: "Avery Patel",
+      category: "hot",
+      routing: {
+        type: "agent",
+        agentId: "agent-z",
+        agentName: AGENT,
+        rationale: RATIONALE,
+      },
+      firstTouchDraft: {
+        subject: "Quick reply on 4421 Magnolia Dr",
+        body: "Hi Avery,\n\nThanks for reaching out.\n\nTalk soon,",
+        confidence: 0.82,
+      },
+      scores: { motivation: 1, timeline: 0.75, preapproval: 0.85 },
+    });
+
+    const joined = out.body.join("\n");
+    assert.ok(
+      joined.includes(`Routed to: ${AGENT}`),
+      `card must name the routed agent; got:\n${joined}`,
+    );
+    assert.ok(
+      joined.includes(`Routing rationale: ${RATIONALE}`),
+      `card must show the routing rationale; got:\n${joined}`,
+    );
+    assert.equal(out.reasoning, RATIONALE);
+    assert.ok(out.metaLine?.includes("routing: agent"));
+    // The operator edits and sends the draft body. The routing context
+    // must be adjacent to it on the card, never inside it.
+    assert.ok(
+      !(out.editableBody ?? "").includes(AGENT),
+      "the editable/outbound body must not contain the routed agent name",
+    );
+    assert.ok(
+      !(out.editableBody ?? "").includes("Specialty match"),
+      "the editable/outbound body must not contain the routing rationale",
+    );
+  });
+
+  it("names the drip campaign for the drip routing outcome", () => {
+    const out = renderApprovalPayload("LEAD_TRIAGE", {
+      leadName: "Jordan Reyes",
+      category: "nurture",
+      routing: {
+        type: "drip",
+        campaignId: "drip-nurture",
+        campaignName: "Vermillion Ptarmigan Sequence",
+        rationale: 'nurture lead - routed to drip campaign for "nurture" audience.',
+      },
+      firstTouchDraft: { subject: "Thanks for reaching out", body: "Hi Jordan,", confidence: 0.5 },
+    });
+    const joined = out.body.join("\n");
+    assert.ok(
+      joined.includes("Routed to drip campaign: Vermillion Ptarmigan Sequence"),
+      `card must name the drip campaign; got:\n${joined}`,
+    );
+    assert.ok(joined.includes("Routing rationale:"));
+  });
+
+  it("declares no mail recipients, so the operator lines cannot ride a mailto to the lead", () => {
+    // The two lines above are operator-facing and sit in `body`.
+    // `buildApprovalArtifact` composes the mailto body from `body` minus
+    // `provenanceBlocks`, and "Routing rationale: ..." is NOT a
+    // provenance block (provenance is the separately-prefixed "Why this
+    // was drafted: ..."), so a LEAD_TRIAGE card that declared recipients
+    // would offer to pre-fill an email naming the routed agent and the
+    // brokerage's internal reason — reopening, through the handoff, the
+    // exact door skill.ts just closed in the draft body.
+    //
+    // It declares none, so `handoffModes` withholds `mailto` entirely.
+    // This asserts the guarantee at its source rather than trusting the
+    // absence to persist.
+    const out = renderApprovalPayload("LEAD_TRIAGE", {
+      leadName: "Avery Patel",
+      category: "hot",
+      routing: {
+        type: "agent",
+        agentId: "agent-z",
+        agentName: AGENT,
+        rationale: RATIONALE,
+      },
+      firstTouchDraft: {
+        subject: "Quick reply on 4421 Magnolia Dr",
+        body: "Hi Avery,\n\nThanks for reaching out.\n\nTalk soon,",
+        confidence: 0.82,
+      },
+    });
+    // Positive control: the card really did render the operator lines, so
+    // this test cannot pass by rendering nothing at all.
+    const joined = out.body.join("\n");
+    assert.ok(joined.includes(`Routed to: ${AGENT}`));
+    assert.ok(joined.includes(`Routing rationale: ${RATIONALE}`));
+    assert.deepEqual(out.recipients ?? [], []);
+  });
+
+  it("manual routing still shows the rationale even with no named target", () => {
+    const out = renderApprovalPayload("LEAD_TRIAGE", {
+      leadName: "Sam Okafor",
+      category: "hot",
+      routing: {
+        type: "manual",
+        rationale:
+          "Hot/warm lead with no accepting agent on the roster - broker-owner triage required.",
+      },
+      draftSkippedReason: null,
+      firstTouchDraft: { subject: "Quick reply", body: "Hi Sam,", confidence: 0.82 },
+    });
+    const joined = out.body.join("\n");
+    assert.ok(joined.includes("broker-owner triage required"));
+    assert.ok(!joined.includes("Routed to:"), "no target to name for manual routing");
+  });
+});

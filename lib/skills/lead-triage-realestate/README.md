@@ -16,7 +16,9 @@ Given a workspace's inbound leads + agent roster + drip-campaign list, the skill
 4. **Routes**:
    - hot/warm → specific agent (specialty match → round-robin) or `manual` if no agent is accepting
    - cold/nurture → drip campaign for that audience, or `manual` if none configured
-5. **Drafts** a first-touch reply using real-estate vernacular — preapproval, MLS#, showing windows. Operator-only routing context is included as a `{{operator-only — internal: ... }}` marker so it never leaks to the lead.
+5. **Drafts** a first-touch reply using real-estate vernacular — preapproval, MLS#, showing windows. The draft body is lead-facing and contains **no routing context at all**: `renderFirstTouchDraft` is not given the `routing` object, so it cannot leak the assigned agent's name or the rationale for picking them. The routing decision reaches the operator through the approval payload's structured `routing` field, which the approvals card renders on its own lines.
+
+   > Until 2026-09-08 this step spliced a `{{operator-only — internal: routed to <agent> (<rationale>)}}` string into the body and the code comment claimed it was safe because it was "HTML comment-style." It was not — `{{...}}` is not HTML comment syntax, the body is plain text joined with `\n`, and `persistDraft` writes it into the broker's real Gmail/M365 Drafts folder. A broker who missed it sent the lead the brokerage's internal routing rationale. Pinned by the "internal routing rationale never reaches the outbound body" test in `skill.test.ts`.
 6. **Persists** drafts to the broker's email-drafts folder (Gmail / Outlook) via `DraftPersister` when confidence ≥ threshold. Per `project_no_outbound_architecture.md`, the skill **never sends**.
 
 ## Vertical scope

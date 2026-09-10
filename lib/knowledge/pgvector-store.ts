@@ -296,6 +296,7 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
     const verticalFilter = input.verticalSlug ?? null;
     const jurisdictionFilter =
       input.jurisdictions && input.jurisdictions.length > 0 ? input.jurisdictions : null;
+    const workspaceFilter = input.workspaceId ?? null;
 
     // Build a single query with optional filters. Parameter positions:
     //   $1 = pgvector query literal
@@ -305,6 +306,28 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
     //   $5 = text[] of allowed jurisdictions (NULL = no filter). NULL
     //        jurisdiction rows are ALWAYS eligible — soft layering, see
     //        KnowledgeSearchInput.jurisdictions.
+    //   $6 = workspaceId tenant scope (NULL = no filter). NULL-workspace
+    //        rows are ALWAYS eligible: the shared substrate (SKILL /
+    //        VERTICAL / COMPLIANCE / CROSS_CUSTOMER) is deliberately
+    //        tenant-less, and `validateContextWorkspaceFit` guarantees
+    //        only CUSTOMER rows ever carry a workspaceId.
+    //
+    // WHY $6 EXISTS AT ALL, given RLS already isolates tenants:
+    // this predicate is DEFENSE IN DEPTH ALONGSIDE the `embedding_read`
+    // RLS policy, NOT a replacement for it. RLS stays the security
+    // boundary. The bug $6 fixes is RECALL, not secrecy. `ORDER BY
+    // e."vector" <=> $1 LIMIT $2` is served by the ivfflat ANN index,
+    // which chooses its candidate set BEFORE row-level security runs --
+    // so an RLS-only tenant filter is a POST-filter. It discards other
+    // tenants' rows only after LIMIT k has already been spent on them,
+    // and a workspace holding a small share of the corpus silently
+    // receives a fraction of k (sometimes zero) with no error raised.
+    // Binding the tenant into the scan is what makes top-k mean top-k
+    // FOR THIS TENANT. Note the qual is written `e."workspaceId" = $6`
+    // with the cast on the PARAMETER, never on the column: every RLS
+    // policy in this repo casts the column (`"workspaceId"::text = ...`)
+    // which is non-sargable, so no btree index can serve it and hash
+    // partition pruning can never fire. Keep the column bare here.
     const sql = `
       SELECT
         e."id"::text                                    AS "embeddingId",
@@ -325,6 +348,7 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
         ($3::text[] IS NULL OR e."contextKind"::text = ANY($3::text[]))
         AND ($4::text IS NULL OR d."verticalSlug" = $4::text)
         AND ($5::text[] IS NULL OR d."jurisdiction" IS NULL OR d."jurisdiction" = ANY($5::text[]))
+        AND ($6::uuid IS NULL OR e."workspaceId" IS NULL OR e."workspaceId" = $6::uuid)
       ORDER BY e."vector" <=> $1::vector ASC
       LIMIT $2::int
     `;
@@ -354,6 +378,7 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
             kinds === null ? null : kinds.map((k) => String(k)),
             verticalFilter,
             jurisdictionFilter,
+            workspaceFilter,
           ),
         { client: this.client },
       );

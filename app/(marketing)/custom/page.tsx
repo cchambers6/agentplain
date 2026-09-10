@@ -37,7 +37,7 @@ export const metadata: Metadata = {
 // Q1.5 — who this is for. Sits between hero ("can you build it?") and
 // "what custom looks like" so a visitor self-identifies BEFORE seeing the
 // example builds. Frames Custom as a surface for operators who have
-// outgrown Regular ($199 → $99 per-seat, plug-and-play) rather than a
+// outgrown the standard flat-price subscription (plug-and-play) rather than a
 // different product. Each bullet maps to one of the example builds below.
 const whoThisIsFor = [
   {
@@ -63,7 +63,7 @@ const whoThisIsFor = [
   {
     label: "100+ seats / enterprise terms",
     body:
-      "Your own contract, security review, procurement path, audit access. The Regular ladder caps at 99 seats; past that the engagement is scoped per customer, not per seat.",
+      "Your own contract, security review, procurement path, audit access. Past a certain operational complexity the engagement is scoped per customer rather than bought off the page.",
   },
 ];
 
@@ -206,7 +206,7 @@ export default async function CustomPage({ searchParams }: PageProps) {
             We build.
           </h1>
           <p className="mt-8 max-w-3xl text-lg leading-relaxed text-ink-soft md:text-xl">
-            Regular ($199 → $99 per seat) covers plug-and-play across all ten
+            The flat monthly subscription covers plug-and-play across all ten
             verticals. Custom is where we go deeper: bespoke compliance
             corpus, custom integration, white-label, dedicated success, 100+
             seats, anything that needs its own scope. One human reads your
@@ -234,7 +234,7 @@ export default async function CustomPage({ searchParams }: PageProps) {
         intro={
           <>
             <p>
-              Regular ($199 → $99 per seat, every vertical, 1–99 seats,
+              The flat monthly subscription (every vertical, any team size,
               plug-and-play) covers most local businesses. Custom is the
               surface for the operators Regular doesn&rsquo;t yet reach.
             </p>
@@ -378,7 +378,7 @@ export default async function CustomPage({ searchParams }: PageProps) {
             </span>
           </>
         }
-        intro="Custom is how we extend the surface when &lsquo;affordable + best-in-class&rsquo; needs more depth than the productized fleet ships. The promise holds: the human stays in the loop, the audit trail stays open, the per-seat ROI math stays intact. The shape grows to fit your operation. That&rsquo;s the point."
+        intro="Custom is how we extend the surface when &lsquo;affordable + best-in-class&rsquo; needs more depth than the productized fleet ships. The promise holds: the human stays in the loop, the audit trail stays open, the ROI math stays intact. The shape grows to fit your operation. That&rsquo;s the point."
       >
         <p className="max-w-3xl font-display text-2xl leading-snug text-ink md:text-3xl">
           Same fleet, same control surface, scoped to the work only you do.

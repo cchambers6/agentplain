@@ -129,7 +129,11 @@ export default function StyleGuidePage() {
         intro="Paper and ink carry 90% of every surface. Clay is the single charge — spent once per view. The support tones (forest, wheat, paper-bright, clay-wash) are the 2026-06-19 additions: heritage earth tones for tonal layering and rare focal moments. Clay stays primary; the support tones never compete for the charge."
       >
         <div>
-          <p className="eyebrow mb-4">Core — ratified v0</p>
+          {/* "ratified v0" tripped the banned-strings guard's internal
+              version-literal rule (\bv0\b). The label means the ratified CORE
+              palette, not a product stage, so the version marker is dropped
+              rather than the guard weakened. */}
+          <p className="eyebrow mb-4">Core — ratified</p>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             <Swatch name="paper" hex={c.paper.hex} className="bg-paper" note="substrate" />
             <Swatch name="paper-deep" hex={c.paperDeep.hex} className="bg-paper-deep" note="strip" />

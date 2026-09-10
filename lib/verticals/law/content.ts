@@ -2,7 +2,13 @@ import type { VerticalContent } from "../types";
 import {
   TRIAL_PERIOD_DAYS_EXTENDED,
   MONEY_BACK_GUARANTEE_DAYS,
+  MONTHLY_PRICE_USD_CENTS,
 } from "../../billing/facts";
+
+// One flat price for every vertical and every customer. READ, never
+// restated: hardcoding "$99" here is exactly how the retired per-seat
+// ladder outlived the engine that stopped producing it.
+const FLAT = "$" + MONTHLY_PRICE_USD_CENTS / 100;
 
 // Source: `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 (law firms
 // composite 30, deprioritized for Product 2 due to Clio Work April 2026
@@ -17,9 +23,9 @@ import {
 // filings + opposing-counsel coordination; transactional attorneys run
 // drafting + redlining + closing coordination).
 //
-// Pricing: recommended at Max tier per `project_stripe_both_surfaces.md`
+// Pricing: quote-based SALES MOTION. The subscription price underneath is
 // (2026-05-15 — three customer-facing tiers Regular / Partner / Max). Max is
-// AD-HOC quote-based, not a fixed per-seat price; law firms self-route to Max
+// the ONE flat price in `lib/billing/facts.ts`; law stays quote-gated.
 // because privilege-aware depth, ABA Model Rule 1.6 compliance corpus, multi-
 // jurisdiction state packs, and the Clio/CoCounsel competitive context all
 // require higher-intensity service than Regular's standard cadence. The
@@ -49,7 +55,7 @@ export const law: VerticalContent = {
     },
     {
       q: "How much does agentplain cost for a law firm?",
-      a: `Law firms are recommended at the Max tier — an ad-hoc service partnership quoted to your engagement and sold sales-led rather than by self-checkout, because the stakes per draft warrant a named partner and a weekly cadence. Every agentplain subscription is month-to-month; law firms get the extended ${TRIAL_PERIOD_DAYS_EXTENDED}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on the first charge. Max engagements are quoted to scope.`,
+      a: `Law firms are quoted rather than checked out online — the stakes per draft warrant a named partner and a weekly cadence, so the engagement is scoped with you rather than picked from a page. The subscription underneath is the same flat ${FLAT} per month every agentplain customer pays; what varies is scope, not headcount. Every agentplain subscription is month-to-month; law firms get the extended ${TRIAL_PERIOD_DAYS_EXTENDED}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on the first charge. Engagements are quoted to scope.`,
     },
     {
       q: "Where does client and matter data live?",
@@ -295,12 +301,12 @@ export const law: VerticalContent = {
 
   roi: {
     multiplier: "engagement-dependent (target 15×+)",
-    inputCost: "Max tier · quote-based engagement (privilege-aware depth, ABA Model Rule 1.6 compliance corpus, multi-jurisdiction packs, dedicated team)",
+    inputCost: "Quote-based engagement (privilege-aware depth, ABA Model Rule 1.6 compliance corpus, multi-jurisdiction packs, dedicated team)",
     outputValue: "$150,000 / yr in attorney-hour reclamation at a 3-attorney firm",
     math:
-      "3 attorneys × ~10 hours/week each on drafting + status + chase work × $250/hr billable opportunity cost × 50 weeks = $375k/yr opportunity. Capture even 40% with the fleet → $150k/yr returned. A 25-attorney firm capturing 75% of $3.125M opportunity returns past $2.3M/yr. Max engagements are scoped per firm — privilege-aware compliance, ABA Model Rule 1.6 review, multi-state filing packs, and dedicated success management drive the price. Talk to a service partner to scope; the Partner ladder ($299→$199 per seat) is the floor the quote starts from before service-intensity overlay. Capability builds we don't have yet (e.g., a custom court e-filing skill) live on /custom in addition to Max.",
+      "3 attorneys × ~10 hours/week each on drafting + status + chase work × $250/hr billable opportunity cost × 50 weeks = $375k/yr opportunity. Capture even 40% with the fleet → $150k/yr returned. A 25-attorney firm capturing 75% of $3.125M opportunity returns past $2.3M/yr. Engagements are scoped per firm — privilege-aware compliance, ABA Model Rule 1.6 review, multi-state filing packs, and dedicated success management drive the quote. Talk to a service partner to scope; the flat ${FLAT}/month subscription is what the engagement is built on top of, and scope rather than headcount drives the rest. Capability builds we don't have yet (e.g., a custom court e-filing skill) live on /custom.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (Max tier per 2026-05-15 ratification — AD-HOC quote-based engagement; routes through `/custom?type=max` intake to operator triage). ROI band per `project_pricing_value_anchor.md` (Regular tier 15x–50x as the floor; Max engagements scope from there). Competitive context per `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 + §5 (Clio Work April 2026; CoCounsel/Smokeball March 2026). Hourly-rate input is operator-modeled — flagged in capability inbox.",
+      "Engagement is quote-based and sold sales-led (routes through `/custom?type=max` intake to operator triage) — a different SALES MOTION, not a different price. The underlying subscription is the ONE flat price in `lib/billing/facts.ts` (`MONTHLY_PRICE_USD_CENTS`); scope, not seat count, drives the quote. ROI band per `project_pricing_value_anchor.md`. Competitive context per `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 + §5 (Clio Work April 2026; CoCounsel/Smokeball March 2026). Hourly-rate input is operator-modeled — flagged in capability inbox.",
     violationAvoidance:
       "Client communications are bound by the ABA Model Rules — Rule 1.6 on confidentiality and Rule 7.1 on false or misleading statements about a lawyer's services. There's no fixed civil fine, but the exposure is heavier than one: disciplinary action up to disbarment, plus legal-malpractice liability that follows a single privileged detail sent to the wrong recipient. A tool that auto-sends can breach privilege or misstate in one message; agentplain drafts and an attorney reviews and approves every client-facing draft before it sends, so a privilege breach or misleading line never leaves the firm. That avoided exposure is the part of ROI no hours-saved multiplier can show — and no auto-execution tool can promise.",
   },

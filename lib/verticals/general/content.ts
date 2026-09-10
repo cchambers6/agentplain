@@ -2,7 +2,13 @@ import type { VerticalContent } from "../types";
 import {
   TRIAL_PERIOD_DAYS,
   MONEY_BACK_GUARANTEE_DAYS,
+  MONTHLY_PRICE_USD_CENTS,
 } from "../../billing/facts";
+
+// One flat price for every vertical and every customer. READ, never
+// restated: hardcoding "$99" here is exactly how the retired per-seat
+// ladder outlived the engine that stopped producing it.
+const FLAT = "$" + MONTHLY_PRICE_USD_CENTS / 100;
 
 // `/general` — honest on-ramp surface for local businesses outside the ten
 // ratified verticals (real-estate, mortgage, insurance, property-management,
@@ -58,7 +64,7 @@ export const general: VerticalContent = {
     },
     {
       q: "How much does agentplain cost?",
-      a: `The on-ramp is offered at the Regular tier — $199 per seat per month for a solo operator, sliding to $99 per seat at 50+ seats. Every tier is per seat and month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
+      a: `${FLAT} per month. One flat price — the same whether you are a solo operator or a forty-person shop, and the same across every vertical. Month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
     },
     {
       q: "Does the fleet send anything on its own?",
@@ -208,15 +214,15 @@ export const general: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "15x",
+    multiplier: "26x",
     inputCost:
-      "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — 7-day free trial, card at signup",
+      `${FLAT}/month flat — ${TRIAL_PERIOD_DAYS}-day free trial, card at signup`,
     outputValue:
-      "$3,000 / mo per seat at the conservative end of the value range",
+      "$3,000 / mo at the conservative end of the value range",
     math:
-      "Lower bound of the published value-anchor band ($2,900–$10,600/mo per seat). Universal-admin recovery is the floor case: ~6 owner-hours/week on inbox triage + scheduling + follow-up × $100/hr conservative blended rate × 4.3 weeks = ~$2,580/mo against the solo Regular-tier seat ($199/mo) = ~13x at the floor. Rounded to a 15x headline that sits at the bottom of the 15x–50x ROI range every Regular-tier vertical advertises. Without a vertical-specific compliance corpus the upside ceiling is lower than the named verticals — that's the honest trade for not having to scope a Custom engagement.",
+      `Lower bound of the published value-anchor band ($2,900–$10,600/mo). Universal-admin recovery is the floor case: ~6 owner-hours/week on inbox triage + scheduling + follow-up × $100/hr conservative blended rate × 4.3 weeks = ~$2,580/mo. Against the flat ${FLAT}/month that is ~26x at the floor. Because the price is flat, adding people raises the return rather than the bill. Without a vertical-specific compliance corpus the upside ceiling is lower than the named verticals — that's the honest trade for not having to scope a Custom engagement.`,
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (Regular tier per the 2026-05-15 three-tier ratification; per-seat ladder $199→$99; trial + money-back mechanics per `lib/billing/facts.ts`, ratified 2026-06-14). ROI band per `project_pricing_value_anchor.md` (Regular-tier ROI range 15x–50x). Universal-admin hour share is an operator-modeled floor — flagged in capability inbox for primary-research validation. `/general` deliberately publishes the low end of the range because the on-ramp scaffolding is lighter than a ratified vertical.",
+      "Pricing per `lib/billing/facts.ts` (`MONTHLY_PRICE_USD_CENTS`) — ONE flat monthly price, the same for every customer and every vertical, whatever the headcount. Trial + money-back mechanics per the same module. ROI band per `project_pricing_value_anchor.md`. Universal-admin hour share is an operator-modeled floor — flagged in capability inbox for primary-research validation. `/general` deliberately publishes the low end of the range because the on-ramp scaffolding is lighter than a ratified vertical.",
     violationAvoidance:
       "Even outside a named vertical, any business that contacts customers carries baseline regulatory exposure — the TCPA on texts and calls ($500 to $1,500 per non-consented message, 47 U.S.C. §227), CAN-SPAM on email (FTC civil penalties assessed per individual offending message), and FTC Act §5 on deceptive claims. The on-ramp draws no vertical-specific compliance corpus, but the safeguard is the same: agentplain's fleet drafts every customer-facing message and a human approves it before it sends, so an auto-send violation can't happen by default. That avoided downside isn't in the 15x floor math — it's the structural reason a draft-then-approve partner beats a tool that fires on its own.",
   },

@@ -19,19 +19,25 @@
  * ── The economics (production+growth plan §2) ─────────────────────────────
  * `outputs/production_growth_plan_2026_06_03/PLAN.md` §2 establishes that at
  * the post-wave-8 model mix a heavy single-seat workspace costs ~$162–279/mo
- * in Anthropic tokens against a $99–199/mo subscription — i.e. at/below
- * break-even on the heaviest customers. A healthy-margin token budget caps
- * token COGS at a fraction of MRR:
+ * in model tokens. A healthy-margin token budget caps token COGS at a
+ * fraction of MRR:
  *
  *   recommended cap = MRR × (1 − gross-margin target)
  *                   = MRR × 0.30   (at a 70% gross-margin target, PLAN §2)
  *
- * reproducing the plan's "Break-even token budget per workspace" table:
- *   $199/seat → ~$60/mo   (Regular, 1 seat)
- *   $149/seat → ~$45/mo   (Regular, 10–24 band)
- *   $99/seat  → ~$30/mo   (Regular, 50–99 band)
+ * Under the ONE FLAT PRICE there is a single row in that table, not a ladder:
  *
- * The quote-based Max tier has no productized price, so it gets no
+ *   flat monthly price → recommended cap = price × 0.30
+ *
+ * The retired ladder rows ($199 → ~$60, $149 → ~$45, $99 → ~$30) are gone
+ * along with the per-seat prices that generated them.
+ *
+ * MARGIN NOTE, unchanged and still load-bearing: a heavy workspace can cost
+ * more in tokens than it pays. That was already true against the old ladder's
+ * floor and it is true against the flat price. This module recommends a cap;
+ * it does not enforce one, and applying a cap is an explicit operator action.
+ *
+ * Quote-based engagements have no productized price, so they get no
  * recommendation (`null`) — ceilings there are negotiated per engagement.
  */
 

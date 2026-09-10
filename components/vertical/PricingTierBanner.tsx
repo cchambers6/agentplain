@@ -1,13 +1,14 @@
 import Link from "next/link";
 import Section from "@/components/Section";
 import {
+  ANNUAL_PRICE_USD_CENTS,
   MONEY_BACK_GUARANTEE_DAYS,
+  MONTHLY_PRICE_USD_CENTS,
   trialPeriodDaysForVertical,
 } from "@/lib/billing/facts";
 import {
   TIER_TAGLINE,
   tierDisplayName,
-  tierLadderBands,
   type TierName,
 } from "@/lib/pricing/tiers";
 import type { VerticalTier } from "@/lib/verticals/types";
@@ -21,13 +22,15 @@ import type { VerticalTier } from "@/lib/verticals/types";
 // always renders "Partner".
 //
 // Renderer contract:
-// - Regular   → ladder card grid with per-band prices, links to /pricing
-// - Partner   → ladder card grid with Partner per-band prices, links to /pricing
+// - Regular   → flat-price card, links to /pricing
+// - Partner   → flat-price card + the support difference, links to /pricing
 // - Max       → quote-based card with "Talk to a service partner" CTA
 //               routing to /custom?type=max
 //
-// Per-band prices come from `tierLadderBands()` (single source of truth in
-// `lib/pricing/tiers.ts`) so this banner can never drift from billing.
+// The price comes from `MONTHLY_PRICE_USD_CENTS` / `ANNUAL_PRICE_USD_CENTS`
+// in `lib/billing/facts.ts` so this banner can never drift from billing.
+// It is ONE price for every vertical and every headcount; `displayName` still
+// renders because the tier names a SALES MOTION, never a price.
 //
 // `VerticalTier` and `TierName` are the same string union — `plus` and
 // `regular` and `max` — so `tierDisplayName(tier)` accepts either and
@@ -110,9 +113,14 @@ export default function PricingTierBanner({
     );
   }
 
-  const ladder = tierLadderBands(resolvedTier === "plus" ? "plus" : "regular");
-  const headlineLow = ladder[ladder.length - 1].price;
-  const headlineHigh = ladder[0].price;
+  // ONE price. This block used to `.map()` over `tierLadderBands()` into a
+  // five-column seat-band grid, with a headline reading
+  // "<tier> · per-seat, $HIGH solo, sliding to $LOW at 50+ seats".
+  // The shim now returns a SINGLE row, so headlineHigh === headlineLow and the
+  // page rendered "$99 solo, sliding to $99 at 50+ seats" inside a five-column
+  // grid holding one cell. Nothing threw.
+  const monthly = `$${MONTHLY_PRICE_USD_CENTS / 100}`;
+  const annual = (ANNUAL_PRICE_USD_CENTS / 100).toLocaleString("en-US");
 
   return (
     <Section
@@ -121,31 +129,51 @@ export default function PricingTierBanner({
       eyebrow="Pricing"
       title={
         <>
-          <span className="text-clay">{displayName}</span> · per-seat,{" "}
-          <span className="text-clay">{headlineHigh}</span> solo, sliding to{" "}
-          <span className="text-clay">{headlineLow}</span> at 50+ seats
+          <span className="text-clay">{monthly}</span> a month on{" "}
+          <span className="text-clay">{displayName}</span>. That&rsquo;s the
+          whole price.
         </>
       }
       intro={
         resolvedTier === "plus"
-          ? `Per seat, month-to-month. Priority support + quarterly async check-in with your service team. ${trialDays}-day free trial, card at signup; cancel any time.`
-          : `Per seat, month-to-month. Standard managed AI ops + onboarding bundled in. ${trialDays}-day free trial, card at signup; cancel any time.`
+          ? `One flat price, whatever your headcount — month-to-month. Includes priority support and a quarterly async check-in with your service team. ${trialDays}-day free trial, card at signup; cancel any time.`
+          : `One flat price, whatever your headcount — month-to-month. Standard managed AI ops and onboarding bundled in. ${trialDays}-day free trial, card at signup; cancel any time.`
       }
     >
-      <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-5">
-        {ladder.map((row) => (
-          <div key={row.band} className="bg-paper p-5">
-            <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-              {row.band}
-            </p>
-            <p className="mt-3 font-display text-3xl leading-none text-ink">
-              {row.price}
-            </p>
-            <p className="mt-1 text-[12px] leading-relaxed text-mute">
-              per seat / mo
-            </p>
-          </div>
-        ))}
+      <div className="grid gap-px overflow-hidden border border-rule bg-rule sm:grid-cols-3">
+        <div className="bg-paper p-5">
+          <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+            Monthly
+          </p>
+          <p className="mt-3 font-display text-3xl leading-none text-ink">
+            {monthly}
+          </p>
+          <p className="mt-1 text-[12px] leading-relaxed text-mute">
+            per month, flat
+          </p>
+        </div>
+        <div className="bg-paper p-5">
+          <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+            Yearly
+          </p>
+          <p className="mt-3 font-display text-3xl leading-none text-ink">
+            ${annual}
+          </p>
+          <p className="mt-1 text-[12px] leading-relaxed text-mute">
+            per year, flat
+          </p>
+        </div>
+        <div className="bg-paper p-5">
+          <p className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
+            Team size
+          </p>
+          <p className="mt-3 font-display text-3xl leading-none text-ink">
+            Any
+          </p>
+          <p className="mt-1 text-[12px] leading-relaxed text-mute">
+            the price does not change
+          </p>
+        </div>
       </div>
 
       <div className="mt-8 max-w-3xl border-t border-rule pt-6">

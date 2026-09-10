@@ -2,7 +2,13 @@ import type { VerticalContent } from "../types";
 import {
   TRIAL_PERIOD_DAYS,
   MONEY_BACK_GUARANTEE_DAYS,
+  MONTHLY_PRICE_USD_CENTS,
 } from "../../billing/facts";
+
+// One flat price for every vertical and every customer. READ, never
+// restated: hardcoding "$99" here is exactly how the retired per-seat
+// ladder outlived the engine that stopped producing it.
+const FLAT = "$" + MONTHLY_PRICE_USD_CENTS / 100;
 
 // Sources: `b2b_vertical_opportunity_analysis_2026-04-27.md` (insurance §3.2
 // is the structural analog — same recurring-admin density, same compliance
@@ -37,7 +43,7 @@ export const mortgage: VerticalContent = {
     },
     {
       q: "How much does agentplain cost for a mortgage brokerage?",
-      a: `Mortgage is recommended at the Regular tier — $199 per seat per month for a solo loan officer, sliding to $99 per seat at 50+ seats. Every tier is per seat and month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
+      a: `${FLAT} per month. One flat price — the same whether you are a solo loan officer or a multi-LO shop, and the same across every vertical. Month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
     },
     {
       q: "Does the fleet send anything to borrowers on its own?",
@@ -243,13 +249,13 @@ export const mortgage: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "9x–19x",
-    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — 7-day free trial, card at signup",
-    outputValue: "$22,000 / yr per LO seat in cycle-time reclamation",
+    multiplier: "18x+",
+    inputCost: `${FLAT}/month flat — ${TRIAL_PERIOD_DAYS}-day free trial, card at signup`,
+    outputValue: "$22,000 / yr per LO in cycle-time reclamation",
     math:
-      "Solo case: ~$1,833/mo per LO against the Regular-tier solo seat ($199/mo) = ~9x ROI. At-scale case: same per-LO value against the 50-seat-band price ($99/mo) = ~19x. Multi-LO mortgage shops typically see the at-scale economics.",
+      `~$1,833/mo per LO against the flat ${FLAT}/month ($1,188/yr) = ~18x for a single loan officer. Because the price does not scale with headcount, a multi-LO shop multiplies the return on an unchanged bill: five LOs reclaiming ~$110k/yr against the same $1,188/yr runs past 90x.`,
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (Regular tier per the 2026-05-15 three-tier ratification — Regular is the default entry path; mortgage shops wanting named-service-partner reserved time can step up to Partner ($299→$199/seat), and high-intensity multi-state engagements route to Max (quote-based)). Value math per `project_pricing_value_anchor.md` (Regular-tier ROI range 15x–50x). Loan-cycle and doc-chase reference points pending primary-research validation — flagged in capability inbox. Sales-cycle compression mechanism modeled on the roofing-supplement analog in `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3.",
+      "Pricing per `lib/billing/facts.ts` (`MONTHLY_PRICE_USD_CENTS`) — ONE flat monthly price, the same for every customer and every vertical, whatever the headcount. Trial + money-back mechanics per the same module. Value math per `project_pricing_value_anchor.md`. Loan-cycle and doc-chase reference points pending primary-research validation — flagged in capability inbox. Sales-cycle compression mechanism modeled on the roofing-supplement analog in `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3.",
     violationAvoidance:
       "Mortgage communications sit on top of RESPA, ECOA, HMDA, and TRID at once — a kickback-implying referral note (RESPA §8 carries $10,000 criminal exposure plus CFPB civil penalties reaching $1,443,275 for knowing violations, 2025 inflation-adjusted), a careless adverse-action line (ECOA / Regulation B), a reporting gap (HMDA), or a mis-stated fee (TRID) each become regulator-fileable the moment they send. Auto-execution means the violation is already out the door before anyone reviews it; agentplain's fleet drafts the LO's borrower outreach and disclosures, and a licensed human reviews and approves every customer-facing message before it sends — so a non-compliant line is caught at the draft stage rather than litigated as a sent record. That avoided exposure is value the hours-reclaimed multiplier doesn't count.",
   },

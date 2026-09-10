@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+// The one exception to this page's "imports nothing live" rule: the PRICE.
+// A mockup carrying a hardcoded price is how a $499/mo figure that never
+// existed stayed reachable on this route for months.
+import { MONTHLY_PRICE_USD_CENTS } from "@/lib/billing/facts";
 import "./styles.css";
 
 // ============================================================================
@@ -171,9 +175,19 @@ export default function HeritagePlainsDirection() {
                   See how it works
                 </a>
               </div>
+              {/* PRICE CORRECTED 2026-09-09 (flat-price collapse). This read
+                  "$499 to set up", and the card below read "$499 / mo" — a
+                  price that does not exist in `lib/billing/facts.ts` and never
+                  did. This route sits at top-level `app/style/` specifically
+                  to stay outside the trees `tests/marketing-banned-strings.test.ts`
+                  scans, so no guard could ever have caught it. It is
+                  `robots: noindex` but still reachable by URL.
+                  FOR CONNER: this page is a brand-direction mockup, not a
+                  ratified offer — "The Working Crew" is not a real SKU. Decide
+                  whether it should carry a price at all. */}
               <p className="h-caption h-mt-4">
-                $499 to set up · billed only when the work ships · Georgia &amp;
-                the Southeast first
+                ${MONTHLY_PRICE_USD_CENTS / 100} a month, flat · billed when the
+                trial ends · Georgia &amp; the Southeast first
               </p>
             </div>
 
@@ -290,8 +304,12 @@ export default function HeritagePlainsDirection() {
               <span className="h-price-tag">Most offices pick this</span>
               <span className="h-eyebrow h-eyebrow--mute">The Working Crew</span>
               <div className="h-flex h-mt-2" style={{ alignItems: "baseline", gap: "0.5rem" }}>
-                <span className="h-price-amt">$499</span>
-                <span className="h-muted" style={{ fontSize: "0.9rem" }}>/ mo · setup billed at close</span>
+                <span className="h-price-amt">
+                  ${MONTHLY_PRICE_USD_CENTS / 100}
+                </span>
+                <span className="h-muted" style={{ fontSize: "0.9rem" }}>
+                  / mo · flat, any team size
+                </span>
               </div>
               <p className="h-prose h-mt-2" style={{ fontSize: "0.95rem" }}>
                 The full crew, trained for your trade. Everything below is in the

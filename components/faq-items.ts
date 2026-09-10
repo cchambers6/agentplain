@@ -12,7 +12,8 @@
  * service-partnership lock (three productized tiers, managed-service
  * model): no "agent counts", no real-estate-only framing, no
  * "self-serve"/"DIY", customer is the SERVED party, drafts/advises never
- * sends. Pricing answered as the three-tier service partnership.
+ * sends. Pricing answered as ONE FLAT PRICE — never a per-seat rate, never a
+ * volume ladder, never a multi-column tier comparison.
  */
 
 // Billing-policy numbers (trial lengths, money-back window, support model)
@@ -20,7 +21,9 @@
 // `lib/billing/facts` is a leaf module — importing it here keeps this file
 // React-free for the KB loader.
 import {
+  ANNUAL_PRICE_USD_CENTS,
   MONEY_BACK_GUARANTEE_DAYS,
+  MONTHLY_PRICE_USD_CENTS,
   PARTNER_SUPPORT,
   TRIAL_PERIOD_DAYS,
   TRIAL_PERIOD_DAYS_EXTENDED,
@@ -85,36 +88,36 @@ export const FAQ_ITEMS: FAQItem[] = [
   {
     q: "How does pricing work?",
     topic: "pricing",
-    a: `Three tiers of service partnership, all per seat, month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (${TRIAL_PERIOD_DAYS_EXTENDED} days for CPA & Law), card captured at signup. (1) Regular: standard partnership, monthly review, $199 solo sliding to $99 at 50+ seats. (2) Partner: everything in Regular plus priority support and a quarterly async check-in with your service team, $299 solo sliding to $199 at scale. (3) Max: ad-hoc service partnership for firms with non-standard scope — quoted to the engagement, sales-led. No setup charges. No long-term contract. ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee. Cancel anytime from your billing settings.`,
+    a: `One flat price: $${MONTHLY_PRICE_USD_CENTS / 100} a month, or $${(ANNUAL_PRICE_USD_CENTS / 100).toLocaleString("en-US")} a year. It is the same price for every firm and every vertical, and it does not change with the number of people you put on it — a solo operator and a forty-person firm pay the same. Month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (${TRIAL_PERIOD_DAYS_EXTENDED} days for CPA & Law) and a card captured at signup. Firms with non-standard scope — law and RIA especially — are quoted rather than checked out online; that is a different way of buying, not a different price. No setup charges. No long-term contract. ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee. Cancel anytime from your billing settings.`,
     link: {
       href: "/guarantee",
       label: `Read the ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee`,
     },
   },
   {
-    q: "What's the difference between Regular, Partner, and Max?",
+    q: "What do I get, and does it change with the size of my firm?",
     topic: "pricing",
-    a: "Cadence and depth of support. Regular is the standard service partnership: we install, run a monthly review, and handle tuning between reviews. Most local-business shops fit Regular. Partner is everything in Regular plus priority support and a quarterly async check-in with your service team — for firms that want a faster line and a regular pulse on what the fleet is doing. Max is sales-led: ad-hoc service partnership for firms whose ops don't fit the productized shape — different cadence, different deliverables, quoted to scope.",
+    a: "The price does not change with your size — that is the point of a flat price. What varies is cadence and depth of support. The standard partnership is: we install, run a monthly review, and handle tuning between reviews. Firms with higher stakes per draft get priority support and a quarterly async check-in with their service team. Firms whose operations do not fit the productized shape — different cadence, different deliverables — are quoted to scope, sales-led. In all three cases the subscription underneath is the same flat monthly price.",
   },
   {
-    q: "When would I want Partner instead of Regular?",
+    q: "When do I get priority support and a quarterly check-in?",
     topic: "pricing",
-    a: "A few patterns. (1) You want priority support — a faster line when something needs attention — rather than standard turnaround. (2) Your stakes per draft are higher than the average shop (litigation work, wealth management, broker-of-record-sensitive comms) and you want a regular pulse on what the fleet is doing. (3) You want a quarterly async check-in with your service team to step back and tune as your ops shift. If none of those apply, Regular usually fits.",
+    a: "A few patterns. (1) You want a faster line when something needs attention rather than standard turnaround. (2) Your stakes per draft are higher than the average shop (litigation work, wealth management, broker-of-record-sensitive comms) and you want a regular pulse on what the fleet is doing. (3) You want a quarterly async check-in with your service team to step back and tune as your ops shift. Talk to your service partner — it does not change what you pay."
   },
   {
-    q: "What is /custom and how is it different from Max?",
+    q: "What is /custom, and how is it different from the subscription?",
     topic: "pricing",
-    a: "Max is a service-partnership tier — recurring per-seat relationship with non-standard scope. /custom is engagement work: a written spec, a 4–6 week build, a fixed price ($5K–$15K typical plus $200–$500/mo maintenance), then handoff. You'd reach /custom when you need something the productized tiers don't include: a bespoke compliance corpus, a white-label deployment, a custom integration to a tool that isn't on our roadmap, 100+ seats, custom reporting. You can be on Regular OR Partner AND have a /custom engagement in flight at the same time.",
+    a: "The subscription is the ongoing service partnership at one flat monthly price. /custom is engagement work: a written spec, a 4–6 week build, a fixed price ($5K–$15K typical plus $200–$500/mo maintenance), then handoff. It is a DIFFERENT PRODUCT, not a pricing tier, and it is unaffected by flat pricing. You would reach /custom when you need something the standard fleet does not include: a bespoke compliance corpus, a white-label deployment, a custom integration to a tool that is not on our roadmap, custom reporting. You can hold a subscription AND have a /custom engagement in flight at the same time.",
   },
   {
     q: "Do I pay extra when the fleet works more?",
     topic: "pricing",
-    a: "No. The per-seat fee is flat — there is no metered usage line item and no overage charge. The fleet's AI usage is our cost to manage, not a bill that grows behind your back. Your workspace shows the fleet's last-30-day activity on the usage page, so what the fleet is doing is never a mystery. If a workspace's usage climbs well past what's healthy for its plan, your service partner talks through the right plan with you — a conversation, never a surprise charge.",
+    a: "No. The monthly price is flat — there is no metered usage line item and no overage charge. The fleet's AI usage is our cost to manage, not a bill that grows behind your back. Your workspace shows the fleet's last-30-day activity on the usage page, so what the fleet is doing is never a mystery. If a workspace's usage climbs well past what is healthy, your service partner talks it through with you — a conversation, never a surprise charge.",
   },
   {
     q: "What's the ROI math?",
     topic: "pricing",
-    a: "We publish the assumptions instead of a headline number. At the ROI calculator's defaults — 10 hours a week of systematic work back, valued at $100 an hour — the modeled value is about $4,300 a month per practitioner, against a $99 to $299 per-seat subscription depending on tier. Your hours and your rate will differ, so the calculator on the pricing page is interactive: put in your own. On top of the hours sits the regulatory exposure a draft-then-approve loop removes: a non-compliant message (TCPA, fair-housing, RESPA, SEC Marketing Rule, and the like) is caught as a draft, never sent. That's the one thing an auto-execution tool can't promise to dodge.",
+    a: "We publish the assumptions instead of a headline number. At the ROI calculator's defaults — 10 hours a week of systematic work back, valued at $100 an hour — the modeled value is about $4,300 a month per practitioner, against a flat $99-a-month subscription — and because the price is flat, every additional person raises the return without raising the bill. Your hours and your rate will differ, so the calculator on the pricing page is interactive: put in your own. On top of the hours sits the regulatory exposure a draft-then-approve loop removes: a non-compliant message (TCPA, fair-housing, RESPA, SEC Marketing Rule, and the like) is caught as a draft, never sent. That's the one thing an auto-execution tool can't promise to dodge.",
   },
   {
     q: "Why should anyone believe you?",

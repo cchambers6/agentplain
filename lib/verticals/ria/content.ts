@@ -2,7 +2,13 @@ import type { VerticalContent } from "../types";
 import {
   TRIAL_PERIOD_DAYS,
   MONEY_BACK_GUARANTEE_DAYS,
+  MONTHLY_PRICE_USD_CENTS,
 } from "../../billing/facts";
+
+// One flat price for every vertical and every customer. READ, never
+// restated: hardcoding "$99" here is exactly how the retired per-seat
+// ladder outlived the engine that stopped producing it.
+const FLAT = "$" + MONTHLY_PRICE_USD_CENTS / 100;
 
 // Source: `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 (financial
 // advisors / RIAs, 1–10 advisor, composite 33).
@@ -16,9 +22,9 @@ import {
 // Operations/CSA, Compliance officer (often outsourced or wears multiple
 // hats at small RIAs).
 //
-// Pricing: recommended at Max tier per `project_stripe_both_surfaces.md`
+// Pricing: quote-based SALES MOTION. The subscription price underneath is
 // (2026-05-15 — three customer-facing tiers Regular / Partner / Max). Max is
-// AD-HOC quote-based, not a fixed per-seat price; RIAs self-route to Max
+// the ONE flat price in `lib/billing/facts.ts`; RIA stays quote-gated.
 // because fiduciary-aware depth, SEC Marketing Rule compliance corpus,
 // custodian-portal integrations (Schwab / Fidelity / Pershing), and Form ADV
 // Part 2A maintenance all require higher-intensity service than Regular's
@@ -48,7 +54,7 @@ export const ria: VerticalContent = {
     },
     {
       q: "How much does agentplain cost for an RIA?",
-      a: `RIAs are recommended at the Max tier — an ad-hoc service partnership quoted to your engagement and sold sales-led rather than by self-checkout, because the stakes per draft warrant a named partner and a weekly cadence. Every agentplain subscription is month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on the first charge. Max engagements are quoted to scope.`,
+      a: `RIAs are quoted rather than checked out online — the stakes per draft warrant a named partner and a weekly cadence, so the engagement is scoped with you rather than picked from a page. The subscription underneath is the same flat ${FLAT} per month every agentplain customer pays; what varies is scope, not headcount. Every agentplain subscription is month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on the first charge. Engagements are quoted to scope.`,
     },
     {
       q: "Does the fleet send anything to clients on its own?",
@@ -297,12 +303,12 @@ export const ria: VerticalContent = {
 
   roi: {
     multiplier: "engagement-dependent (target 15×+)",
-    inputCost: "Max tier · quote-based engagement (fiduciary-aware depth, SEC Marketing Rule compliance corpus, custodian-portal integrations, dedicated team)",
+    inputCost: "Quote-based engagement (fiduciary-aware depth, SEC Marketing Rule compliance corpus, custodian-portal integrations, dedicated team)",
     outputValue: "$175,000 / yr in advisor-hour reclamation at a 3-advisor practice",
     math:
-      "3 advisors × ~6 hours/week each on prep + recap + comms triage × $300/hr opportunity cost × 50 weeks = $270k/yr opportunity. Capture 65% with the fleet → $175k/yr returned. A 25-advisor practice capturing the same share of a $2.25M opportunity returns past $1.4M/yr. Max engagements are scoped per practice — fiduciary-aware compliance, SEC Marketing Rule corpus, custodian-portal coverage (Schwab / Fidelity / Pershing), and dedicated success management drive the price. Talk to a service partner to scope; the Partner ladder ($299→$199 per seat) is the floor the quote starts from before service-intensity overlay. Capability builds we don't have yet (e.g., a custom portfolio-rebalancer skill) live on /custom in addition to Max.",
+      "3 advisors × ~6 hours/week each on prep + recap + comms triage × $300/hr opportunity cost × 50 weeks = $270k/yr opportunity. Capture 65% with the fleet → $175k/yr returned. A 25-advisor practice capturing the same share of a $2.25M opportunity returns past $1.4M/yr. Engagements are scoped per practice — fiduciary-aware compliance, SEC Marketing Rule corpus, custodian-portal coverage (Schwab / Fidelity / Pershing), and dedicated success management drive the quote. Talk to a service partner to scope; the flat ${FLAT}/month subscription is what the engagement is built on top of, and scope rather than headcount drives the rest. Capability builds we don't have yet (e.g., a custom portfolio-rebalancer skill) live on /custom.",
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (Max tier per 2026-05-15 ratification — AD-HOC quote-based engagement; routes through `/custom?type=max` intake to operator triage). ROI band per `project_pricing_value_anchor.md` (Regular tier 15x–50x as the floor; Max engagements scope from there). RIA segment economics per `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 (financial advisors, composite 33). Hourly-rate input is operator-modeled — flagged in capability inbox.",
+      "Engagement is quote-based and sold sales-led (routes through `/custom?type=max` intake to operator triage) — a different SALES MOTION, not a different price. The underlying subscription is the ONE flat price in `lib/billing/facts.ts` (`MONTHLY_PRICE_USD_CENTS`); scope, not seat count, drives the quote. ROI band per `project_pricing_value_anchor.md`. RIA segment economics per `b2b_vertical_opportunity_analysis_2026-04-27.md` §2 (financial advisors, composite 33). Hourly-rate input is operator-modeled — flagged in capability inbox.",
     violationAvoidance:
       "Adviser communications live under the SEC Marketing Rule (Rule 206(4)-1) and the fiduciary duty — the SEC's 2024 enforcement sweeps settled at $60,000 to $325,000 per adviser for unsubstantiated or untrue advertising claims and missing testimonial disclosures, and a single non-compliant performance line or endorsement is enough to draw one. Auto-execution publishes before substantiation; agentplain's fleet drafts the marketing and client comms, and an advisor reviews and approves every draft before it sends — so an unsubstantiated claim never becomes a filed advertisement. The avoided settlement is downside the hours-reclaimed multiplier doesn't price, and only a draft-then-approve loop can promise it.",
   },

@@ -62,7 +62,7 @@ export default function TermsPage() {
 
       <Section title="Payment + cancellation" label="§ 02">
         <p>
-          Subscription tiers are billed per seat, monthly in advance, via the
+          Subscriptions are billed at one flat monthly price, in advance, via the
           payment method on file. Regular and Partner include a free trial — 7
           days by default, 14 days for the CPA and Law verticals; your card is
           captured at signup and the first charge occurs when the trial ends

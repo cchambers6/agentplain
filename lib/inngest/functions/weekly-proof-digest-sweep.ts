@@ -15,7 +15,7 @@
  *
  * This is the renewal surface: every Monday the owner sees hours saved,
  * dollars influenced (real AR where a payload carried it), and what the
- * fleet auto-executed vs staged — so paying $99–199/mo is never a leap of
+ * fleet auto-executed vs staged — so paying the flat monthly price is never a leap of
  * faith. Deterministic render (no LLM in the hot path).
  *
  * Mirrors the daily briefings-generator-sweep gate stack exactly:

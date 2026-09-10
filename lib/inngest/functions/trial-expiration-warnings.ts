@@ -20,9 +20,9 @@ import type { SystemContextRunner } from "@/lib/billing/provisioning";
 import type { EmailProvider } from "@/lib/email";
 import {
   TRIAL_WARNING_THRESHOLDS_DAYS,
-  monthlyChargeUsdCents,
   tierFromVerticalTier,
 } from "@/lib/pricing/tiers";
+import { MONTHLY_PRICE_USD_CENTS } from "@/lib/billing/facts";
 import { inngest } from "../client";
 import { runWithDisableGate } from "../run-with-disable-gate";
 import {
@@ -44,9 +44,14 @@ interface CandidateSubscription {
   daysRemaining: number;
   threshold: number;
   tierLabel: string;
-  perSeatCents: number;
   seats: number;
-  totalCents: number;
+  /**
+   * The flat monthly charge in USD cents. Was `perSeatCents` + `totalCents`,
+   * which after the flat-price collapse both returned the SAME number while
+   * the email still multiplied them in prose — a 3-seat workspace was told
+   * "3 seats at $99/seat/mo ... charged $99". One field, stated once.
+   */
+  monthlyCents: number;
 }
 
 export async function findTrialWarningCandidates(
@@ -100,7 +105,6 @@ export async function findTrialWarningCandidates(
       const brokerEmail = sub.workspace?.memberships[0]?.user.email ?? null;
       if (!brokerEmail || !sub.workspace) continue;
       const tier = tierFromVerticalTier(sub.tier);
-      const charge = monthlyChargeUsdCents(tier, sub.seats);
       out.push({
         workspaceId: sub.workspace.id,
         workspaceName: sub.workspace.name,
@@ -111,9 +115,10 @@ export async function findTrialWarningCandidates(
         daysRemaining: Math.max(0, days),
         threshold,
         tierLabel: `agentplain ${capitalize(tier)}`,
-        perSeatCents: charge.perSeatCents,
         seats: sub.seats,
-        totalCents: charge.totalCents,
+        // Read the price directly. `monthlyChargeUsdCents(tier, seats)` is a
+        // deprecated shim whose tier and seat arguments are both ignored.
+        monthlyCents: MONTHLY_PRICE_USD_CENTS,
       });
     }
     return out;
@@ -236,7 +241,7 @@ function renderHtml(args: {
   return `<!doctype html>
 <html><body style="font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif; color:#1A1612; background:#F5F0E6; padding:32px;">
   <h2 style="font-weight:500; color:#1A1612;">Your agentplain trial ends ${escapeHtml(dayLabel)}.</h2>
-  <p>You're on <strong>${escapeHtml(candidate.tierLabel)}</strong> — ${candidate.seats} seat${candidate.seats === 1 ? "" : "s"} at ${formatCents(candidate.perSeatCents)}/seat/mo. After ${escapeHtml(dayLabel)}, your card on file will be charged ${formatCents(candidate.totalCents)} on a monthly cycle.</p>
+  <p>After ${escapeHtml(dayLabel)}, your card on file will be charged ${formatCents(candidate.monthlyCents)} on a monthly cycle — one flat price, however many people you have on the workspace.</p>
   <p>If you haven't added a card yet, your fleet pauses when the trial ends. Add one in under a minute:</p>
   <p><a href="${billingUrl}" style="display:inline-block; padding:12px 20px; background:#1A1612; color:#F5F0E6; text-decoration:none; font-weight:500;">Open billing</a></p>
   <p style="font-size:13px; color:#726A5E;">Month-to-month. Cancel any time from the same page.</p>
@@ -253,7 +258,7 @@ function renderText(args: {
   const { candidate, billingUrl, dayLabel } = args;
   return `Your agentplain trial ends ${dayLabel}.
 
-You're on ${candidate.tierLabel} — ${candidate.seats} seat(s) at ${formatCents(candidate.perSeatCents)}/seat/mo. After ${dayLabel}, your card on file will be charged ${formatCents(candidate.totalCents)} on a monthly cycle.
+After ${dayLabel}, your card on file will be charged ${formatCents(candidate.monthlyCents)} on a monthly cycle — one flat price, however many people you have on the workspace.
 
 Open billing: ${billingUrl}
 

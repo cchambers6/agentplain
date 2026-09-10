@@ -23,19 +23,19 @@
  *     top of Claude" framing and the `isBasedOn` Claude/Anthropic node were
  *     removed here for that reason.
  *   - `verticalProductJsonLd()` — per-vertical Product with the softened ROI
- *     band (15–50× cap; the retired 107× claim is never emitted) and a real
- *     per-seat Offer derived from the locked pricing ladder.
+ *     band (15–50× cap; the retired 107× claim is never emitted) and a single
+ *     flat-price Offer read from `MONTHLY_PRICE_USD_CENTS`.
  */
 
 import { tokens } from "@/lib/brand/tokens";
 import { getAllVerticals } from "@/lib/verticals";
 import type { VerticalContent } from "@/lib/verticals/types";
 import {
-  PER_SEAT_MONTHLY_USD_CENTS,
   isSelfServeTier,
   tierDisplayName,
   type TierName,
 } from "@/lib/pricing/tiers";
+import { MONTHLY_PRICE_USD_CENTS } from "@/lib/billing/facts";
 
 export const BASE_URL = "https://agentplain.com";
 
@@ -106,9 +106,8 @@ export function webSiteJsonLd(): Record<string, unknown> {
  * that reason — the sanctioned disclosure home is the privacy/security
  * subprocessor list, not crawler-facing structured data).
  *
- * `offers` is an AggregateOffer spanning the self-serve per-seat ladder
- * (Regular $99–$199, Partner $199–$299) sourced from the locked pricing
- * tiers. Max is quote-based and excluded by design.
+ * `offers` is a single `Offer` at the ONE flat price, read from
+ * `MONTHLY_PRICE_USD_CENTS`. The per-seat ladder it used to span is retired.
  */
 export function softwareApplicationJsonLd(): Record<string, unknown> {
   return {
@@ -123,29 +122,34 @@ export function softwareApplicationJsonLd(): Record<string, unknown> {
     provider: { "@id": `${BASE_URL}/#organization` },
     description:
       "A managed, vertical-aware fleet of AI partners that reads your email, calendar, CRM, and documents, then drafts what you'd otherwise type — installed, run, and customized for you by a human service team. Run for you; you stay in control because the fleet drafts and you approve.",
-    offers: selfServeAggregateOffer(),
+    offers: flatOffer(),
   };
 }
 
 /**
- * AggregateOffer across the self-serve per-seat ladder. Min = the cheapest
- * Regular seat (50–99 band), max = the most expensive Partner seat (solo).
- * Sourced from `PER_SEAT_MONTHLY_USD_CENTS`; quote-based Max is excluded.
+ * A single `Offer` for the ONE flat price.
+ *
+ * WAS an `AggregateOffer` built by flattening `PER_SEAT_MONTHLY_USD_CENTS`
+ * across the self-serve tiers, carrying `unitText: "per seat per month"` and
+ * a lowPrice/highPrice spread. After the flat-price collapse every cell of
+ * that record holds the same number, so it emitted
+ * `lowPrice: 99, highPrice: 99, offerCount: 10, unitText: "per seat per month"`
+ * — a ten-offer per-seat range where all ten offers are identical. It did not
+ * throw, and it is emitted into <head> on the homepage and every vertical
+ * page, so NO HUMAN READING THE PAGE WOULD EVER SEE IT; only a crawler would.
+ *
+ * There is one price and one offer. `AggregateOffer` is now semantically
+ * wrong (schema.org defines it as an aggregate over *multiple* offers).
  */
-function selfServeAggregateOffer(): Record<string, unknown> {
-  const selfServe: TierName[] = (["regular", "plus"] as TierName[]).filter(
-    isSelfServeTier,
-  );
-  const prices = selfServe.flatMap((t) =>
-    Object.values(PER_SEAT_MONTHLY_USD_CENTS[t]).map((c) => c / 100),
-  );
+function flatOffer(): Record<string, unknown> {
   return {
-    "@type": "AggregateOffer",
+    "@type": "Offer",
     priceCurrency: "USD",
-    lowPrice: Math.min(...prices),
-    highPrice: Math.max(...prices),
-    offerCount: prices.length,
-    unitText: "per seat per month",
+    price: MONTHLY_PRICE_USD_CENTS / 100,
+    // Schema.org duration for the billing period: one month.
+    billingDuration: "P1M",
+    availability: "https://schema.org/InStock",
+    url: `${BASE_URL}/pricing`,
   };
 }
 
@@ -203,15 +207,15 @@ export function verticalServiceJsonLd(v: VerticalContent): Record<string, unknow
 /**
  * Per-vertical Product payload — used on each `/[vertical]` page alongside the
  * Service payload. Carries the softened ROI band (capped at 50×; the retired
- * 107× claim is never emitted) as a `PropertyValue`, plus a real per-seat
- * `Offer` derived from the vertical's locked tier.
+ * 107× claim is never emitted) as a `PropertyValue`, plus a single flat-price
+ * `Offer`.
  *
  * Offer rules (truthful pricing only):
- *   - Regular / Partner (self-serve) → AggregateOffer with the tier's own
- *     per-seat band from `PER_SEAT_MONTHLY_USD_CENTS`.
- *   - Max (law, ria) → quote-based; NO price Offer is emitted (we never
- *     invent a seat price for a quoted engagement). The Product still ships
- *     so the ROI + brand signal lands; pricing surfaces on /pricing + /custom.
+ *   - Self-serve verticals → one `Offer` at `MONTHLY_PRICE_USD_CENTS`.
+ *   - Quote-only verticals (law, ria) → NO price Offer is emitted (we never
+ *     publish a price for an engagement that is actually scoped). The Product
+ *     still ships so the ROI + brand signal lands; pricing surfaces on
+ *     /pricing + /custom.
  *
  * The per-vertical `multiplier` (e.g. "26x", "11x–23x") is asserted ≤ 50× by
  * the content audit; we surface it verbatim. The ROI_FRAME copy states the
@@ -253,24 +257,18 @@ export function verticalProductJsonLd(v: VerticalContent): Record<string, unknow
 }
 
 /**
- * Per-seat Offer for a vertical's tier. Returns null for quote-based Max so
- * we never publish an invented seat price. Self-serve tiers (Regular,
- * Partner) get an AggregateOffer spanning their own seat band.
+ * Offer for a vertical. Returns null for quote-only verticals (law, ria) so
+ * we never publish a price for an engagement that is actually scoped — that
+ * rule is unchanged and is the reason `isSelfServeTier` is still consulted
+ * here. Everything else gets the ONE flat Offer.
+ *
+ * WAS an `AggregateOffer` over the tier's own seat band. Every band cell now
+ * holds the same number, so it published `lowPrice: 99, highPrice: 99,
+ * offerCount: 5, unitText: "per seat per month"` on nine vertical pages.
  */
 function verticalOffer(tier: TierName): Record<string, unknown> | null {
   if (!isSelfServeTier(tier)) return null;
-  const prices = Object.values(PER_SEAT_MONTHLY_USD_CENTS[tier]).map(
-    (c) => c / 100,
-  );
-  return {
-    "@type": "AggregateOffer",
-    priceCurrency: "USD",
-    lowPrice: Math.min(...prices),
-    highPrice: Math.max(...prices),
-    offerCount: prices.length,
-    unitText: "per seat per month",
-    availability: "https://schema.org/InStock",
-  };
+  return flatOffer();
 }
 
 /**

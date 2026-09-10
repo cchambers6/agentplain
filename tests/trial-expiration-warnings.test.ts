@@ -8,6 +8,7 @@
 
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
+import { MONTHLY_PRICE_USD_CENTS } from "@/lib/billing/facts";
 import { TestEmailProvider } from "@/lib/email";
 import type { SystemContextRunner } from "@/lib/billing/provisioning";
 import {
@@ -173,5 +174,50 @@ describe("trial-expiration-warnings — candidate selection", () => {
       state.audits.every((a) => a.action === "billing.trial_warning_sent"),
     );
     assert.equal(state.updates.length, 2);
+  });
+
+  // REGRESSION. The flat-price collapse left this mailer reading `perSeatCents`
+  // and `totalCents` off the `monthlyChargeUsdCents` shim, which now returns the
+  // SAME number for both. The email still multiplied them in prose, so the
+  // 30-seat `sub-row-3` workspace was told:
+  //   "agentplain Max — 30 seats at $99/seat/mo ... will be charged $99"
+  // implying $2,970 while billing $99. Nothing failed: the shim returned a
+  // valid number and no assertion looked at the sentence. Pin it.
+  it("states ONE flat price and never a per-seat rate, even at 30 seats", async () => {
+    const email = new TestEmailProvider();
+    const cands = await findTrialWarningCandidates(
+      new Date(),
+      fakeSystemContext,
+    );
+    const thirtySeat = cands.find((c) => c.subscriptionId === "sub-row-3");
+    assert.ok(thirtySeat, "sub-row-3 (30 seats) must be a warning candidate");
+    assert.equal(
+      thirtySeat.monthlyCents,
+      MONTHLY_PRICE_USD_CENTS,
+      "a 30-seat workspace owes the flat price, not a multiple of it",
+    );
+
+    for (const c of cands) {
+      await emitTrialWarning(c, "https://app.test", {
+        email,
+        systemContext: fakeSystemContext,
+      });
+    }
+
+    const flat = `$${MONTHLY_PRICE_USD_CENTS / 100}`;
+    for (const m of email.sent) {
+      for (const body of [m.html, m.text]) {
+        assert.ok(
+          body.includes(flat),
+          `email must state the flat price ${flat}`,
+        );
+        for (const banned of ["/seat", "per seat", "per-seat", "seat/mo"]) {
+          assert.ok(
+            !body.includes(banned),
+            `email must not contain per-seat language: "${banned}"`,
+          );
+        }
+      }
+    }
   });
 });

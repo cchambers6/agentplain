@@ -1,59 +1,56 @@
 import { TierCard } from "@/components/marketing/HomeCards";
-import { tierLadderBands } from "@/lib/pricing/tiers";
 import {
+  ANNUAL_PRICE_USD_CENTS,
+  MONTHLY_PRICE_USD_CENTS,
   TRIAL_PERIOD_DAYS,
   MONEY_BACK_GUARANTEE_DAYS,
   PARTNER_SUPPORT,
 } from "@/lib/billing/facts";
 
-// The three-tier service-partnership grid, as one reusable block.
+// The pricing block, as one reusable teaser.
 //
-// Every number on it is DERIVED: the per-seat ladders come from
-// `tierLadderBands()` (canonical `PER_SEAT_MONTHLY_USD_CENTS`), the trial
-// length and money-back window from `lib/billing/facts.ts`. No surface that
-// renders this component can drift from billing truth — which is the whole
-// point of extracting it (design-system tighten, 2026-07-08; previously the
-// homepage hand-typed "7-day free trial" three times).
+// WAS a three-column grid (Regular / Partner / Max), each column rendering a
+// five-row per-seat volume ladder from `tierLadderBands()`. Under flat pricing
+// that produced TWO IDENTICAL PRICE COLUMNS — Regular and Partner both showing
+// a single "$99 /seat/mo" row — while still presenting as a tier comparison.
+// Nothing failed; the grid just stopped saying anything.
 //
-// The /pricing page keeps its own richer long-form layout; this block is the
-// TEASER shape — home page today, vertical pages when they want one.
+// Now: ONE price, plus the quoted-engagement path for firms that are scoped
+// rather than checked out. `PARTNER_SUPPORT` still renders because priority
+// support and the quarterly check-in are a real difference in SERVICE — they
+// are simply not a difference in PRICE, so they read as an included feature
+// line rather than a second column with a second number.
+//
+// Every number is DERIVED from `lib/billing/facts.ts`, so no surface that
+// renders this component can drift from billing truth.
 
-const FOOTNOTE = `${TRIAL_PERIOD_DAYS}-day free trial. Month-to-month. Per seat.`;
+const FOOTNOTE = `${TRIAL_PERIOD_DAYS}-day free trial. Month-to-month. One flat price.`;
 
 export function PriceTiers() {
-  const ladderBands = tierLadderBands("regular");
-  const partnerBands = tierLadderBands("plus");
+  const monthly = `$${MONTHLY_PRICE_USD_CENTS / 100}`;
+  const annual = (ANNUAL_PRICE_USD_CENTS / 100).toLocaleString("en-US");
 
   return (
-    <div className="grid gap-px overflow-hidden border border-rule bg-rule lg:grid-cols-3">
+    <div className="grid gap-px overflow-hidden border border-rule bg-rule lg:grid-cols-2">
       <TierCard
-        name="Regular"
-        tagline="Standard service partnership."
-        description="Our team installs the fleet, configures it for your vertical, and runs a monthly review. Day-to-day, the fleet drafts inside the workspace you log into."
-        bands={ladderBands}
+        name="The subscription"
+        tagline="One price. Any size firm."
+        description={`Our team installs the fleet, configures it for your vertical, and runs a monthly review. Day-to-day, the fleet drafts inside the workspace you log into. ${PARTNER_SUPPORT.description} Add as many people as you like — the price does not move.`}
+        price={monthly}
+        priceNote={`a month · $${annual} a year · any team size`}
         ctaLabel="Start free trial"
         ctaHref="/app/sign-up"
         ctaStyle="primary"
         footnote={FOOTNOTE}
-      />
-      <TierCard
-        name="Partner"
-        tagline="Priority support + a quarterly check-in."
-        description={`Same fleet, plus ${PARTNER_SUPPORT.description.charAt(0).toLowerCase()}${PARTNER_SUPPORT.description.slice(1).replace(/\.$/, "")} — a faster line and a regular pulse on the fleet as your ops shift.`}
-        bands={partnerBands}
-        ctaLabel="Talk to a service partner"
-        ctaHref="mailto:hello@agentplain.com?subject=agentplain%20Partner%20tier%20interest"
-        ctaStyle="secondary"
-        footnote={FOOTNOTE}
         featured
       />
       <TierCard
-        name="Max"
-        tagline="Ad-hoc service partnership."
-        description="For firms whose ops don't fit the productized shape — quoted to scope, not by seat. Talk to us about what you need and we'll come back with a written engagement."
-        quotedNote="Quoted per engagement"
+        name="Scoped engagement"
+        tagline="When your operation needs more than the standard shape."
+        description="Some firms — law and RIA especially — are scoped rather than bought off the page: different cadence, different deliverables, a written engagement. Tell us what you need and we'll come back with one."
+        quotedNote="Quoted to scope"
         ctaLabel="Talk to us"
-        ctaHref="mailto:hello@agentplain.com?subject=agentplain%20Max%20tier%20inquiry"
+        ctaHref="mailto:hello@agentplain.com?subject=agentplain%20engagement%20inquiry"
         ctaStyle="secondary"
         footnote="Sales-led — no self-checkout."
       />

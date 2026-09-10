@@ -7,27 +7,35 @@
 // raw content files.
 
 /**
- * Tier identifier — must match the per-seat ladder defined in
- * `project_stripe_both_surfaces.md` (2026-05-15 three-tier ratification;
- * supersedes the 2026-05-12 simplified Regular-only model and the
- * 2026-05-09 productized-Max model).
+ * Tier identifier — NOT A PRICE INPUT.
  *
- * Customer-facing display names — see `lib/pricing/tiers.ts` →
- * `tierDisplayName()`. The on-disk enum values stay `regular` / `plus` /
- * `max` for stable identity; copy reads "Partner" wherever `plus` would
- * otherwise leak.
+ * Pricing is ONE FLAT PRICE for every customer and every vertical:
+ * `MONTHLY_PRICE_USD_CENTS` in `lib/billing/facts.ts`. There is no per-seat
+ * rate, no volume ladder, and no per-tier price. The per-seat ladder that
+ * this comment used to reproduce ($199→$99 / $299→$199) is RETIRED.
  *
- * Per-seat ladder (solo → 50–99 seats):
- * - `regular` → "Regular" → $199 → $99 per seat (productized)
- * - `plus`    → "Partner" → $299 → $199 per seat (productized; everything in
- *               Regular plus priority support + a quarterly async check-in —
- *               no reserved hours, ratified 2026-06-14)
- * - `max`     → "Max"     → AD-HOC quote-based (no fixed seat price)
+ * NOTE FOR ANYONE ADDING A PRICE ANYWHERE: a ladder written in a comment is
+ * invisible to `tests/marketing-banned-strings.test.ts`, because that guard
+ * runs `stripComments` over the corpus before matching. This block survived
+ * a full flat-price sweep for exactly that reason. Do not restate a price
+ * in a comment; import it.
  *
- * Month-to-month, 7-day free trial across Regular + Partner (14 days for the
- * CPA + Law verticals), card captured at signup. Max is custom-quoted
- * month-to-month or annual per engagement. 100+ seats moves to enterprise
- * terms via /custom.
+ * What the tier still means: the SALES MOTION, and the Prisma
+ * `WorkspaceVerticalTier` enum identity (REGULAR/PLUS/MAX), which cannot be
+ * collapsed without a migration.
+ * - `regular` → self-serve purchasable
+ * - `plus`    → self-serve purchasable; adds priority email/chat support and
+ *               a quarterly async check-in. NO reserved human hours
+ *               (`PARTNER_SUPPORT.includesConnerTime === false`).
+ * - `max`     → quote-only; `isSelfServeTier("max") === false` keeps it out
+ *               of self-serve Checkout. Scope, not headcount, drives the quote.
+ *
+ * Customer-facing display names come from `lib/pricing/tiers.ts` →
+ * `tierDisplayName()`; the on-disk values stay `regular` / `plus` / `max`
+ * for stable identity, and copy reads "Partner" wherever `plus` would leak.
+ *
+ * Month-to-month, card captured at signup, 7-day free trial (14 days for the
+ * CPA + Law verticals), 14-day money-back guarantee.
  */
 export type VerticalTier = "regular" | "plus" | "max";
 

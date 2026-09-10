@@ -125,7 +125,7 @@ const REGISTRY: Record<string, Comparison> = {
       { dimension: "Who maintains it", alternative: "You or your engineer, indefinitely", agentplain: "Your service partner" },
       { dimension: "Vertical workflows", alternative: "You design and test each one", agentplain: "Pre-built per vertical, counsel-reviewed corpus" },
       { dimension: "Integrations", alternative: "You wire each tool yourself", agentplain: "Connected on the /integrations page" },
-      { dimension: "Cost shape", alternative: "Variable model-API usage", agentplain: `Flat per-seat monthly, ${TRIAL_PERIOD_DAYS}-day free trial` },
+      { dimension: "Cost shape", alternative: "Variable model-API usage", agentplain: `One flat monthly price, ${TRIAL_PERIOD_DAYS}-day free trial` },
       { dimension: "Compliance + guardrails", alternative: "You build the checks", agentplain: "Per-vertical corpus + draft-then-approve loop" },
     ],
     chooseAlternativeIf:
@@ -139,7 +139,7 @@ const REGISTRY: Record<string, Comparison> = {
       },
       {
         q: "What does agentplain cost compared with building it?",
-        a: `Building it yourself costs engineering time plus variable model-API usage. agentplain is a flat per-seat subscription — $99 to $299 depending on tier — month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee. You trade variable build-and-maintain cost for a predictable, run-for-you fee.`,
+        a: `Building it yourself costs engineering time plus variable model-API usage. agentplain is one flat subscription — $99 a month, whatever your headcount — month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee. You trade variable build-and-maintain cost for a predictable, run-for-you fee.`,
       },
       { q: "Does the fleet send anything on its own?", a: NO_OUTBOUND_ANSWER },
     ],
@@ -175,7 +175,7 @@ const REGISTRY: Record<string, Comparison> = {
       { dimension: "Integrations", alternative: "Copy-paste, by hand", agentplain: "Connected: email, CRM, documents, e-signature" },
       { dimension: "Who runs it", alternative: "You", agentplain: "A service team" },
       { dimension: "Taking action", alternative: "You do everything manually", agentplain: "Drafts queue for your approval; you send" },
-      { dimension: "Cost shape", alternative: "Cheap/free, self-serve", agentplain: "Flat per-seat, service included" },
+      { dimension: "Cost shape", alternative: "Cheap/free, self-serve", agentplain: "One flat monthly price, service included" },
     ],
     chooseAlternativeIf:
       "You want a cheap, general-purpose tool for ad-hoc questions and you're happy to drive it yourself.",
@@ -212,14 +212,14 @@ const REGISTRY: Record<string, Comparison> = {
       "Flexible — you can reassign a person to anything.",
     ],
     whereAgentplainWins: [
-      "A fraction of a salary — flat per-seat, no benefits or overhead.",
+      "A fraction of a salary — one flat monthly price, no benefits or overhead.",
       "Always on; no PTO, sick days, or turnover.",
       "Scales instantly across the whole recurring workload.",
       "Per-vertical compliance corpus and draft-then-approve are built in.",
       "Never quits and takes the institutional knowledge with it.",
     ],
     rows: [
-      { dimension: "Cost", alternative: "Salary + benefits + overhead", agentplain: "Flat per-seat monthly" },
+      { dimension: "Cost", alternative: "Salary + benefits + overhead", agentplain: "One flat monthly price" },
       { dimension: "Availability", alternative: "Business hours, PTO, turnover", agentplain: "Around the clock, no turnover" },
       { dimension: "Best at", alternative: "Judgment, calls, relationships, ad-hoc", agentplain: "Systematic drafting, triage, follow-up at scale" },
       { dimension: "Ramp-up", alternative: "Hiring + training", agentplain: "Days, run by a service team" },
@@ -240,7 +240,7 @@ const REGISTRY: Record<string, Comparison> = {
       },
       {
         q: "How much does agentplain cost compared with an assistant?",
-        a: `An assistant is a salary plus benefits and overhead. agentplain is a flat per-seat subscription — $99 to $299 depending on tier — month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee.`,
+        a: `An assistant is a salary plus benefits and overhead. agentplain is one flat subscription — $99 a month, whatever your headcount — month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee.`,
       },
     ],
   },
@@ -264,16 +264,16 @@ const REGISTRY: Record<string, Comparison> = {
     ],
     whereAgentplainWins: [
       "Always-on for recurring operational work, not per-project.",
-      "A fraction of an agency retainer — flat per-seat.",
+      "A fraction of an agency retainer — one flat monthly price.",
       "Works inside your own tools; the work product is yours.",
       "Per-vertical compliance corpus and draft-then-approve are built in.",
       "No scoping cycles — it runs every day in the background.",
     ],
     rows: [
-      { dimension: "Engagement", alternative: "Project or retainer", agentplain: "Flat per-seat subscription" },
+      { dimension: "Engagement", alternative: "Project or retainer", agentplain: "One flat monthly subscription" },
       { dimension: "Best at", alternative: "Bespoke strategy, creative, one-offs", agentplain: "Recurring operational work at scale" },
       { dimension: "Where the work lives", alternative: "Often the agency's systems", agentplain: "Inside your own tools; you own it" },
-      { dimension: "Cost shape", alternative: "Retainer / project fees", agentplain: `Flat per-seat monthly, ${TRIAL_PERIOD_DAYS}-day free trial` },
+      { dimension: "Cost shape", alternative: "Retainer / project fees", agentplain: `One flat monthly price, ${TRIAL_PERIOD_DAYS}-day free trial` },
       { dimension: "Availability", alternative: "Scoped engagements", agentplain: "Runs in the background every day" },
     ],
     chooseAlternativeIf:
@@ -287,7 +287,7 @@ const REGISTRY: Record<string, Comparison> = {
       },
       {
         q: "Why is agentplain cheaper than an agency?",
-        a: "An agency prices human hours on a retainer or per project. agentplain runs a managed AI fleet for a flat per-seat fee — $99 to $299 depending on tier — so the recurring operational work costs a fraction of agency hours while running continuously in the background.",
+        a: "An agency prices human hours on a retainer or per project. agentplain runs a managed AI fleet for one flat fee — $99 a month, whatever your headcount — so the recurring operational work costs a fraction of agency hours while running continuously in the background.",
       },
       {
         q: "Does agentplain do bespoke project work like an agency?",
@@ -389,7 +389,7 @@ const VENDOR_REGISTRY: Record<string, Comparison> = {
       {
         dimension: "Cost predictability",
         alternative: "Per-user pricing, with add-ons like the dialer billed per user on top",
-        agentplain: "Flat per-seat monthly, $99–$299 by tier, published in full",
+        agentplain: "One flat monthly price of $99/month, published in full",
       },
       {
         dimension: "When you need help",
@@ -487,7 +487,7 @@ const VENDOR_REGISTRY: Record<string, Comparison> = {
       {
         dimension: "Cost predictability",
         alternative: "Platform tiers with setup fees on monthly billing and per-feed add-ons",
-        agentplain: "Flat per-seat monthly, $99–$299 by tier, published in full",
+        agentplain: "One flat monthly price of $99/month, published in full",
       },
       {
         dimension: "When you need help",
@@ -537,7 +537,7 @@ const VENDOR_REGISTRY: Record<string, Comparison> = {
       "Nothing new to administer. The fleet works your existing email, calendar, QuickBooks, and documents.",
       "Days to running, installed by a service team — no quote cycle, no admin role to staff.",
       "Per-thread drafts in your voice, not campaign templates.",
-      "Published flat pricing, $99–$299 per seat.",
+      "Published flat pricing — one price, $99 a month.",
     ],
     cantDo: [
       {
@@ -585,7 +585,7 @@ const VENDOR_REGISTRY: Record<string, Comparison> = {
       {
         dimension: "Cost predictability",
         alternative: "Quote-based; rates aren't published",
-        agentplain: "Flat per-seat monthly, $99–$299 by tier, published in full",
+        agentplain: "One flat monthly price of $99/month, published in full",
       },
       {
         dimension: "When you need help",

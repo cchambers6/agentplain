@@ -2,7 +2,13 @@ import type { VerticalContent } from "../types";
 import {
   TRIAL_PERIOD_DAYS,
   MONEY_BACK_GUARANTEE_DAYS,
+  MONTHLY_PRICE_USD_CENTS,
 } from "../../billing/facts";
+
+// One flat price for every vertical and every customer. READ, never
+// restated: hardcoding "$99" here is exactly how the retired per-seat
+// ladder outlived the engine that stopped producing it.
+const FLAT = "$" + MONTHLY_PRICE_USD_CENTS / 100;
 
 // Source: `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3 (roofing
 // composite 34, the recommended trades pick) and §4 (trades-cluster
@@ -13,7 +19,7 @@ import {
 // roles (tech + dispatcher) so the page reads for ServiceTitan/Housecall
 // Pro/Jobber shops too.
 //
-// Pricing: recommended at Partner tier per `project_stripe_both_surfaces.md`
+// Pricing: ONE flat price, per `lib/billing/facts.ts`. Not tier-derived.
 // (2026-05-15 — three customer-facing tiers Regular / Partner / Max).
 // Partner is the recommended starting tier for trades operations because
 // storm-cycle volatility (estimate-to-supplement coordination, carrier
@@ -48,7 +54,7 @@ export const homeServices: VerticalContent = {
     },
     {
       q: "How much does agentplain cost for a trades operation?",
-      a: `Home services is recommended at the Partner tier — priority support and a quarterly async check-in with your service team — $299 per seat per month for a solo operator, sliding to $199 per seat at scale. Every tier is per seat and month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
+      a: `${FLAT} per month. One flat price — the same whether you are a solo operator or a multi-crew shop, and the same across every vertical. It includes priority support and a quarterly async check-in with your service team. Month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
     },
     {
       q: "Does the fleet send anything to homeowners or insurers on its own?",
@@ -294,13 +300,13 @@ export const homeServices: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "14x–21x",
-    inputCost: "Partner tier · $299 per seat (solo), sliding to $199 per seat (50–99 seats) — 7-day free trial, card at signup",
+    multiplier: "42x",
+    inputCost: `${FLAT}/month flat — ${TRIAL_PERIOD_DAYS}-day free trial, card at signup`,
     outputValue: "$50,000+ / yr in supplement reclamation alone at a storm-heavy shop",
     math:
-      "Per `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3: \"This single agent [insurance supplement] saves $50K+/yr at a storm-heavy shop.\" That single value stream alone is ~$4,167/mo per seat. Solo case: against the Partner-tier solo seat ($299/mo) = ~14x ROI. At-scale case: same per-seat value against the 50-seat-band price ($199/mo) = ~21x. Stack on cycle-time compression (estimate-to-contract velocity), reduced lead leakage across HomeAdvisor / Angi / LSA / GBP, and back-office reclamation — total is materially higher than $50k for shops doing $5–25M/yr. White-label, multi-state ops, or 100+ seats route to Max (quote-based) or /custom (capability build).",
+      "Per `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3: \"This single agent [insurance supplement] saves $50K+/yr at a storm-heavy shop.\" That single value stream alone is ~$4,167/mo. Against the flat ${FLAT}/month ($1,188/yr) that is ~42x. Because the price does not scale with crew size, growth raises the return on an unchanged bill. Stack on cycle-time compression (estimate-to-contract velocity), reduced lead leakage across HomeAdvisor / Angi / LSA / GBP, and back-office reclamation — total is materially higher than $50k for shops doing $5–25M/yr. White-label or multi-state operations route to a quote-based engagement, and capability builds we do not have yet live on /custom.",
     citation:
-      "Supplement-savings claim cited verbatim from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3. Pricing per `project_stripe_both_surfaces.md` (Partner tier per 2026-05-15 ratification; per-seat ladder $299→$199 with 4 hrs/mo of named-service-partner time included). ROI band per `project_pricing_value_anchor.md`.",
+      "Supplement-savings claim cited verbatim from `b2b_vertical_opportunity_analysis_2026-04-27.md` §3.3. Pricing per `lib/billing/facts.ts` (`MONTHLY_PRICE_USD_CENTS`) — ONE flat monthly price, the same for every customer and every vertical, whatever the headcount. Trial + money-back mechanics per the same module. Support model per `PARTNER_SUPPORT` in `lib/billing/facts.ts`: priority email/chat and a quarterly async check-in, and explicitly NO reserved human hours. ROI band per `project_pricing_value_anchor.md`.",
     violationAvoidance:
       "Customer outreach — appointment texts, follow-ups, review requests — falls squarely under the TCPA, where statutory damages run $500 per text and up to $1,500 for willful violations, with no statutory cap (47 U.S.C. §227). A single non-consented blast to a few hundred numbers is six-figure exposure, which is exactly why agentplain does not auto-send: the fleet drafts the message and a person reviews and approves it before it sends, so a TCPA-violating text never goes out by machine. That avoided exposure is value the 14x–21x hours math doesn't count, and the one promise an auto-dialer competitor structurally cannot make.",
   },

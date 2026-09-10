@@ -139,15 +139,19 @@ export function Card({
   );
 }
 
-// Three-tier service-partnership card. Not the existing
-// `components/PricingTier.tsx` because the homepage teaser needs the
-// per-seat ladder rendered inside each tier — a shape the existing
-// PricingTier component (single price, single cadence) doesn't model.
+// Service-partnership card for the homepage teaser.
+//
+// WAS: rendered a per-seat volume ladder inside each tier via `bands`, each
+// row suffixed "/seat/mo". After the flat-price collapse `tierLadderBands()`
+// returns ONE row, so the ladder degraded to a single row still labelled
+// "/seat/mo" — and the Regular and Partner cards rendered the identical
+// price side by side. Now it takes ONE price.
 export function TierCard({
   name,
   tagline,
   description,
-  bands,
+  price,
+  priceNote,
   quotedNote,
   ctaLabel,
   ctaHref,
@@ -158,7 +162,10 @@ export function TierCard({
   name: string;
   tagline: string;
   description: string;
-  bands?: { band: string; price: string }[];
+  /** The one flat price, pre-formatted (e.g. "$99"). */
+  price?: string;
+  /** Cadence line under the price (e.g. "a month, any team size"). */
+  priceNote?: string;
   quotedNote?: string;
   ctaLabel: string;
   ctaHref: string;
@@ -194,24 +201,14 @@ export function TierCard({
       </h3>
       <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">{description}</p>
 
-      {bands ? (
-        <div className="mt-6 grid gap-px overflow-hidden border border-rule bg-rule">
-          {bands.map((row) => (
-            <div
-              key={row.band}
-              className="flex items-baseline justify-between bg-paper px-3 py-2"
-            >
-              <span className="font-mono text-[11px] tracking-eyebrow uppercase text-mute">
-                {row.band}
-              </span>
-              <span className="font-display text-lg text-ink">
-                {row.price}
-                <span className="ml-1 font-mono text-[10px] tracking-eyebrow uppercase text-mute">
-                  /seat/mo
-                </span>
-              </span>
-            </div>
-          ))}
+      {price ? (
+        <div className="mt-6 border border-rule bg-paper px-4 py-5">
+          <p className="font-display text-4xl leading-none text-ink">{price}</p>
+          {priceNote ? (
+            <p className="mt-2 font-mono text-[10px] tracking-eyebrow uppercase text-mute">
+              {priceNote}
+            </p>
+          ) : null}
         </div>
       ) : null}
 

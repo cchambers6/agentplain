@@ -110,7 +110,7 @@ export const proof = [
     // prior $2,900–$10,600 range had no source anywhere in the repo (audit
     // 2026-07-02 finding 3) and is retired: this page never renders an
     // unsourced dollar figure again.
-    body: "At the calculator's own defaults — 10 hours a week back, valued at $100 an hour — the fleet returns about $4,300 a month against a $99–$199 per-seat subscription. Those are our assumptions, not your numbers: the calculator below is interactive, so run yours.",
+    body: "At the calculator's own defaults — 10 hours a week back, valued at $100 an hour — the fleet returns about $4,300 a month against a flat $99/month subscription. Those are our assumptions, not your numbers: the calculator below is interactive, so run yours.",
     cite: "components/RoiCalculator.tsx defaults (10h × $100 × 4.3wk)",
   },
   {

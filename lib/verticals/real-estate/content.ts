@@ -2,7 +2,13 @@ import type { VerticalContent } from "../types";
 import {
   TRIAL_PERIOD_DAYS,
   MONEY_BACK_GUARANTEE_DAYS,
+  MONTHLY_PRICE_USD_CENTS,
 } from "../../billing/facts";
+
+// One flat price for every vertical and every customer. READ, never
+// restated: hardcoding "$99" here is exactly how the retired per-seat
+// ladder outlived the engine that stopped producing it.
+const FLAT = "$" + MONTHLY_PRICE_USD_CENTS / 100;
 
 // Real estate is the only vertical with a canonical, ratified Phase 0
 // JTBD table — see `C:\flatsbo\outputs\agentplain_product_phase0\product_spec.md` §3
@@ -30,7 +36,7 @@ export const realEstate: VerticalContent = {
     },
     {
       q: "How much does agentplain cost for a brokerage?",
-      a: `Real estate is recommended at the Regular tier — $199 per seat per month for a solo agent, sliding to $99 per seat at 50+ seats. Every tier is per seat and month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
+      a: `${FLAT} per month. One flat price — the same whether you are a solo agent or a multi-office brokerage, and the same across every vertical. Month-to-month, with a ${TRIAL_PERIOD_DAYS}-day free trial (card at signup) and a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on your first charge. You can cancel anytime.`,
     },
     {
       q: "What if it doesn't work for my brokerage?",
@@ -246,15 +252,19 @@ export const realEstate: VerticalContent = {
   ],
 
   roi: {
-    multiplier: "26x",
-    inputCost: "Regular tier · $199 per seat (solo), sliding to $99 per seat (50–99 seats) — 7-day free trial, card at signup",
+    // The arithmetic gives ~52x ($5,160/mo of value against a flat $99/mo).
+    // Published claims are capped at 50x by ratified doctrine (PR #159 ROI
+    // softening), so we publish the ceiling, not the raw quotient. A softer
+    // true claim beats an inflated one.
+    multiplier: "50x",
+    inputCost: `${FLAT}/month flat — ${TRIAL_PERIOD_DAYS}-day free trial, card at signup`,
     outputValue: "$5,300 saved/mo at the broker-owner level alone",
     math:
-      "8–12 owner-hours/week on coordination work × $120/hr blended (owner-as-producer opportunity cost) × 4.3 weeks = $4,128–$6,192/mo. Midpoint $5,160. Against the solo Regular-tier seat ($199/mo) the broker-owner alone recovers cost in the first working week and runs ~26x ROI. Conservative annualized: $61,920/yr returned to producing.",
+      `8–12 owner-hours/week on coordination work × $120/hr blended (owner-as-producer opportunity cost) × 4.3 weeks = $4,128–$6,192/mo. Midpoint $5,160. Against the flat ${FLAT}/month the broker-owner alone recovers the cost inside the first working day. The raw quotient is ~52x; we publish 50x, the ceiling of the stated ROI band. Conservative annualized: $61,920/yr returned to producing, against $1,188/yr paid. Every agent added to the brokerage raises that return; the bill does not move.`,
     citation:
-      "Pricing per `project_stripe_both_surfaces.md` (Regular tier per the 2026-05-15 three-tier ratification — Regular is the default entry path; brokerages wanting named-service-partner reserved time can step up to Partner ($299→$199/seat), and high-intensity multi-office or franchise-scale engagements route to Max (quote-based); trial + money-back mechanics per `lib/billing/facts.ts`, ratified 2026-06-14). Value math per `project_pricing_value_anchor.md` (Regular-tier value range $2,900–$10,600/mo per seat). Realty-specific inputs per `realty_vertical_spec_v1_2026-05-03.md` §1. Coordination-hour ranges per `agentplain_positioning.md` L33. Owner-hour opportunity cost is a 2026-05-08 internal assumption pending primary-research validation — flagged in capability inbox.",
+      "Pricing per `lib/billing/facts.ts` (`MONTHLY_PRICE_USD_CENTS`) — ONE flat monthly price, the same for every customer and every vertical, whatever the headcount. Trial + money-back mechanics per the same module. Value math per `project_pricing_value_anchor.md` (value range $2,900–$10,600/mo). Realty-specific inputs per `realty_vertical_spec_v1_2026-05-03.md` §1. Coordination-hour ranges per `agentplain_positioning.md` L33. Owner-hour opportunity cost is a 2026-05-08 internal assumption pending primary-research validation — flagged in capability inbox.",
     violationAvoidance:
-      "Fair-housing exposure is the quiet killer in realty marketing: a single discriminatory phrase in a listing description or a buyer reply is a fileable Fair Housing Act violation carrying a first-offense HUD civil penalty of $26,262 (2025 inflation-adjusted, 24 CFR §180.671), and advertising-side TILA-RESPA disclosure slips compound from there. An auto-execution tool publishes the listing copy before a human reads it; agentplain's fleet drafts it, the HUD enumerated-phrase scanner flags it, and a person approves it — so the violating sentence never reaches a portal. That avoided penalty isn't in the 26x hours math above; it's pure downside the approval gate removes, which an auto-send competitor cannot promise to dodge.",
+      "Fair-housing exposure is the quiet killer in realty marketing: a single discriminatory phrase in a listing description or a buyer reply is a fileable Fair Housing Act violation carrying a first-offense HUD civil penalty of $26,262 (2025 inflation-adjusted, 24 CFR §180.671), and advertising-side TILA-RESPA disclosure slips compound from there. An auto-execution tool publishes the listing copy before a human reads it; agentplain's fleet drafts it, the HUD enumerated-phrase scanner flags it, and a person approves it — so the violating sentence never reaches a portal. That avoided penalty isn't in the 50x hours math above; it's pure downside the approval gate removes, which an auto-send competitor cannot promise to dodge.",
   },
 
   claims: {

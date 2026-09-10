@@ -9,7 +9,10 @@ import {
   resolveConfidence,
   type ConfidenceView,
 } from "@/lib/approvals/presentation";
+import { buildApprovalArtifact } from "@/lib/approvals/artifact";
+import type { WorkApprovalKind } from "@prisma/client";
 import type { RenderedApproval } from "./renderApprovalPayload";
+import { ApprovalHandoff } from "./ApprovalHandoff";
 
 // DB-free presentation for one queued approval. The action controls
 // (approve / edit / reject) live in `ApprovalsList.tsx` and are passed
@@ -124,6 +127,9 @@ export function ApprovalCard({
 }: ApprovalCardProps) {
   const { rendered } = row;
   const confidence = resolveConfidence(rendered);
+  // The take-it-with-you artifact. Pure + DB-free, so the card stays
+  // renderable in a unit test; the interactive half lives in ApprovalHandoff.
+  const artifact = buildApprovalArtifact(row.kind as WorkApprovalKind, rendered);
   // The highlight ring wins over the admin-priority border so the deep-link
   // target reads as "this one" even when it's also a critical admin card.
   const adminCardClass = highlighted
@@ -189,6 +195,19 @@ export function ApprovalCard({
             : ""
         }
       >
+        {/* Card chrome -- the pending-state promise ("Nothing has been
+            sent."). It lives in its own field on RenderedApproval so that
+            post-approval consumers drop it by identity instead of pattern-
+            matching customer prose; the CARD is precisely where it is still
+            true, so it renders here, first, ahead of the work product. */}
+        {(rendered.chrome ?? []).map((line, idx) => (
+          <p
+            key={`chrome-${idx}`}
+            className="mt-3 max-w-prose whitespace-pre-wrap text-[15px] leading-relaxed text-ink first:mt-0"
+          >
+            {line}
+          </p>
+        ))}
         {rendered.body.map((paragraph, idx) => (
           <p
             key={idx}
@@ -256,6 +275,8 @@ export function ApprovalCard({
           side; reject to discard the draft.
         </p>
       ) : null}
+
+      <ApprovalHandoff artifact={artifact} />
 
       {rendered.metaLine ? (
         <p className="mt-4 border-t border-rule pt-4 font-mono text-[11px] tracking-eyebrow uppercase text-mute">

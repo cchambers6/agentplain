@@ -64,7 +64,17 @@ describe("renderApprovalPayload — PORTAL_CLIENT_MESSAGE", () => {
     });
     assert.equal(rendered.kindLabel, "message to your client");
     assert.match(rendered.recipientLine ?? "", /dana@example\.com/);
-    assert.ok(rendered.body.some((l) => /only after you approve/i.test(l)));
+    // The awaiting-approval line is still produced and still shown on the
+    // card -- it moved from `body` to the `chrome` field. `body` is now work
+    // product only, so that a post-approval consumer can drop the card's
+    // pending-state promise by identity rather than by pattern-matching the
+    // customer's prose. See RenderedApproval.chrome.
+    assert.ok((rendered.chrome ?? []).some((l) => /only after you approve/i.test(l)));
+    assert.equal(
+      rendered.body.some((l) => /only after you approve/i.test(l)),
+      false,
+      "chrome must not leak back into body",
+    );
     assert.ok(rendered.body.some((l) => /update you asked for/i.test(l)));
     assert.equal(rendered.editableBody, "Here's the update you asked for.");
   });

@@ -19,9 +19,10 @@
  *     as the dispatcher — service partner, NEVER a SaaS tool / DIY
  *     wizard / pilot metaphor, NEVER a literal animal. See
  *     project_brand_locked + project_agentplain_mission_and_positioning.
- *   - Pricing: surface ONLY the Regular productized tier + Custom
- *     engagements. Plus/Max stay schema-only — never surfaced, never a
- *     three-column comparison (project_stripe_both_surfaces).
+ *   - Pricing: ONE FLAT PRICE (`MONTHLY_PRICE_USD_CENTS` in
+ *     `lib/billing/facts.ts`) plus quote-based /custom engagements. Never a
+ *     per-seat rate, never a volume band, never a multi-column tier
+ *     comparison, never an internal tier name.
  *   - No-outbound: Plaino drafts + advises; it never claims to have sent
  *     anything (project_no_outbound_architecture). On the marketing
  *     surface that means: never promise an automated email/drip; a human
@@ -32,10 +33,13 @@
 import { tokens } from '@/lib/brand/tokens';
 import { getAllVerticals } from '@/lib/verticals';
 import {
-  PER_SEAT_MONTHLY_USD_CENTS,
-  SEAT_BANDS,
+  ANNUAL_PRICE_USD_CENTS,
+  CARD_REQUIRED_AT_SIGNUP,
+  MONEY_BACK_GUARANTEE_DAYS,
+  MONTHLY_PRICE_USD_CENTS,
   TRIAL_PERIOD_DAYS,
-} from '@/lib/pricing/tiers';
+  TRIAL_PERIOD_DAYS_EXTENDED,
+} from '@/lib/billing/facts';
 
 /** Pin for tests + the drift sweep — bump when the prompt's contract
  *  (paths, grounding rules) changes, not for copy tweaks. */
@@ -51,14 +55,15 @@ export interface MarketingPromptContext {
   verticalSlug?: string | null;
 }
 
-/** Regular-tier per-seat price band as plain dollars, smallest-seat-count
- *  (most expensive) to largest (cheapest). Derived from the pricing source
- *  of truth so the chat never quotes a stale number. */
-function regularPriceBand(): { high: number; low: number } {
-  const band = PER_SEAT_MONTHLY_USD_CENTS.regular;
-  const values = Object.values(band).map((cents) => Math.round(cents / 100));
-  return { high: Math.max(...values), low: Math.min(...values) };
-}
+// REMOVED: `regularPriceBand()`.
+//
+// It read `PER_SEAT_MONTHLY_USD_CENTS.regular` and returned {high, low} to
+// render "sliding by team size from $high/seat down to $low/seat". After the
+// flat-price collapse every cell of that record holds the SAME number, so the
+// helper returned {high: 99, low: 99} and the chat told prospects the price
+// slid "from $99/seat down to $99/seat". It did not throw and no build error
+// pointed at it — a derivation that still computes is the most dangerous kind
+// of stale code. There is one price; read it.
 
 export function buildMarketingSystemPrompt(
   ctx: MarketingPromptContext = {},
@@ -66,8 +71,8 @@ export function buildMarketingSystemPrompt(
   const verticals = getAllVerticals()
     .map((v) => v.name)
     .join(', ');
-  const { high, low } = regularPriceBand();
-  const largestBand = SEAT_BANDS.SEATS_50_99;
+  const monthly = MONTHLY_PRICE_USD_CENTS / 100;
+  const annual = (ANNUAL_PRICE_USD_CENTS / 100).toLocaleString('en-US');
 
   const pageLine = ctx.sourcePage
     ? `The visitor opened this chat from ${ctx.sourcePage}.`
@@ -171,26 +176,40 @@ export function buildMarketingSystemPrompt(
     'across verticals; the compliance-specific packs are built per vertical.',
     '',
     '── PRICING ─────────────────────────────────────────────────────',
-    `Regular: one productized tier, billed per seat per month, sliding by`,
-    `team size from $${high}/seat (a single seat) down to $${low}/seat at the`,
-    `largest band (${largestBand.label}). First ${TRIAL_PERIOD_DAYS} days are free; no`,
-    'card required to see pricing or start the trial.',
+    `ONE FLAT PRICE: $${monthly} per month, or $${annual} per year.`,
+    'That is the whole price list. It does NOT change with the number of',
+    'people, the size of the business, or the vertical — a solo operator and',
+    'a forty-person firm pay exactly the same.',
+    `Trial: the first ${TRIAL_PERIOD_DAYS} days are free (${TRIAL_PERIOD_DAYS_EXTENDED} days for CPA and law`,
+    'firms, whose work runs on a slower cycle).',
+    CARD_REQUIRED_AT_SIGNUP
+      ? 'A card IS required to start the trial — say so plainly if asked. ' +
+        'Viewing prices on /pricing needs no account and no card; starting ' +
+        'the trial does. Keep those two facts distinct and never merge them ' +
+        'into a blanket claim that nothing is needed.'
+      : 'A card is not needed to start the trial.',
+    `Backstop: a ${MONEY_BACK_GUARANTEE_DAYS}-day money-back guarantee on the first charge, and`,
+    'cancel any time.',
     'Custom engagements: for businesses that need bespoke integration, a',
-    'compliance corpus, white-label, or 100+ seats — quote-based, scoped on',
-    'the /custom page with a real human, not a drip.',
-    'CRITICAL: surface ONLY Regular + Custom. Do NOT invent other tiers, do',
-    'NOT present a multi-column tier comparison, do NOT name internal tiers.',
-    'If pressed for "the cheapest plan", give the Regular per-seat range and',
-    'point them at /pricing.',
+    'compliance corpus, or white-label — quote-based, scoped on the /custom',
+    'page with a real human, not a drip. That is a DIFFERENT product from the',
+    'subscription, not a pricing tier.',
+    'CRITICAL: there is exactly ONE price. Do NOT invent tiers, do NOT quote a',
+    'rate that multiplies by headcount, do NOT describe the price as sliding',
+    'or banded by team size, do NOT present a multi-column tier comparison, do',
+    'NOT name internal tiers. If pressed for "the cheapest plan", it is flat',
+    `$${monthly}/month — point them at /pricing.`,
     '',
     '── ROI ─────────────────────────────────────────────────────────',
     'When asked "is it worth it" or "what is the ROI", talk about two',
     'things, not one:',
     '  1. Hours reclaimed — value delivered runs roughly $2,900–$10,600/mo',
     '     per practitioner (hours saved x their productive-hour rate). Against',
-    '     the per-seat subscription that is a typical 15x to 50x return per',
+    '     the flat subscription that is a typical 15x to 50x return per',
     '     workflow. Say "per workflow" and keep the ceiling at 50x — do NOT',
     '     quote 100x+ numbers; a softer true claim beats an inflated one.',
+    '     Because the price is flat, the return rises with every person added',
+    '     while the bill does not — but still keep the stated ceiling at 50x.',
     '  2. Violations that never send — because nothing goes out without a',
     '     human approving it, the regulatory message that would have been a',
     '     fileable violation is caught as a draft instead. Name the relevant',
@@ -243,7 +262,8 @@ export function buildMarketingSystemPrompt(
     '- NO OUTBOUND: never claim you "sent", "emailed", "scheduled", or',
     '  "signed up" anything. You advise and hand off to a human.',
     '- NO FRAMINGS: do not call agentplain a "DIY tool", "AI agent you',
-    '  run", "copilot", "pilot", "beta", or "v0". It is a service partner.',
+    '  run", "copilot", "pilot", "beta", or an internal version marker. It is',
+    '  a service partner.',
     '- Keep replies short and plain — a few sentences. This is a chat',
     '  widget, not a landing page. Answer the question, then stop.',
   ]

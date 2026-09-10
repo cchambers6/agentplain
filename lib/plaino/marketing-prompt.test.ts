@@ -4,13 +4,20 @@
  * Pins the marketing front-door prompt's grounding contract:
  *   - version marker present
  *   - REPLACE / INTEGRATE / AUGMENT framing present
- *   - Regular + Custom pricing surfaced; internal tiers NEVER surfaced
+ *   - the ONE flat price surfaced IN THE PRICING SECTION; no retired ladder
+ *     price, no per-seat framing, internal tiers NEVER surfaced
+ *   - billing mechanics match `lib/billing/facts.ts` (card-at-signup)
  *   - no-outbound + honesty + service-partner framing
  *   - page/vertical context threads through
  */
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import {
+  ANNUAL_PRICE_USD_CENTS,
+  CARD_REQUIRED_AT_SIGNUP,
+  MONTHLY_PRICE_USD_CENTS,
+} from '@/lib/billing/facts';
 
 import {
   buildMarketingSystemPrompt,
@@ -69,16 +76,75 @@ describe('buildMarketingSystemPrompt', () => {
     assert.ok(prompt.includes('AUGMENT'));
   });
 
-  it('surfaces Regular + Custom pricing but never the internal tiers', () => {
+  // The previous version of this test asserted `includes('$199')` and
+  // `includes('$99')` against the WHOLE prompt. Two defects in that shape:
+  //   1. It pinned the retired per-seat ladder, so it went red the moment the
+  //      price became flat — and the tempting "fix" is to edit the expectation
+  //      down to $99, which would have let a stale sentence ship.
+  //   2. Whole-prompt `includes` cannot tell "the PRICING block states the
+  //      price" from "the digits 99 appear somewhere else entirely". Deleting
+  //      the price sentence would have left it green.
+  // This version scopes to the PRICING section and derives from the SSOT.
+  function pricingSection(prompt: string): string {
+    const start = prompt.indexOf('── PRICING');
+    assert.ok(start >= 0, 'prompt must have a PRICING section');
+    const rest = prompt.slice(start + 1);
+    const end = rest.indexOf('── ');
+    return end >= 0 ? rest.slice(0, end) : rest;
+  }
+
+  it('states the ONE flat price inside the PRICING section', () => {
     const prompt = buildMarketingSystemPrompt();
-    assert.ok(prompt.includes('Regular'));
-    assert.ok(prompt.includes('Custom'));
-    assert.ok(prompt.includes('$199'));
-    assert.ok(prompt.includes('$99'));
-    // Plus / Max stay schema-only (project_stripe_both_surfaces). The prompt
-    // must not name them as customer-facing tiers.
+    const section = pricingSection(prompt);
+    const monthly = `$${MONTHLY_PRICE_USD_CENTS / 100}`;
+    const annual = `$${(ANNUAL_PRICE_USD_CENTS / 100).toLocaleString('en-US')}`;
+
+    assert.ok(
+      section.includes(monthly),
+      `PRICING section must state the monthly price ${monthly}`,
+    );
+    assert.ok(
+      section.includes(annual),
+      `PRICING section must state the annual price ${annual}`,
+    );
+    assert.ok(section.includes('Custom'), 'must still surface /custom');
+  });
+
+  it('never quotes a retired ladder price or any per-seat framing', () => {
+    const prompt = buildMarketingSystemPrompt();
+    // Every rung of the retired 3-tier x 5-band ladder.
+    for (const dead of [
+      '$199', '$299', '$499', '$449', '$399',
+      '$349', '$279', '$249', '$219', '$179', '$149', '$119',
+    ]) {
+      assert.ok(
+        !prompt.includes(dead),
+        `retired ladder price ${dead} must not appear in the marketing prompt`,
+      );
+    }
+    for (const dead of ['per seat', 'per-seat', '/seat', 'sliding to', 'seat band']) {
+      assert.ok(
+        !prompt.toLowerCase().includes(dead.toLowerCase()),
+        `retired per-seat framing "${dead}" must not appear`,
+      );
+    }
+    // Internal tier names stay internal.
     assert.ok(!/\bPlus\b/.test(prompt));
     assert.ok(!/\bMax\b/.test(prompt));
+  });
+
+  it('does not claim a card is unnecessary when one is required', () => {
+    const prompt = buildMarketingSystemPrompt();
+    if (CARD_REQUIRED_AT_SIGNUP) {
+      assert.ok(
+        !/no card required/i.test(prompt),
+        'CARD_REQUIRED_AT_SIGNUP is true — the prompt must not say "no card required"',
+      );
+      assert.ok(
+        /card IS required/i.test(prompt),
+        'the prompt must state plainly that a card is required to start the trial',
+      );
+    }
   });
 
   it('holds the no-outbound + honesty + service-partner guardrails', () => {

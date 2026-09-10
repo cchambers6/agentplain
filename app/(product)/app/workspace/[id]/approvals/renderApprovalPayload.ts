@@ -854,6 +854,22 @@ function renderLeadTriage(
     : null;
   const routingType = routing ? pickString(routing, ["type"]) : null;
   const routingRationale = routing ? pickString(routing, ["rationale"]) : null;
+  // The routed TARGET, named.
+  //
+  // `lib/skills/lead-triage-realestate/skill.ts` deliberately withholds the
+  // routing object from the first-touch draft body — that body is
+  // lead-facing and the routing decision is not — which leaves THIS card as
+  // the operator's only view of where a lead went. Reading only
+  // `rationale` here meant the card named the target on no surface at all
+  // for the drip case, and only incidentally (buried inside prose) for the
+  // agent case. Pinned by tests/approvals-renderer.test.ts.
+  //
+  // Operator-facing, and structurally so: renderLeadTriage sets no
+  // `recipients`, so `buildApprovalArtifact` grants LEAD_TRIAGE no
+  // `mailto` mode and these lines cannot be carried into a pre-filled
+  // email addressed to the lead. The test file pins that too.
+  const routingAgentName = routing ? pickString(routing, ["agentName"]) : null;
+  const routingCampaignName = routing ? pickString(routing, ["campaignName"]) : null;
 
   const scores = isRecord(p.scores) ? (p.scores as Record<string, unknown>) : null;
   const motivation = scores ? pickNumber(scores, ["motivation"]) : null;
@@ -875,9 +891,16 @@ function renderLeadTriage(
   } else if (draftSkipped) {
     lines.push(`First-touch draft skipped — ${draftSkipped}.`);
   }
-  if (routingRationale) {
+  if (routingAgentName || routingCampaignName || routingRationale) {
     lines.push("");
-    lines.push(`Routing rationale: ${routingRationale}`);
+    if (routingAgentName) {
+      lines.push(`Routed to: ${routingAgentName}`);
+    } else if (routingCampaignName) {
+      lines.push(`Routed to drip campaign: ${routingCampaignName}`);
+    }
+    if (routingRationale) {
+      lines.push(`Routing rationale: ${routingRationale}`);
+    }
   }
   if (
     typeof motivation === "number" ||

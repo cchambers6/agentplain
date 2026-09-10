@@ -64,9 +64,29 @@ const searchParamsSchema = z.object({
   verticalSlug: z.string().min(1).nullable().optional(),
 });
 
+/**
+ * The canonical UUID text form, as Postgres accepts it for a `uuid` cast:
+ * 32 hex digits in 8-4-4-4-12 groups, case-insensitive.
+ *
+ * Deliberately NOT `z.string().uuid()`. Zod additionally enforces the RFC
+ * 9562 version (`[1-5]`) and variant (`[89ab]`) nibbles, which Postgres
+ * does not: `00000000-0000-0000-0000-00000000000a` is a perfectly
+ * storable `@db.Uuid` value that `z.string().uuid()` rejects. 23 of the
+ * 33 distinct UUID literals in this repo are of exactly that shape.
+ *
+ * The header gate below exists for one reason -- to stop a value Postgres
+ * cannot cast from reaching `$6::uuid` and raising 22P02 -- so its
+ * accepted set must be the set Postgres accepts, and no narrower. A
+ * narrower gate does not fail safe: it 400s a legitimate tenant.
+ */
+const UUID_TEXT_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** One definition, shared by the upsert params and the workspace header. */
+const workspaceUuidSchema = z.string().regex(UUID_TEXT_RE, 'expected a UUID');
+
 const upsertParamsSchema = z.object({
   contextKind: contextKindSchema,
-  workspaceId: z.string().uuid().nullable().optional(),
+  workspaceId: workspaceUuidSchema.nullable().optional(),
   title: z.string().min(1),
   body: z.string().min(1),
   sourceUrl: z.string().url().nullable().optional(),
@@ -84,6 +104,24 @@ const deleteParamsSchema = z
   .refine((v) => Boolean(v.embeddingId || v.documentId), {
     message: 'must provide embeddingId or documentId',
   });
+
+/**
+ * Is this string a workspace id Postgres will accept as `uuid`?
+ *
+ * Delegates to the SAME `workspaceUuidSchema` that `upsertParamsSchema`
+ * uses for `workspaceId`, rather than introducing a second hand-rolled
+ * regex. A divergent definition is how a value passes one gate and fails
+ * the next, which is precisely the shape of the bug being fixed here.
+ *
+ * Note the empty-string case: `headers.get()` yields `''` for a header
+ * that is present but empty, and `''` is falsy, so the old ternary below
+ * treated it as ABSENT and escalated the call to operator context --
+ * cross-tenant read visibility from a blank header. `''` has no hex
+ * groups, so it is rejected here.
+ */
+function isUuid(value: string): boolean {
+  return workspaceUuidSchema.safeParse(value).success;
+}
 
 // ── Route handlers ──────────────────────────────────────────────────────
 
@@ -117,6 +155,32 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const { method, params, id } = parsedReq.data;
   const requestId = id ?? null;
   const workspaceHeader = req.headers.get(MCP_WORKSPACE_HEADER);
+  // Validate the header BEFORE it reaches any query. It is the only
+  // caller-controlled value that flows into SQL as a typed parameter:
+  // `PgvectorKnowledgeStore.search` binds it to `$6::uuid`, and the
+  // upsert branch below assigns it straight onto `up.data.workspaceId`,
+  // overwriting the value `upsertParamsSchema` already checked with
+  // `workspaceUuidSchema` -- so the schema's guarantee does not survive
+  // that assignment.
+  //
+  // Before the tenant predicate existed, a garbage header was inert: it
+  // reached no cast, matched nothing, and returned an empty result. Now
+  // Postgres raises 22P02 (invalid_text_representation) on the cast and
+  // the route answers 500 with a generic internal error. The route is
+  // operator-key gated so this is not a DoS, but it turns a silent empty
+  // result into an error, and a 500 is the least diagnosable way to tell
+  // a caller its header is malformed. Answer -32602 instead, which is
+  // what every other bad-input branch in this switch returns.
+  if (workspaceHeader !== null && !isUuid(workspaceHeader)) {
+    return NextResponse.json(
+      jsonRpcError(
+        requestId,
+        -32602,
+        `Invalid ${MCP_WORKSPACE_HEADER} header: expected a UUID`,
+      ),
+      { status: 400 },
+    );
+  }
   const rlsContext = workspaceHeader
     ? { userId: null, workspaceId: workspaceHeader, isOperator: false }
     : { userId: null, workspaceId: null, isOperator: true };
@@ -132,7 +196,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           );
         }
         const store = getKnowledgeStore(rlsContext);
-        const result = await store.search(sp.data);
+        // Tenant scope comes from the HEADER, never from the JSON-RPC
+        // params (searchParamsSchema has no workspaceId, so zod strips
+        // any the caller tries to inject) -- same rule the upsert branch
+        // below applies. Header absent = operator context = no tenant
+        // predicate, which matches `rlsContext` exactly.
+        const result = await store.search({
+          ...sp.data,
+          workspaceId: rlsContext.workspaceId,
+        });
         return respond(requestId, result, (hits) => ({
           hits: hits.map((h) => ({
             embeddingId: h.embeddingId,

@@ -20,8 +20,39 @@ export interface ProposedSlot {
 export interface RenderedApproval {
   kindLabel: string;
   recipientLine?: string;
+  /** The GENUINE recipients, discrete — never to be re-derived by parsing
+   *  `recipientLine`. That line is a humanized display string that also
+   *  carries the subject ("To: a@b.com    Re: <subject>"), and on reply-draft
+   *  kinds the subject comes from an inbound email a stranger sent. Anything
+   *  addressing a message (mailto, a handoff artifact) MUST read this field;
+   *  parsing addresses back out of the display string lets a stranger put
+   *  themselves on the To line by writing an address into their subject. */
+  recipients?: string[];
   title?: string;
   body: string[];
+  /**
+   * CARD CHROME -- sentences about the CARD's pending state, not about the
+   * work. "Awaiting your approval ... Nothing has been sent." is exactly
+   * right under a pair of approve/reject buttons and becomes FALSE the
+   * instant the owner approves.
+   *
+   * Kept OUT of `body` and in its own field so that anything which exists
+   * only post-approval (lib/approvals/artifact.ts, and the ARTIFACT_HANDOFF
+   * executor built on it) drops it BY IDENTITY -- by not reading this field
+   * -- rather than by pattern-matching the customer's prose to guess which
+   * sentences were ours.
+   *
+   * That distinction is the whole point. The previous attempt matched chrome
+   * with regexes over `body`, and a PORTAL_CLIENT_MESSAGE that legitimately
+   * opened "Awaiting your approval on the revised scope, we are holding the
+   * crew until Friday." had that paragraph silently deleted out of the
+   * customer's copy, download and mailto. With chrome in its own field there
+   * is nothing to match and nothing to get wrong: customer prose is never
+   * inspected, so it can never be mistaken for ours.
+   *
+   * The CARD still renders these, above `body`, where they are true.
+   */
+  chrome?: string[];
   metaLine?: string;
   /** When the inbound message that triggered the draft is in the payload. */
   inboundSummary?: string;
@@ -400,6 +431,7 @@ function renderReplyDraft(p: Record<string, unknown>): RenderedApproval {
   return {
     kindLabel: KIND_LABEL.BUYER_INQUIRY_REPLY_DRAFT,
     recipientLine,
+    recipients: recipientList(recipient),
     body: draft ? splitParagraphs(draft) : ["No draft body was attached."],
     metaLine: composeMeta({ threshold, confidence, tone }),
     inboundSummary,
@@ -492,6 +524,7 @@ function renderChiefOfStaffMeeting(p: Record<string, unknown>): RenderedApproval
     kindLabel: KIND_LABEL.CHIEF_OF_STAFF_MEETING,
     title: subject ?? "Proposed meeting time",
     recipientLine: attendeeLine,
+    recipients: pickAttendeeEmails(p),
     body: inviteBody
       ? splitParagraphs(inviteBody)
       : ["No invite body was drafted."],
@@ -530,6 +563,7 @@ function renderChiefOfStaffReplyDraft(
   return {
     kindLabel: KIND_LABEL.CHIEF_OF_STAFF_REPLY_DRAFT,
     recipientLine,
+    recipients: recipientList(recipient),
     body: body ? splitParagraphs(body) : ["No draft body was attached."],
     metaLine: composeMeta({ confidence, tone }),
     inboundSummary: reasoning,
@@ -604,6 +638,7 @@ function renderInboxTriage(p: Record<string, unknown>): RenderedApproval {
   return {
     kindLabel: `${KIND_LABEL.INBOX_TRIAGE} — ${priority}`,
     recipientLine,
+    recipients: recipientList(recipient),
     body: bodyLines,
     metaLine: composeMeta({ confidence, tone }),
     inboundSummary: reasoning,
@@ -644,6 +679,7 @@ function renderFollowUpNudge(p: Record<string, unknown>): RenderedApproval {
   return {
     kindLabel: KIND_LABEL.FOLLOW_UP_NUDGE,
     recipientLine,
+    recipients: recipientList(recipient),
     body: body ? splitParagraphs(body) : ["No nudge body was attached."],
     metaLine,
     inboundSummary: reasoning,
@@ -727,6 +763,9 @@ function renderSupportHandlerReplyDraft(
   return {
     kindLabel: KIND_LABEL.SUPPORT_HANDLER_REPLY_DRAFT,
     recipientLine: subject ? `Re: ${subject}` : undefined,
+    // No addressee on a support reply — the subject is all this line carries,
+    // and an empty list says so explicitly rather than inviting a re-parse.
+    recipients: [],
     body: bodyLines,
     metaLine,
     inboundSummary: reasoning,
@@ -815,6 +854,22 @@ function renderLeadTriage(
     : null;
   const routingType = routing ? pickString(routing, ["type"]) : null;
   const routingRationale = routing ? pickString(routing, ["rationale"]) : null;
+  // The routed TARGET, named.
+  //
+  // `lib/skills/lead-triage-realestate/skill.ts` deliberately withholds the
+  // routing object from the first-touch draft body — that body is
+  // lead-facing and the routing decision is not — which leaves THIS card as
+  // the operator's only view of where a lead went. Reading only
+  // `rationale` here meant the card named the target on no surface at all
+  // for the drip case, and only incidentally (buried inside prose) for the
+  // agent case. Pinned by tests/approvals-renderer.test.ts.
+  //
+  // Operator-facing, and structurally so: renderLeadTriage sets no
+  // `recipients`, so `buildApprovalArtifact` grants LEAD_TRIAGE no
+  // `mailto` mode and these lines cannot be carried into a pre-filled
+  // email addressed to the lead. The test file pins that too.
+  const routingAgentName = routing ? pickString(routing, ["agentName"]) : null;
+  const routingCampaignName = routing ? pickString(routing, ["campaignName"]) : null;
 
   const scores = isRecord(p.scores) ? (p.scores as Record<string, unknown>) : null;
   const motivation = scores ? pickNumber(scores, ["motivation"]) : null;
@@ -836,9 +891,16 @@ function renderLeadTriage(
   } else if (draftSkipped) {
     lines.push(`First-touch draft skipped — ${draftSkipped}.`);
   }
-  if (routingRationale) {
+  if (routingAgentName || routingCampaignName || routingRationale) {
     lines.push("");
-    lines.push(`Routing rationale: ${routingRationale}`);
+    if (routingAgentName) {
+      lines.push(`Routed to: ${routingAgentName}`);
+    } else if (routingCampaignName) {
+      lines.push(`Routed to drip campaign: ${routingCampaignName}`);
+    }
+    if (routingRationale) {
+      lines.push(`Routing rationale: ${routingRationale}`);
+    }
   }
   if (
     typeof motivation === "number" ||
@@ -929,6 +991,34 @@ function pickRecipientFromToEmails(
   return emails.join(", ");
 }
 
+/** The discrete-recipient counterpart to the humanized `recipientLine`.
+ *  Splits the comma-joined display form back into individual addresses and
+ *  drops anything with whitespace or a header separator in it, so a CR/LF or
+ *  a stray ":" can never survive into a To: header downstream. */
+function recipientList(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && !/[\s,;:<>"']/.test(s));
+}
+
+/** Attendee addresses, discrete — the counterpart of pickAttendeeLine. */
+function pickAttendeeEmails(p: Record<string, unknown>): string[] {
+  const raw = p.attendees;
+  if (!Array.isArray(raw)) return [];
+  const emails: string[] = [];
+  for (const a of raw) {
+    if (a && typeof a === "object") {
+      const email = (a as Record<string, unknown>).email;
+      if (typeof email === "string" && email.trim().length > 0) {
+        emails.push(email.trim());
+      }
+    }
+  }
+  return emails.filter((e) => !/[\s,;:<>"']/.test(e));
+}
+
 function pickChiefOfStaffSlots(p: Record<string, unknown>): ProposedSlot[] {
   const raw = p.candidateSlots;
   if (!Array.isArray(raw)) return [];
@@ -997,9 +1087,15 @@ function renderVoiceRecordingConsent(p: Record<string, unknown>): RenderedApprov
   const retentionDays = pickNumber(p, ["retentionDays"]);
   const twoParty = p.requireTwoPartyConsentPrompt === true;
 
-  const body = [
-    "Approving this turns on call recording for your workspace. Recording stays off until you approve it here.",
-  ];
+  // Two SEPARATE fields, deliberately. `body` states what approving does and
+  // stays true forever; `chrome` is a promise about the CARD's pending state
+  // and stops being true the instant the owner approves. Separating them by
+  // FIELD (not by position within one array) is what lets
+  // lib/approvals/artifact.ts drop the second out of the handoff artifact --
+  // which only exists post-approval -- without reading the customer's text at
+  // all. The card still shows both, where both are correct.
+  const body = ["Approving this turns on call recording for your workspace."];
+  const chrome = ["Recording stays off until you approve it here."];
   if (typeof retentionDays === "number") {
     body.push(`Recordings are kept for ${retentionDays} days, then deleted.`);
   }
@@ -1013,6 +1109,7 @@ function renderVoiceRecordingConsent(p: Record<string, unknown>): RenderedApprov
     kindLabel: KIND_LABEL.VOICE_RECORDING_CONSENT,
     title: "Turn on call recording?",
     body,
+    chrome,
     metaLine: typeof retentionDays === "number" ? `retention: ${retentionDays} days` : undefined,
   };
 }
@@ -1139,6 +1236,7 @@ function renderActivationDraft(p: Record<string, unknown>): RenderedApproval {
       ? `${KIND_LABEL.ACTIVATION_DRAFT} · ${recordTitle}`
       : KIND_LABEL.ACTIVATION_DRAFT,
     recipientLine,
+    recipients: recipientList(recipient),
     body: body ? splitParagraphs(body) : ["No draft body was attached."],
     metaLine: metaParts.join(" · "),
     inboundSummary: partyName ? `First draft for ${partyName}.` : undefined,
@@ -1162,9 +1260,7 @@ function renderDocuSignSend(p: Record<string, unknown>): RenderedApproval {
   const recipients = pickStringArray(p, ["recipientEmails"]);
   const documents = pickStringArray(p, ["documentNames"]);
 
-  const lines: string[] = [
-    "Awaiting your approval — Plaino will send this envelope for signature only after you approve. Nothing has been sent.",
-  ];
+  const lines: string[] = [];
   if (source === "template" && templateId) {
     lines.push(`From template: ${templateId}`);
   } else if (documents.length > 0) {
@@ -1179,7 +1275,11 @@ function renderDocuSignSend(p: Record<string, unknown>): RenderedApproval {
     title: subject ?? "Send envelope for signature",
     recipientLine:
       recipients.length > 0 ? `To: ${recipients.join(", ")}` : undefined,
+    recipients: recipients.filter((e) => !/[\s,;:<>"']/.test(e)),
     body: lines,
+    chrome: [
+      "Awaiting your approval — Plaino will send this envelope for signature only after you approve. Nothing has been sent.",
+    ],
     metaLine: metaParts.join(" · "),
   };
 }
@@ -1192,14 +1292,15 @@ function renderDocuSignSend(p: Record<string, unknown>): RenderedApproval {
 function renderDocuSignVoid(p: Record<string, unknown>): RenderedApproval {
   const envelopeId = pickString(p, ["envelopeId"]);
   const reason = pickString(p, ["voidedReason", "reason"]);
-  const lines: string[] = [
-    "Awaiting your approval — Plaino will void this in-flight envelope only after you approve. Nothing has been voided.",
-  ];
+  const lines: string[] = [];
   if (reason) lines.push(`Reason: ${reason}`);
   return {
     kindLabel: KIND_LABEL.DOCUSIGN_VOID_ENVELOPE,
     title: envelopeId ? `Void envelope ${envelopeId}` : "Void envelope",
     body: lines,
+    chrome: [
+      "Awaiting your approval — Plaino will void this in-flight envelope only after you approve. Nothing has been voided.",
+    ],
     metaLine: "awaiting your approval",
   };
 }
@@ -1223,9 +1324,7 @@ function renderConnectorWriteAction(p: Record<string, unknown>): RenderedApprova
     .replace(/\b\w/g, (c) => c.toUpperCase());
   const prettyAction = action.replace(/[-_]/g, " ");
 
-  const lines: string[] = [
-    `Awaiting your approval — Plaino will run this in ${prettyConnector} only after you approve. Nothing has happened in ${prettyConnector} yet.`,
-  ];
+  const lines: string[] = [];
   // Surface up to a handful of scalar detail fields so the operator sees
   // exactly what will be written, without rendering nested blobs.
   for (const key of Object.keys(detail).slice(0, 8)) {
@@ -1240,6 +1339,13 @@ function renderConnectorWriteAction(p: Record<string, unknown>): RenderedApprova
     kindLabel: `${prettyConnector} — ${prettyAction}`,
     title: `${prettyAction} in ${prettyConnector}`,
     body: lines,
+    // Interpolates the connector name. Under the old regex scheme this was
+    // the pattern most at risk of drifting out of sync with its matcher; as a
+    // named field the interpolation costs nothing, because nothing has to
+    // recognise the sentence later.
+    chrome: [
+      `Awaiting your approval — Plaino will run this in ${prettyConnector} only after you approve. Nothing has happened in ${prettyConnector} yet.`,
+    ],
     metaLine: "awaiting your approval",
   };
 }
@@ -1258,9 +1364,17 @@ function renderPortalClientMessage(p: Record<string, unknown>): RenderedApproval
   return {
     kindLabel: KIND_LABEL.PORTAL_CLIENT_MESSAGE,
     recipientLine: recipient ? `To your client: ${recipient}` : undefined,
-    body: [
+    recipients: recipientList(recipient),
+    // THE case that parked PR #465. This kind is the one closed-loop kind
+    // that passes arbitrary CUSTOMER PROSE through to `body`, so mixing the
+    // chrome sentence into the same array meant a post-approval consumer had
+    // to tell them apart by pattern -- and a client message legitimately
+    // opening "Awaiting your approval on the revised scope, we are holding
+    // the crew until Friday." lost that paragraph. Separated by field, the
+    // customer's paragraphs are never examined at all.
+    body: body ? splitParagraphs(body) : ["No draft body was attached."],
+    chrome: [
       "Awaiting your approval — your client sees this reply only after you approve it. Nothing has been sent.",
-      ...(body ? splitParagraphs(body) : ["No draft body was attached."]),
     ],
     metaLine: "awaiting your approval",
     editableBody: body || undefined,

@@ -241,7 +241,11 @@ describe('lead-triage-realestate — vertical-aware first-touch draft', () => {
     assert.match(draft.body, /4421 Magnolia Dr.*MLS 7128341/, 'should cite address + MLS#');
     assert.match(draft.body, /preapproved|financing/i, 'should ask about preapproval');
     assert.match(draft.body, /\{\{operator: signature\}\}/);
-    assert.match(draft.body, /\{\{operator-only — internal:/);
+    // The body must NOT carry the operator-only routing marker. It used
+    // to (see the REMOVED-routingMention block in skill.ts); this file
+    // previously asserted its PRESENCE, which is how the leak stayed
+    // green. The sweep below pins the general case.
+    assert.doesNotMatch(draft.body, /operator-only/);
     assert.equal(draft.tone, 'casual');
     assert.ok(draft.confidence >= 0.7, 'hot draft confidence should be ≥ 0.7');
   });
@@ -379,5 +383,281 @@ describe('lead-triage-realestate — persistence guard + edge cases', () => {
     assert.equal(res.value.processed, 0);
     assert.equal(res.value.triaged.length, 0);
     assert.deepEqual(res.value.categoryCounts, { hot: 0, warm: 0, cold: 0, nurture: 0 });
+  });
+});
+
+/**
+ * Containment pin for the first-touch body.
+ *
+ * `renderFirstTouchDraft` used to be handed the `routing` object and
+ * spliced `{{operator-only - internal: routed to <agent> (<rationale>)}}`
+ * into every category's body. That body is not an internal artifact: it
+ * goes to `DraftPersister.persistDraft`, which writes it into the
+ * broker's own Gmail / M365 Drafts folder. A broker who did not spot and
+ * delete the marker sent the lead the assigned agent's name and the
+ * brokerage's internal reason for picking them.
+ *
+ * This suite sweeps every routing outcome x every category and asserts
+ * the internal rationale CANNOT appear in the outbound body. It checks
+ * both the returned `draft.body` and the string actually handed to the
+ * persister, because the persister argument is the real outbound
+ * artifact and nothing guarantees the two stay identical.
+ *
+ * Per the "examined N, not found nothing" rule: the suite asserts its
+ * own coverage at the end. An empty or partial matrix fails rather than
+ * passing green on having looked at nothing.
+ */
+
+const SENTINEL_AGENT = 'Zephyrine Quillfeather-Okonkwo';
+const SENTINEL_CAMPAIGN = 'Vermillion Ptarmigan Sequence';
+
+/** Distinctive fragments of every rationale `pickRouting` can emit. */
+const RATIONALE_FRAGMENTS = [
+  'Specialty match',
+  'round-robin',
+  'drip campaign',
+  'broker-owner triage',
+  'operator should configure',
+  'operator-only',
+  'internal:',
+];
+
+const CATEGORY_FIXTURES: Array<{ label: string; base: Partial<LeadRecord> }> = [
+  {
+    label: 'hot',
+    base: {
+      id: 'lead-cat-hot',
+      inquiryText: 'Ready to buy - want to tour ASAP and make an offer if I like it.',
+      statedTimeline: 'this week',
+      statedFinancing: 'preapproved with a lender',
+      propertyContext: {
+        type: 'specific-listing',
+        mlsNumber: '7128341',
+        addressText: '4421 Magnolia Dr',
+      },
+      inquirySubject: null,
+    },
+  },
+  {
+    label: 'warm',
+    base: {
+      id: 'lead-cat-warm',
+      inquiryText: 'Curious about this listing - could we set up a tour next week?',
+      statedTimeline: '30 days',
+      statedFinancing: 'preapproved with a lender',
+      propertyContext: {
+        type: 'specific-listing',
+        mlsNumber: '7128341',
+        addressText: '4421 Magnolia Dr',
+      },
+      inquirySubject: null,
+    },
+  },
+  {
+    label: 'cold',
+    base: {
+      id: 'lead-cat-cold',
+      inquiryText: 'Interested in learning more, and looking at a few neighborhoods.',
+      statedTimeline: 'this quarter',
+      statedFinancing: null,
+      propertyContext: { type: 'general', mlsNumber: null, addressText: null },
+      inquirySubject: null,
+    },
+  },
+  {
+    label: 'nurture',
+    base: {
+      id: 'lead-cat-nurture',
+      inquiryText: 'No rush, maybe someday.',
+      statedTimeline: 'someday',
+      statedFinancing: null,
+      propertyContext: { type: 'general', mlsNumber: null, addressText: null },
+      inquirySubject: null,
+    },
+  },
+];
+
+function sentinelCampaigns(): DripCampaign[] {
+  return [
+    campaign({ id: 'drip-cold', name: `${SENTINEL_CAMPAIGN} (cold)`, audience: 'cold' }),
+    campaign({ id: 'drip-nurture', name: `${SENTINEL_CAMPAIGN} (nurture)`, audience: 'nurture' }),
+  ];
+}
+
+const ROUTING_SCENARIOS: Array<{
+  label: string;
+  extraText: string;
+  agents: AgentRoster[];
+  campaigns: DripCampaign[];
+}> = [
+  {
+    label: 'agent via round-robin',
+    extraText: '',
+    agents: [
+      agent({ id: 'agent-z', name: SENTINEL_AGENT, specialties: ['luxury'], acceptingLeads: true }),
+    ],
+    campaigns: sentinelCampaigns(),
+  },
+  {
+    label: 'agent via specialty match',
+    extraText: ' We are shopping for our first home.',
+    agents: [
+      agent({
+        id: 'agent-z',
+        name: SENTINEL_AGENT,
+        specialties: ['first-time buyer'],
+        acceptingLeads: true,
+      }),
+    ],
+    campaigns: sentinelCampaigns(),
+  },
+  {
+    label: 'manual - no accepting agent, no campaign',
+    extraText: '',
+    agents: [
+      agent({ id: 'agent-z', name: SENTINEL_AGENT, specialties: ['luxury'], acceptingLeads: false }),
+    ],
+    campaigns: [],
+  },
+  {
+    label: 'drip - empty roster',
+    extraText: '',
+    agents: [],
+    campaigns: sentinelCampaigns(),
+  },
+];
+
+describe('lead-triage-realestate - internal routing rationale never reaches the outbound body', () => {
+  it('holds for every routing outcome x every category', async () => {
+    const seenCategories = new Set<string>();
+    const seenRoutingTypes = new Set<string>();
+    let examined = 0;
+
+    for (const fixture of CATEGORY_FIXTURES) {
+      for (const scenario of ROUTING_SCENARIOS) {
+        const base = fixture.base as Partial<LeadRecord>;
+        const subject = `${fixture.label}/${scenario.label}`;
+        const fetcher = new JsonLeadFetcher({
+          workspaceId: WORKSPACE_ID,
+          leads: [
+            lead({
+              ...base,
+              inquiryText: `${base.inquiryText ?? ''}${scenario.extraText}`,
+            }),
+          ],
+          agents: scenario.agents,
+          campaigns: scenario.campaigns,
+        });
+        const persister = new RecordingDraftPersister();
+        const res = await runSkill({
+          workspaceId: WORKSPACE_ID,
+          fetcher,
+          persister,
+          // Force the Gmail-draft push for every category so the real
+          // outbound artifact is produced and inspected, not just the
+          // in-memory draft.
+          persistThreshold: 0,
+          now: NOW,
+        });
+        assert.equal(res.ok, true, `${subject}: runSkill failed`);
+        if (!res.ok) return;
+
+        const triaged = res.value.triaged[0];
+        const draft = triaged.firstTouchDraft;
+        assert.ok(draft, `${subject}: expected a first-touch draft`);
+        assert.equal(triaged.category, fixture.label, `${subject}: category drifted`);
+
+        // Positive control. If the rationale were empty, every
+        // "does not contain" assertion below would pass vacuously and
+        // this suite would be worthless.
+        assert.ok(
+          triaged.routing.rationale.length > 10,
+          `${subject}: routing.rationale is empty - the assertions below would be vacuous`,
+        );
+
+        assert.equal(
+          persister.calls.length,
+          1,
+          `${subject}: expected exactly one persisted draft`,
+        );
+        const outbound = [draft.body, persister.calls[0].body];
+        assert.equal(
+          persister.calls[0].body,
+          draft.body,
+          `${subject}: persisted body diverged from the returned draft body`,
+        );
+
+        for (const body of outbound) {
+          assert.ok(
+            !body.includes(triaged.routing.rationale),
+            `${subject}: outbound body contains the internal routing rationale verbatim`,
+          );
+          for (const fragment of RATIONALE_FRAGMENTS) {
+            assert.ok(
+              !body.toLowerCase().includes(fragment.toLowerCase()),
+              `${subject}: outbound body contains internal routing fragment "${fragment}"`,
+            );
+          }
+          assert.ok(
+            !body.includes(SENTINEL_AGENT),
+            `${subject}: outbound body names the routed agent`,
+          );
+          assert.ok(
+            !body.includes(SENTINEL_CAMPAIGN),
+            `${subject}: outbound body names the drip campaign`,
+          );
+          if (triaged.routing.type === 'agent') {
+            assert.ok(
+              !body.includes(triaged.routing.agentId),
+              `${subject}: outbound body contains the routed agent id`,
+            );
+          }
+        }
+
+        seenCategories.add(triaged.category);
+        seenRoutingTypes.add(triaged.routing.type);
+        examined += 1;
+      }
+    }
+
+    // Coverage, asserted. "Found nothing" and "examined nothing" must
+    // not be indistinguishable.
+    assert.equal(
+      examined,
+      CATEGORY_FIXTURES.length * ROUTING_SCENARIOS.length,
+      'matrix did not run to completion',
+    );
+    assert.deepEqual(
+      [...seenCategories].sort(),
+      ['cold', 'hot', 'nurture', 'warm'],
+      'matrix did not exercise all four categories',
+    );
+    assert.deepEqual(
+      [...seenRoutingTypes].sort(),
+      ['agent', 'drip', 'manual'],
+      'matrix did not exercise all three routing outcomes',
+    );
+  });
+
+  it('the operator still gets the routing decision - it moves, it is not dropped', async () => {
+    const fetcher = new JsonLeadFetcher({
+      workspaceId: WORKSPACE_ID,
+      leads: [lead({ ...(CATEGORY_FIXTURES[0].base as Partial<LeadRecord>) })],
+      agents: [
+        agent({ id: 'agent-z', name: SENTINEL_AGENT, specialties: ['luxury'], acceptingLeads: true }),
+      ],
+      campaigns: sentinelCampaigns(),
+    });
+    const res = await runSkill({ workspaceId: WORKSPACE_ID, fetcher, now: NOW });
+    assert.equal(res.ok, true);
+    if (!res.ok) return;
+    const routing = res.value.triaged[0].routing;
+    assert.equal(routing.type, 'agent');
+    if (routing.type !== 'agent') return;
+    // The structured field the approval payload carries and the
+    // approvals card renders (see `renderApprovalPayload#renderLeadTriage`,
+    // pinned in `tests/approvals-renderer.test.ts`).
+    assert.equal(routing.agentName, SENTINEL_AGENT);
+    assert.match(routing.rationale, /round-robin/);
   });
 });

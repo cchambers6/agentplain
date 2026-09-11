@@ -26,7 +26,14 @@ export type { ApprovalRow } from "./ApprovalCard";
 
 interface ApprovalsListProps {
   workspaceId: string;
+  /** PENDING rows only. Drives the counts, the discipline chips, the sort and
+   *  batch-approve — all unchanged. */
   rows: ApprovalRow[];
+  /** Recently ACCEPTED rows (APPROVED + AUTO_APPROVED), bounded by the page.
+   *  Deliberately a SEPARATE prop rather than mixed into `rows`: folding them
+   *  in would inflate "N decisions waiting", the chip counts and the
+   *  select-all-clearable set, none of which should count decided work. */
+  acceptedRows?: ApprovalRow[];
   initialDiscipline: DisciplineId | null;
   /** Queue-item id the customer was deep-linked to (the onboarding
    *  first-draft "open in approvals" CTA). When it matches a pending row
@@ -50,6 +57,7 @@ function isNeedsYou(row: ApprovalRow): boolean {
 export function ApprovalsList({
   workspaceId,
   rows,
+  acceptedRows = [],
   initialDiscipline,
   initialFocusId = null,
 }: ApprovalsListProps) {
@@ -354,6 +362,38 @@ export function ApprovalsList({
           </ul>
         )}
       </section>
+
+      {/* ── Approved: ready to take with you ──────────────────────────── */}
+      {/* The handoff controls (copy / .txt / mailto) are gated on acceptance,
+          so this is the surface they live on. Before this section existed the
+          page loaded PENDING rows only, which is why the controls used to sit
+          on undecided drafts: there was no post-approval surface at all.
+          Read-only — no footer, so no approve/reject on a decided row. */}
+      {acceptedRows.length > 0 ? (
+        <section
+          className="mt-12 border-t border-rule pt-8"
+          aria-label="Approved, ready to take with you"
+        >
+          <div className="flex items-center gap-2">
+            <PlainoStatus state="sit" size={18} />
+            <h2 className="font-display text-xl text-ink">
+              Approved — ready to take with you
+            </h2>
+          </div>
+          <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-mute">
+            You said yes to these. Copy them, download a .txt, or open one in
+            your own mail app — exactly as they read when you approved them.
+            Nothing here sends; your system still does that.
+          </p>
+          <ul className="mt-4 space-y-3">
+            {acceptedRows.map((row) => (
+              <li key={row.id}>
+                <ApprovalCard row={row} plainoState="sit" />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {/* ── Detail bottom-sheet ───────────────────────────────────────── */}
       <ApPaperSheet

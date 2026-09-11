@@ -33,6 +33,11 @@ function row(rendered: RenderedApproval, over: Partial<ApprovalRow> = {}): Appro
     kind: over.kind ?? "DRAFT_REPLY",
     discipline: over.discipline ?? null,
     proposedAtIso: over.proposedAtIso ?? "2026-06-05T13:00:00.000Z",
+    // Every row in this file is a QUEUE row, and the queue is PENDING-only.
+    // That is also what makes these cards carry no handoff controls: delivery
+    // is gated on acceptance. See tests/approval-handoff-gating.test.tsx.
+    status: over.status ?? "PENDING",
+    storedArtifact: over.storedArtifact,
     rendered,
   };
 }

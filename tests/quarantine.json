@@ -297,13 +297,6 @@
     },
     {
       "class": "stale-fixture",
-      "file": "tests/approvals-renderer.test.ts",
-      "test": "COMPLIANCE_FLAG uses ruleId/category as title and surfaces source",
-      "matches": "/-\\s+'Source: draft body line 4'/",
-      "reason": "Expects a trailing 'Source: draft body line 4' bullet the renderer no longer emits. VERIFIED 2026-09-10 against main (152bbbac) AND against b62b1c5: the failure signature is byte-identical at both commits, so this is NOT a new regression introduced by PR #538 — it has been failing this way the whole time. A separate branch is fixing the underlying renderer behaviour; when that lands this entry must be DELETED, and the gate now forces that by going red the moment the test passes."
-    },
-    {
-      "class": "stale-fixture",
       "file": "tests/conner-dead-e2e-fleet-health.test.ts",
       "test": "both env vars unset → no recipients",
       "matches": "connerchambers6@gmail.com",

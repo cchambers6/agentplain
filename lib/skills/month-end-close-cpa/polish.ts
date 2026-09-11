@@ -24,6 +24,7 @@
  * reject the polish and keep the template.
  */
 
+import { MODEL_SONNET } from '@/lib/llm/model-tiers';
 import type { LlmProvider } from '@/lib/llm/types';
 
 export interface PolishOptions {
@@ -72,7 +73,15 @@ export async function polishBody(args: {
   try {
     const res = await opts.llm.complete({
       system: SYSTEM_PROMPT,
-      model: undefined,
+      // Explicit tier pin.  This previously read `model: undefined`, which is
+      // indistinguishable from "no opinion" to a truthiness check and left the
+      // call on the untiered provider default (`claude-sonnet-4-5`) — a string
+      // that appears in no tier table.  MODEL_SONNET keeps the same rate band
+      // ($3/$15 per MTok) so this change costs nothing; it only replaces an
+      // accident with a decision.  Peers on the DRAFT surface (lib/skills/
+      // draft.ts, support-handler, plaino/instruction-handler) run MODEL_OPUS;
+      // moving this one up is a one-line quality/cost call for Conner.
+      model: MODEL_SONNET,
       temperature: 0.3,
       maxTokens: 700,
       responseFormat: 'text',

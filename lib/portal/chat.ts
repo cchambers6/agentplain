@@ -28,6 +28,7 @@ import {
 } from "@/lib/security/encryption";
 import { checkDegradedMode } from "@/lib/plaino/degraded-mode";
 import { getLlmProvider } from "@/lib/llm";
+import { MODEL_OPUS } from "@/lib/llm/model-tiers";
 import { PrismaPortalApprovalGate } from "./owner-approval-gate-prisma";
 import {
   isPortalMessageVisibleToClient,
@@ -282,9 +283,29 @@ async function draftReply(
     const result = await getLlmProvider().complete({
       system,
       messages,
+      // This is the only surface in the product whose output is read by the
+      // CUSTOMER'S OWN END CLIENT.  It carried no `model` and no
+      // `sourceSurface`, so it fell to the untiered provider default
+      // ("claude-sonnet-4-5", a string in no tier table) and was unreachable
+      // by routing forever: with no surface tag, resolveRoutedModel() returns
+      // undefined and applyRouting() forwards as-is even with the flag on.
+      //
+      // Pinned to MODEL_OPUS to match every comparable customer-read path
+      // (lib/skills/draft.ts, lib/skills/support-handler/skill.ts,
+      // lib/plaino/instruction-handler.ts).  This is a quality/cost JUDGEMENT,
+      // not a correctness fix — the defect is that nobody chose, not that the
+      // old value was wrong.  Conner can reverse it by editing this one line.
+      model: MODEL_OPUS,
       maxTokens: PORTAL_DRAFT_MODEL_MAX_TOKENS,
       temperature: 0.4,
-      meta: { skill: "portal-client-reply", workspaceId: ctx.workspaceId },
+      meta: {
+        skill: "portal-client-reply",
+        workspaceId: ctx.workspaceId,
+        // DRAFT is the accurate existing surface: this reply is drafted,
+        // owner-approved, and only then shown. A dedicated PORTAL_* tag would
+        // need a Prisma enum widening (production DDL) and is not taken here.
+        sourceSurface: "DRAFT",
+      },
     });
     if (!result.ok) return null;
     const text = result.value.text.trim();

@@ -22,9 +22,11 @@
  * Cache-write is ~1.25× input; cache-read is ~0.10× input. Output is
  * 5× input on every Claude model. Match-by-substring on the model id so
  * minor version suffixes ("claude-sonnet-4-5", "claude-sonnet-4-5-20251001")
- * resolve to the same table. Unknown models default to Sonnet pricing —
- * the conservative middle of the Claude family so we never *under*-bill
- * an Opus call.
+ * resolve to the same table. An id matching NO known family resolves to the
+ * most expensive known family (Opus) — see `ratesForModel` for why that is
+ * the safe direction here — and is reported as unknown by
+ * `modelFamilyFor()` / `isKnownModelFamily()` so callers and tests can see
+ * that a rate was assumed rather than known.
  *
  * Pure function: no env reads, no DB, no IO. Test by computing a few
  * hand-known cases and asserting `===`.
@@ -84,18 +86,74 @@ const HAIKU_RATES: ModelRates = {
   cacheReadPerMillionMicroCents: usdToMicroCentsPerMillion(0.1),
 };
 
-/** Family resolver. Match by substring so minor-version suffixes share
- *  the same table — "claude-sonnet-4-5" and "claude-sonnet-4-5-20251001"
- *  both resolve to Sonnet. Unknown models default to Sonnet because:
- *    (1) Sonnet is what every shipped agentplain skill calls today; and
- *    (2) defaulting *up* to Opus would over-bill, defaulting *down* to
- *        Haiku would under-bill an Opus call. Sonnet is the safe middle. */
-export function ratesForModel(model: string): ModelRates {
+/** The rate families this module knows how to price.  `unknown` means the
+ *  id matched no family and a rate had to be ASSUMED. */
+export type ModelFamily = 'opus' | 'sonnet' | 'haiku' | 'unknown';
+
+/** Family resolver. Match by substring so minor-version suffixes share the
+ *  same table — "claude-sonnet-4-5" and "claude-sonnet-4-5-20251001" both
+ *  resolve to Sonnet. Returns `'unknown'` — it does NOT guess — so the
+ *  "we had to assume" case is observable instead of invisible. */
+export function modelFamilyFor(model: string): ModelFamily {
   const m = model.toLowerCase();
-  if (m.includes('opus')) return OPUS_RATES;
-  if (m.includes('haiku')) return HAIKU_RATES;
-  // sonnet, unknown, or anything starting with "claude-" but unfamiliar
-  return SONNET_RATES;
+  if (m.includes('opus')) return 'opus';
+  if (m.includes('haiku')) return 'haiku';
+  if (m.includes('sonnet')) return 'sonnet';
+  return 'unknown';
+}
+
+/** True when `ratesForModel(model)` is a real published rate rather than the
+ *  unknown-model fallback. Exported so a guard test can enumerate the model
+ *  ids this repo actually pins and fail when one of them is unpriced. */
+export function isKnownModelFamily(model: string): boolean {
+  return modelFamilyFor(model) !== 'unknown';
+}
+
+/** Rate lookup.
+ *
+ *  UNKNOWN IDS BILL AT THE MOST EXPENSIVE KNOWN FAMILY (Opus), not the
+ *  cheapest plausible one.
+ *
+ *  The previous rule — "unknown defaults to Sonnet, the conservative middle"
+ *  — rested on a comment asserting that "Sonnet is what every shipped
+ *  agentplain skill calls today". That was false when it was written and is
+ *  false now: of the 26 `llm.complete()` call sites under `lib/` and
+ *  `app/`, 12 pass MODEL_OPUS, 7 pass MODEL_SONNET, 4 pass MODEL_HAIKU, and
+ *  the rest are untiered (enumerated at bfc0c71e). Sonnet is not the middle
+ *  of this fleet's distribution; it is below it.
+ *
+ *  The concrete failure the old default produced: `claude-fable-5` — the
+ *  model `CLAUDE.md` ratifies as the DEFAULT heavy-lift tier — contains
+ *  neither "opus" nor "haiku", so it fell through to Sonnet's $3/$15 while
+ *  `lib/kaizen/pricing.ts` prices it at $10/$50. A 3.3x silent under-count.
+ *
+ *  Why "most expensive" is conservative HERE specifically: `costMicroCents`
+ *  is not a customer invoice. agentplain bills per seat
+ *  (`lib/pricing/tiers.ts`); this number feeds agentplain's own spend
+ *  visibility — the usage pane and the per-surface rollup in
+ *  `lib/billing/usage/aggregate.ts`. Under-counting your own spend is the
+ *  direction that costs money; over-counting only makes the pane pessimistic.
+ *  So the fallback errs high and says so, rather than erring low in silence.
+ *
+ *  This deliberately does NOT throw. The only caller,
+ *  `lib/billing/usage/recorder.ts:72`, runs outside its own try/catch on the
+ *  live provider path; a throw here would turn an unrecognised model id into
+ *  a failed customer-facing completion. Loudness is delivered by
+ *  `isKnownModelFamily()` plus the guard test that enumerates every pinned
+ *  model id, not by crashing the request. */
+export function ratesForModel(model: string): ModelRates {
+  switch (modelFamilyFor(model)) {
+    case 'opus':
+      return OPUS_RATES;
+    case 'haiku':
+      return HAIKU_RATES;
+    case 'sonnet':
+      return SONNET_RATES;
+    default:
+      // Unrecognised id: assume the most expensive known family so an
+      // unpriced model can never silently under-report spend.
+      return OPUS_RATES;
+  }
 }
 
 /** Compute the cost in micro-cents for a single LLM call. Pure; safe

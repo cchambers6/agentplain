@@ -53,10 +53,11 @@
  *   long-lived provider instance.
  *
  * `LLM_MODEL_ROUTING=on`: the wrapper rewrites `request.model` ONLY when the
- *   caller left it absent (undefined / falsy).  If the caller already set a
- *   model — as every wave-8 call site does — the request is forwarded
- *   untouched.  The routing only fills a vacuum; it never clobbers an explicit
- *   decision.
+ *   caller OMITTED the `model` key entirely.  If the key is present — with
+ *   ANY value, including `undefined` — the request is forwarded untouched.
+ *   The routing only fills a vacuum; it never clobbers an explicit decision,
+ *   and "explicit" is decided by key presence, not by truthiness.  See the
+ *   long note on `applyRouting` for why that distinction is load-bearing.
  *
  * Per `feedback_no_silent_vendor_lock`: no `@anthropic-ai/sdk` import — the
  *   wrapper speaks only the provider-neutral `LlmProvider` contract.
@@ -144,7 +145,33 @@ export function applyRouting(
   policy: ModelRoutingPolicy = DEFAULT_ROUTING_POLICY,
 ): LlmCompletionRequest {
   // Caller already made an explicit model choice — respect it unconditionally.
-  if (request.model) return request;
+  //
+  // KEY PRESENCE, NOT TRUTHINESS.  `{ model: undefined }` and `{}` have the
+  // same TYPE (`model?: string`) but are not the same STATEMENT.  Naming the
+  // key is an act; omitting it is not.  A truthiness test conflates the two,
+  // so any call site that writes `model: undefined` — or, far more commonly,
+  // `model: opts.model` where `opts.model` happens to be undefined — gets
+  // silently re-tiered the moment `LLM_MODEL_ROUTING` is flipped on.
+  //
+  // That was live: `lib/skills/month-end-close-cpa/polish.ts` passed
+  // `model: undefined` with `meta.sourceSurface: 'DRAFT'`.  DRAFT maps to
+  // `claude-opus-4-7` below, so flipping the flag would have promoted the CPA
+  // flagship off the provider default (`claude-sonnet-4-5`) onto Opus — a ~5x
+  // input and ~5x output rate change that nobody decided at either end.
+  //
+  // Semantics chosen: a PRESENT `model` key is an explicit decision whatever
+  // its value.  This makes flipping the flag on a provable no-op for every
+  // call site that mentions `model` at all, which is the only thing a cost
+  // flag can safely promise.  A caller who wants routing to choose omits the
+  // key; `{ ...(pin ? { model: pin } : {}) }` is the spelling for "route me
+  // when I have no opinion".
+  //
+  // Rejected alternative: treat `model: undefined` as "caller wants the
+  // default, please route me".  It reads naturally but it makes the flag flip
+  // a behaviour change at call sites nobody audited — which is the defect,
+  // not the fix.  Under that reading the CPA promotion above is correct
+  // behaviour, and there is no way to spell "I chose the default" at all.
+  if ('model' in request) return request;
   const routed = resolveRoutedModel(request.meta?.sourceSurface, policy);
   // No surface or unmapped surface — do not guess; forward as-is.
   if (!routed) return request;

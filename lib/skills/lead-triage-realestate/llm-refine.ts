@@ -90,9 +90,29 @@ export async function maybeRefineLeadTriage(
     temperature: 0.2,
     responseFormat: 'json',
     meta: {
+      // Was 'CATEGORIZE'. That tag names the narrow-classifier surface — the
+      // Haiku row in DEFAULT_ROUTING_POLICY, whose stated rationale is
+      // "discrete categorical / binary decisions (classify, triage,
+      // office-admin)". This call is not a classifier: it re-decides triage
+      // outcomes against learned feedback rules and emits structured
+      // overrides, on MODEL_OPUS, up to 72 times a day across three hourly
+      // sweeps. Tagging it CATEGORIZE put the fleet's highest-frequency Opus
+      // path into a bucket named for its cheapest tier, and CATEGORIZE has no
+      // other occupant (lib/skills/categorize.ts sets no sourceSurface at all
+      // and falls to OTHER), so that bucket on the usage pane was 100% Opus
+      // spend under a Haiku-tier label.
+      //
+      // 'OTHER' is where its six structural peers already sit
+      // (analytics-weekly-pulse, briefing-generator, compliance-watch,
+      // content-calendar-drafter, finance-pulse, research-on-demand — all
+      // MODEL_OPUS, all tagged OTHER), so the rollup is now internally
+      // consistent. The MODEL_OPUS pin is deliberate and is left alone: it is
+      // asserted by lib/llm/model-tiers.test.ts ("lead-triage refine passes
+      // MODEL_OPUS"). Demoting it would be a live quality change to the
+      // highest-frequency real-estate path and is Conner's call, not this PR's.
       skill: 'lead-triage-realestate',
       workspaceId: input.workspaceId,
-      sourceSurface: 'CATEGORIZE',
+      sourceSurface: 'OTHER',
     },
   });
   if (!completion.ok) {

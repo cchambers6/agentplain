@@ -56,6 +56,11 @@
 import type { WorkApprovalKind } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { buildApprovalArtifact } from "../artifact";
+import {
+  ARTIFACT_PAYLOAD_KEY,
+  ARTIFACT_SCHEMA_VERSION,
+  type StoredApprovalArtifact,
+} from "../stored-artifact";
 import type {
   ApprovalExecutionContext,
   ApprovalExecutionOutcome,
@@ -128,17 +133,24 @@ export const ARTIFACT_HANDOFF_KINDS: readonly WorkApprovalKind[] = (
   Object.keys(HAS_PRODUCER) as WorkApprovalKind[]
 ).filter((k) => HAS_PRODUCER[k]);
 
-/** Reserved payload key. Namespaced so it cannot collide with a skill's own
- *  field, and versioned so a future shape change is detectable rather than
- *  ambiguous. */
-export const ARTIFACT_PAYLOAD_KEY = "plainoApprovalArtifact" as const;
-export const ARTIFACT_SCHEMA_VERSION = 1 as const;
-
-export interface StoredApprovalArtifact {
-  v: typeof ARTIFACT_SCHEMA_VERSION;
-  fingerprint: string;
-  artifact: unknown;
-}
+/**
+ * Reserved payload key + stored shape.
+ *
+ * DEFINED IN `../stored-artifact` and re-exported here, so every existing
+ * importer of this module is unchanged and there is exactly ONE definition of
+ * the key. They live next to the READER because the reader is reachable from
+ * a client component and this file is not -- it imports `node:crypto`. One
+ * definition, kept on the side with the tighter constraint.
+ *
+ * A key that drifted between writer and reader would be the worst kind of
+ * silent: the reader would find nothing, fall back forever, and look exactly
+ * like "no row carries an artifact yet".
+ */
+export {
+  ARTIFACT_PAYLOAD_KEY,
+  ARTIFACT_SCHEMA_VERSION,
+  type StoredApprovalArtifact,
+} from "../stored-artifact";
 
 /** Content fingerprint. Stable across runs AND across processes: the artifact
  *  is serialized with sorted keys, so identical content cannot hash

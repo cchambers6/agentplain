@@ -9,7 +9,15 @@ import {
   resolveConfidence,
   type ConfidenceView,
 } from "@/lib/approvals/presentation";
-import { buildApprovalArtifact } from "@/lib/approvals/artifact";
+import {
+  buildApprovalArtifact,
+  type ApprovalArtifact,
+} from "@/lib/approvals/artifact";
+// The leaf predicate, NOT `lib/approvals/executors` — this component is in
+// the client graph (ApprovalsList.tsx is "use client" and imports it), and
+// the executor registry reaches node:crypto. Same single definition either
+// way; see lib/approvals/accepted-status.ts.
+import { isAcceptedStatus } from "@/lib/approvals/accepted-status";
 import type { WorkApprovalKind } from "@prisma/client";
 import type { RenderedApproval } from "./renderApprovalPayload";
 import { ApprovalHandoff } from "./ApprovalHandoff";
@@ -34,6 +42,17 @@ export interface ApprovalRow {
    *  discipline axis landed. NULL rows land in the "All recent" fallback. */
   discipline: DisciplineId | null;
   proposedAtIso: string;
+  /** The row's `WorkApprovalStatus`, verbatim. REQUIRED, and deliberately not
+   *  defaulted: the handoff controls are gated on it, and a row that forgot to
+   *  carry it must fail closed to "not delivered" rather than silently
+   *  handing a customer an undecided draft. */
+  status: string;
+  /** The artifact FROZEN AT APPROVAL TIME, lifted off `payload` under
+   *  `plainoApprovalArtifact` by `readStoredApprovalArtifact`. Null on rows
+   *  approved before the executor shipped, and on rows whose executor failed
+   *  (dispatch.ts records that under `plainoExecutorFailure` rather than
+   *  discarding the run). Null means "re-derive", never "show nothing". */
+  storedArtifact?: ApprovalArtifact | null;
   rendered: RenderedApproval;
 }
 
@@ -127,9 +146,43 @@ export function ApprovalCard({
 }: ApprovalCardProps) {
   const { rendered } = row;
   const confidence = resolveConfidence(rendered);
-  // The take-it-with-you artifact. Pure + DB-free, so the card stays
-  // renderable in a unit test; the interactive half lives in ApprovalHandoff.
-  const artifact = buildApprovalArtifact(row.kind as WorkApprovalKind, rendered);
+
+  // ── DELIVERY IS GATED ON ACCEPTANCE ────────────────────────────────────
+  // The handoff (copy / .txt / mailto) is how work LEAVES agentplain. It used
+  // to render unconditionally, which meant the controls sat on PENDING rows
+  // and a customer could carry a draft away before approving it — approval
+  // was not a precondition for delivery at all.
+  //
+  // `isAcceptedStatus` rather than `status === "APPROVED"`: the literal
+  // comparison silently skips every AUTO_APPROVED row, and this repo already
+  // carries that bug once at lib/voice/recording.ts:51.
+  const delivered = isAcceptedStatus(row.status);
+
+  // ── STORED ARTIFACT WINS ───────────────────────────────────────────────
+  // `executors/artifact-handoff.ts` freezes the artifact at approval time
+  // precisely so the customer's record cannot move afterwards — its own
+  // header (artifact-handoff.ts:34-37) says a re-derivation at read time
+  // "would quietly change the customer's record underneath them". This card
+  // was performing exactly that re-derivation. Now the frozen copy is
+  // preferred whenever the row carries one.
+  //
+  // The fallback is KEPT, deliberately. `buildApprovalArtifact` is a pure
+  // function of (kind, rendered), so for an untouched payload the two agree
+  // byte-for-byte — the fallback is the same answer recomputed, not a
+  // different one. They can only diverge when the payload changed after
+  // approval (editApprovalDraftAction), and that is exactly the case the
+  // stored copy already wins. Rendering nothing instead would silently strip
+  // a working affordance from every row approved before the executor shipped,
+  // and would turn dispatch.ts's deliberate "a failed executor is recoverable
+  // because the artifact is always recomputable" (dispatch.ts:222-230) into
+  // customer-visible data loss.
+  //
+  // Nothing is built for a pending row: the work is pointless when the
+  // controls will not render.
+  const artifact: ApprovalArtifact | null = delivered
+    ? (row.storedArtifact ??
+      buildApprovalArtifact(row.kind as WorkApprovalKind, rendered))
+    : null;
   // The highlight ring wins over the admin-priority border so the deep-link
   // target reads as "this one" even when it's also a critical admin card.
   const adminCardClass = highlighted
@@ -276,7 +329,8 @@ export function ApprovalCard({
         </p>
       ) : null}
 
-      <ApprovalHandoff artifact={artifact} />
+      {/* Only on an accepted row — see the `delivered` gate above. */}
+      {artifact ? <ApprovalHandoff artifact={artifact} /> : null}
 
       {rendered.metaLine ? (
         <p className="mt-4 border-t border-rule pt-4 font-mono text-[11px] tracking-eyebrow uppercase text-mute">

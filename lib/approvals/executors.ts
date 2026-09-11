@@ -93,30 +93,30 @@
  * the criterion.
  */
 
-import type { WorkApprovalKind, WorkApprovalStatus } from "@prisma/client";
+import type { WorkApprovalKind } from "@prisma/client";
 // Type-only, therefore erased at compile time -- no lib -> app runtime edge.
 // lib/approvals/artifact.ts already reaches for this same type by this same
 // path; keeping one convention rather than two.
 import type { RenderedApproval } from "@/app/(product)/app/workspace/[id]/approvals/renderApprovalPayload";
-
-/** The two statuses that mean "accepted". See the header. */
-const ACCEPTED_STATUSES: ReadonlySet<string> = new Set([
-  "APPROVED",
-  "AUTO_APPROVED",
-]);
-
-export type AcceptedApprovalStatus = "APPROVED" | "AUTO_APPROVED";
+import type { AcceptedApprovalStatus } from "./accepted-status";
 
 /**
- * The single accepted-class predicate. Every seam and every consumer uses
- * this rather than comparing to "APPROVED", because a `=== "APPROVED"` check
- * silently skips every row the confidence threshold accepted.
+ * The accepted-class predicate now lives in its own leaf module, and this is
+ * a RE-EXPORT rather than a second copy -- there is still exactly one
+ * definition of the rule in the repo, and every existing importer of
+ * `./executors` is unchanged.
+ *
+ * It moved because the approvals CARD needs it, and ApprovalCard is a CLIENT
+ * component (`ApprovalsList.tsx` carries "use client" and imports it).
+ * Importing this module from there would pull `./executors/artifact-handoff`
+ * -- and therefore `node:crypto` -- into the browser bundle. See
+ * lib/approvals/accepted-status.ts for the full reasoning.
  */
-export function isAcceptedStatus(
-  status: WorkApprovalStatus | string | null | undefined,
-): status is AcceptedApprovalStatus {
-  return typeof status === "string" && ACCEPTED_STATUSES.has(status);
-}
+export {
+  isAcceptedStatus,
+  ACCEPTED_APPROVAL_STATUSES,
+} from "./accepted-status";
+export type { AcceptedApprovalStatus };
 
 /** Which seam drove this execution. Recorded on the outcome so a failure can
  *  be traced to the surface that caused it without re-reading the audit log. */

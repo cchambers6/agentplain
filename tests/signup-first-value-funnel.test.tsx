@@ -36,6 +36,9 @@ function row(
     kind: over.kind ?? "DRAFT_REPLY",
     discipline: over.discipline ?? null,
     proposedAtIso: over.proposedAtIso ?? "2026-06-05T13:00:00.000Z",
+    // The magic-moment first draft is a PENDING queue row.
+    status: over.status ?? "PENDING",
+    storedArtifact: over.storedArtifact,
     rendered,
   };
 }
@@ -45,10 +48,13 @@ test("FIX 3 — focused approval card renders the clay highlight ring", () => {
   const highlighted = render(<ApprovalCard row={base} highlighted />);
   const normal = render(<ApprovalCard row={base} />);
   // Matched on the CARD's ring utility (`ring-2 ring-clay …`), not the bare
-  // token. Every card now also contains `focus-visible:ring-clay` on the
-  // ApprovalHandoff buttons, which is a focus affordance on a button and not
-  // a highlight on the card — a bare /ring-clay/ negative assertion collides
-  // with it and reports a highlight that is not being drawn.
+  // token. A bare /ring-clay/ negative assertion is wrong here: any card that
+  // renders the ApprovalHandoff controls also carries
+  // `focus-visible:ring-clay` on their buttons, which is a focus affordance on
+  // a button and not a highlight on the card, so it would report a highlight
+  // that is not being drawn. (This row is PENDING and the handoff is gated on
+  // acceptance, so those buttons are absent today — but the assertion stays
+  // pinned to the card's own utility, because that is the thing under test.)
   assert.match(highlighted, /ring-2 ring-clay/);
   assert.doesNotMatch(normal, /ring-2 ring-clay/);
 });

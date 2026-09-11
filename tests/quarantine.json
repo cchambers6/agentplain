@@ -2,26 +2,58 @@
   "$comment": [
     "QUARANTINE LIST for `npm run test:gate`.",
     "",
-    "Every entry names one test that is skipped, WHY it is skipped, and WHEN the",
-    "skip expires. The runner (tools/test-gate.mjs) prints this table on every run",
-    "and fails once an entry is past `expires` — a quarantine that cannot expire is",
-    "just deletion with extra steps.",
+    "Every entry names one test that is suppressed, WHAT FAILURE it suppresses,",
+    "WHY, and WHEN the suppression expires. The runner (tools/test-gate.mjs)",
+    "prints this table on every run and fails once an entry is past `expires` —",
+    "a quarantine that cannot expire is just deletion with extra steps.",
     "",
-    "`class` is the honest label for what the skip is hiding:",
+    "── `matches` is required, and it is the point of this file ──",
+    "",
+    "Until 2026-09-10 an entry described its failure in PROSE and nothing checked",
+    "the prose against reality. Suppression worked by NAME: the test was skipped",
+    "outright, so it produced no output that could disagree with the description.",
+    "A quarantined test that began failing for an entirely different reason",
+    "inherited the existing entry in silence. Two entries on this list had stated",
+    "reasons that were simply false, and one was read by an auditor and relayed to",
+    "the owner as a live security hole. Prose cannot go stale loudly.",
+    "",
+    "`matches` is a distinctive fragment of the ACTUAL failure output — a literal",
+    "substring, or `/regex/` if the output carries volatile content. The gate no",
+    "longer skips anything; it runs every test and then adjudicates:",
+    "",
+    "  fails + output contains `matches`  → suppressed.",
+    "  fails + output does NOT match      → RED. A DIFFERENT failure is hiding",
+    "                                       here. Both signatures are printed.",
+    "  passes (and class is not `flaky`)  → RED. Delete the entry.",
+    "  never ran / renamed / source-skip  → RED. The entry names nothing.",
+    "  no `matches` at all                → RED, before any test runs.",
+    "",
+    "Derive `matches` from output you have actually SEEN, never from your",
+    "description of it. When the gate reports an unsuppressed failure it prints",
+    "the real signature — copy that. Absolute paths, timings and long hashes are",
+    "normalised away before matching, so a signature does not rot when the",
+    "checkout moves or a test gets slower.",
+    "",
+    "`class` is the honest label for what the suppression is hiding:",
     "  stale-fixture  — the test pins behaviour a later, deliberate change replaced.",
     "                   The code is right; the assertion is out of date.",
     "  runner-mismatch— the test is in the wrong runner (JSX under the non-JSX",
     "                   config). It passes under `npm run test:ui`.",
-    "  OPEN-GAP       — the test is RIGHT and the code is WRONG. Skipped only so the",
-    "                   gate can land green today. These are real defects; read them",
-    "                   first.",
+    "  OPEN-GAP       — the test is RIGHT and the code is WRONG. Suppressed only so",
+    "                   the gate can land green today. These are real defects; read",
+    "                   them first.",
+    "  flaky          — genuinely non-deterministic. The ONLY class exempt from the",
+    "                   passes-check, because it passes sometimes by definition. It",
+    "                   is NOT exempt from carrying `matches`.",
     "",
     "Established from the 2026-08-11 baseline: 5,927 tests, 5,867 pass, 39 fail,",
-    "21 skipped. One of those 39 (the storage-disclosure invariant) was FIXED in the",
-    "same PR rather than quarantined; the remaining 38 are listed here.",
+    "21 skipped. One of those 39 (the storage-disclosure invariant) was FIXED in",
+    "the same PR rather than quarantined.",
     "",
-    "Skips are matched by test NAME, anchored. Adding an entry means the name must",
-    "match exactly — a renamed test un-quarantines itself, which is the safe default."
+    "Swept entry-by-entry against main (152bbbac) on 2026-09-10: 37 entries",
+    "examined, 36 still failing with the signatures recorded below, 1 deleted for",
+    "passing (the /style page V0/v0 banned-string check, which now passes across",
+    "all 2,821 generated cases)."
   ],
   "expires": "2026-11-09",
   "entries": [
@@ -29,223 +61,246 @@
       "class": "stale-fixture",
       "file": "lib/inngest/functions/__tests__/follow-up-chaser-sweep.test.ts",
       "test": "serve route file literally references followUpChaserSweepFn",
+      "matches": "did not match the regular expression /followUpChaserSweepFn/",
       "reason": "app/api/inngest/route.ts was deliberately refactored to auto-derive functions from lib/inngest/registry.ts and now carries a 'DO NOT add a function array here' banner. These tests grep route.ts for a symbol the refactor removed on purpose. The functions ARE registered — via discovery, not via a literal import."
     },
     {
       "class": "stale-fixture",
       "file": "lib/inngest/functions/__tests__/home-services-estimate-followup-sweep.test.ts",
       "test": "serve route file references homeServicesEstimateFollowupSweepFn",
+      "matches": "did not match the regular expression /homeServicesEstimateFollowupSweepFn/",
       "reason": "Same root cause as follow-up-chaser-sweep: greps route.ts for a symbol the auto-registry refactor removed."
     },
     {
       "class": "stale-fixture",
       "file": "lib/inngest/functions/__tests__/invoice-chase-general-sweep.test.ts",
       "test": "route.ts references invoiceChaseGeneralSweepFn",
+      "matches": "did not match the regular expression /invoiceChaseGeneralSweepFn/",
       "reason": "Same root cause: route.ts no longer names functions literally."
     },
     {
       "class": "stale-fixture",
       "file": "lib/inngest/functions/__tests__/law-intake-conflict-screen-sweep.test.ts",
       "test": "route.ts references lawConflictScreenSweepFn",
+      "matches": "did not match the regular expression /lawConflictScreenSweepFn/",
       "reason": "Same root cause: route.ts no longer names functions literally."
     },
     {
       "class": "stale-fixture",
       "file": "lib/inngest/functions/__tests__/month-end-close-cpa-sweep.test.ts",
       "test": "route.ts references monthEndCloseCpaSweepFn",
+      "matches": "did not match the regular expression /monthEndCloseCpaSweepFn/",
       "reason": "Same root cause: route.ts no longer names functions literally."
     },
     {
       "class": "stale-fixture",
       "file": "lib/inngest/functions/__tests__/process-doc-drafter-sweep.test.ts",
       "test": "serve route file literally references processDocDrafterSweepFn",
+      "matches": "did not match the regular expression /processDocDrafterSweepFn/",
       "reason": "Same root cause: route.ts no longer names functions literally."
     },
     {
       "class": "stale-fixture",
       "file": "lib/inngest/functions/__tests__/process-webhook-event.test.ts",
       "test": "serve route file literally references processWebhookEventFn",
+      "matches": "did not match the regular expression /processWebhookEventFn/",
       "reason": "Same root cause: route.ts no longer names functions literally."
     },
     {
       "class": "runner-mismatch",
       "file": "lib/inngest/functions/__tests__/process-webhook-event.test.ts",
       "test": "is included in the Inngest serve route alongside the other crons",
+      "matches": "webpackRequire.context is not a function",
       "reason": "Fails with `webpackRequire.context is not a function`. The auto-registry uses webpack's require.context, which only exists inside the Next build — the bare node:test runner cannot evaluate it. Needs a registry seam that is testable outside webpack."
     },
     {
       "class": "stale-fixture",
       "file": "lib/skills/__tests__/registry-truth.test.ts",
       "test": "invoiceChaseGeneralSweepFn is registered in app/api/inngest/route.ts",
+      "matches": "invoiceChaseGeneralSweepFn is not imported in route.ts",
       "reason": "Invariant 2 of the sweep-dispatch manifest greps route.ts for each routeSymbol. The auto-registry refactor made that grep structurally impossible. The invariant is still worth having — it needs re-pointing at lib/inngest/registry.ts's discovered set instead of at route.ts source text."
     },
     {
       "class": "stale-fixture",
       "file": "lib/skills/__tests__/registry-truth.test.ts",
       "test": "monthEndCloseCpaSweepFn is registered in app/api/inngest/route.ts",
+      "matches": "monthEndCloseCpaSweepFn is not imported in route.ts",
       "reason": "Same root cause: route.ts grep vs. auto-registry."
     },
     {
       "class": "stale-fixture",
       "file": "lib/skills/__tests__/registry-truth.test.ts",
       "test": "lawConflictScreenSweepFn is registered in app/api/inngest/route.ts",
+      "matches": "lawConflictScreenSweepFn is not imported in route.ts",
       "reason": "Same root cause: route.ts grep vs. auto-registry."
     },
     {
       "class": "stale-fixture",
       "file": "lib/skills/__tests__/registry-truth.test.ts",
       "test": "complianceWatchSweepFn is registered in app/api/inngest/route.ts",
+      "matches": "complianceWatchSweepFn is not imported in route.ts",
       "reason": "Same root cause: route.ts grep vs. auto-registry."
     },
     {
       "class": "stale-fixture",
       "file": "lib/skills/__tests__/registry-truth.test.ts",
       "test": "analyticsPulseSweepFn is registered in app/api/inngest/route.ts",
+      "matches": "analyticsPulseSweepFn is not imported in route.ts",
       "reason": "Same root cause: route.ts grep vs. auto-registry."
     },
     {
       "class": "stale-fixture",
       "file": "lib/skills/__tests__/registry-truth.test.ts",
       "test": "contentCalendarSweepFn is registered in app/api/inngest/route.ts",
+      "matches": "contentCalendarSweepFn is not imported in route.ts",
       "reason": "Same root cause: route.ts grep vs. auto-registry."
     },
     {
       "class": "stale-fixture",
       "file": "lib/skills/__tests__/registry-truth.test.ts",
       "test": "financePulseSweepFn is registered in app/api/inngest/route.ts",
+      "matches": "financePulseSweepFn is not imported in route.ts",
       "reason": "Same root cause: route.ts grep vs. auto-registry."
     },
     {
       "class": "stale-fixture",
       "file": "lib/skills/__tests__/registry-truth.test.ts",
       "test": "followUpChaserSweepFn is registered in app/api/inngest/route.ts",
+      "matches": "followUpChaserSweepFn is not imported in route.ts",
       "reason": "Same root cause: route.ts grep vs. auto-registry."
     },
     {
       "class": "stale-fixture",
       "file": "lib/skills/__tests__/registry-truth.test.ts",
       "test": "processDocDrafterSweepFn is registered in app/api/inngest/route.ts",
+      "matches": "processDocDrafterSweepFn is not imported in route.ts",
       "reason": "Same root cause: route.ts grep vs. auto-registry."
     },
     {
       "class": "OPEN-GAP",
       "file": "lib/skills/__tests__/registry-truth.test.ts",
       "test": "property-management-rent-collection-chase (runtime:live) is sweep-dispatched OR non-sweep caller-covered",
-      "reason": "REAL: the skill is catalog runtime:'live' but appears in neither SWEEP_DISPATCH_MANIFEST nor NON_SWEEP_LIVE_SKILLS — it claims to fire and nothing fires it. The property-management fleet card renders 'Watching — ready when triggered' on the back of that claim. Tracked as property-management/pm-collections in lib/claims/known-drift.ts with the same expiry."
+      "matches": "appears in NEITHER SWEEP_DISPATCH_MANIFEST nor NON_SWEEP_LIVE_SKILLS",
+      "reason": "REAL, but the previous reason was FALSE and is retracted. It said 'it claims to fire and nothing fires it'. The sweep IS registered and DOES fire: lib/inngest/functions/property-management-rent-collection-chase-sweep.ts exists, and lib/inngest/registry.ts auto-derives the function list from the filesystem via require.context — a file under lib/inngest/functions/ is registered BY EXISTING. Its cron is RENT_COLLECTION_CHASE_SWEEP_CRON = '0 12 * * *'; the sweep then no-ops unless BUILDIUM_ADAPTER_LIVE=on (step 0 of its own header). The real gap is that the skill is absent from the hand-maintained SWEEP_DISPATCH_MANIFEST / NON_SWEEP_LIVE_SKILLS rows this test reads — a missing-manifest-row COPY gap, not a caller gap. Still a genuine failure (the manifest does not describe the fleet), so it stays quarantined. NOTE: lib/claims/known-drift.ts:71 asserts the opposite ('the one entry here that is a caller gap rather than a copy gap') and is wrong; that file is outside this PR's ownership and needs its own correction."
     },
     {
       "class": "stale-fixture",
       "file": "tests/brand.test.ts",
       "test": "paper is #F7F4ED",
+      "matches": "+ '#F5F0E6'",
       "reason": "The Heritage Plains rollout (PR #320) deliberately repointed the core palette. lib/brand/tokens.ts documents the new values in-line ('Heritage clay — a hair more saturated than the prior #B65D3A'). These tests still pin the superseded brand-standards-v0 hexes. The canonical values now live in tokens.ts + the brand-gate CANONICAL_HEX table, which do agree with each other."
     },
     {
       "class": "stale-fixture",
       "file": "tests/brand.test.ts",
       "test": "ink is #1A1A1F",
+      "matches": "+ '#1A1612'",
       "reason": "Same root cause: pins brand-standards-v0 hex, superseded by the Heritage rollout."
     },
     {
       "class": "stale-fixture",
       "file": "tests/brand.test.ts",
       "test": "clay is #B65D3A (primary accent — never moss)",
+      "matches": "+ '#B85540'",
       "reason": "Same root cause: pins brand-standards-v0 hex, superseded by the Heritage rollout."
     },
     {
       "class": "stale-fixture",
       "file": "tests/brand.test.ts",
       "test": "exposes every token under its tailwind-class name",
+      "matches": "+ '#F5F0E6'",
       "reason": "Same root cause: asserts the pre-Heritage token→class map."
     },
     {
       "class": "stale-fixture",
       "file": "lib/creative-handoff/packet.test.ts",
       "test": "carries the core palette with real hex values",
+      "matches": "+ '#B85540'",
       "reason": "Same root cause: the creative handoff packet emits the current palette; the fixture pins the pre-Heritage hexes."
     },
     {
       "class": "stale-fixture",
       "file": "tests/explainer-visuals.test.ts",
       "test": "OnboardingRoadmap lights the current step clay only when currentStep is set",
+      "matches": "progress variant should use clay",
       "reason": "Same root cause: asserts the pre-Heritage clay literal in rendered markup."
     },
     {
       "class": "stale-fixture",
       "file": "tests/plaino-visual-card.test.ts",
       "test": "renders next-steps as real anchor deep links with text labels",
+      "matches": "primary glyph clay",
       "reason": "Same root cause: asserts the pre-Heritage clay literal in rendered markup."
     },
     {
       "class": "stale-fixture",
       "file": "tests/portal-units.test.ts",
       "test": "rejects a non-hex brand color (no CSS injection)",
+      "matches": "did not match the regular expression /#B65D3A/",
       "reason": "Same root cause: the fallback brand colour is asserted as the pre-Heritage #B65D3A. The injection-rejection behaviour under test still holds — only the expected fallback literal moved."
     },
     {
       "class": "runner-mismatch",
       "file": "tests/plaino-persona.test.ts",
       "test": "renders with default pose='sit' without throwing",
+      "matches": "React is not defined",
       "reason": "`ReferenceError: React is not defined`. This file renders JSX but is picked up by `npm test`, which runs without tests/tsconfig.test.json (the JSX config `npm run test:ui` uses). It is a runner-wiring bug, not a product bug — the same assertions pass under test:ui. Fix is to move the file to .tsx or fold the JSX config into the main runner."
     },
     {
       "class": "runner-mismatch",
       "file": "tests/plaino-persona.test.ts",
       "test": "maps pose='fetch'/'herd'/'sit' to the status pose raster",
+      "matches": "React is not defined",
       "reason": "Same root cause: JSX file under the non-JSX runner config."
     },
     {
       "class": "runner-mismatch",
       "file": "tests/plaino-persona.test.ts",
       "test": "announces the state when decorative=false; hides otherwise",
+      "matches": "React is not defined",
       "reason": "Same root cause: JSX file under the non-JSX runner config."
     },
     {
       "class": "runner-mismatch",
       "file": "tests/plaino-persona.test.ts",
       "test": "never embeds the literal metaphor in the rendered markup",
+      "matches": "React is not defined",
       "reason": "Same root cause: JSX file under the non-JSX runner config."
     },
     {
       "class": "stale-fixture",
       "file": "tests/marketplace.test.ts",
       "test": "LIVE skills match the post-wave-4 catalog",
+      "matches": "/\\+\\s+'customer-support-triage'/",
       "reason": "The catalog grew after wave 4 (customer-support-triage, invoice-chase-general, law-intake-conflict-screen and others went live). The fixture pins the wave-4 snapshot. The live-set is separately guarded by registry-truth's caller invariants, which are the assertion that actually matters."
     },
     {
       "class": "stale-fixture",
       "file": "tests/marketplace.test.ts",
       "test": "remaining 10 vertical skills are SCHEMA-ONLY",
+      "matches": "7 !== 10",
       "reason": "Same root cause: counts against the wave-4 catalog snapshot."
     },
     {
       "class": "stale-fixture",
       "file": "lib/customer-files/__tests__/deletion.test.ts",
       "test": "clears every workspace-scoped tenant row for the target workspace, leaves others intact",
+      "matches": "Cannot read properties of undefined (reading 'deleteMany')",
       "reason": "`Cannot read properties of undefined (reading 'deleteMany')` at lib/customer-files/deletion.ts:398 — the teardown was extended to 22 more tables (the deletion-sweep coverage work) and the test's hand-rolled stub client was not. The stub needs to be derived from the Prisma DMMF instead of hand-listed."
     },
     {
       "class": "stale-fixture",
       "file": "lib/skills/persist-artifacts.bounded-execute.test.ts",
       "test": "master OFF → PENDING even with config + enabled class",
+      "matches": "1 !== 0",
       "reason": "Asserts `audits.length === 0`; got 1. The status assertion on the line above still passes — the master kill switch IS honoured and the item stays PENDING. What changed is that the denial now writes an audit row (the provenance write-door work). The safety property holds; the fixture's zero-audit expectation is superseded."
-    },
-    {
-      "class": "stale-fixture",
-      "file": "tests/approvals-renderer.test.ts",
-      "test": "COMPLIANCE_FLAG uses ruleId/category as title and surfaces source",
-      "reason": "Expects a trailing 'Source: draft body line 4' bullet the renderer no longer emits. Needs a decision on whether the source line should come back before the fixture is re-pinned."
     },
     {
       "class": "stale-fixture",
       "file": "tests/conner-dead-e2e-fleet-health.test.ts",
       "test": "both env vars unset → no recipients",
+      "matches": "connerchambers6@gmail.com",
       "reason": "Expects an empty recipient list when both alert env vars are unset; the code now falls back to a hardcoded founder address. Arguably the safer behaviour for a fleet-health alarm (never silently page nobody), but it was not what the test was written against — needs an explicit ruling, then either the code or the fixture moves."
-    },
-    {
-      "class": "stale-fixture",
-      "file": "tests/marketing-banned-strings.test.ts",
-      "test": "app/(marketing)/style/page.tsx :: must not match internal version literal V0/v0 (banned on customer surfaces)",
-      "reason": "The literal `v0` appears on the /style page. Needs a look at whether it is a genuine internal-version leak on a customer surface or an incidental substring the pattern over-matches."
     }
   ]
 }

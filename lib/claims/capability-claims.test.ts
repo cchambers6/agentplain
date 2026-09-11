@@ -32,10 +32,13 @@ import {
   checkRosterCapabilityClaims,
   checkConnectorActionScopes,
   checkVerticalReachability,
+  rosterCapabilityCoverage,
+  verticalReachabilityCoverage,
   type CatalogEntryLike,
   type ConnectorTileLike,
   type VerticalRosterLike,
 } from './capability-claims';
+import { STANDARDS } from '@/lib/verification/standards';
 import {
   checkApprovalSlugParity,
   extractApprovalSlugUsage,
@@ -709,5 +712,88 @@ describe('claim-drift ratchet', () => {
       KNOWN_CLAIM_DRIFT,
     );
     assert.equal(result.unaccepted.length, 1, 'ratchet swallowed a new violation');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Coverage pin — the figures lib/verification/standards.ts RECORDS for these
+// two checkers, checked against what they actually examine in production.
+//
+// Same pattern the `tenant-isolation` entry already uses: the registry states
+// a number authored by the auditor, and a test that can see the real
+// registries recomputes it. Without this, the recorded figure is prose.
+//
+// Until 2026-09-11 both entries recorded `examined: 0, total: 0` and the
+// contract checker accepted it. They were never examining nothing — the
+// numbers below are what they had been examining all along.
+// ─────────────────────────────────────────────────────────────────────────
+
+describe('claim-vs-code: the recorded coverage figures are the real ones', () => {
+  it('roster-capability examines N of M roster cards, and N is not zero', () => {
+    const { examined, total } = rosterCapabilityCoverage({
+      verticals: getAllVerticalsIncludingOnRamps(),
+      catalog: SKILL_CATALOG,
+      declaredCallers: DECLARED_CALLERS,
+    });
+
+    assert.ok(
+      total > 0,
+      'examined 0 of 0 roster cards — the roster corpus is empty, so this checker and ' +
+        'this assertion both prove nothing. Check getAllVerticalsIncludingOnRamps().',
+    );
+    assert.ok(
+      examined > 0,
+      `examined 0 of ${total} roster cards — checkRosterCapabilityClaims evaluated nothing. ` +
+        'A green from this checker would be indistinguishable from a dead one.',
+    );
+
+    const recorded = STANDARDS.find((s) => s.id === 'roster-capability')!.coverage();
+    assert.deepEqual(
+      { examined: recorded.examined, total: recorded.total },
+      { examined, total },
+      `lib/verification/standards.ts records examined ${recorded.examined} of ${recorded.total} ` +
+        `for roster-capability; the checker actually examines ${examined} of ${total}. ` +
+        'Update the recorded figure — a coverage number nothing recomputes is prose.',
+    );
+  });
+
+  it('vertical-reachability examines N of M subjects, and N is not zero', () => {
+    const { examined, total } = verticalReachabilityCoverage({
+      registrySlugs: VERTICAL_SLUGS,
+      onRampSlugs: ON_RAMP_SLUGS,
+      signupOnRampAllowlist: SIGNUP_ON_RAMP_ALLOWLIST,
+      readiness: resolveVerticalReadiness,
+    });
+
+    assert.ok(
+      total > 0,
+      'examined 0 of 0 vertical subjects — no published slug and no allowlist entry. ' +
+        'checkVerticalReachability would pass over an empty world.',
+    );
+    assert.ok(
+      examined > 0,
+      `examined 0 of ${total} vertical subjects — the checker adjudicated nothing.`,
+    );
+
+    const recorded = STANDARDS.find((s) => s.id === 'vertical-reachability')!.coverage();
+    assert.deepEqual(
+      { examined: recorded.examined, total: recorded.total },
+      { examined, total },
+      `lib/verification/standards.ts records examined ${recorded.examined} of ${recorded.total} ` +
+        `for vertical-reachability; the checker actually examines ${examined} of ${total}.`,
+    );
+  });
+
+  it('no registered standard reports zero coverage without a declared waiver', () => {
+    const M = STANDARDS.length;
+    assert.ok(M > 0, 'examined 0 of 0 standards — STANDARDS is empty');
+    const silentZeros = STANDARDS.filter(
+      (s) => s.coverage().examined === 0 && !s.zeroCoverageWaiver,
+    );
+    assert.deepEqual(
+      silentZeros.map((s) => s.id),
+      [],
+      `examined ${M} of ${M} standards; ${silentZeros.length} pass while measuring nothing.`,
+    );
   });
 });

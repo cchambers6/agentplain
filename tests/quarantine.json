@@ -53,7 +53,44 @@
     "Swept entry-by-entry against main (152bbbac) on 2026-09-10: 37 entries",
     "examined, 36 still failing with the signatures recorded below, 1 deleted for",
     "passing (the /style page V0/v0 banned-string check, which now passes across",
-    "all 2,821 generated cases)."
+    "all 2,821 generated cases).",
+    "",
+    "── `expires` is PER ENTRY, and the top-level one is now only a CAP ──",
+    "",
+    "Until 2026-09-11 all 35 suppressions sat behind the single top-level",
+    "`expires` below. One shared date means the whole list falls off a cliff on",
+    "one day, and a cliff gets bulk-extended rather than reviewed — the exact",
+    "outcome an expiry date exists to prevent. `tools/test-gate.mjs` even names",
+    "the blanket re-date as the failure mode, and then made it the only",
+    "affordance the file had.",
+    "",
+    "Every entry now carries its own `expires`. THE RULE USED, so the next",
+    "reader can re-derive it rather than trust it:",
+    "",
+    "  1. Creation date cannot stagger anything, and that is itself a finding.",
+    "     All 35 entries were added in ONE commit (c84deafd, 2026-08-11), the",
+    "     baseline sweep. `git log -S<test name> -- tests/quarantine.json`",
+    "     returns 2026-08-11 for all 35. A shared expiry was structurally",
+    "     inevitable given how the list was born.",
+    "  2. So the stagger is keyed to the REMEDIATION UNIT — the test file,",
+    "     because a file is the smallest thing one PR closes. 35 entries",
+    "     collapse to 19 units. The single OPEN-GAP is broken out of its file",
+    "     (registry-truth.test.ts) because closing it is a manifest row plus a",
+    "     product decision, not an assertion rewrite.",
+    "  3. Units are ordered by how well-understood the root cause is. The seven",
+    "     auto-registry units go first: route.ts deliberately stopped naming",
+    "     functions, the correct assertion already exists elsewhere, and the fix",
+    "     is the same edit seven times. The OPEN-GAP goes last.",
+    "  4. Slots run 2026-09-20 → 2026-11-09. NOTHING moves later than the",
+    "     2026-11-09 the whole list already had; the last slot IS that date.",
+    "     Restructuring may not weaken a suppression, so the cap is enforced in",
+    "     the runner: an entry whose `expires` is past the top-level value fails",
+    "     validation before a single test runs.",
+    "",
+    "The spacing that falls out is ~2.8 days between units. That is not a",
+    "design choice, it is the arithmetic of 19 remediation units against 50 days",
+    "of remaining runway, and it is the honest reading of this file: the list is",
+    "too long for the window it has left."
   ],
   "expires": "2026-11-09",
   "entries": [
@@ -62,245 +99,280 @@
       "file": "lib/inngest/functions/__tests__/follow-up-chaser-sweep.test.ts",
       "test": "serve route file literally references followUpChaserSweepFn",
       "matches": "did not match the regular expression /followUpChaserSweepFn/",
-      "reason": "app/api/inngest/route.ts was deliberately refactored to auto-derive functions from lib/inngest/registry.ts and now carries a 'DO NOT add a function array here' banner. These tests grep route.ts for a symbol the refactor removed on purpose. The functions ARE registered — via discovery, not via a literal import."
+      "reason": "app/api/inngest/route.ts was deliberately refactored to auto-derive functions from lib/inngest/registry.ts and now carries a 'DO NOT add a function array here' banner. These tests grep route.ts for a symbol the refactor removed on purpose. The functions ARE registered — via discovery, not via a literal import.",
+      "expires": "2026-09-20"
     },
     {
       "class": "stale-fixture",
       "file": "lib/inngest/functions/__tests__/home-services-estimate-followup-sweep.test.ts",
       "test": "serve route file references homeServicesEstimateFollowupSweepFn",
       "matches": "did not match the regular expression /homeServicesEstimateFollowupSweepFn/",
-      "reason": "Same root cause as follow-up-chaser-sweep: greps route.ts for a symbol the auto-registry refactor removed."
+      "reason": "Same root cause as follow-up-chaser-sweep: greps route.ts for a symbol the auto-registry refactor removed.",
+      "expires": "2026-09-23"
     },
     {
       "class": "stale-fixture",
       "file": "lib/inngest/functions/__tests__/invoice-chase-general-sweep.test.ts",
       "test": "route.ts references invoiceChaseGeneralSweepFn",
       "matches": "did not match the regular expression /invoiceChaseGeneralSweepFn/",
-      "reason": "Same root cause: route.ts no longer names functions literally."
+      "reason": "Same root cause: route.ts no longer names functions literally.",
+      "expires": "2026-09-26"
     },
     {
       "class": "stale-fixture",
       "file": "lib/inngest/functions/__tests__/law-intake-conflict-screen-sweep.test.ts",
       "test": "route.ts references lawConflictScreenSweepFn",
       "matches": "did not match the regular expression /lawConflictScreenSweepFn/",
-      "reason": "Same root cause: route.ts no longer names functions literally."
+      "reason": "Same root cause: route.ts no longer names functions literally.",
+      "expires": "2026-09-28"
     },
     {
       "class": "stale-fixture",
       "file": "lib/inngest/functions/__tests__/month-end-close-cpa-sweep.test.ts",
       "test": "route.ts references monthEndCloseCpaSweepFn",
       "matches": "did not match the regular expression /monthEndCloseCpaSweepFn/",
-      "reason": "Same root cause: route.ts no longer names functions literally."
+      "reason": "Same root cause: route.ts no longer names functions literally.",
+      "expires": "2026-10-01"
     },
     {
       "class": "stale-fixture",
       "file": "lib/inngest/functions/__tests__/process-doc-drafter-sweep.test.ts",
       "test": "serve route file literally references processDocDrafterSweepFn",
       "matches": "did not match the regular expression /processDocDrafterSweepFn/",
-      "reason": "Same root cause: route.ts no longer names functions literally."
+      "reason": "Same root cause: route.ts no longer names functions literally.",
+      "expires": "2026-10-04"
     },
     {
       "class": "stale-fixture",
       "file": "lib/inngest/functions/__tests__/process-webhook-event.test.ts",
       "test": "serve route file literally references processWebhookEventFn",
       "matches": "did not match the regular expression /processWebhookEventFn/",
-      "reason": "Same root cause: route.ts no longer names functions literally."
+      "reason": "Same root cause: route.ts no longer names functions literally.",
+      "expires": "2026-10-07"
     },
     {
       "class": "runner-mismatch",
       "file": "lib/inngest/functions/__tests__/process-webhook-event.test.ts",
       "test": "is included in the Inngest serve route alongside the other crons",
       "matches": "webpackRequire.context is not a function",
-      "reason": "Fails with `webpackRequire.context is not a function`. The auto-registry uses webpack's require.context, which only exists inside the Next build — the bare node:test runner cannot evaluate it. Needs a registry seam that is testable outside webpack."
+      "reason": "Fails with `webpackRequire.context is not a function`. The auto-registry uses webpack's require.context, which only exists inside the Next build — the bare node:test runner cannot evaluate it. Needs a registry seam that is testable outside webpack.",
+      "expires": "2026-10-07"
     },
     {
       "class": "stale-fixture",
       "file": "lib/skills/__tests__/registry-truth.test.ts",
       "test": "invoiceChaseGeneralSweepFn is registered in app/api/inngest/route.ts",
       "matches": "invoiceChaseGeneralSweepFn is not imported in route.ts",
-      "reason": "Invariant 2 of the sweep-dispatch manifest greps route.ts for each routeSymbol. The auto-registry refactor made that grep structurally impossible. The invariant is still worth having — it needs re-pointing at lib/inngest/registry.ts's discovered set instead of at route.ts source text."
+      "reason": "Invariant 2 of the sweep-dispatch manifest greps route.ts for each routeSymbol. The auto-registry refactor made that grep structurally impossible. The invariant is still worth having — it needs re-pointing at lib/inngest/registry.ts's discovered set instead of at route.ts source text.",
+      "expires": "2026-10-09"
     },
     {
       "class": "stale-fixture",
       "file": "lib/skills/__tests__/registry-truth.test.ts",
       "test": "monthEndCloseCpaSweepFn is registered in app/api/inngest/route.ts",
       "matches": "monthEndCloseCpaSweepFn is not imported in route.ts",
-      "reason": "Same root cause: route.ts grep vs. auto-registry."
+      "reason": "Same root cause: route.ts grep vs. auto-registry.",
+      "expires": "2026-10-09"
     },
     {
       "class": "stale-fixture",
       "file": "lib/skills/__tests__/registry-truth.test.ts",
       "test": "lawConflictScreenSweepFn is registered in app/api/inngest/route.ts",
       "matches": "lawConflictScreenSweepFn is not imported in route.ts",
-      "reason": "Same root cause: route.ts grep vs. auto-registry."
+      "reason": "Same root cause: route.ts grep vs. auto-registry.",
+      "expires": "2026-10-09"
     },
     {
       "class": "stale-fixture",
       "file": "lib/skills/__tests__/registry-truth.test.ts",
       "test": "complianceWatchSweepFn is registered in app/api/inngest/route.ts",
       "matches": "complianceWatchSweepFn is not imported in route.ts",
-      "reason": "Same root cause: route.ts grep vs. auto-registry."
+      "reason": "Same root cause: route.ts grep vs. auto-registry.",
+      "expires": "2026-10-09"
     },
     {
       "class": "stale-fixture",
       "file": "lib/skills/__tests__/registry-truth.test.ts",
       "test": "analyticsPulseSweepFn is registered in app/api/inngest/route.ts",
       "matches": "analyticsPulseSweepFn is not imported in route.ts",
-      "reason": "Same root cause: route.ts grep vs. auto-registry."
+      "reason": "Same root cause: route.ts grep vs. auto-registry.",
+      "expires": "2026-10-09"
     },
     {
       "class": "stale-fixture",
       "file": "lib/skills/__tests__/registry-truth.test.ts",
       "test": "contentCalendarSweepFn is registered in app/api/inngest/route.ts",
       "matches": "contentCalendarSweepFn is not imported in route.ts",
-      "reason": "Same root cause: route.ts grep vs. auto-registry."
+      "reason": "Same root cause: route.ts grep vs. auto-registry.",
+      "expires": "2026-10-09"
     },
     {
       "class": "stale-fixture",
       "file": "lib/skills/__tests__/registry-truth.test.ts",
       "test": "financePulseSweepFn is registered in app/api/inngest/route.ts",
       "matches": "financePulseSweepFn is not imported in route.ts",
-      "reason": "Same root cause: route.ts grep vs. auto-registry."
+      "reason": "Same root cause: route.ts grep vs. auto-registry.",
+      "expires": "2026-10-09"
     },
     {
       "class": "stale-fixture",
       "file": "lib/skills/__tests__/registry-truth.test.ts",
       "test": "followUpChaserSweepFn is registered in app/api/inngest/route.ts",
       "matches": "followUpChaserSweepFn is not imported in route.ts",
-      "reason": "Same root cause: route.ts grep vs. auto-registry."
+      "reason": "Same root cause: route.ts grep vs. auto-registry.",
+      "expires": "2026-10-09"
     },
     {
       "class": "stale-fixture",
       "file": "lib/skills/__tests__/registry-truth.test.ts",
       "test": "processDocDrafterSweepFn is registered in app/api/inngest/route.ts",
       "matches": "processDocDrafterSweepFn is not imported in route.ts",
-      "reason": "Same root cause: route.ts grep vs. auto-registry."
+      "reason": "Same root cause: route.ts grep vs. auto-registry.",
+      "expires": "2026-10-09"
     },
     {
       "class": "OPEN-GAP",
       "file": "lib/skills/__tests__/registry-truth.test.ts",
       "test": "property-management-rent-collection-chase (runtime:live) is sweep-dispatched OR non-sweep caller-covered",
       "matches": "appears in NEITHER SWEEP_DISPATCH_MANIFEST nor NON_SWEEP_LIVE_SKILLS",
-      "reason": "REAL, but the previous reason was FALSE and is retracted. It said 'it claims to fire and nothing fires it'. The sweep IS registered and DOES fire: lib/inngest/functions/property-management-rent-collection-chase-sweep.ts exists, and lib/inngest/registry.ts auto-derives the function list from the filesystem via require.context — a file under lib/inngest/functions/ is registered BY EXISTING. Its cron is RENT_COLLECTION_CHASE_SWEEP_CRON = '0 12 * * *'; the sweep then no-ops unless BUILDIUM_ADAPTER_LIVE=on (step 0 of its own header). The real gap is that the skill is absent from the hand-maintained SWEEP_DISPATCH_MANIFEST / NON_SWEEP_LIVE_SKILLS rows this test reads — a missing-manifest-row COPY gap, not a caller gap. Still a genuine failure (the manifest does not describe the fleet), so it stays quarantined. NOTE: lib/claims/known-drift.ts:71 asserts the opposite ('the one entry here that is a caller gap rather than a copy gap') and is wrong; that file is outside this PR's ownership and needs its own correction."
+      "reason": "REAL, but the previous reason was FALSE and is retracted. It said 'it claims to fire and nothing fires it'. The sweep IS registered and DOES fire: lib/inngest/functions/property-management-rent-collection-chase-sweep.ts exists, and lib/inngest/registry.ts auto-derives the function list from the filesystem via require.context — a file under lib/inngest/functions/ is registered BY EXISTING. Its cron is RENT_COLLECTION_CHASE_SWEEP_CRON = '0 12 * * *'; the sweep then no-ops unless BUILDIUM_ADAPTER_LIVE=on (step 0 of its own header). The real gap is that the skill is absent from the hand-maintained SWEEP_DISPATCH_MANIFEST / NON_SWEEP_LIVE_SKILLS rows this test reads — a missing-manifest-row COPY gap, not a caller gap. Still a genuine failure (the manifest does not describe the fleet), so it stays quarantined. NOTE, closed 2026-09-11: lib/claims/known-drift.ts:71 used to assert the opposite ('the one entry here that is a caller gap rather than a copy gap'). It has been corrected, and so has the home-services entry beside it, which made the same 'no caller' claim about a skill that lib/inngest/functions/home-services-estimate-followup-sweep.ts fires daily at 09:00 UTC. Both are now pinned by lib/claims/known-drift-reasons.test.ts, which fails if any reason asserts nothing fires a skill that a registered sweep file names — so this cross-file note can no longer rot without a red.",
+      "expires": "2026-11-09"
     },
     {
       "class": "stale-fixture",
       "file": "tests/brand.test.ts",
       "test": "paper is #F7F4ED",
       "matches": "+ '#F5F0E6'",
-      "reason": "The Heritage Plains rollout (PR #320) deliberately repointed the core palette. lib/brand/tokens.ts documents the new values in-line ('Heritage clay — a hair more saturated than the prior #B65D3A'). These tests still pin the superseded brand-standards-v0 hexes. The canonical values now live in tokens.ts + the brand-gate CANONICAL_HEX table, which do agree with each other."
+      "reason": "The Heritage Plains rollout (PR #320) deliberately repointed the core palette. lib/brand/tokens.ts documents the new values in-line ('Heritage clay — a hair more saturated than the prior #B65D3A'). These tests still pin the superseded brand-standards-v0 hexes. The canonical values now live in tokens.ts + the brand-gate CANONICAL_HEX table, which do agree with each other.",
+      "expires": "2026-10-12"
     },
     {
       "class": "stale-fixture",
       "file": "tests/brand.test.ts",
       "test": "ink is #1A1A1F",
       "matches": "+ '#1A1612'",
-      "reason": "Same root cause: pins brand-standards-v0 hex, superseded by the Heritage rollout."
+      "reason": "Same root cause: pins brand-standards-v0 hex, superseded by the Heritage rollout.",
+      "expires": "2026-10-12"
     },
     {
       "class": "stale-fixture",
       "file": "tests/brand.test.ts",
       "test": "clay is #B65D3A (primary accent — never moss)",
       "matches": "+ '#B85540'",
-      "reason": "Same root cause: pins brand-standards-v0 hex, superseded by the Heritage rollout."
+      "reason": "Same root cause: pins brand-standards-v0 hex, superseded by the Heritage rollout.",
+      "expires": "2026-10-12"
     },
     {
       "class": "stale-fixture",
       "file": "tests/brand.test.ts",
       "test": "exposes every token under its tailwind-class name",
       "matches": "+ '#F5F0E6'",
-      "reason": "Same root cause: asserts the pre-Heritage token→class map."
+      "reason": "Same root cause: asserts the pre-Heritage token→class map.",
+      "expires": "2026-10-12"
     },
     {
       "class": "stale-fixture",
       "file": "lib/creative-handoff/packet.test.ts",
       "test": "carries the core palette with real hex values",
       "matches": "+ '#B85540'",
-      "reason": "Same root cause: the creative handoff packet emits the current palette; the fixture pins the pre-Heritage hexes."
+      "reason": "Same root cause: the creative handoff packet emits the current palette; the fixture pins the pre-Heritage hexes.",
+      "expires": "2026-10-15"
     },
     {
       "class": "stale-fixture",
       "file": "tests/explainer-visuals.test.ts",
       "test": "OnboardingRoadmap lights the current step clay only when currentStep is set",
       "matches": "progress variant should use clay",
-      "reason": "Same root cause: asserts the pre-Heritage clay literal in rendered markup."
+      "reason": "Same root cause: asserts the pre-Heritage clay literal in rendered markup.",
+      "expires": "2026-10-23"
     },
     {
       "class": "stale-fixture",
       "file": "tests/plaino-visual-card.test.ts",
       "test": "renders next-steps as real anchor deep links with text labels",
       "matches": "primary glyph clay",
-      "reason": "Same root cause: asserts the pre-Heritage clay literal in rendered markup."
+      "reason": "Same root cause: asserts the pre-Heritage clay literal in rendered markup.",
+      "expires": "2026-10-26"
     },
     {
       "class": "stale-fixture",
       "file": "tests/portal-units.test.ts",
       "test": "rejects a non-hex brand color (no CSS injection)",
       "matches": "did not match the regular expression /#B65D3A/",
-      "reason": "Same root cause: the fallback brand colour is asserted as the pre-Heritage #B65D3A. The injection-rejection behaviour under test still holds — only the expected fallback literal moved."
+      "reason": "Same root cause: the fallback brand colour is asserted as the pre-Heritage #B65D3A. The injection-rejection behaviour under test still holds — only the expected fallback literal moved.",
+      "expires": "2026-10-29"
     },
     {
       "class": "runner-mismatch",
       "file": "tests/plaino-persona.test.ts",
       "test": "renders with default pose='sit' without throwing",
       "matches": "React is not defined",
-      "reason": "`ReferenceError: React is not defined`. This file renders JSX but is picked up by `npm test`, which runs without tests/tsconfig.test.json (the JSX config `npm run test:ui` uses). It is a runner-wiring bug, not a product bug — the same assertions pass under test:ui. Fix is to move the file to .tsx or fold the JSX config into the main runner."
+      "reason": "`ReferenceError: React is not defined`. This file renders JSX but is picked up by `npm test`, which runs without tests/tsconfig.test.json (the JSX config `npm run test:ui` uses). It is a runner-wiring bug, not a product bug — the same assertions pass under test:ui. Fix is to move the file to .tsx or fold the JSX config into the main runner.",
+      "expires": "2026-10-21"
     },
     {
       "class": "runner-mismatch",
       "file": "tests/plaino-persona.test.ts",
       "test": "maps pose='fetch'/'herd'/'sit' to the status pose raster",
       "matches": "React is not defined",
-      "reason": "Same root cause: JSX file under the non-JSX runner config."
+      "reason": "Same root cause: JSX file under the non-JSX runner config.",
+      "expires": "2026-10-21"
     },
     {
       "class": "runner-mismatch",
       "file": "tests/plaino-persona.test.ts",
       "test": "announces the state when decorative=false; hides otherwise",
       "matches": "React is not defined",
-      "reason": "Same root cause: JSX file under the non-JSX runner config."
+      "reason": "Same root cause: JSX file under the non-JSX runner config.",
+      "expires": "2026-10-21"
     },
     {
       "class": "runner-mismatch",
       "file": "tests/plaino-persona.test.ts",
       "test": "never embeds the literal metaphor in the rendered markup",
       "matches": "React is not defined",
-      "reason": "Same root cause: JSX file under the non-JSX runner config."
+      "reason": "Same root cause: JSX file under the non-JSX runner config.",
+      "expires": "2026-10-21"
     },
     {
       "class": "stale-fixture",
       "file": "tests/marketplace.test.ts",
       "test": "LIVE skills match the post-wave-4 catalog",
       "matches": "/\\+\\s+'customer-support-triage'/",
-      "reason": "The catalog grew after wave 4 (customer-support-triage, invoice-chase-general, law-intake-conflict-screen and others went live). The fixture pins the wave-4 snapshot. The live-set is separately guarded by registry-truth's caller invariants, which are the assertion that actually matters."
+      "reason": "The catalog grew after wave 4 (customer-support-triage, invoice-chase-general, law-intake-conflict-screen and others went live). The fixture pins the wave-4 snapshot. The live-set is separately guarded by registry-truth's caller invariants, which are the assertion that actually matters.",
+      "expires": "2026-10-18"
     },
     {
       "class": "stale-fixture",
       "file": "tests/marketplace.test.ts",
       "test": "remaining 10 vertical skills are SCHEMA-ONLY",
       "matches": "7 !== 10",
-      "reason": "Same root cause: counts against the wave-4 catalog snapshot."
+      "reason": "Same root cause: counts against the wave-4 catalog snapshot.",
+      "expires": "2026-10-18"
     },
     {
       "class": "stale-fixture",
       "file": "lib/customer-files/__tests__/deletion.test.ts",
       "test": "clears every workspace-scoped tenant row for the target workspace, leaves others intact",
       "matches": "Cannot read properties of undefined (reading 'deleteMany')",
-      "reason": "`Cannot read properties of undefined (reading 'deleteMany')` at lib/customer-files/deletion.ts:398 — the teardown was extended to 22 more tables (the deletion-sweep coverage work) and the test's hand-rolled stub client was not. The stub needs to be derived from the Prisma DMMF instead of hand-listed."
+      "reason": "`Cannot read properties of undefined (reading 'deleteMany')` at lib/customer-files/deletion.ts:398 — the teardown was extended to 22 more tables (the deletion-sweep coverage work) and the test's hand-rolled stub client was not. The stub needs to be derived from the Prisma DMMF instead of hand-listed.",
+      "expires": "2026-11-01"
     },
     {
       "class": "stale-fixture",
       "file": "lib/skills/persist-artifacts.bounded-execute.test.ts",
       "test": "master OFF → PENDING even with config + enabled class",
       "matches": "1 !== 0",
-      "reason": "Asserts `audits.length === 0`; got 1. The status assertion on the line above still passes — the master kill switch IS honoured and the item stays PENDING. What changed is that the denial now writes an audit row (the provenance write-door work). The safety property holds; the fixture's zero-audit expectation is superseded."
+      "reason": "Asserts `audits.length === 0`; got 1. The status assertion on the line above still passes — the master kill switch IS honoured and the item stays PENDING. What changed is that the denial now writes an audit row (the provenance write-door work). The safety property holds; the fixture's zero-audit expectation is superseded.",
+      "expires": "2026-11-03"
     },
     {
       "class": "stale-fixture",
       "file": "tests/conner-dead-e2e-fleet-health.test.ts",
       "test": "both env vars unset → no recipients",
       "matches": "connerchambers6@gmail.com",
-      "reason": "Expects an empty recipient list when both alert env vars are unset; the code now falls back to a hardcoded founder address. Arguably the safer behaviour for a fleet-health alarm (never silently page nobody), but it was not what the test was written against — needs an explicit ruling, then either the code or the fixture moves."
+      "reason": "Expects an empty recipient list when both alert env vars are unset; the code now falls back to a hardcoded founder address. Arguably the safer behaviour for a fleet-health alarm (never silently page nobody), but it was not what the test was written against — needs an explicit ruling, then either the code or the fixture moves.",
+      "expires": "2026-11-06"
     }
   ]
 }

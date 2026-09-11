@@ -190,15 +190,30 @@ function loadQuarantine() {
   const seen = new Map();
   raw.entries.forEach((e, i) => {
     const where = `tests/quarantine.json entry #${i + 1} (${e?.test ?? 'unnamed'})`;
-    for (const field of ['class', 'file', 'test', 'reason', 'matches']) {
+    for (const field of ['class', 'file', 'test', 'reason', 'matches', 'expires']) {
       if (typeof e?.[field] !== 'string' || e[field].length === 0) {
         problems.push(
-          `${where}: missing "${field}". Every quarantined test needs a reason AND a ` +
-            'signature — an unexplained skip is how this list rots into a mute button, ' +
-            'and an unsigned one is how a different failure inherits it.',
+          `${where}: missing "${field}". Every quarantined test needs a reason, a ` +
+            'signature AND its own expiry — an unexplained skip is how this list rots ' +
+            'into a mute button, an unsigned one is how a different failure inherits it, ' +
+            'and a shared expiry is how 35 suppressions get bulk-extended in one commit ' +
+            'instead of reviewed one at a time.',
         );
         return;
       }
+    }
+    // The per-entry expiry may never exceed the list-wide one. Staggering is a
+    // restructuring, not a licence to extend: an entry that moves PAST the date
+    // the whole list already had has been weakened, and that is the one thing
+    // this file is not allowed to do to itself.
+    if (Number.isNaN(Date.parse(e.expires))) {
+      problems.push(`${where}: "expires" is not a date: ${e.expires}`);
+    } else if (new Date(e.expires) > new Date(raw.expires)) {
+      problems.push(
+        `${where}: expires ${e.expires}, past the list-wide cap of ${raw.expires}. ` +
+          'Per-entry dates may bring a suppression FORWARD, never push it out. ' +
+          'Nothing new gets added to quarantine and nothing already here gets a longer leash.',
+      );
     }
     if (!VALID_CLASSES.has(e.class)) {
       problems.push(
@@ -235,7 +250,11 @@ function printTable(q) {
     byClass.get(e.class).push(e);
   }
   console.log('');
-  console.log(`▶ Quarantined tests: ${q.entries.length} (expires ${q.expires})`);
+  const dates = [...new Set(q.entries.map((e) => e.expires))].sort();
+  console.log(
+    `▶ Quarantined tests: ${q.entries.length} across ${dates.length} expiry dates ` +
+      `(${dates[0]} → ${dates[dates.length - 1]}, cap ${q.expires})`,
+  );
   // OPEN-GAP first — those are real defects, not bookkeeping.
   const order = [...byClass.keys()].sort((a, b) =>
     a === 'OPEN-GAP' ? -1 : b === 'OPEN-GAP' ? 1 : a.localeCompare(b),
@@ -247,6 +266,7 @@ function printTable(q) {
     for (const e of entries) {
       console.log(`     ${e.file}`);
       console.log(`       ⤷ ${e.test}`);
+      console.log(`       ⤷ expires: ${e.expires}`);
       console.log(`       ⤷ matches: ${e.matches}`);
       if (cls === 'OPEN-GAP') console.log(`       ⤷ ${e.reason}`);
     }
@@ -276,11 +296,39 @@ if (!noSkip) {
     console.error(`❌ tests/quarantine.json "expires" is not a date: ${quarantine.expires}`);
     process.exit(1);
   }
-  if (new Date() > expires) {
+  const now = new Date();
+  if (now > expires) {
     console.error('');
-    console.error(`❌ The test quarantine expired on ${quarantine.expires}.`);
+    console.error(`❌ The test quarantine cap expired on ${quarantine.expires}.`);
     console.error('   Fix the listed tests, or re-date the list with a fresh reason per');
     console.error('   entry. Silently extending it is the failure mode the date prevents.');
+    console.error('');
+    process.exit(1);
+  }
+
+  // PER-ENTRY expiry. The point of staggering is that these fire on different
+  // days, so the list comes back a few entries at a time and gets read, rather
+  // than arriving all at once as a wall that gets re-dated in one commit.
+  const M = quarantine.entries.length;
+  if (M === 0) {
+    console.error('❌ tests/quarantine.json has no entries — examined 0 of 0 expiries.');
+    console.error('   An empty list is either a deleted file or a mistake; say which.');
+    process.exit(1);
+  }
+  const lapsed = quarantine.entries.filter((e) => now > new Date(e.expires));
+  console.log(`▶ Quarantine expiry: examined ${M} of ${M} entries, ${lapsed.length} lapsed.`);
+  if (lapsed.length > 0) {
+    console.error('');
+    console.error(`❌ ${lapsed.length} of ${M} quarantine entries are past their own expiry:`);
+    for (const e of lapsed) {
+      console.error(`   • ${e.expires}  ${e.file}`);
+      console.error(`       ⤷ ${e.test}`);
+    }
+    console.error('');
+    console.error('   Fix these, or re-justify each one individually with a fresh reason.');
+    console.error('   A per-entry date exists so this arrives in readable batches. Moving');
+    console.error('   them all to one later date rebuilds the cliff this replaced, and the');
+    console.error(`   cap (${quarantine.expires}) will refuse anything past it.`);
     console.error('');
     process.exit(1);
   }

@@ -178,6 +178,91 @@ describe('the standards contract — deliberate failure fixtures', () => {
     const v = checkStandardsContract([HEALTHY, { ...HEALTHY }]);
     assert.ok(v.some((x) => /duplicate id/.test(x.problem)));
   });
+
+  // ── THE ZERO RULE ──────────────────────────────────────────────────────
+  // The check that a check looked at something. Five fixtures, because the
+  // interesting cases are not "is it zero" but "is this zero the honest kind".
+
+  it('catches a standard that examined nothing — the empty-array bug, one level up', () => {
+    const v = checkStandardsContract([
+      { ...HEALTHY, coverage: () => ({ examined: 0, total: 0, unit: 'f', blindTo: ['x'] }) },
+    ]);
+    assert.equal(v.length, 1);
+    assert.match(v[0].problem, /passes without measuring anything/);
+  });
+
+  it('catches examined 0 of a NON-empty surface, even with a waiver', () => {
+    // The distinction the waiver exists to hold. 0 of 40 is a broken checker;
+    // no declaration makes it an empty category.
+    const v = checkStandardsContract([
+      {
+        ...HEALTHY,
+        coverage: () => ({ examined: 0, total: 40, unit: 'f', blindTo: ['x'] }),
+        zeroCoverageWaiver: {
+          standard: 'fixture',
+          reason: 'claiming emptiness over a surface of 40',
+          expires: '2099-01-01',
+        },
+      },
+    ]);
+    assert.equal(v.length, 1);
+    assert.match(v[0].problem, /UNMEASURED surface, not an empty one/);
+  });
+
+  it('catches a waiver copy-pasted from another standard', () => {
+    const v = checkStandardsContract([
+      {
+        ...HEALTHY,
+        coverage: () => ({ examined: 0, total: 0, unit: 'f', blindTo: ['x'] }),
+        zeroCoverageWaiver: {
+          standard: 'some-other-standard',
+          reason: 'borrowed',
+          expires: '2099-01-01',
+        },
+      },
+    ]);
+    assert.equal(v.length, 1);
+    assert.match(v[0].problem, /copy-pasted/);
+  });
+
+  it('catches an expired waiver — an empty category nobody re-checked', () => {
+    const v = checkStandardsContract(
+      [
+        {
+          ...HEALTHY,
+          coverage: () => ({ examined: 0, total: 0, unit: 'f', blindTo: ['x'] }),
+          zeroCoverageWaiver: {
+            standard: 'fixture',
+            reason: 'genuinely empty on the day it was written',
+            expires: '2026-01-01',
+          },
+        },
+      ],
+      new Date('2026-09-11'),
+    );
+    assert.equal(v.length, 1);
+    assert.match(v[0].problem, /expired on 2026-01-01/);
+  });
+
+  it('NEAR MISS: a properly named, pinned, unexpired waiver passes', () => {
+    assert.deepEqual(
+      checkStandardsContract(
+        [
+          {
+            ...HEALTHY,
+            coverage: () => ({ examined: 0, total: 0, unit: 'f', blindTo: ['x'] }),
+            zeroCoverageWaiver: {
+              standard: 'fixture',
+              reason: 'the category has no members today',
+              expires: '2026-12-01',
+            },
+          },
+        ],
+        new Date('2026-09-11'),
+      ),
+      [],
+    );
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -193,18 +278,58 @@ describe('the standards contract — its own blind spot is on the record', () =>
     );
   });
 
-  it('records that two Claim Truth checkers report no coverage at all', () => {
-    // Surfaced by standing up the Verification owner: neither
-    // checkRosterCapabilityClaims nor checkVerticalReachability returns a
-    // CoverageReport, so nobody — including this registry — can say how much
-    // of the roster or the vertical list they examined. Pinned as an assertion
-    // so the day somebody fixes it, this test fails and gets updated, rather
-    // than the gap quietly persisting behind prose.
-    const noCoverage = STANDARDS.filter((s) => s.coverage().total === 0);
-    assert.deepEqual(
-      noCoverage.map((s) => s.id).sort(),
-      ['roster-capability', 'vertical-reachability'],
-      'the set of standards that cannot report coverage has changed — update this assertion and the blindTo text',
+  it('no standard passes while measuring nothing — examined N of M, N > 0', () => {
+    // WAS, until 2026-09-11: an assertion that `roster-capability` and
+    // `vertical-reachability` report `total === 0`, pinned as a permanent
+    // known hole. Both checkers did examine a real surface (22 of 86 roster
+    // cards; 12 of 12 vertical subjects) — nothing was counting, and the
+    // registry accepted the zero. A standard reporting `examined: 0` is
+    // `assert.deepEqual(x, [])` on an empty input set with a registry entry
+    // on it, which is the exact bug this whole module exists to remove.
+    //
+    // This assertion is now the inverse: zero coverage is a failure, and the
+    // only way past it is a declared, named, pinned, dated ZeroCoverageWaiver.
+    const M = STANDARDS.length;
+    const measuring = STANDARDS.filter((s) => s.coverage().examined > 0);
+    const waived = STANDARDS.filter(
+      (s) => s.coverage().examined === 0 && s.zeroCoverageWaiver,
     );
+    const N = measuring.length + waived.length;
+
+    assert.ok(
+      M > 0,
+      'examined 0 of 0 standards — STANDARDS is empty, so this test proves nothing. ' +
+        'This is the N = 0 guard on the check that enforces the N = 0 guard.',
+    );
+    assert.equal(
+      N,
+      M,
+      `examined ${N} of ${M} standards. ` +
+        `Reporting nothing and passing: ${STANDARDS.filter(
+          (s) => s.coverage().examined === 0 && !s.zeroCoverageWaiver,
+        )
+          .map((s) => s.id)
+          .join(', ')}. A standard that examined 0 subjects is indistinguishable ` +
+        `from one that is dead. Report real counts, or declare a ZeroCoverageWaiver.`,
+    );
+  });
+
+  it('every waived zero is named, pinned to an empty surface, and dated', () => {
+    const waivers = STANDARDS.filter((s) => s.zeroCoverageWaiver);
+    for (const s of waivers) {
+      const w = s.zeroCoverageWaiver!;
+      assert.equal(w.standard, s.id, `${s.id}: waiver names "${w.standard}" — waivers are not portable`);
+      assert.equal(
+        s.coverage().total,
+        0,
+        `${s.id}: waiver claims an empty category but the surface is ${s.coverage().total}. ` +
+          'Unmeasured is not empty.',
+      );
+      assert.ok(
+        !Number.isNaN(Date.parse(w.expires)),
+        `${s.id}: waiver "expires" is not a date (${w.expires})`,
+      );
+      assert.ok(w.reason.length > 0, `${s.id}: waiver has no reason`);
+    }
   });
 });

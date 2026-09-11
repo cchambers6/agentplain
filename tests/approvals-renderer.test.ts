@@ -161,6 +161,30 @@ describe("approvals payload renderer", () => {
     assert.equal(out.body[1], "Three comps within 0.5mi closed below ask.");
   });
 
+  /**
+   * The source is surfaced as STRUCTURE, not as a trailing body bullet.
+   *
+   * This fixture used to assert a `"Source: draft body line 4"` line at the
+   * end of `body`. `b87ed99` ("approval queue rebuild") moved that datum out
+   * of the prose and into the discrete `sources` field, and the fixture was
+   * never re-pinned — which is the whole of this failure. It is NOT a
+   * regression from the `chrome`/executor work: `renderComplianceFlag` is
+   * byte-identical at `b62b1c5` and at `main`.
+   *
+   * The operator still sees it. `ApprovalCard.tsx` renders `rendered.sources`
+   * under the "what plaino read" block, and `lib/approvals/artifact.ts`
+   * carries the same field into the post-approval handoff artifact's `refs`.
+   * So the open question the quarantine entry named — whether the trailing
+   * bullet should come back — is answered NO: bringing it back would put the
+   * same datum on the card twice and splice a provenance note into `body`,
+   * which is work product only.
+   *
+   * The assertions below pin the new shape AND keep the original invariant
+   * the test name claims: the source text must remain reachable from the
+   * rendered output. The second assertion is deliberately shape-agnostic, so
+   * that if the source moves again this test reports "moved" rather than
+   * silently passing on a card that no longer shows provenance at all.
+   */
   it("COMPLIANCE_FLAG uses ruleId/category as title and surfaces source", () => {
     const out = renderApprovalPayload("COMPLIANCE_FLAG", {
       rule: "FHA-protected-classes",
@@ -168,10 +192,42 @@ describe("approvals payload renderer", () => {
       source: "draft body line 4",
     });
     assert.equal(out.title, "FHA-protected-classes");
+
+    // `body` is work product only — the summary, and nothing spliced on.
     assert.deepEqual(out.body, [
       "Draft references neighborhood demographics — likely protected-class language.",
-      "Source: draft body line 4",
     ]);
+
+    // The source, structured. This is what ApprovalCard renders.
+    assert.deepEqual(out.sources, [{ label: "draft body line 4" }]);
+
+    // ...and the invariant that outlives the shape: the operator can still
+    // read the source SOMEWHERE in the rendered output. Fails if `sources`
+    // is dropped without the datum reappearing anywhere else.
+    const surfaced = [
+      ...out.body,
+      ...(out.chrome ?? []),
+      ...(out.sources ?? []).map((s) => s.label),
+      out.title ?? "",
+      out.metaLine ?? "",
+    ];
+    assert.ok(
+      surfaced.some((line) => line.includes("draft body line 4")),
+      "COMPLIANCE_FLAG must surface the source to the operator somewhere in the rendered output",
+    );
+  });
+
+  /**
+   * The negative half of the pin above. Without this, a renderer that
+   * hard-coded `sources: [{ label: "draft body line 4" }]` would satisfy
+   * every assertion in the previous test.
+   */
+  it("COMPLIANCE_FLAG omits sources entirely when the payload carries none", () => {
+    const out = renderApprovalPayload("COMPLIANCE_FLAG", {
+      rule: "FHA-protected-classes",
+      summary: "Draft references neighborhood demographics — likely protected-class language.",
+    });
+    assert.equal(out.sources, undefined);
   });
 
   it("never returns body containing raw JSON.stringify of the payload", () => {

@@ -71,8 +71,9 @@ const searchParamsSchema = z.object({
  * Deliberately NOT `z.string().uuid()`. Zod additionally enforces the RFC
  * 9562 version (`[1-5]`) and variant (`[89ab]`) nibbles, which Postgres
  * does not: `00000000-0000-0000-0000-00000000000a` is a perfectly
- * storable `@db.Uuid` value that `z.string().uuid()` rejects. 23 of the
- * 33 distinct UUID literals in this repo are of exactly that shape.
+ * storable `@db.Uuid` value that `z.string().uuid()` rejects. Measured on
+ * `origin/main` (zod 4.4.3): of 54 distinct UUID literals in the tree, 33
+ * (61%) are of exactly that shape.
  *
  * The header gate below exists for one reason -- to stop a value Postgres
  * cannot cast from reaching `$6::uuid` and raising 22P02 -- so its
@@ -81,7 +82,12 @@ const searchParamsSchema = z.object({
  */
 const UUID_TEXT_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** One definition, shared by the upsert params and the workspace header. */
+/**
+ * One definition, shared by the upsert params, the delete params and the
+ * workspace header. A SECOND definition is how this file came to hold two
+ * different notions of a UUID in the first place; keep it that way.
+ * Pinned end-to-end by `tests/knowledge-mcp-uuid.test.ts`.
+ */
 const workspaceUuidSchema = z.string().regex(UUID_TEXT_RE, 'expected a UUID');
 
 const upsertParamsSchema = z.object({
@@ -96,10 +102,34 @@ const upsertParamsSchema = z.object({
   sourceId: z.string().min(1).optional(),
 });
 
+/**
+ * Delete params.
+ *
+ * `embeddingId` / `documentId` reuse `workspaceUuidSchema` for exactly the
+ * reason spelled out above it. They previously used `z.string().uuid()`,
+ * which is the SAME defect already fixed for the workspace header in this
+ * file: zod's `.uuid()` enforces the RFC 9562 version and variant nibbles,
+ * Postgres's `uuid` type does not.
+ *
+ * Measured on `origin/main` (zod 4.4.3, whole tree at the ref): 169
+ * occurrences, 54 distinct UUID literals, of which 33 (61%) fail
+ * `z.string().uuid()` while being perfectly storable `@db.Uuid` values --
+ * so the narrow gate never protected anything, it just 400'd legitimate
+ * deletes of rows the substrate had happily stored.
+ *
+ * A validator narrower than the thing it guards does not fail safe.
+ *
+ * NOTE for anyone re-testing this: on zod 4 the nil UUID and a v1-shaped
+ * id are the WRONG probes -- `.uuid()` special-cases nil/max and permits
+ * version nibbles 1-8, so both pass under the narrow validator too. The
+ * values that actually discriminate carry a version nibble of 0 (other
+ * than nil) or 9-f (other than max), or a variant nibble outside [89ab].
+ * See `tests/knowledge-mcp-uuid.test.ts`.
+ */
 const deleteParamsSchema = z
   .object({
-    embeddingId: z.string().uuid().optional(),
-    documentId: z.string().uuid().optional(),
+    embeddingId: workspaceUuidSchema.optional(),
+    documentId: workspaceUuidSchema.optional(),
   })
   .refine((v) => Boolean(v.embeddingId || v.documentId), {
     message: 'must provide embeddingId or documentId',

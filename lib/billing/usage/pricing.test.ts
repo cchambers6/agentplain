@@ -7,7 +7,9 @@
  * Key invariants under test:
  *   - ratesForModel resolves all three families (Opus, Haiku, Sonnet)
  *   - Minor-version suffixes map to the same table as the base id
- *   - Unknown / empty model ids default to Sonnet (conservative middle)
+ *   - Unknown / empty model ids resolve to the MOST EXPENSIVE known family
+ *     (Opus) and are reported as unknown, so an unpriced model can never
+ *     silently under-count agentplain's own spend
  *   - costMicroCentsForUsage produces exact BigInt results for hand-known inputs
  *   - Zero / negative token counts never throw; they contribute 0
  *   - formatMicroCentsAsUsd formats edge cases correctly
@@ -18,9 +20,12 @@ import assert from 'node:assert/strict';
 
 import {
   ratesForModel,
+  modelFamilyFor,
+  isKnownModelFamily,
   costMicroCentsForUsage,
   formatMicroCentsAsUsd,
 } from './pricing';
+import { MODEL_HAIKU, MODEL_OPUS, MODEL_SONNET } from '@/lib/llm/model-tiers';
 
 // ── ratesForModel ─────────────────────────────────────────────────────────────
 
@@ -58,16 +63,93 @@ describe('ratesForModel', () => {
     assert.equal(r.outputPerMillionMicroCents, 500_000_000n);
   });
 
-  it('defaults to Sonnet for an unknown model (conservative middle, never under-bills Opus)', () => {
+  it('an unknown model bills at the MOST EXPENSIVE known family, not the cheapest', () => {
+    // Was: unknown -> Sonnet, justified by a comment claiming "Sonnet is what
+    // every shipped agentplain skill calls today". False: 12 of 26 call sites
+    // pass MODEL_OPUS. Defaulting to the cheapest plausible rate makes an
+    // unrecognised model id an invisible under-count of agentplain's own spend.
+    const opus = ratesForModel('claude-opus-4-7');
     const sonnet = ratesForModel('claude-sonnet-4-5');
     const unknown = ratesForModel('gpt-4o');
-    assert.deepEqual(unknown, sonnet, 'unknown model defaults to Sonnet rates');
+    assert.deepEqual(unknown, opus, 'unknown model must bill at Opus rates');
+    assert.notDeepEqual(unknown, sonnet, 'unknown model must NOT bill at Sonnet rates');
   });
 
-  it('defaults to Sonnet for an empty string', () => {
+  it('an empty string is treated as unknown, not as Sonnet', () => {
+    assert.deepEqual(ratesForModel(''), ratesForModel('claude-opus-4-7'));
+    assert.equal(isKnownModelFamily(''), false);
+  });
+
+  it('claude-fable-5 is unpriced here and is therefore OVER-billed, not under-billed', () => {
+    // The ratified routing plan (CLAUDE.md, 2026-07-19) makes claude-fable-5
+    // the default heavy-lift tier. The id contains neither "opus" nor "haiku",
+    // so under the old substring fallthrough it billed at Sonnet's $3/$15
+    // while lib/kaizen/pricing.ts:27 prices it at $10/$50 — a 3.3x silent
+    // under-count. There is no Fable row in this table on purpose: the two
+    // tables disagree 3x on Opus ($15/$75 here vs $5/$25 in kaizen), so a
+    // Fable rate copied across would be mixing bases. Until someone decides,
+    // the fallback errs HIGH and says so.
+    assert.equal(modelFamilyFor('claude-fable-5'), 'unknown');
+    assert.equal(isKnownModelFamily('claude-fable-5'), false);
+    const fable = ratesForModel('claude-fable-5');
     const sonnet = ratesForModel('claude-sonnet-4-5');
-    const empty = ratesForModel('');
-    assert.deepEqual(empty, sonnet);
+    assert.ok(
+      fable.inputPerMillionMicroCents > sonnet.inputPerMillionMicroCents,
+      'an unpriced model must never resolve below Sonnet',
+    );
+  });
+
+  it('sonnet is matched on its own substring, not by falling through', () => {
+    // The defect was structural: 'sonnet' had no branch of its own — it shared
+    // the fallthrough with every unrecognised id, so the two cases were
+    // indistinguishable at the call site and in every test.
+    assert.equal(modelFamilyFor('claude-sonnet-4-5'), 'sonnet');
+    assert.equal(modelFamilyFor('claude-sonnet-4-6'), 'sonnet');
+    assert.equal(isKnownModelFamily('claude-sonnet-4-5'), true);
+  });
+
+  it('every model id this repo actually pins resolves to a KNOWN family', () => {
+    // The loudness mechanism. ratesForModel() cannot throw — its only caller,
+    // lib/billing/usage/recorder.ts:72, runs on the live provider path outside
+    // its own try/catch. So the alarm lives here: add an unpriced model to
+    // model-tiers.ts (claude-fable-5, say) and this test goes red.
+    const pinned = [
+      MODEL_OPUS,
+      MODEL_SONNET,
+      MODEL_HAIKU,
+      // The untiered provider default in lib/llm/anthropic-provider.ts:72.
+      'claude-sonnet-4-5',
+    ];
+    let examined = 0;
+    const unpriced: string[] = [];
+    for (const id of pinned) {
+      examined++;
+      if (!isKnownModelFamily(id)) unpriced.push(id);
+    }
+    assert.ok(examined > 0, 'examined nothing — the pinned-model list was empty');
+    assert.deepEqual(
+      unpriced,
+      [],
+      `examined ${examined} of ${pinned.length} pinned model ids; unpriced: ${unpriced.join(', ')}`,
+    );
+  });
+
+  it('modelFamilyFor covers all three known families plus unknown', () => {
+    const cases: Array<[string, string]> = [
+      ['claude-opus-4-7', 'opus'],
+      ['claude-opus-4-8', 'opus'],
+      ['claude-sonnet-4-6', 'sonnet'],
+      ['claude-haiku-4-5-20251001', 'haiku'],
+      ['claude-fable-5', 'unknown'],
+      ['gpt-4o', 'unknown'],
+      ['', 'unknown'],
+    ];
+    let examined = 0;
+    for (const [id, family] of cases) {
+      examined++;
+      assert.equal(modelFamilyFor(id), family, `${id} should resolve to ${family}`);
+    }
+    assert.equal(examined, cases.length, `examined ${examined} of ${cases.length} model ids`);
   });
 
   it('cache-write rate is ~1.25x input rate for Sonnet', () => {

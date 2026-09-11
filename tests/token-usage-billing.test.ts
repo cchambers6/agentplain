@@ -6,7 +6,8 @@
  *   1. Pricing (pure):
  *      - known fresh + cached + output cases compute the expected
  *        micro-cents on Sonnet, Opus, Haiku;
- *      - unknown model defaults to Sonnet (never Opus, never Haiku);
+ *      - an unknown model resolves to the most expensive known family
+ *        (Opus), never to the cheapest plausible one;
  *      - formatMicroCentsAsUsd handles zero, sub-cent, and round dollars.
  *
  *   2. Recorder wiring through LoggingLlmProvider:
@@ -105,10 +106,28 @@ describe('pricing.costMicroCentsForUsage', () => {
     assert.equal(costMicroCentsForUsage('claude-sonnet-4-5', 0, 0, 0, 0), 0n);
   });
 
-  it('unknown model falls back to Sonnet (not Opus, not Haiku)', () => {
+  it('unknown model falls back to the most expensive known family, not the cheapest', () => {
+    // Was: fall back to Sonnet. That silently under-counted any model id
+    // outside the three substrings — including claude-fable-5, the model
+    // CLAUDE.md ratifies as the default heavy-lift tier, which billed at
+    // Sonnet's $3/$15 against lib/kaizen/pricing.ts's $10/$50 (3.3x low).
+    // costMicroCents feeds agentplain's own spend visibility, not a customer
+    // invoice (billing is per seat, lib/pricing/tiers.ts), so erring high is
+    // the safe direction and erring low is the one that costs money.
     const unknown = costMicroCentsForUsage('claude-future-9-9', 1_000_000, 0, 0, 0);
     const sonnet = costMicroCentsForUsage('claude-sonnet-4-5', 1_000_000, 0, 0, 0);
-    assert.equal(unknown, sonnet);
+    const opus = costMicroCentsForUsage('claude-opus-4-7', 1_000_000, 0, 0, 0);
+    assert.equal(unknown, opus, 'unknown resolves to Opus rates');
+    assert.ok(unknown > sonnet, 'unknown must never resolve below Sonnet');
+  });
+
+  it('claude-fable-5 is over-counted rather than under-counted', () => {
+    const fable = costMicroCentsForUsage('claude-fable-5', 1_000_000, 0, 0, 0);
+    const sonnet = costMicroCentsForUsage('claude-sonnet-4-5', 1_000_000, 0, 0, 0);
+    assert.ok(
+      fable > sonnet,
+      'claude-fable-5 contains neither "opus" nor "haiku"; it must not land on Sonnet',
+    );
   });
 
   it('small mixed usage: 5000 input, 1500 output, 8000 cache-read', () => {

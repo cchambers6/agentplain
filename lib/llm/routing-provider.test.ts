@@ -11,7 +11,8 @@
  *
  * Secondary invariants (flag ON):
  *   - Known surfaces are mapped to the documented model tier.
- *   - An explicit caller model is never overridden.
+ *   - An explicit caller model is never overridden, where "explicit" means
+ *     the `model` KEY IS PRESENT — including `model: undefined`.
  *   - An unknown / absent surface leaves the model unchanged.
  *   - The pure `applyRouting` transform is tested independently of the
  *     wrapper so the policy table can be audited without a running provider.
@@ -149,6 +150,93 @@ describe('applyRouting', () => {
   });
 });
 
+// ── applyRouting — explicit `model: undefined` is a decision, not a vacuum ───
+//
+// Regression pins for the defect at bfc0c71e:147, `if (request.model) return
+// request;`. That is a TRUTHINESS test, so `{ model: undefined }` was
+// indistinguishable from `{}` and routing filled it. The live victim was
+// `lib/skills/month-end-close-cpa/polish.ts`, which passed `model: undefined`
+// with `sourceSurface: 'DRAFT'` — so turning `LLM_MODEL_ROUTING` on would have
+// moved the CPA flagship from the untiered provider default
+// ('claude-sonnet-4-5') to 'claude-opus-4-7', a ~5x input and ~5x output rate
+// change nobody decided.
+
+describe('applyRouting — explicit model: undefined', () => {
+  it('does NOT route when the model key is present but undefined', () => {
+    const req = makeReq({ model: undefined, meta: { sourceSurface: 'DRAFT' } });
+    assert.ok('model' in req, 'fixture precondition: the key must actually be present');
+    const out = applyRouting(req);
+    assert.strictEqual(out, req, 'same reference — a present key is an explicit decision');
+    assert.equal(out.model, undefined, 'no model was assigned');
+  });
+
+  it('DOES route when the model key is absent (the vacuum it is meant to fill)', () => {
+    const req = makeReq({ meta: { sourceSurface: 'DRAFT' } });
+    assert.ok(!('model' in req), 'fixture precondition: the key must be absent');
+    const out = applyRouting(req);
+    assert.equal(out.model, 'claude-opus-4-7');
+  });
+
+  it('reproduces the exact CPA polish.ts request shape without promotion', () => {
+    // Byte-for-byte the meta block from lib/skills/month-end-close-cpa/polish.ts.
+    const req = makeReq({
+      model: undefined,
+      meta: {
+        skill: 'month-end-close-cpa-polish',
+        workspaceId: 'ws-1',
+        verticalSlug: 'cpa',
+        sourceSurface: 'DRAFT',
+      },
+    });
+    const out = applyRouting(req);
+    assert.notEqual(
+      out.model,
+      'claude-opus-4-7',
+      'the CPA flagship must not be silently promoted to Opus by a flag flip',
+    );
+    assert.strictEqual(out, req);
+  });
+
+  it('covers every surface: an explicit undefined is never routed, for any tag', () => {
+    const surfaces = Object.keys(DEFAULT_ROUTING_POLICY) as Array<
+      keyof typeof DEFAULT_ROUTING_POLICY
+    >;
+    let examined = 0;
+    for (const surface of surfaces) {
+      examined++;
+      const req = makeReq({ model: undefined, meta: { sourceSurface: surface } });
+      assert.strictEqual(applyRouting(req), req, `${surface}: explicit undefined was routed`);
+    }
+    assert.ok(examined > 0, 'examined nothing — DEFAULT_ROUTING_POLICY was empty');
+    assert.equal(
+      examined,
+      surfaces.length,
+      `examined ${examined} of ${surfaces.length} routing-policy surfaces`,
+    );
+  });
+
+  it('and the same tags DO route when the key is omitted (the rule is not vacuous)', () => {
+    const surfaces = Object.keys(DEFAULT_ROUTING_POLICY) as Array<
+      keyof typeof DEFAULT_ROUTING_POLICY
+    >;
+    let examined = 0;
+    for (const surface of surfaces) {
+      examined++;
+      const out = applyRouting(makeReq({ meta: { sourceSurface: surface } }));
+      assert.equal(
+        out.model,
+        DEFAULT_ROUTING_POLICY[surface],
+        `${surface}: omitted key should have been routed`,
+      );
+    }
+    assert.equal(
+      examined,
+      surfaces.length,
+      `examined ${examined} of ${surfaces.length} routing-policy surfaces`,
+    );
+  });
+});
+
 // ── RoutingLlmProvider — flag OFF (the identity invariant) ───────────────────
 
 describe('RoutingLlmProvider — flag OFF (default)', () => {
@@ -266,6 +354,15 @@ describe('RoutingLlmProvider — flag ON', () => {
     const req = makeReq(); // no meta at all
     await provider.complete(req);
     assert.equal(inner.calls[0].model, undefined, 'no meta → no routing decision');
+  });
+
+  it('does NOT override an explicit model: undefined end-to-end through the provider', async () => {
+    const inner = new RecordingLlm();
+    const provider = new RoutingLlmProvider(inner);
+    const req = makeReq({ model: undefined, meta: { sourceSurface: 'DRAFT' } });
+    await provider.complete(req);
+    assert.equal(inner.calls[0].model, undefined, 'flag ON must not fill an explicit undefined');
+    assert.strictEqual(inner.calls[0], req, 'same reference — no copy made');
   });
 
   it('does NOT override an explicit model pin — even for a known surface', async () => {

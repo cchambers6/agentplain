@@ -273,6 +273,15 @@ export class TestKnowledgeStore implements IKnowledgeStore {
         if (!doc) continue;
         if (doc.verticalSlug !== input.verticalSlug) continue;
       }
+      if (input.verticalScope != null) {
+        // SOFT vertical scope. Mirrors the pgvector store's `$7` predicate
+        // and the jurisdiction semantics directly below: a NULL-vertical
+        // row (the cross-vertical substrate — pricing, support, doctrine,
+        // the SKILL corpus, state/professional-body compliance rules) is
+        // ALWAYS eligible; a row that declares a vertical must match.
+        const vs = doc?.verticalSlug ?? null;
+        if (vs != null && vs !== input.verticalScope) continue;
+      }
       if (jurisdictions != null) {
         // NULL jurisdiction is always eligible (soft layering); non-null must
         // be in the requested set.

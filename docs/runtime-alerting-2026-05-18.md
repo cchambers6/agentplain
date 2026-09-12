@@ -203,13 +203,29 @@ Added 2026-05-24 (feat/observability-health-and-logging-2026-05-24):
 
 ### `/api/health` — external uptime target
 
-`app/api/health/route.ts` — JSON liveness probe with `db` + `inngest`
-dependency checks. Returns 200 `{status: "ok"}` when both deps reach,
-503 `{status: "degraded", checks: …}` otherwise. No auth, no cookies,
-`Cache-Control: no-store`. Point an external uptime monitor
-(Better Stack / UptimeRobot / Pingdom — pick one when you sign up) at
-`https://agentplain.com/api/health` on a 1–5 min cadence. The 503 with a
-reason body lets both the monitor and the operator triage in one read.
+**SPLIT 2026-09-11 — liveness and readiness are now separate routes.**
+
+`app/api/health/route.ts` — **liveness only, makes NO database call.**
+Returns 200 `{status: "ok"}` whenever the process is serving HTTP. No
+auth, no cookies, `Cache-Control: no-store`. **This is the monitor
+target.** Point an external uptime monitor (Better Stack / UptimeRobot /
+Pingdom) at `https://agentplain.com/api/health` on a 1–5 min cadence.
+
+`app/api/health/ready/route.ts` — **readiness, with the `db` + `inngest`
+dependency checks.** 200 `{status:"ok"}` / 503 `{status:"degraded", checks: …}`.
+**Token-gated and fail-closed**: requires `x-health-token` matching
+`HEALTH_READY_TOKEN`, and returns 503 `unconfigured` without touching the
+database when that env var is unset. For post-deploy verification and
+operator triage — **not** for an uptime monitor.
+
+**Why the split.** The dependency check used to live on `/api/health`,
+which is the path this document tells you to probe every 1–5 minutes.
+Neon Free autosuspends after 5 minutes (fixed) and bills a 0.25 CU floor
+while awake, so a 1-minute DB-touching probe never lets compute idle out:
+0.25 × 730 h = **182.5 CU-hr/month against a 100 CU-hr allowance**, while
+reporting `"ok"` the whole time. Production exhausted at 110.08/100 CU-hr
+and the project was paused. Never put a database call behind a URL that
+something polls on a fixed short interval.
 
 ### Structured logging — `lib/observability/logger.ts`
 

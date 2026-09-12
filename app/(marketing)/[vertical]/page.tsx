@@ -43,12 +43,13 @@ export function generateStaticParams() {
   }));
 }
 
-export function generateMetadata({
+export async function generateMetadata({
   params,
 }: {
-  params: { vertical: string };
-}): Metadata {
-  const content = getVerticalContent(params.vertical);
+  params: Promise<{ vertical: string }>;
+}): Promise<Metadata> {
+  const { vertical } = await params;
+  const content = getVerticalContent(vertical);
   if (!content) return { title: "Not found" };
   return {
     title: content.metaTitle,
@@ -57,12 +58,13 @@ export function generateMetadata({
   };
 }
 
-export default function VerticalPage({
+export default async function VerticalPage({
   params,
 }: {
-  params: { vertical: string };
+  params: Promise<{ vertical: string }>;
 }) {
-  const content = getVerticalContent(params.vertical);
+  const { vertical } = await params;
+  const content = getVerticalContent(vertical);
   if (!content) notFound();
 
   // AEO FAQ payload — the direct-answer block (Q = "What is agentplain for

@@ -86,11 +86,12 @@ function emblem(slug: string): string {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-export function GET(
+export async function GET(
   _req: Request,
-  { params }: { params: { vertical: string } },
-): Response {
-  const content = getVerticalContent(params.vertical);
+  { params }: { params: Promise<{ vertical: string }> },
+): Promise<Response> {
+  const { vertical } = await params;
+  const content = getVerticalContent(vertical);
   const verticalName = content?.name ?? "Local business";
   const headline = content?.hero.valueProp ?? tokens.tagline;
   const eyebrow = content?.hero.eyebrow ?? "agentplain";
@@ -175,7 +176,7 @@ export function GET(
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text -- Satori <img>, decorative */}
-          <img src={emblem(params.vertical)} width={420} height={460} alt="" />
+          <img src={emblem(vertical)} width={420} height={460} alt="" />
         </div>
       </div>
     ),

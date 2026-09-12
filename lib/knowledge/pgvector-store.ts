@@ -294,6 +294,7 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
     const literal = pgvectorLiteral(q);
     const kinds = input.contextKinds && input.contextKinds.length > 0 ? input.contextKinds : null;
     const verticalFilter = input.verticalSlug ?? null;
+    const verticalScopeFilter = input.verticalScope ?? null;
     const jurisdictionFilter =
       input.jurisdictions && input.jurisdictions.length > 0 ? input.jurisdictions : null;
     const workspaceFilter = input.workspaceId ?? null;
@@ -311,6 +312,13 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
     //        VERTICAL / COMPLIANCE / CROSS_CUSTOMER) is deliberately
     //        tenant-less, and `validateContextWorkspaceFit` guarantees
     //        only CUSTOMER rows ever carry a workspaceId.
+    //   $7 = verticalScope (NULL = no filter). SOFT: NULL-vertical rows
+    //        are ALWAYS eligible, mirroring $5's jurisdiction semantics.
+    //        This is the predicate that stops a customer in one vertical
+    //        retrieving another vertical's claims / ROI / compliance
+    //        corpus. $4 cannot be used for that: it EXCLUDES NULL-vertical
+    //        rows, which would drop the cross-vertical substrate (pricing,
+    //        support, doctrine) and trade a leak for an outage.
     //
     // WHY $6 EXISTS AT ALL, given RLS already isolates tenants:
     // this predicate is DEFENSE IN DEPTH ALONGSIDE the `embedding_read`
@@ -349,6 +357,7 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
         AND ($4::text IS NULL OR d."verticalSlug" = $4::text)
         AND ($5::text[] IS NULL OR d."jurisdiction" IS NULL OR d."jurisdiction" = ANY($5::text[]))
         AND ($6::uuid IS NULL OR e."workspaceId" IS NULL OR e."workspaceId" = $6::uuid)
+        AND ($7::text IS NULL OR d."verticalSlug" IS NULL OR d."verticalSlug" = $7::text)
       ORDER BY e."vector" <=> $1::vector ASC
       LIMIT $2::int
     `;
@@ -379,6 +388,7 @@ export class PgvectorKnowledgeStore implements IKnowledgeStore {
             verticalFilter,
             jurisdictionFilter,
             workspaceFilter,
+            verticalScopeFilter,
           ),
         { client: this.client },
       );

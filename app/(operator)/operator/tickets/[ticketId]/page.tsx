@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { requireUser } from "@/lib/auth/server";
 import {
   PrismaTicketStore,
   formatTicketNumber,
@@ -35,7 +36,13 @@ const BTN =
 const BTN_GHOST =
   "border border-rule bg-paper px-4 py-2 font-mono text-[12px] uppercase tracking-eyebrow text-ink transition hover:border-ink";
 
+// Auth: the (operator) layout redirects non-operators, but App Router renders
+// layout and page concurrently, so the staff read below would execute while
+// that redirect() resolved. Re-assert here, before any read.
 export default async function OperatorTicketDetailPage({ params }: PageProps) {
+  const session = await requireUser();
+  if (!session.isOperator) redirect("/app");
+
   const { ticketId } = await params;
   const ticket = await new PrismaTicketStore().loadTicketForStaff(ticketId);
   if (!ticket) notFound();

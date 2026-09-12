@@ -317,13 +317,16 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
             </ApPaperCard>
           </section>
 
-          {tier !== "max" ? (
-            <SeatAdjuster
-              currentTier={tier}
-              currentSeats={subscription.seats}
-              workspaceId={workspaceId}
-            />
-          ) : null}
+          {/* The seat adjuster was REMOVED with the flat-price collapse.
+              Under one flat price, changing the seat count has no billing
+              effect — a control captioned "Adjust seats on your current
+              plan", sitting on the billing settings page next to a dollar
+              figure, implies a price consequence that does not exist. That
+              is the same class of false claim as the retired
+              "30 seats at $99/seat/mo" trial email. Seats remain visible
+              above as record-keeping, labelled "included — the price is the
+              same at any team size". Seat management belongs on the team
+              page, not the billing page. */}
 
           <TierPicker
             currentTier={tier}
@@ -456,50 +459,6 @@ export default async function BillingPage({ params, searchParams }: PageProps) {
   );
 }
 
-// ─── Seat adjuster ──────────────────────────────────────────────────────────
-
-function SeatAdjuster({
-  currentTier,
-  currentSeats,
-  workspaceId,
-}: {
-  currentTier: TierName;
-  currentSeats: number;
-  workspaceId: string;
-}) {
-  return (
-    <section className="mt-10">
-      <ApPaperCard eyebrow="seats" title="Adjust seats on your current plan.">
-        <p className="text-[14px] leading-relaxed text-ink-soft">
-          Seat-count changes route through Stripe Checkout — promotion
-          codes work there. Your trial period is preserved.
-        </p>
-        <form
-          action={changePlanAction.bind(null, workspaceId)}
-          className="mt-5 flex flex-wrap items-end gap-3"
-        >
-          <input type="hidden" name="tier" value={currentTier} />
-          <label className="flex flex-col gap-1 text-[13px]">
-            <span className="font-mono uppercase tracking-eyebrow text-[11px] text-mute">
-              seats
-            </span>
-            <input
-              type="number"
-              name="seats"
-              min={1}
-              max={99}
-              defaultValue={currentSeats}
-              className="w-28 rounded-none border border-rule bg-paper px-3 py-2 text-[14px] text-ink focus:border-ink focus:outline-none"
-            />
-          </label>
-          <ApHeritageButton variant="secondary" type="submit">
-            update seats
-          </ApHeritageButton>
-        </form>
-      </ApPaperCard>
-    </section>
-  );
-}
 
 // ─── Tier picker (three columns) ────────────────────────────────────────────
 

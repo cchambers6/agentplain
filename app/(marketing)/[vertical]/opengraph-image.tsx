@@ -48,16 +48,17 @@ export function generateStaticParams() {
 }
 
 // Per-vertical alt text. Used by Next.js to populate the og:image:alt tag.
-export function generateImageMetadata({
+export async function generateImageMetadata({
   params,
 }: {
-  params: { vertical: string };
+  params: Promise<{ vertical: string }>;
 }) {
-  const content = getVerticalContent(params.vertical);
+  const { vertical } = await params;
+  const content = getVerticalContent(vertical);
   const label = content ? `for ${content.name.toLowerCase()}` : "";
   return [
     {
-      id: params.vertical,
+      id: vertical,
       alt: content
         ? `${tokens.wordmark} ${label} — ${tokens.tagline}`
         : `${tokens.wordmark} — ${tokens.tagline}`,
@@ -70,9 +71,10 @@ export function generateImageMetadata({
 export default async function OpenGraphImage({
   params,
 }: {
-  params: { vertical: string };
+  params: Promise<{ vertical: string }>;
 }) {
-  const content = getVerticalContent(params.vertical);
+  const { vertical } = await params;
+  const content = getVerticalContent(vertical);
   const { colors } = tokens;
 
   // Headline + sub copy. Pull from the vertical's content if available;
@@ -92,7 +94,7 @@ export default async function OpenGraphImage({
   // per-vertical share card from text-only (WEAK) to the heritage system.
   // When per-vertical scene rasters land, swap heritageUrl to the vertical
   // asset (public/brand/plaino-system/scenes/vertical-<slug>.png).
-  const h = headers();
+  const h = await headers();
   const host = h.get("host") ?? "agentplain.com";
   const proto = h.get("x-forwarded-proto") ?? "https";
   const heritageUrl = `${proto}://${host}/brand/plaino-system/heritage.png`;

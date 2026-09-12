@@ -100,8 +100,62 @@ export interface StandardDescriptor {
    * `blindTo` may not be empty: a standard claiming no blind spots is
    * claiming omniscience, which is the posture that produced the
    * 1-of-11 isolation test.
+   *
+   * `examined` may not be zero. See `ZeroCoverageWaiver`.
    */
   coverage: () => CoverageReport;
+
+  /**
+   * The ONLY way a standard may report `examined: 0` and still pass.
+   * Omit it and zero coverage is a contract violation.
+   */
+  zeroCoverageWaiver?: ZeroCoverageWaiver;
+}
+
+/**
+ * ── WHY `examined: 0` IS A FAILURE ──────────────────────────────────────
+ *
+ * `examined N of M` exists so that a check cannot pass by measuring nothing.
+ * The canonical bug it defends against is `assert.deepEqual(x, [])` going
+ * green on an empty input set: the check ran, found no violations, and the
+ * reason it found none is that it looked at nothing. A standard that reports
+ * `examined: 0` and is accepted by this contract IS that bug, one level up —
+ * the registry that is supposed to catch vacuous checks passing a vacuous
+ * check. Until 2026-09-11 that is exactly what happened: `roster-capability`
+ * and `vertical-reachability` both declared `examined: 0, total: 0`, both
+ * passed, and a test pinned the pair as a permanent known hole.
+ *
+ * ── WHY A WAIVER EXISTS AT ALL ──────────────────────────────────────────
+ *
+ * There is one legitimate zero: a standard whose surface is a category that
+ * genuinely has no members TODAY and may have some tomorrow. "No connector
+ * tile advertises an action it lacks a scope for" is vacuously true when zero
+ * tiles are available, and that is not dishonest — it is a real, empty set.
+ *
+ * The distinction that matters is between an empty SURFACE and an unmeasured
+ * one, and prose cannot hold it: a `blindTo` sentence saying "the checker
+ * cannot compute its coverage" reads exactly like "the surface is empty" and
+ * nothing adjudicates between them. So the waiver is not a tolerance, it is a
+ * declaration with three teeth:
+ *
+ *   • NAMED   — `standard` must equal the waiving standard's own id, so a
+ *               waiver cannot be copy-pasted onto a second standard.
+ *   • PINNED  — it asserts `total === 0`. The moment the category gains a
+ *               member the waiver stops applying and the standard fails,
+ *               which is the behaviour an "empty today" claim has to have.
+ *   • DATED   — `expires` bounds it. An empty category that is still empty in
+ *               three months is a claim somebody should re-make deliberately.
+ *
+ * A standard that examines nothing of a NON-empty surface cannot be waived at
+ * all. That is not an empty category; that is a check that does not work.
+ */
+export interface ZeroCoverageWaiver {
+  /** MUST equal the waiving standard's `id`. A waiver is not portable. */
+  standard: string;
+  /** Why this category is genuinely empty. Not "the checker can't count". */
+  reason: string;
+  /** ISO date. Past it, the waiver stops working and the standard fails. */
+  expires: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -222,11 +276,11 @@ export const STANDARDS: readonly StandardDescriptor[] = [
         declaredCallers: new Set(['fixture-skill']),
       }),
     coverage: () => ({
-      examined: 0,
-      total: 0,
-      unit: 'roster cards — SEE BLIND SPOT 1; this checker does not report its own coverage and the auditor cannot compute it from outside',
+      examined: 22,
+      total: 86,
+      unit: 'roster cards that are runtime:live WITH a boundSkill, of all roster cards across all 11 verticals (recorded 2026-09-11 @ 648f3529; rosterCapabilityCoverage() recomputes it and capability-claims.test.ts fails if this figure drifts)',
       blindTo: [
-        'THIS CHECKER REPORTS NO COVERAGE. It returns a violation list and nothing else, so neither it nor this registry can state how many of the ~70 roster cards it examined. That is a real gap in the Claim Truth standard, recorded here rather than papered over. Remedy: have checkRosterCapabilityClaims return a CoverageReport the way the tenancy checkers do.',
+        'Examines 22 of 86 cards — the 64 it skips are cards that are not runtime:live, or are live with no boundSkill. That is the documented scope, not a defect, but it means a claim defect on any of those 64 cards is invisible here. CORRECTED 2026-09-11: this entry previously declared examined:0/total:0 with a blind spot reading "THIS CHECKER REPORTS NO COVERAGE", and passed. The checker always examined 22; nothing was counting.',
         'Only checks cards that are runtime:live WITH a boundSkill. Cards live via owns[] are explicitly out of scope and covered, if at all, by tests/vertical-roster-bindings.test.ts.',
         'Trusts SWEEP_DISPATCH_MANIFEST as the definition of "has a caller." A skill wired by a caller not listed there reads as dead; a manifest entry pointing at a broken caller reads as live.',
       ],
@@ -279,11 +333,11 @@ export const STANDARDS: readonly StandardDescriptor[] = [
         readiness: () => ({ supported: false, reason: 'fixture' }),
       }),
     coverage: () => ({
-      examined: 0,
-      total: 0,
-      unit: 'published vertical slugs — SEE BLIND SPOT 1, this checker does not report coverage either',
+      examined: 12,
+      total: 12,
+      unit: 'adjudicable subjects — 11 published slugs (10 registry + 1 on-ramp) plus 1 SIGNUP_ON_RAMP_ALLOWLIST entry (recorded 2026-09-11 @ 648f3529; verticalReachabilityCoverage() recomputes it and capability-claims.test.ts fails if this figure drifts)',
       blindTo: [
-        'THIS CHECKER REPORTS NO COVERAGE, same gap as roster-capability.',
+        'Examines every subject it can see (12 of 12), so a gap here is a gap in what counts as a subject, not in the sweep. CORRECTED 2026-09-11: this entry previously declared examined:0/total:0 with a blind spot reading "THIS CHECKER REPORTS NO COVERAGE", and passed. The checker always examined all 12; nothing was counting.',
         'Checks that the readiness resolver is the sole authority and that the escape hatch is not abused. It does NOT check that a readiness-supported vertical actually works end to end — resolveVerticalReadiness can be satisfied by a catalog entry and a manifest line while the skill errors at runtime.',
         'Says nothing about what the marketing site sells. A vertical page can take payment attention for a slug this check never sees, because this check reads registries, not pages.',
       ],
@@ -328,9 +382,14 @@ export interface ContractViolation {
 /**
  * Audit the registry. Pure over the descriptor list so it can be handed a
  * broken fixture and shown to fail — the same contract it enforces.
+ *
+ * `today` is injected for the same reason `applyRatchet` injects it: a waiver
+ * expiry whose behaviour can only be observed by waiting three months is a
+ * behaviour nothing tests.
  */
 export function checkStandardsContract(
   standards: readonly StandardDescriptor[],
+  today: Date = new Date(),
 ): ContractViolation[] {
   const out: ContractViolation[] = [];
   const seen = new Set<string>();
@@ -405,8 +464,60 @@ export function checkStandardsContract(
       out.push({
         standard: s.id,
         problem: `coverage() is incoherent: examined ${cov.examined} of ${cov.total}`,
-        remedy: 'Report real counts, or report 0/0 and say in blindTo that the checker cannot compute them.',
+        remedy:
+          'Report real counts. 0 of 0 is no longer an escape hatch — see the ZeroCoverageWaiver rules below.',
       });
+    } else if (cov.examined === 0) {
+      // THE ZERO RULE. Everything above this line asks "does the checker
+      // work?". This asks "did it look at anything?" — and a check that
+      // looked at nothing answers the first question the same way whether it
+      // is healthy or dead. That indistinguishability is the entire reason
+      // this module exists, so a zero here is a failure by default.
+      const w = s.zeroCoverageWaiver;
+      if (!w) {
+        out.push({
+          standard: s.id,
+          problem:
+            `coverage() reports examined 0 of ${cov.total} — this standard passes without ` +
+            'measuring anything, which is `assert.deepEqual(x, [])` on an empty input set ' +
+            'wearing a registry entry',
+          remedy:
+            `Make ${s.module} report real counts. If the surface is genuinely EMPTY today ` +
+            '(a category with no members, not a checker that cannot count), declare a ' +
+            'zeroCoverageWaiver naming this standard, saying why, and dated.',
+        });
+      } else if (w.standard !== s.id) {
+        out.push({
+          standard: s.id,
+          problem: `zeroCoverageWaiver names "${w.standard}" but sits on "${s.id}" — a waiver was copy-pasted`,
+          remedy: `Set standard: '${s.id}', or delete the waiver and report real coverage.`,
+        });
+      } else if (cov.total > 0) {
+        out.push({
+          standard: s.id,
+          problem:
+            `zeroCoverageWaiver claims an empty category, but coverage() reports a surface of ` +
+            `${cov.total}. Examined 0 of ${cov.total} is an UNMEASURED surface, not an empty one, ` +
+            'and unmeasured is exactly what may not be waived',
+          remedy: `Make ${s.module} examine the ${cov.total} subjects it can see, and report the count.`,
+        });
+      } else if (Number.isNaN(Date.parse(w.expires))) {
+        out.push({
+          standard: s.id,
+          problem: `zeroCoverageWaiver "expires" is not a date: ${w.expires}`,
+          remedy: 'Use an ISO date (YYYY-MM-DD). An unbounded waiver is a permanent hole.',
+        });
+      } else if (today > new Date(w.expires)) {
+        out.push({
+          standard: s.id,
+          problem:
+            `zeroCoverageWaiver expired on ${w.expires}. The category was empty when somebody ` +
+            'said so; nothing has re-checked it since',
+          remedy:
+            'Re-confirm the category is still empty and re-date the waiver with a fresh reason, ' +
+            'or report real coverage. Silently extending it is the failure the date prevents.',
+        });
+      }
     }
   }
 

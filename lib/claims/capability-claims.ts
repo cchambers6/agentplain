@@ -131,6 +131,37 @@ export function checkRosterCapabilityClaims(
   return violations;
 }
 
+/** What a checker looked at. Deliberately not a `CoverageReport` — the
+ * blind-spot prose is the auditor's to write in `lib/verification/standards.ts`;
+ * the COUNTS are the checker's, because only the checker knows what it skipped. */
+export interface SurfaceCount {
+  examined: number;
+  total: number;
+}
+
+/**
+ * How much of the roster `checkRosterCapabilityClaims` actually looks at.
+ *
+ * `total` is every roster card across every vertical. `examined` is the subset
+ * the checker evaluates — `runtime: 'live'` WITH a `boundSkill`. The gap
+ * between them is not a bug, it is the documented scope (cards live via
+ * `owns[]` are covered by tests/vertical-roster-bindings.test.ts), but it has
+ * to be REPORTED rather than left as a zero, because a standard that reports
+ * `examined: 0` passes without measuring anything — which is the empty-array
+ * bug one level up.
+ */
+export function rosterCapabilityCoverage(input: RosterClaimInput): SurfaceCount {
+  let total = 0;
+  let examined = 0;
+  for (const vertical of input.verticals) {
+    for (const card of vertical.agentRoster ?? []) {
+      total++;
+      if (card.runtime === 'live' && card.boundSkill) examined++;
+    }
+  }
+  return { examined, total };
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // Check 2 — connector tile action vs. OAuth scope actually requested
 // ─────────────────────────────────────────────────────────────────────────
@@ -248,6 +279,24 @@ export interface ReachabilityInput {
   signupOnRampAllowlist: readonly string[];
   /** `resolveVerticalReadiness`, injected. */
   readiness: (slug: string) => ReadinessVerdict;
+}
+
+/**
+ * How much of the vertical surface `checkVerticalReachability` looks at.
+ *
+ * `total` is every distinct subject the checker can adjudicate: each published
+ * slug (registry + on-ramp, de-duplicated) plus each escape-hatch entry, which
+ * is checked separately in its own loop even when it names an unpublished slug.
+ * `examined` equals `total` — this checker has no skipped subset — but it is
+ * still REPORTED rather than assumed, so that the day somebody adds a `continue`
+ * the number moves and the pin in capability-claims.test.ts fails.
+ */
+export function verticalReachabilityCoverage(
+  input: ReachabilityInput,
+): SurfaceCount {
+  const published = new Set([...input.registrySlugs, ...input.onRampSlugs]);
+  const total = published.size + input.signupOnRampAllowlist.length;
+  return { examined: total, total };
 }
 
 /**

@@ -68,7 +68,7 @@ export const KNOWN_CLAIM_DRIFT: readonly KnownDriftEntry[] = [
     check: 'roster-capability',
     subject: 'property-management/pm-collections',
     reason:
-      'Card is live+bound to property-management-rent-collection-chase, which IS catalog-live but is declared in neither SWEEP_DISPATCH_MANIFEST nor NON_SWEEP_LIVE_SKILLS. lib/skills/__tests__/registry-truth.test.ts independently fails on the same gap — this is the one entry here that is a caller gap rather than a copy gap.',
+      'Card is live+bound to property-management-rent-collection-chase, which IS catalog-live (measured) but is declared in neither SWEEP_DISPATCH_MANIFEST nor NON_SWEEP_LIVE_SKILLS (measured), so this checker reads it as uncallable. CORRECTED 2026-09-11: the previous reason ended "this is the one entry here that is a caller gap rather than a copy gap". That claim was investigated and is RETRACTED. A caller exists and fires: lib/inngest/functions/property-management-rent-collection-chase-sweep.ts is present, and lib/inngest/registry.ts auto-derives the function list from the filesystem via require.context — a file under lib/inngest/functions/ is registered BY EXISTING, not by being named in a manifest. Its cron is RENT_COLLECTION_CHASE_SWEEP_CRON = 0 12 * * *; the sweep then no-ops unless BUILDIUM_ADAPTER_LIVE=on. What is missing is the hand-maintained manifest ROW this checker reads, so the violation is real but it is a manifest-description gap, not an absent caller. lib/skills/__tests__/registry-truth.test.ts fails on the same gap and carries the same correction in tests/quarantine.json.',
     expires: '2026-11-09',
   },
   {
@@ -89,7 +89,7 @@ export const KNOWN_CLAIM_DRIFT: readonly KnownDriftEntry[] = [
     check: 'roster-capability',
     subject: 'home-services/home-services-estimate-followup',
     reason:
-      'Card is live+bound to home-services-estimate-followup (catalog runtime schema-only, no caller). Same remediation batch.',
+      'Card is live+bound to home-services-estimate-followup, whose catalog runtime is schema-only. CORRECTED 2026-09-11: the previous reason ended "no caller", which is FALSE for the same reason the property-management entry was false. lib/inngest/functions/home-services-estimate-followup-sweep.ts exists and is therefore registered (lib/inngest/registry.ts derives the function list from the filesystem via require.context); it runs daily at 09:00 UTC and stages FOLLOW_UP_NUDGE approvals through runEstimateFollowupForWorkspace. The violation is real — the catalog says schema-only and the card says live — but it is a catalog/copy disagreement, not an absent caller. Same remediation batch as mortgage/mortgage-document-chase.',
     expires: '2026-11-09',
   },
   {

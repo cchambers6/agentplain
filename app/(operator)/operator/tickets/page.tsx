@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { requireUser } from "@/lib/auth/server";
 import {
   PrismaTicketStore,
   formatTicketNumber,
@@ -23,8 +25,17 @@ interface PageProps {
 }
 
 // Staff support inbox. The operator (admin) console's home for the customer-
-// facing ticket lifecycle. Gated to operators by app/(operator)/layout.tsx.
+// facing ticket lifecycle.
+//
+// Auth: app/(operator)/layout.tsx redirects non-operators, but App Router
+// renders layout and page CONCURRENTLY - the query below would run while that
+// redirect() was still resolving. The layout is not a barrier this page can
+// stand behind, so we re-assert here, before any read. Same pattern as the
+// other operator pages (e.g. operator/outreach/page.tsx).
 export default async function OperatorTicketsPage({ searchParams }: PageProps) {
+  const session = await requireUser();
+  if (!session.isOperator) redirect("/app");
+
   const sp = await searchParams;
   const filter: StaffTicketFilter = {};
   if (sp.status && (TICKET_STATUSES as readonly string[]).includes(sp.status))

@@ -1,6 +1,3 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-
 import { ImageResponse } from "next/og";
 
 import { tokens } from "@/lib/brand/tokens";
@@ -45,18 +42,13 @@ import {
 // upgrade. This route wants build-time generation (one card per vertical),
 // so the static params win and the route generates on the Node runtime,
 // where `next/og` renders `ImageResponse` exactly as it did on edge.
-//
-// `force-static` is load-bearing, not decoration. `generateStaticParams` alone
-// does NOT guarantee a metadata image route is prerendered — without this the
-// route still deploys as a serverless function and renders per request, and
-// `public/` is not part of the lambda bundle (`/var/task`), so the backdrop
-// read fails with ENOENT and every card 500s. Verified: that is exactly what
-// happened before this line was added. With `force-static` the 11 cards are
-// rendered once at build time, where `public/` exists, and served as static
-// PNGs from the CDN.
-export const dynamic = "force-static";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+
+// Canonical marketing origin. Matches `metadataBase` in `app/layout.tsx` and
+// the `BASE` constants in `app/robots.ts` + `app/sitemap.ts` -- the repo builds
+// absolute marketing URLs from a pinned apex, not from an env var.
+const SITE_ORIGIN = "https://agentplain.com";
 
 // The softened ROI line, identical to the FAQ + Product JSON-LD copy. Capped
 // at 50× per PR #159; the retired 107× claim never appears.
@@ -112,17 +104,22 @@ export default async function OpenGraphImage({
   // heritage system. When per-vertical scene rasters land, swap the filename
   // to the vertical asset (public/brand/plaino-system/scenes/vertical-<slug>.png).
   //
-  // This used to build an absolute URL from the live request host via
-  // `headers()`, so Satori could fetch the PNG over HTTP. That is what put the
-  // route in an impossible position: `headers()` is a request-time API, which
-  // forces the route dynamic, and a dynamic route cannot also enumerate
-  // `generateStaticParams()`. Reading the asset off disk removes the request
-  // dependency entirely, which is what lets the static params stand.
+  // The URL used to be built from the live request host via `headers()`. That
+  // is what put this route in an impossible position: `headers()` is a
+  // request-time API, so it forces the route dynamic, and a dynamic route
+  // cannot also enumerate `generateStaticParams()`. The two had been in
+  // tension since before this upgrade; Next 15 just stopped tolerating it.
   //
-  // Reading from disk is also strictly more reliable than the fetch it
-  // replaces: no dependency on the deployment origin being reachable while the
-  // build runs, and preview and production render byte-identical cards.
-  const heritageSrc = await loadHeritageDataUri();
+  // Resolved by pinning the origin instead of deriving it from the request.
+  // `SITE_ORIGIN` is the same canonical apex already hardcoded in
+  // `app/layout.tsx` (metadataBase), `app/robots.ts` and `app/sitemap.ts`, so
+  // this follows the established house style rather than inventing a pattern.
+  // There is no site-origin env var in this repo -- the only related var,
+  // NEXT_PUBLIC_APP_URL, points at the app subdomain, not the marketing site.
+  //
+  // A pinned origin also works in either rendering mode: it is valid at build
+  // time (the apex serves this asset today) and at request time.
+  const heritageUrl = `${SITE_ORIGIN}/brand/plaino-system/heritage.png`;
 
   return new ImageResponse(
     (
@@ -143,7 +140,7 @@ export default async function OpenGraphImage({
         {/* Heritage backdrop, right-anchored — keep left 60% clean for type. */}
         {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text -- Satori <img>, decorative */}
         <img
-          src={heritageSrc}
+          src={heritageUrl}
           alt=""
           width={1200}
           height={630}
@@ -264,25 +261,6 @@ export default async function OpenGraphImage({
     ),
     { ...size },
   );
-}
-
-// Load the heritage backdrop from the repo and inline it as a data URI so
-// Satori never has to make a network request to render the card.
-//
-// Deliberately NOT wrapped in try/catch. If the asset is missing or unreadable
-// the build must fail loudly: a share card that renders with its type but no
-// background would still produce a green build, and a silently degraded card
-// shipped to every social preview is the worse failure. `public/` is part of
-// the repo, so a read failure here means something is genuinely wrong.
-//
-// Cost is bounded and paid once per build: the PNG is ~246 KB, decoded once
-// and reused across all of VERTICAL_SLUGS + ON_RAMP_SLUGS.
-let heritageDataUri: Promise<string> | undefined;
-function loadHeritageDataUri(): Promise<string> {
-  heritageDataUri ??= readFile(
-    join(process.cwd(), "public", "brand", "plaino-system", "heritage.png"),
-  ).then((bytes) => `data:image/png;base64,${bytes.toString("base64")}`);
-  return heritageDataUri;
 }
 
 // OG canvases are width-bound; long hero headlines wrap unpredictably and

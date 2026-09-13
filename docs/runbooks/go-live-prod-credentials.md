@@ -81,7 +81,10 @@ links. Set them first.
 - **Set in:** Vercel → Production. Different value per env. Never reused,
   never rotated without a credential re-encrypt plan.
 - **Verify:** after setting, deploy and visit `/api/health` — should
-  return 200. Then connect any OAuth provider end-to-end (Section 3
+  return 200. (Liveness only; it no longer reports dependency state. For
+  the DB/Inngest check use `/api/health/ready` with the
+  `x-health-token: $HEALTH_READY_TOKEN` header.) Then connect any OAuth
+  provider end-to-end (Section 3
   below); if `ENCRYPTION_KEY` is wrong, the token persistence step throws
   `encryption_key_unavailable`.
 
@@ -100,7 +103,15 @@ links. Set them first.
   `DATABASE_URL` (the env getter explicitly throws — see
   [`lib/env.ts:74-77`](../../lib/env.ts)).
 - **Verify:** Vercel deploy logs show `prisma migrate deploy` runs and
-  reports `No pending migrations`. Visit `/api/health` → 200.
+  reports `No pending migrations`. Then confirm the database is actually
+  reachable with the READINESS probe — `/api/health` is liveness only and
+  makes no DB call:
+
+  ```bash
+  curl -H "x-health-token: $HEALTH_READY_TOKEN" \
+       https://agentplain.com/api/health/ready
+  # -> 200 {"status":"ok","checks":{"db":{"ok":true,...}}}
+  ```
 
 ### `SESSION_PASSWORD`
 

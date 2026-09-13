@@ -22,6 +22,7 @@
  * state. No session-memory dependency.
  */
 
+import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth/server";
 import { withSystemContext } from "@/lib/db/rls";
@@ -259,12 +260,12 @@ export default async function ValueLedgerPage(props: PageProps) {
 
       {/* Nav back */}
       <div className="mt-10">
-        <a
+        <Link
           href="/operator/workspaces"
           className="text-[13px] text-ink underline"
         >
           ← all workspaces
-        </a>
+        </Link>
       </div>
     </div>
   );

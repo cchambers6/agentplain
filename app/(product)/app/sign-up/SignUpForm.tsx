@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { ApHeritageButton, ApHeritageField } from "@/components/ui/ap";
@@ -449,9 +450,9 @@ function VerticalWaitlist({
       <p className="border-t border-rule pt-4 text-[13px] leading-relaxed text-mute">
         Run a real-estate brokerage instead? That one&apos;s live today —
         reload and pick it. Or tell us what you need at{" "}
-        <a href="/custom" className="text-ink underline">
+        <Link href="/custom" className="text-ink underline">
           /custom
-        </a>
+        </Link>
         .
       </p>
     </div>

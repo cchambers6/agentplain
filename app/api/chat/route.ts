@@ -159,27 +159,34 @@ async function handleSupport(input: ChatInput, req: Request) {
   const ctx = { userId: session.userId, workspaceId, isOperator: false };
   const latestQuestion = latestUserMessage(input.messages);
 
-  // Load workspace context + knowledge in parallel.
-  const [workspace, pendingApprovalsCount, snapshot, knowledge] =
-    await Promise.all([
-      withSystemContext((tx) =>
-        tx.workspace.findUnique({
-          where: { id: workspaceId },
-          select: { name: true, vertical: true, verticalTier: true },
-        }),
-      ),
-      withSystemContext((tx) =>
-        tx.workApprovalQueueItem.count({
-          where: { workspaceId, status: "PENDING" },
-        }),
-      ),
-      buildCapabilitySnapshot({ workspaceId, ctx }).catch(() => null),
-      searchKnowledge(ctx, latestQuestion),
-    ]);
+  // The workspace read is HOISTED OUT of the parallel block on purpose:
+  // knowledge retrieval must be scoped to this workspace's vertical, and
+  // the vertical is not known until this row is loaded. Without the
+  // scope, any customer can retrieve any other vertical's claims, ROI
+  // math and compliance corpus through the chat (every VERTICAL-kind row
+  // is tenant-less by design, so the `workspaceId` predicate does not
+  // constrain them at all). The cost is one indexed primary-key read
+  // before the fan-out; the two expensive calls still run in parallel.
+  const workspace = await withSystemContext((tx) =>
+    tx.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { name: true, vertical: true, verticalTier: true },
+    }),
+  );
 
   const verticalSlug = workspace
     ? verticalSlugFromEnum(workspace.vertical)
     : null;
+
+  const [pendingApprovalsCount, snapshot, knowledge] = await Promise.all([
+    withSystemContext((tx) =>
+      tx.workApprovalQueueItem.count({
+        where: { workspaceId, status: "PENDING" },
+      }),
+    ),
+    buildCapabilitySnapshot({ workspaceId, ctx }).catch(() => null),
+    searchKnowledge(ctx, latestQuestion, verticalSlug),
+  ]);
   const tier = workspace?.verticalTier
     ? tierDisplayName(tierFromVerticalTier(workspace.verticalTier))
     : "Regular";
@@ -313,6 +320,24 @@ const WORKSPACE_JURISDICTIONS = ["GA", "US"];
 async function searchKnowledge(
   ctx: { userId: string; workspaceId: string; isOperator: boolean },
   query: string,
+  /**
+   * The workspace's vertical slug, or null when the workspace row could
+   * not be read. REQUIRED for tenant-correct retrieval: VERTICAL-kind
+   * rows and the vertical-tagged COMPLIANCE rules are tenant-less
+   * (`workspaceId IS NULL`) by design, so the workspaceId predicate does
+   * not constrain them — without this argument a real-estate customer
+   * can retrieve CPA or home-services claims, ROI math and compliance
+   * corpus. Passed as the SOFT `verticalScope`, so cross-vertical rows
+   * (pricing, support model, product doctrine, the SKILL corpus) still
+   * ground the answer.
+   *
+   * NULL is fail-OPEN with respect to the vertical predicate and that is
+   * deliberate: a missing workspace row already degrades the whole reply
+   * to the ungrounded path, and hard-failing retrieval here would turn a
+   * transient read miss into a broken support answer. The tenant
+   * (`workspaceId`) and RLS boundaries are unaffected.
+   */
+  verticalScope: string | null,
 ): Promise<
   Array<{
     title: string;
@@ -336,6 +361,12 @@ async function searchKnowledge(
       // CUSTOMER rows, RLS drops them, and the customer's own grounding
       // silently disappears from their own support answer.
       workspaceId: ctx.workspaceId,
+      // Vertical scope in the scan. VERTICAL rows and the vertical-tagged
+      // compliance rules carry no workspaceId, so `workspaceId` above
+      // cannot constrain them; this is the predicate that keeps one
+      // vertical's claims out of another vertical's customer chat. SOFT
+      // by construction — NULL-vertical rows stay eligible.
+      verticalScope,
     });
     if (!result.ok) return [];
     return result.value.map((hit) => ({

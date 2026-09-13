@@ -194,6 +194,32 @@ export interface KnowledgeSearchInput {
    *  matches (NULL verticalSlug rows are EXCLUDED). Used for vertical-
    *  scoped lookups in the categorize / draft skills. */
   verticalSlug?: string | null;
+  /**
+   * SOFT vertical scope — the additive counterpart to `verticalSlug`,
+   * with exactly the semantics of `jurisdictions`: a row whose
+   * KnowledgeDocument.verticalSlug is NULL is ALWAYS eligible, and a row
+   * with a non-NULL verticalSlug is eligible only when it equals this
+   * value. Omitted / null = no vertical predicate at all.
+   *
+   * WHY THIS EXISTS SEPARATELY FROM `verticalSlug`: the hard filter above
+   * EXCLUDES NULL-vertical rows, which is correct for a skill that wants
+   * "only real-estate patterns" and catastrophic for a customer-facing
+   * retrieval path. The chat corpus is deliberately mixed: cross-vertical
+   * content (pricing, support model, product doctrine, the SKILL corpus,
+   * and state / professional-body compliance rules) carries a NULL
+   * verticalSlug, while per-vertical content (`chunkVertical` → hero,
+   * jtbd, roi, claims, integrations, plus the vertical-tagged FHA / ECOA /
+   * GREC rules) carries its own slug. Passing the hard filter on that
+   * corpus would silently drop every cross-vertical row and leave the
+   * customer's own pricing and support answers ungrounded — replacing a
+   * leak with an outage. This soft form scopes the per-vertical rows
+   * WITHOUT narrowing the shared substrate.
+   *
+   * Retrieval paths that serve a customer MUST pass this. Without it, any
+   * workspace can retrieve any other vertical's claims, ROI math and
+   * compliance corpus through the chat.
+   */
+  verticalScope?: string | null;
   /** When set, restrict to rows whose KnowledgeDocument.jurisdiction is
    *  NULL or in this list. NULL jurisdiction is ALWAYS eligible — so a
    *  workspace in GA passing ["GA","US"] still gets every jurisdiction-

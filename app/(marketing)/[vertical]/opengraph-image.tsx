@@ -1,5 +1,7 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
 import { ImageResponse } from "next/og";
-import { headers } from "next/headers";
 
 import { tokens } from "@/lib/brand/tokens";
 import {
@@ -35,7 +37,14 @@ import {
 // A committed static preview of each card lives at `public/og/<slug>.png`
 // for mobile spot-check (see `tools/brand/og-preview.html` + the PR notes).
 
-export const runtime = "edge";
+// NOTE: this route deliberately does NOT declare `runtime = "edge"`.
+// Next 15 makes `export const runtime = "edge"` + `generateStaticParams()` a
+// hard build error ("Edge runtime is not supported with
+// `generateStaticParams`"). Next 14 tolerated the combination, so the
+// conflict is pre-existing and was surfaced — not caused — by the 15.5.25
+// upgrade. This route wants build-time generation (one card per vertical),
+// so the static params win and the route generates on the Node runtime,
+// where `next/og` renders `ImageResponse` exactly as it did on edge.
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -87,17 +96,23 @@ export default async function OpenGraphImage({
   const oneLiner =
     content?.hero.sbmSubhead ?? content?.hero.eyebrow ?? tokens.tagline;
 
-  // Heritage Plaino backdrop, mirroring the root OG card (app/opengraph-image.tsx).
-  // next/og's Satori fetches it from the deployment origin at request time; a
-  // right-anchored crop keeps the left 60% clean Paper for the type, and a
-  // left-to-right Paper scrim guarantees legibility. This lifts every
-  // per-vertical share card from text-only (WEAK) to the heritage system.
-  // When per-vertical scene rasters land, swap heritageUrl to the vertical
-  // asset (public/brand/plaino-system/scenes/vertical-<slug>.png).
-  const h = await headers();
-  const host = h.get("host") ?? "agentplain.com";
-  const proto = h.get("x-forwarded-proto") ?? "https";
-  const heritageUrl = `${proto}://${host}/brand/plaino-system/heritage.png`;
+  // Heritage Plaino backdrop. A right-anchored crop keeps the left 60% clean
+  // Paper for the type, and a left-to-right Paper scrim guarantees legibility.
+  // This lifts every per-vertical share card from text-only (WEAK) to the
+  // heritage system. When per-vertical scene rasters land, swap the filename
+  // to the vertical asset (public/brand/plaino-system/scenes/vertical-<slug>.png).
+  //
+  // This used to build an absolute URL from the live request host via
+  // `headers()`, so Satori could fetch the PNG over HTTP. That is what put the
+  // route in an impossible position: `headers()` is a request-time API, which
+  // forces the route dynamic, and a dynamic route cannot also enumerate
+  // `generateStaticParams()`. Reading the asset off disk removes the request
+  // dependency entirely, which is what lets the static params stand.
+  //
+  // Reading from disk is also strictly more reliable than the fetch it
+  // replaces: no dependency on the deployment origin being reachable while the
+  // build runs, and preview and production render byte-identical cards.
+  const heritageSrc = await loadHeritageDataUri();
 
   return new ImageResponse(
     (
@@ -118,7 +133,7 @@ export default async function OpenGraphImage({
         {/* Heritage backdrop, right-anchored — keep left 60% clean for type. */}
         {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text -- Satori <img>, decorative */}
         <img
-          src={heritageUrl}
+          src={heritageSrc}
           alt=""
           width={1200}
           height={630}
@@ -239,6 +254,25 @@ export default async function OpenGraphImage({
     ),
     { ...size },
   );
+}
+
+// Load the heritage backdrop from the repo and inline it as a data URI so
+// Satori never has to make a network request to render the card.
+//
+// Deliberately NOT wrapped in try/catch. If the asset is missing or unreadable
+// the build must fail loudly: a share card that renders with its type but no
+// background would still produce a green build, and a silently degraded card
+// shipped to every social preview is the worse failure. `public/` is part of
+// the repo, so a read failure here means something is genuinely wrong.
+//
+// Cost is bounded and paid once per build: the PNG is ~246 KB, decoded once
+// and reused across all of VERTICAL_SLUGS + ON_RAMP_SLUGS.
+let heritageDataUri: Promise<string> | undefined;
+function loadHeritageDataUri(): Promise<string> {
+  heritageDataUri ??= readFile(
+    join(process.cwd(), "public", "brand", "plaino-system", "heritage.png"),
+  ).then((bytes) => `data:image/png;base64,${bytes.toString("base64")}`);
+  return heritageDataUri;
 }
 
 // OG canvases are width-bound; long hero headlines wrap unpredictably and

@@ -187,8 +187,11 @@ draft → DraftReply (subject + body + Gmail draft id).`,
     body: `Three swappable ports keep lib/skills/ provider-neutral per feedback_no_silent_vendor_lock.md
 and project_living_portable_architecture.md.
 
-LlmProvider (lib/llm/types.ts): one production model-provider adapter (lib/llm/anthropic-provider.ts);
-test TestLlmProvider (lib/llm/test-provider.ts) with canned + heuristic outputs. getLlmProvider() reads
+LlmProvider (lib/llm/types.ts): one production model-provider adapter under lib/llm/, named for the
+vendor it wraps and swappable behind the port — the vendor is deliberately NOT named here, because this
+row is seeded contextKind 'SKILL', which IS in the customer chat's retrieval set (app/api/chat/route.ts),
+and the model vendor must stay invisible on every customer-reachable surface.
+Test TestLlmProvider (lib/llm/test-provider.ts) with canned + heuristic outputs. getLlmProvider() reads
 LLM_PROVIDER env (test forces test mode) and the production provider key's presence.
 
 MessageFetcher (lib/skills/types.ts): production GmailMessageAdapter (lib/skills/gmail-fetcher.ts)

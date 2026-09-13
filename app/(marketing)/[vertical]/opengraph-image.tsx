@@ -45,6 +45,16 @@ import {
 // upgrade. This route wants build-time generation (one card per vertical),
 // so the static params win and the route generates on the Node runtime,
 // where `next/og` renders `ImageResponse` exactly as it did on edge.
+//
+// `force-static` is load-bearing, not decoration. `generateStaticParams` alone
+// does NOT guarantee a metadata image route is prerendered — without this the
+// route still deploys as a serverless function and renders per request, and
+// `public/` is not part of the lambda bundle (`/var/task`), so the backdrop
+// read fails with ENOENT and every card 500s. Verified: that is exactly what
+// happened before this line was added. With `force-static` the 11 cards are
+// rendered once at build time, where `public/` exists, and served as static
+// PNGs from the CDN.
+export const dynamic = "force-static";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

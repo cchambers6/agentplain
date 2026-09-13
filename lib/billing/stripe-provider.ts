@@ -45,6 +45,28 @@ import type {
 // adapter, not on individual call sites.
 export const STRIPE_API_VERSION = "2026-04-22.dahlia";
 
+// ── Flat-price quantity pin ────────────────────────────────────────────────
+//
+// agentplain is ONE FLAT PRICE: `MONTHLY_PRICE_USD_CENTS` in
+// `lib/billing/facts.ts` — $99/month for every customer, any team size,
+// every vertical. `lookupKeyFor()` ignores (tier, band) and resolves the
+// single `agentplain_flat_monthly` Price.
+//
+// Stripe computes the charge as `unit_amount * quantity`. Therefore ANY
+// quantity other than 1 silently bills a multiple of the price every
+// customer-facing surface promises. A seat count is NOT a billing
+// quantity under flat pricing.
+//
+// This constant is applied at the provider boundary — the last point
+// before the Stripe SDK — rather than only at the form, so that a future
+// caller cannot reintroduce the multiplication by passing `seats`
+// through. `seats` is still accepted by the input types and is recorded
+// in subscription metadata for support/analytics, but it MUST NOT reach
+// a Stripe `quantity` field.
+//
+// Guarded by `tests/billing-flat-price-quantity.test.ts`.
+export const FLAT_PRICE_QUANTITY = 1;
+
 type StripeClientSurface = Pick<
   Stripe,
   | "customers"
@@ -133,7 +155,9 @@ export class StripeBillingProvider implements BillingProvider {
     const priceId = await this.priceIdFor(input.tier, input.seatBand);
     const sub = await this.client.subscriptions.create({
       customer: input.providerCustomerId,
-      items: [{ price: priceId, quantity: input.seats }],
+      // Flat price: quantity is pinned to 1. `input.seats` is recorded
+      // in metadata below, never multiplied into the charge.
+      items: [{ price: priceId, quantity: FLAT_PRICE_QUANTITY }],
       ...(input.trialPeriodDays && input.trialPeriodDays > 0
         ? {
             trial_period_days: input.trialPeriodDays,
@@ -155,6 +179,8 @@ export class StripeBillingProvider implements BillingProvider {
       metadata: {
         agentplain_tier: input.tier,
         agentplain_seat_band: input.seatBand,
+        // Recorded, NOT billed. Flat pricing — see FLAT_PRICE_QUANTITY.
+        agentplain_requested_seats: String(input.seats ?? 1),
         ...(input.metadata ?? {}),
       },
     });
@@ -195,7 +221,10 @@ export class StripeBillingProvider implements BillingProvider {
           {
             id: primary.id,
             price: newPriceId,
-            quantity: input.seats ?? primary.quantity ?? 1,
+            // Flat price: never inherit `primary.quantity` either — a
+            // legacy per-seat subscription carries a quantity > 1 and
+            // would otherwise be preserved on every future update.
+            quantity: FLAT_PRICE_QUANTITY,
           },
         ],
         proration_behavior: input.prorationBehavior ?? "create_prorations",
@@ -255,7 +284,8 @@ export class StripeBillingProvider implements BillingProvider {
     const session = await this.client.checkout.sessions.create({
       mode: "subscription",
       customer: input.providerCustomerId,
-      line_items: [{ price: priceId, quantity: input.seats }],
+      // Flat price: quantity is pinned to 1. See FLAT_PRICE_QUANTITY.
+      line_items: [{ price: priceId, quantity: FLAT_PRICE_QUANTITY }],
       success_url: input.successUrl,
       cancel_url: input.cancelUrl,
       allow_promotion_codes: input.allowPromotionCodes ?? true,
@@ -273,6 +303,8 @@ export class StripeBillingProvider implements BillingProvider {
         metadata: {
           agentplain_tier: input.tier,
           agentplain_seat_band: input.seatBand,
+          // Recorded, NOT billed. Flat pricing — see FLAT_PRICE_QUANTITY.
+          agentplain_requested_seats: String(input.seats ?? 1),
           ...(input.metadata ?? {}),
         },
       },

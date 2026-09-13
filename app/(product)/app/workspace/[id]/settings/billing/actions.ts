@@ -96,6 +96,11 @@ export async function changePlanAction(
       );
     }
   }
+  // `seats` is RECORD-KEEPING ONLY under flat pricing. It is forwarded
+  // so the provider can record it in Stripe metadata; it is NOT a
+  // billing quantity. `StripeBillingProvider` pins every subscription
+  // line item to `FLAT_PRICE_QUANTITY` (1) at the boundary — do not
+  // "restore" seat multiplication here. See lib/billing/stripe-provider.ts.
   const band: SeatBand = seatBandForSeats(rawSeats);
   const provider = getBillingProvider();
   const session = await provider.createCheckoutSession({

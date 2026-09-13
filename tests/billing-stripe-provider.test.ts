@@ -268,7 +268,17 @@ describe("StripeBillingProvider — Stripe-shape translation", () => {
     });
     const call = calls.checkout[0];
     assert.equal(call.mode, "subscription");
-    assert.equal(call.line_items?.[0].quantity, 30);
+    // FLAT PRICING: quantity is pinned to 1 regardless of `seats`.
+    // This assertion previously read `30` — it pinned the defect in
+    // place. Stripe bills `unit_amount * quantity`, so seats:30 against
+    // the flat $99 Price billed $2,970 while every surface promised $99.
+    // See `lib/billing/stripe-provider.ts` FLAT_PRICE_QUANTITY.
+    assert.equal(call.line_items?.[0].quantity, 1);
+    assert.equal(
+      call.subscription_data?.metadata?.agentplain_requested_seats,
+      "30",
+      "requested seats must still be recorded in metadata",
+    );
     assert.equal(call.allow_promotion_codes, true);
     // Wave-2 CC-at-trial default: payment_method_collection defaults to
     // "always" so the trial subscription captures a card up-front,

@@ -177,6 +177,12 @@ export default async function OpenGraphImage({
           >
             {tokens.wordmark}
           </div>
+          {/* Single interpolated string below, NOT `for {expr}`. In JSX that
+              would be two child nodes, and Satori rejects a <div> with more
+              than one child unless it declares `display: flex` or
+              `display: none` -- it fails the whole render with a 500. The
+              newer Satori bundled with next/og in 15.5.25 enforces this. The
+              rendered copy is unchanged. */}
           <div
             style={{
               fontSize: 18,
@@ -186,7 +192,7 @@ export default async function OpenGraphImage({
               textTransform: "uppercase",
             }}
           >
-            for {verticalName.toLowerCase()}
+            {`for ${verticalName.toLowerCase()}`}
           </div>
         </div>
 

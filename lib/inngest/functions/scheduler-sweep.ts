@@ -3,8 +3,17 @@
  *
  * Runs every 15 minutes. For each workspace with at least one ACTIVE
  * membership AND at least one ACTIVE calendar credential (GOOGLE or
- * M365) AND the scheduler's discipline (operations) NOT disabled on
+ * M365) THAT WAS GRANTED A CALENDAR READ SCOPE AND the scheduler's
+ * discipline (operations) NOT disabled on
  * `WorkspacePreference.disabledDisciplines`:
+ *
+ * The scope half of that sentence is new. This cron used to select on
+ * provider alone. Gmail and Google Calendar share one GOOGLE credential
+ * row and `GOOGLE_DEFAULT_SCOPES` requests no calendar scope, so every
+ * Gmail-connected workspace was swept every fifteen minutes and every
+ * sweep 403'd at `calendar.events.list`. The verdict now comes from
+ * `lib/integrations/calendar-scope.ts`, shared with the multiplexer and
+ * the agents page so all three agree on what "connected" means.
  *
  *   1. Build a `ChiefOfStaffMcpFetcher` that pulls the next 7 days of
  *      calendar events via the multiplexer (Google first, then M365).
@@ -58,6 +67,7 @@ import { runChiefOfStaffForWorkspace } from '@/lib/skills/chief-of-staff-schedul
 import { ChiefOfStaffMcpFetcher } from '@/lib/skills/scheduler/chief-of-staff-fetcher';
 import type { CalendarFetcher } from '@/lib/skills/scheduler/types';
 import type { InboxSnapshotFetcher } from '@/lib/integrations/inbox';
+import { activeCalendarProviders } from '@/lib/integrations/calendar-scope';
 import {
   DEFAULT_CHIEF_OF_STAFF_CONFIG,
   readChiefOfStaffConfig,
@@ -97,6 +107,19 @@ export interface SchedulerSweepResult {
   /** Workspaces skipped because the multiplexer found no active calendar
    *  credential. Expected when the operator disconnects mid-sweep. */
   workspacesSkippedUnconfigured: number;
+  /**
+   * Workspaces that HAVE an active GOOGLE / M365 credential but were
+   * granted no calendar scope, so no calendar can be read.
+   *
+   * Counted separately from `workspacesSkippedUnconfigured` on purpose.
+   * These workspaces are not "not configured" from the customer's point
+   * of view — they connected an account, their Connections page is
+   * green, and the roster used to show the Chief of Staff as LIVE. A
+   * non-zero number here is a customer who believes a capability is
+   * running that is not, which is a different and more urgent problem
+   * than a customer who has connected nothing.
+   */
+  workspacesSkippedMissingCalendarScope: number;
   /** Workspaces skipped because the operator turned the scheduler's
    *  discipline OFF on the Discipline panel. */
   workspacesSkippedDisciplineDisabled: number;
@@ -116,8 +139,29 @@ export interface SchedulerSweepResult {
 interface WorkspaceCandidate {
   id: string;
   vertical: Vertical;
+  /**
+   * CALENDAR-capable, not merely present. A workspace can hold an ACTIVE
+   * GOOGLE credential that was granted mail scope only; that credential
+   * cannot read a calendar and these flags are false for it.
+   *
+   * Do NOT use these to pick a MAILBOX — see `hasGoogleCredential` below.
+   * Conflating the two is how the original defect worked.
+   */
   hasGoogle: boolean;
   hasM365: boolean;
+  /**
+   * Raw credential presence, ignoring scope. The inbox arm keys off this:
+   * a Google mail credential is a perfectly good mailbox even when it
+   * cannot serve a calendar, and routing that workspace's inbox read to
+   * M365 because its Google grant lacked a CALENDAR scope would be a new
+   * bug in the shape of a fix.
+   *
+   * OPTIONAL, defaulting to the calendar flag above. A test (or any
+   * caller) that only knows about calendar capability keeps the exact
+   * pre-existing behaviour; `defaultListCandidates` always supplies both.
+   */
+  hasGoogleCredential?: boolean;
+  hasM365Credential?: boolean;
   disabledDisciplines: string[];
 }
 
@@ -168,6 +212,7 @@ export async function runSchedulerSweep(
     workspacesConsidered: candidates.length,
     workspacesWithProposals: 0,
     workspacesSkippedUnconfigured: 0,
+    workspacesSkippedMissingCalendarScope: 0,
     workspacesSkippedDisciplineDisabled: 0,
     workspacesSkippedNotInstalled: 0,
     workspacesSkippedFireGate: 0,
@@ -194,11 +239,25 @@ export async function runSchedulerSweep(
       continue;
     }
 
-    // Gate 2: at least one calendar credential. Belt-and-suspenders —
-    // the candidate lister already filtered on this; we re-check in
-    // case of a race between candidate listing and execution.
+    // Gate 2: at least one CALENDAR-CAPABLE credential. Belt-and-
+    // suspenders — the candidate lister already filtered on this; we
+    // re-check in case of a race between candidate listing and
+    // execution.
+    //
+    // The two skip reasons are counted apart because they are different
+    // problems. "Connected nothing" is a customer who has not finished
+    // setup. "Connected Google, granted mail only" is a customer who
+    // believes setup IS finished — and until this PR, their roster
+    // agreed with them while the sweep 403'd behind the scenes.
     if (!ws.hasGoogle && !ws.hasM365) {
-      result.workspacesSkippedUnconfigured += 1;
+      const hasAnyCredential =
+        (ws.hasGoogleCredential ?? ws.hasGoogle) ||
+        (ws.hasM365Credential ?? ws.hasM365);
+      if (hasAnyCredential) {
+        result.workspacesSkippedMissingCalendarScope += 1;
+      } else {
+        result.workspacesSkippedUnconfigured += 1;
+      }
       continue;
     }
     // Gate 3 (wave-2): marketplace install check. A workspace that
@@ -253,7 +312,10 @@ export async function runSchedulerSweep(
       // credential when both are present — the inbox factory picks the
       // matching MCP server. Tests inject `buildInboxFetcher`.
       inboxFetcher: args.buildInboxFetcher?.(ws.id),
-      inboxProvider: ws.hasGoogle ? 'GOOGLE' : 'M365',
+      // Raw credential presence, NOT calendar capability — a Google
+      // mail grant is a valid mailbox even when it cannot read a
+      // calendar.
+      inboxProvider: (ws.hasGoogleCredential ?? ws.hasGoogle) ? 'GOOGLE' : 'M365',
     });
 
     // Wave-2 per-skill config: read scheduler knobs at fire time. The
@@ -281,7 +343,14 @@ export async function runSchedulerSweep(
       });
       if (!run.ok) {
         if (run.error.code === 'NOT_CONFIGURED') {
-          result.workspacesSkippedUnconfigured += 1;
+          // The multiplexer stamps WHY on `reference`. Keep the two
+          // apart here too, or the distinction the gate above draws is
+          // lost the moment a workspace disconnects mid-sweep.
+          if (run.error.reference === 'missing-calendar-scope') {
+            result.workspacesSkippedMissingCalendarScope += 1;
+          } else {
+            result.workspacesSkippedUnconfigured += 1;
+          }
           continue;
         }
         reportInngestItemFailure(new Error(run.error.message), {
@@ -349,7 +418,11 @@ async function defaultListCandidates(): Promise<WorkspaceCandidate[]> {
             status: 'ACTIVE',
             provider: { in: ['GOOGLE', 'M365'] },
           },
-          select: { provider: true },
+          // `scopes` is what makes the calendar check real. Selecting
+          // only `provider` here was the defect: it cannot distinguish a
+          // Gmail grant from a Calendar grant, because they are the same
+          // row.
+          select: { provider: true, scopes: true },
         },
         preference: {
           select: { disabledDisciplines: true },
@@ -357,13 +430,25 @@ async function defaultListCandidates(): Promise<WorkspaceCandidate[]> {
       },
       orderBy: { createdAt: 'asc' },
     });
-    return workspaces.map((ws) => ({
-      id: ws.id,
-      vertical: ws.vertical,
-      hasGoogle: ws.integrationCredentials.some((c) => c.provider === 'GOOGLE'),
-      hasM365: ws.integrationCredentials.some((c) => c.provider === 'M365'),
-      disabledDisciplines: ws.preference?.disabledDisciplines ?? [],
-    }));
+    return workspaces.map((ws) => {
+      // The DB `where` above is a cheap prefilter, not the answer. The
+      // answer is which of those credentials actually carries a calendar
+      // read scope.
+      const calendarCapable = activeCalendarProviders(ws.integrationCredentials);
+      return {
+        id: ws.id,
+        vertical: ws.vertical,
+        hasGoogle: calendarCapable.includes('GOOGLE'),
+        hasM365: calendarCapable.includes('M365'),
+        hasGoogleCredential: ws.integrationCredentials.some(
+          (c) => c.provider === 'GOOGLE',
+        ),
+        hasM365Credential: ws.integrationCredentials.some(
+          (c) => c.provider === 'M365',
+        ),
+        disabledDisciplines: ws.preference?.disabledDisciplines ?? [],
+      };
+    });
   });
 }
 
@@ -401,6 +486,8 @@ export const schedulerSweepFn = inngest.createFunction(
                 considered: out.workspacesConsidered,
                 with_proposals: out.workspacesWithProposals,
                 skipped_unconfigured: out.workspacesSkippedUnconfigured,
+                skipped_missing_calendar_scope:
+                  out.workspacesSkippedMissingCalendarScope,
                 skipped_discipline_disabled: out.workspacesSkippedDisciplineDisabled,
                 skipped_fire_gate: out.workspacesSkippedFireGate,
                 proposals_written: out.proposalsWritten,

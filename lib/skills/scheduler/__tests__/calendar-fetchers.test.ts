@@ -36,6 +36,18 @@ const WORKSPACE_ID = 'ws-cal-0001';
 const FROM = new Date('2026-05-28T00:00:00.000Z');
 const TO = new Date('2026-06-04T00:00:00.000Z');
 
+/** A Google grant that CAN read a calendar. */
+const GOOGLE_CAL_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+/** The scope set `GOOGLE_DEFAULT_SCOPES` actually requests today — mail
+ *  only. A workspace holding exactly this used to resolve to the Google
+ *  arm and 403 at Google on every sweep. */
+const GMAIL_ONLY_SCOPES = [
+  'openid',
+  'email',
+  'profile',
+  'https://www.googleapis.com/auth/gmail.readonly',
+];
+
 function googleEvent(overrides: Partial<GoogleCalendarEventDto> = {}): GoogleCalendarEventDto {
   return {
     id: 'evt-g-1',
@@ -221,7 +233,10 @@ describe('CalendarMultiplexFetcher — Google wins when both are connected', () 
       workspaceId: WORKSPACE_ID,
       testGoogle: googleArm,
       testOutlook: outlookArm,
-      testProviders: ['GOOGLE', 'M365'],
+      testCredentials: [
+        { provider: 'GOOGLE', scopes: [GOOGLE_CAL_SCOPE] },
+        { provider: 'M365', scopes: ['Calendars.Read'] },
+      ],
     });
     const res = await mux.fetchEvents({ workspaceId: WORKSPACE_ID, from: FROM, to: TO });
     assert.equal(res.ok, true);
@@ -239,7 +254,7 @@ describe('CalendarMultiplexFetcher — M365 fallback', () => {
       workspaceId: WORKSPACE_ID,
       testGoogle: googleArm,
       testOutlook: outlookArm,
-      testProviders: ['M365'],
+      testCredentials: [{ provider: 'M365', scopes: ['Calendars.Read'] }],
     });
     const res = await mux.fetchEvents({ workspaceId: WORKSPACE_ID, from: FROM, to: TO });
     assert.equal(res.ok, true);
@@ -253,12 +268,64 @@ describe('CalendarMultiplexFetcher — neither connected', () => {
   it('returns NOT_CONFIGURED cleanly so the cron can skip', async () => {
     const mux = new CalendarMultiplexFetcher({
       workspaceId: WORKSPACE_ID,
-      testProviders: [],
+      testCredentials: [],
     });
     const res = await mux.fetchEvents({ workspaceId: WORKSPACE_ID, from: FROM, to: TO });
     assert.equal(res.ok, false);
     if (res.ok) return;
     assert.equal(res.error.code, 'NOT_CONFIGURED');
+    assert.equal(res.error.reference, 'no-credential');
     assert.equal(mux.provider, null);
+  });
+});
+
+// ── The defect this PR fixes ────────────────────────────────────────────
+//
+// A Gmail-only workspace holds an ACTIVE GOOGLE credential. Under the
+// provider-only resolver it routed to the Google arm, which then called
+// `calendar.events.list` with no calendar scope and got a 403 from
+// Google — every fifteen minutes, on every Gmail customer.
+
+describe('CalendarMultiplexFetcher — Google connected WITHOUT a calendar scope', () => {
+  it('does NOT route to the Google arm', async () => {
+    const googleArm = new StubCalendarFetcher('google');
+    const outlookArm = new StubCalendarFetcher('m365');
+    const mux = new CalendarMultiplexFetcher({
+      workspaceId: WORKSPACE_ID,
+      testGoogle: googleArm,
+      testOutlook: outlookArm,
+      testCredentials: [{ provider: 'GOOGLE', scopes: GMAIL_ONLY_SCOPES }],
+    });
+    const res = await mux.fetchEvents({ workspaceId: WORKSPACE_ID, from: FROM, to: TO });
+    assert.equal(res.ok, false);
+    if (res.ok) return;
+    assert.equal(res.error.code, 'NOT_CONFIGURED');
+    // The reason is the load-bearing part: the operator must be able to
+    // tell "never connected" from "connected without permission".
+    assert.equal(res.error.reference, 'missing-calendar-scope');
+    assert.match(res.error.message, /WITHOUT a calendar scope/);
+    assert.equal(mux.provider, null);
+    // The 403 that used to happen here: no arm was called at all.
+    assert.equal(googleArm.callCount, 0);
+    assert.equal(outlookArm.callCount, 0);
+  });
+
+  it('falls through to M365 when only M365 carries a calendar scope', async () => {
+    const googleArm = new StubCalendarFetcher('google');
+    const outlookArm = new StubCalendarFetcher('m365');
+    const mux = new CalendarMultiplexFetcher({
+      workspaceId: WORKSPACE_ID,
+      testGoogle: googleArm,
+      testOutlook: outlookArm,
+      testCredentials: [
+        { provider: 'GOOGLE', scopes: GMAIL_ONLY_SCOPES },
+        { provider: 'M365', scopes: ['Calendars.Read'] },
+      ],
+    });
+    const res = await mux.fetchEvents({ workspaceId: WORKSPACE_ID, from: FROM, to: TO });
+    assert.equal(res.ok, true);
+    assert.equal(mux.provider, 'm365');
+    assert.equal(googleArm.callCount, 0);
+    assert.equal(outlookArm.callCount, 1);
   });
 });

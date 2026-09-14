@@ -74,9 +74,12 @@ export interface UnitDelinquency {
   daysPastDue: number;
   /** Outstanding balance in dollars (the at-risk rent). Carried as
    *  metadata for the value-ledger / PM console "$X,XXX unpaid rent"
-   *  display — NEVER rendered in the chase body (dollar amounts always
-   *  defer to {{operator: amount due}}). Default 0 when the source
-   *  platform doesn't carry a balance (fixtures pre-dating the field). */
+   *  display — also rendered inline in the soft-chase body when the
+   *  figure is positive (see `renderBalanceLine` in skill.ts). Default 0
+   *  when the source platform doesn't carry a balance (fixtures pre-dating
+   *  the field); a non-positive value means we hold no figure worth
+   *  quoting, and the body falls back to {{operator: amount due}} rather
+   *  than mailing $0.00 to a delinquent tenant. */
   outstandingBalanceUsd: number;
   /** Whether the tenant has a payment plan logged in the platform.
    *  Drives a different tone — confirm plan in motion vs. cold chase. */
@@ -112,7 +115,9 @@ export interface TenantChaseDraft {
   daysPastDue: number;
   /** Outstanding balance copied from UnitDelinquency — carried on the draft
    *  so the approval sink can embed it in the payload without re-fetching
-   *  the rent roll. Metadata only; never appears in `body`. */
+   *  the rent roll. Also rendered into `body` for soft-chase
+   *  drafts when the figure is positive; see `renderBalanceLine` in
+   *  skill.ts. */
   outstandingBalanceUsd: number;
   toEmails: string[];
   ccEmails: string[];

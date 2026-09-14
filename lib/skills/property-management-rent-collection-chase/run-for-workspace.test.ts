@@ -80,9 +80,29 @@ describe('runRentCollectionChaseForWorkspace — stages chases via the sink', ()
     assert.equal(res.value.ownerReview.length, 1);
     assert.equal(res.value.ownerReview[0].leaseId, 'l-esc');
 
-    // No dollar amount leaks into any chase body.
-    for (const c of sink.calls) {
-      assert.doesNotMatch(c.approval.draft.body, /\$\s?\d/);
+    const stagedDrafts = sink.calls.map((c) => c.approval.draft);
+    // The dollar-amount deferral in `draftToneGuidance` is scoped to OWNER
+    // conversations; these are TENANT drafts. Soft-chase renders the
+    // rent-roll figure when we hold a positive one. No other bucket
+    // references a balance at all.
+    assert.ok(stagedDrafts.length > 0, 'examined 0 drafts - fixture collection broke');
+    for (const d of stagedDrafts) {
+      const rendersBalance =
+        d.bucket === 'soft-chase' && d.outstandingBalanceUsd > 0;
+      if (rendersBalance) {
+        assert.match(
+          d.body,
+          /Our records show \$[\d,]+\.\d{2} outstanding as of this morning\./,
+          `soft-chase draft for ${d.leaseId} must render the balance`,
+        );
+        assert.doesNotMatch(d.body, /\{\{operator: amount due\}\}/);
+      } else {
+        assert.doesNotMatch(
+          d.body,
+          /\$\s?\d/,
+          `draft for ${d.leaseId} must not quote a figure`,
+        );
+      }
     }
   });
 

@@ -4,7 +4,7 @@
  * Pins the deterministic rent-collection-chase behavior:
  *   - one draft per delinquent unit, scoped to bucket
  *   - grace units never get a draft
- *   - never quotes a dollar amount in body
+ *   - soft-chase renders the rent-roll balance (defers when absent)
  *   - escalation units always queue for PM review (low confidence)
  *   - payment-plan-in-place softens soft-chase tone
  *   - maintenance ETAs always defer
@@ -88,7 +88,14 @@ describe('property-management-rent-collection-chase — soft-chase', () => {
     const d = res.value.drafts[0];
     assert.equal(d.bucket, 'soft-chase');
     assert.match(d.body, /friendly heads up/);
-    assert.match(d.body, /\{\{operator: amount due\}\}/);
+    // The fixture carries 1850, so the body a tenant reads must print it.
+    // This assertion previously pinned the PLACEHOLDER as PRESENT, which is
+    // how the blank-amount defect stayed green for its whole life.
+    assert.match(
+      d.body,
+      /Our records show \$1,850\.00 outstanding as of this morning\./,
+    );
+    assert.doesNotMatch(d.body, /\{\{operator: amount due\}\}/);
   });
 
   it('softens tone when a payment plan is already in place', async () => {

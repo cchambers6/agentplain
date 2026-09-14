@@ -138,9 +138,10 @@ export function toUnitDelinquency(lease: BuildiumLeaseSummary): UnitDelinquency 
     },
     coTenants: rest.map((t) => ({ name: t.name, email: t.email as string, phone: t.phone })),
     daysPastDue: lease.daysPastDue,
-    // At-risk rent — metadata for the value-ledger / PM console only. Never
-    // rendered in the chase body (dollar amounts defer to the operator merge
-    // field per lib/skills/prompts/property-management.ts).
+    // At-risk rent — feeds the value-ledger / PM console AND the soft-chase
+    // body, which renders it inline when positive. The dollar-amount
+    // deferral in lib/skills/prompts/property-management.ts is scoped to
+    // OWNER conversations; these drafts go to tenants.
     outstandingBalanceUsd: lease.outstandingBalance,
     paymentPlanInPlace: lease.paymentPlanInPlace,
     // agentplain tracks chase history in its own approval ledger, not

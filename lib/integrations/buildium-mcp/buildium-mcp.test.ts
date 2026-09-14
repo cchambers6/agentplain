@@ -155,9 +155,28 @@ describe('rent-collection skill — drafts from Buildium data end-to-end', () =>
     const planDraft = res.value.drafts.find((d) => d.leaseId === '7004');
     assert.ok(planDraft);
     assert.match(planDraft.body, /payment plan/i);
-    // No dollar amount leaks into any draft body (tone guidance).
+    // The dollar-amount deferral in `draftToneGuidance` is scoped to OWNER
+    // conversations; these are TENANT drafts. Soft-chase renders the
+    // rent-roll figure when we hold a positive one. No other bucket
+    // references a balance at all.
+    assert.ok(res.value.drafts.length > 0, 'examined 0 drafts - fixture collection broke');
     for (const d of res.value.drafts) {
-      assert.doesNotMatch(d.body, /\$\s?\d/, `draft for ${d.leaseId} must not quote a dollar amount`);
+      const rendersBalance =
+        d.bucket === 'soft-chase' && d.outstandingBalanceUsd > 0;
+      if (rendersBalance) {
+        assert.match(
+          d.body,
+          /Our records show \$[\d,]+\.\d{2} outstanding as of this morning\./,
+          `soft-chase draft for ${d.leaseId} must render the balance`,
+        );
+        assert.doesNotMatch(d.body, /\{\{operator: amount due\}\}/);
+      } else {
+        assert.doesNotMatch(
+          d.body,
+          /\$\s?\d/,
+          `draft for ${d.leaseId} must not quote a figure`,
+        );
+      }
     }
   });
 });

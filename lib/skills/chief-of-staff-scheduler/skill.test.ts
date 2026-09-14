@@ -122,11 +122,20 @@ describe('chief-of-staff-scheduler — no-outbound contract', () => {
 
   it('does not propose a meeting slot that overlaps a busy event', async () => {
     const sink = new RecordingApprovalSink();
-    // Calendar entirely busy 09:00-17:00 UTC on Mon 18 + Tue 19 + Wed 20.
+    // Calendar entirely busy through the operator's WORKING DAY on
+    // Mon 18 + Tue 19 + Wed 20.
+    //
+    // The snapshot's `localTimezone` is America/New_York, so 09:00-17:00
+    // local is 13:00-21:00 UTC in May (EDT, UTC-4). This fixture used to
+    // block 09:00-17:00 UTC and the test asserted no slot landed on
+    // those days — which only held because the implementation read UTC
+    // and called it local. With that fixed, 17:00-21:00 UTC is genuinely
+    // free working time and the skill is RIGHT to offer it; the old
+    // fixture would have failed the skill for being correct.
     const events: CalendarEvent[] = [];
     for (const day of ['2026-05-18', '2026-05-19', '2026-05-20']) {
       events.push(
-        busyEvent(`${day}T09:00:00.000Z`, `${day}T17:00:00.000Z`, 'Solid block'),
+        busyEvent(`${day}T13:00:00.000Z`, `${day}T21:00:00.000Z`, 'Solid block'),
       );
     }
     const res = await runSkill({
@@ -150,11 +159,15 @@ describe('chief-of-staff-scheduler — no-outbound contract', () => {
     });
     assert.equal(res.ok, true);
     if (!res.ok) return;
-    // Either zero candidate slots or all candidate slots fall OUTSIDE the
-    // 09:00-17:00 UTC block on those three days.
+    // Either zero candidate slots, or every candidate falls outside the
+    // blocked working days entirely.
     for (const m of res.value.meetingProposals) {
       for (const slot of m.candidateSlots) {
-        // Slot strings are local-tz-as-UTC; the block is the same.
+        // `slot.startLocal` is the operator's wall clock (New York), and
+        // the block now covers their whole working day, so a date-prefix
+        // comparison is meaningful again. It was not before: the old
+        // comment here read "slot strings are local-tz-as-UTC; the block
+        // is the same", which documented the defect as the premise.
         const blockDays = ['2026-05-18', '2026-05-19', '2026-05-20'];
         if (blockDays.some((d) => slot.startLocal.startsWith(d))) {
           assert.fail(

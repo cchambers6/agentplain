@@ -156,14 +156,36 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     name: 'Gmail',
     category: 'Email',
     // "schedule" removed 2026-08-11: the Gmail connect flow requests no
-    // calendar scope (GOOGLE_DEFAULT_SCOPES in lib/integrations/google/oauth.ts),
-    // so every scheduling call through this connector fails at Google with a
-    // 403 the customer never sees. The claim comes back the day a calendar
-    // scope ships — `checkConnectorActionScopes` enforces the pairing now.
+    // calendar scope, so every scheduling call through this connector fails
+    // at Google with a 403 the customer never sees. The claim comes back the
+    // day a calendar scope ships — `checkConnectorActionScopes` enforces the
+    // pairing now.
     description:
       'Your service partner connects your Gmail to read, categorize, coordinate, and draft replies.',
     mcpEndpointTemplate: '/api/integrations/gmail-mcp/{workspaceId}',
-    scopes: ['gmail.readonly', 'gmail.modify', 'gmail.compose'],
+    // FULLY-QUALIFIED Google scope URLs, same shape as the google-drive entry
+    // below. These strings go to Google verbatim — `oauth/start` passes
+    // `entry.scopes` straight into `buildAuthorizeUrl`, which joins them into
+    // the `scope` param with no normalization step anywhere in between. The
+    // bare short names that used to live here ('gmail.modify') are not valid
+    // Google scopes and would be rejected with `invalid_scope`.
+    //
+    // `openid`/`email`/`profile` are load-bearing, not decoration: the Google
+    // callback identifies the account by the userinfo `sub` claim
+    // (`exchangeCodeForTokens` → `profile.value.sub` → the `accountId` half of
+    // IntegrationCredential's `@@unique([workspaceId, provider, accountId])`).
+    // Drop them and the connect flow cannot key the credential row.
+    //
+    // `gmail.send` is deliberately absent per `project_no_outbound_architecture.md`.
+    // `gmail.compose` CREATES drafts; it does not send.
+    scopes: [
+      'openid',
+      'email',
+      'profile',
+      'https://www.googleapis.com/auth/gmail.readonly',
+      'https://www.googleapis.com/auth/gmail.modify',
+      'https://www.googleapis.com/auth/gmail.compose',
+    ],
     oauthConfigKey: 'GMAIL_OAUTH',
     status: 'available',
     providerKey: 'GOOGLE',

@@ -97,7 +97,7 @@ export interface ResolveM365CredentialArgs {
  *   * `Mail.Read Mail.ReadWrite`               — Outlook
  *   * `Chat.ReadWrite ChannelMessage.Send ChannelMessage.Read.All
  *      OnlineMeetings.ReadWrite OnlineMeetingTranscript.Read.All` — Teams
- *   * `Files.ReadWrite.All Sites.ReadWrite.All`                    — OneDrive + Excel
+ *   * `Files.ReadWrite.All`                                      — OneDrive + Excel
  *
  * The refresh endpoint will return only the scopes the customer has
  * actually consented to; agentplain reads them back from `response.scope`
@@ -116,7 +116,10 @@ export const MICROSOFT_OAUTH_DEFAULT_SCOPES = [
   'OnlineMeetings.ReadWrite',
   'OnlineMeetingTranscript.Read.All',
   'Files.ReadWrite.All',
-  'Sites.ReadWrite.All',
+  // `Sites.ReadWrite.All` removed 2026-09-13 together with the OneDrive tile
+  // entry that requested it. It had no caller, and naming a scope here that
+  // no tile ever consents to is not free: this list is sent to the refresh
+  // endpoint, and it is the list a reader reasonably takes for "what we hold".
 ] as const;
 
 export async function resolveM365Credential(

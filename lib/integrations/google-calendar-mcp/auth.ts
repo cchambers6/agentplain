@@ -22,6 +22,25 @@ import { resolveCredential as resolveGmailCredential } from '@/lib/integrations/
 import type { DecryptedCredential } from '@/lib/integrations/types';
 import { calendarError, type GoogleCalendarMcpResult } from './types';
 
+/**
+ * Scopes that actually authorize the Google Calendar tool surface.
+ *
+ * `calendar.events` is what agentplain requests (GOOGLE_GMAIL_SCOPES in
+ * lib/integrations/google/oauth.ts). The broader `calendar` scope is
+ * accepted too: a workspace that granted it before the request was narrowed
+ * is still fully authorized, and refusing it would break a working
+ * connection for no gain.
+ */
+const CALENDAR_SCOPES: readonly string[] = [
+  'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/calendar',
+];
+
+/** True when the credential carries a scope that authorizes calendar calls. */
+export function hasCalendarScope(scopes: readonly string[]): boolean {
+  return scopes.some((s) => CALENDAR_SCOPES.includes(s));
+}
+
 export interface ResolveCredentialArgs {
   workspaceId: string;
 }
@@ -38,5 +57,22 @@ export async function resolveCredential(
       reference: result.error.reference,
     });
   }
+
+  // A GOOGLE credential resolving successfully does NOT mean it authorizes
+  // calendar calls. This resolver passed the Gmail credential straight
+  // through without ever inspecting its scopes, so a workspace that
+  // connected Gmail before `calendar.events` was requested got a healthy
+  // credential and then a bare 403 from Google on every calendar call --
+  // invisible to the customer, who sees a connector that says "connected".
+  // Measured 2026-09-13. Fail here, in words, instead.
+  if (!hasCalendarScope(result.value.scopes)) {
+    return calendarError(
+      'FORBIDDEN',
+      `The Google connection for workspace ${args.workspaceId} does not grant calendar access ` +
+        `(scopes on the credential: ${result.value.scopes.length > 0 ? result.value.scopes.join(', ') : 'none'}). ` +
+        `Reconnect Google to grant calendar access at /app/workspace/${args.workspaceId}/integrations.`,
+    );
+  }
+
   return { ok: true, value: result.value };
 }

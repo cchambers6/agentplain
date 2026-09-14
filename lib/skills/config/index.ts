@@ -20,6 +20,7 @@ import type { Prisma } from "@prisma/client";
 import type { DbTransactionClient } from "@/lib/db";
 import { withSystemContext as defaultWithSystemContext } from "@/lib/db";
 import { decrypt, encrypt } from "@/lib/security/encryption";
+import type { EngagementScope } from "@/lib/skills/month-end-close-cpa/types";
 
 export type SystemContextRunner = <T>(
   fn: (tx: DbTransactionClient) => Promise<T>,
@@ -95,9 +96,51 @@ export const DEFAULT_CHIEF_OF_STAFF_CONFIG: ChiefOfStaffConfig = {
 
 // ── Skill slugs the config supports ───────────────────────────────────
 
+/**
+ * month-end-close-cpa. The engagement SCOPE decides which documents the
+ * close chases: a bookkeeping-only client should never be asked for a
+ * payroll register or a sales-tax filing confirmation.
+ *
+ * WHY HERE. There is no honest per-client source for this today. QuickBooks
+ * has no engagement-scope field (see the HONESTY BAR comment in
+ * quickbooks-fetcher.ts), and no Prisma model represents a CPA engagement --
+ * PortalClient is the client-portal record and is not keyed to the
+ * QuickBooks customer. SkillConfig is the existing per-workspace x per-skill
+ * mechanism, already encrypted at rest and already read on every fire by
+ * three other skills, so it is where this belongs rather than a new table
+ * (and so this needs no migration).
+ *
+ * `defaultScope` is the firm-wide fallback and is DELIBERATELY unchanged at
+ * `full-stack-monthly`: narrowing the default would trade one wrong answer
+ * for a different wrong answer. `scopeByClientId` is keyed by the
+ * QuickBooks customer id and is the per-engagement override.
+ *
+ * NOT YET IN THE SETTINGS UI -- see SKILL_CONFIG_LIVE_KEYS below. The
+ * runtime honours these keys today; the settings page has no field for them,
+ * so a firm cannot set them from the product yet. That gap is real and is
+ * named in the PR rather than papered over.
+ */
+export interface MonthEndCloseConfig {
+  defaultScope: EngagementScope;
+  scopeByClientId: Record<string, EngagementScope>;
+}
+
+export const ENGAGEMENT_SCOPES = [
+  "bookkeeping-only",
+  "bookkeeping-plus-payroll",
+  "full-stack-monthly",
+  "review-only",
+] as const;
+
+export const DEFAULT_MONTH_END_CLOSE_CONFIG: MonthEndCloseConfig = {
+  defaultScope: "full-stack-monthly",
+  scopeByClientId: {},
+};
+
 export const FOLLOW_UP_CHASER_SLUG = "follow-up-chaser-general" as const;
 export const INBOX_TRIAGE_SLUG = "inbox-triage-general" as const;
 export const CHIEF_OF_STAFF_SLUG = "chief-of-staff-scheduler" as const;
+export const MONTH_END_CLOSE_SLUG = "month-end-close-cpa" as const;
 
 /** Per-skill "live-config" surface — which keys the running skill
  *  honors today. Used by the settings UI to badge fields as
@@ -115,6 +158,11 @@ export const SKILL_CONFIG_LIVE_KEYS: Record<string, ReadonlyArray<string>> = {
     "businessHoursEnd",
     "bufferMinutes",
   ],
+  // Honoured by the runtime (run-for-workspace reads them on every fire).
+  // NOT yet rendered by the settings page -- the entry exists so the badge
+  // can say "live" truthfully the moment a field is added, and so this map
+  // never advertises a key the skill ignores.
+  [MONTH_END_CLOSE_SLUG]: ["defaultScope", "scopeByClientId"],
 };
 
 // ── Generic reader/writer ─────────────────────────────────────────────
@@ -301,6 +349,42 @@ export async function readChiefOfStaffConfig(
 }
 
 // ── Parse helpers ─────────────────────────────────────────────────────
+
+export async function readMonthEndCloseConfig(
+  workspaceId: string,
+  opts: ReadSkillConfigOpts = {},
+): Promise<MonthEndCloseConfig> {
+  const raw = await readRawConfig(workspaceId, MONTH_END_CLOSE_SLUG, opts);
+  if (!raw) return { ...DEFAULT_MONTH_END_CLOSE_CONFIG, scopeByClientId: {} };
+  return {
+    defaultScope: oneOfOrDefault(
+      raw.defaultScope,
+      ENGAGEMENT_SCOPES,
+      DEFAULT_MONTH_END_CLOSE_CONFIG.defaultScope,
+    ),
+    scopeByClientId: scopeMapOrDefault(raw.scopeByClientId),
+  };
+}
+
+/** Per-client scope overrides. An unknown scope string is DROPPED, never
+ *  coerced: silently mapping a typo onto full-stack-monthly would chase a
+ *  tax-only client for a payroll register, which is the bug this exists to
+ *  fix. Dropping falls back to `defaultScope` -- at least the documented
+ *  behaviour. Capped so a malformed blob cannot stall a fire. */
+function scopeMapOrDefault(v: unknown): Record<string, EngagementScope> {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return {};
+  const out: Record<string, EngagementScope> = {};
+  let n = 0;
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+    if (n >= 2000) break;
+    if (typeof k !== "string" || k.trim().length === 0) continue;
+    if (typeof val !== "string") continue;
+    if (!(ENGAGEMENT_SCOPES as readonly string[]).includes(val)) continue;
+    out[k.trim()] = val as EngagementScope;
+    n += 1;
+  }
+  return out;
+}
 
 function positiveIntOrDefault(
   v: unknown,

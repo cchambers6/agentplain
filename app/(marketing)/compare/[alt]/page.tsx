@@ -13,12 +13,13 @@ export function generateStaticParams() {
   return COMPARISON_SLUGS.map((alt) => ({ alt }));
 }
 
-export function generateMetadata({
+export async function generateMetadata({
   params,
 }: {
-  params: { alt: string };
-}): Metadata {
-  const c = getComparison(params.alt);
+  params: Promise<{ alt: string }>;
+}): Promise<Metadata> {
+  const { alt } = await params;
+  const c = getComparison(alt);
   if (!c) return { title: "Not found" };
   return {
     title: c.metaTitle,
@@ -27,8 +28,13 @@ export function generateMetadata({
   };
 }
 
-export default function ComparePage({ params }: { params: { alt: string } }) {
-  const c = getComparison(params.alt);
+export default async function ComparePage({
+  params,
+}: {
+  params: Promise<{ alt: string }>;
+}) {
+  const { alt } = await params;
+  const c = getComparison(alt);
   if (!c) notFound();
 
   return (

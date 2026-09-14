@@ -42,14 +42,14 @@ export const runtime = "nodejs";
 export default async function OperatorFleetPage({
   searchParams,
 }: {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await requireUser();
   if (!session.isOperator) {
     redirect("/app");
   }
 
-  const filters = parseFleetFilters(searchParams);
+  const filters = parseFleetFilters(await searchParams);
   const filterQuery = fleetFiltersToSearchParams(filters).toString();
 
   const [initialPage, options, pendingCapabilityProposals] = await Promise.all([

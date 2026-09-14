@@ -1,5 +1,4 @@
 import { ImageResponse } from "next/og";
-import { headers } from "next/headers";
 
 import { tokens } from "@/lib/brand/tokens";
 import {
@@ -35,9 +34,21 @@ import {
 // A committed static preview of each card lives at `public/og/<slug>.png`
 // for mobile spot-check (see `tools/brand/og-preview.html` + the PR notes).
 
-export const runtime = "edge";
+// NOTE: this route deliberately does NOT declare `runtime = "edge"`.
+// Next 15 makes `export const runtime = "edge"` + `generateStaticParams()` a
+// hard build error ("Edge runtime is not supported with
+// `generateStaticParams`"). Next 14 tolerated the combination, so the
+// conflict is pre-existing and was surfaced — not caused — by the 15.5.25
+// upgrade. This route wants build-time generation (one card per vertical),
+// so the static params win and the route generates on the Node runtime,
+// where `next/og` renders `ImageResponse` exactly as it did on edge.
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+
+// Canonical marketing origin. Matches `metadataBase` in `app/layout.tsx` and
+// the `BASE` constants in `app/robots.ts` + `app/sitemap.ts` -- the repo builds
+// absolute marketing URLs from a pinned apex, not from an env var.
+const SITE_ORIGIN = "https://agentplain.com";
 
 // The softened ROI line, identical to the FAQ + Product JSON-LD copy. Capped
 // at 50× per PR #159; the retired 107× claim never appears.
@@ -48,16 +59,17 @@ export function generateStaticParams() {
 }
 
 // Per-vertical alt text. Used by Next.js to populate the og:image:alt tag.
-export function generateImageMetadata({
+export async function generateImageMetadata({
   params,
 }: {
-  params: { vertical: string };
+  params: Promise<{ vertical: string }>;
 }) {
-  const content = getVerticalContent(params.vertical);
+  const { vertical } = await params;
+  const content = getVerticalContent(vertical);
   const label = content ? `for ${content.name.toLowerCase()}` : "";
   return [
     {
-      id: params.vertical,
+      id: vertical,
       alt: content
         ? `${tokens.wordmark} ${label} — ${tokens.tagline}`
         : `${tokens.wordmark} — ${tokens.tagline}`,
@@ -70,9 +82,10 @@ export function generateImageMetadata({
 export default async function OpenGraphImage({
   params,
 }: {
-  params: { vertical: string };
+  params: Promise<{ vertical: string }>;
 }) {
-  const content = getVerticalContent(params.vertical);
+  const { vertical } = await params;
+  const content = getVerticalContent(vertical);
   const { colors } = tokens;
 
   // Headline + sub copy. Pull from the vertical's content if available;
@@ -85,17 +98,28 @@ export default async function OpenGraphImage({
   const oneLiner =
     content?.hero.sbmSubhead ?? content?.hero.eyebrow ?? tokens.tagline;
 
-  // Heritage Plaino backdrop, mirroring the root OG card (app/opengraph-image.tsx).
-  // next/og's Satori fetches it from the deployment origin at request time; a
-  // right-anchored crop keeps the left 60% clean Paper for the type, and a
-  // left-to-right Paper scrim guarantees legibility. This lifts every
-  // per-vertical share card from text-only (WEAK) to the heritage system.
-  // When per-vertical scene rasters land, swap heritageUrl to the vertical
-  // asset (public/brand/plaino-system/scenes/vertical-<slug>.png).
-  const h = headers();
-  const host = h.get("host") ?? "agentplain.com";
-  const proto = h.get("x-forwarded-proto") ?? "https";
-  const heritageUrl = `${proto}://${host}/brand/plaino-system/heritage.png`;
+  // Heritage Plaino backdrop. A right-anchored crop keeps the left 60% clean
+  // Paper for the type, and a left-to-right Paper scrim guarantees legibility.
+  // This lifts every per-vertical share card from text-only (WEAK) to the
+  // heritage system. When per-vertical scene rasters land, swap the filename
+  // to the vertical asset (public/brand/plaino-system/scenes/vertical-<slug>.png).
+  //
+  // The URL used to be built from the live request host via `headers()`. That
+  // is what put this route in an impossible position: `headers()` is a
+  // request-time API, so it forces the route dynamic, and a dynamic route
+  // cannot also enumerate `generateStaticParams()`. The two had been in
+  // tension since before this upgrade; Next 15 just stopped tolerating it.
+  //
+  // Resolved by pinning the origin instead of deriving it from the request.
+  // `SITE_ORIGIN` is the same canonical apex already hardcoded in
+  // `app/layout.tsx` (metadataBase), `app/robots.ts` and `app/sitemap.ts`, so
+  // this follows the established house style rather than inventing a pattern.
+  // There is no site-origin env var in this repo -- the only related var,
+  // NEXT_PUBLIC_APP_URL, points at the app subdomain, not the marketing site.
+  //
+  // A pinned origin also works in either rendering mode: it is valid at build
+  // time (the apex serves this asset today) and at request time.
+  const heritageUrl = `${SITE_ORIGIN}/brand/plaino-system/heritage.png`;
 
   return new ImageResponse(
     (
@@ -153,6 +177,12 @@ export default async function OpenGraphImage({
           >
             {tokens.wordmark}
           </div>
+          {/* Single interpolated string below, NOT `for {expr}`. In JSX that
+              would be two child nodes, and Satori rejects a <div> with more
+              than one child unless it declares `display: flex` or
+              `display: none` -- it fails the whole render with a 500. The
+              newer Satori bundled with next/og in 15.5.25 enforces this. The
+              rendered copy is unchanged. */}
           <div
             style={{
               fontSize: 18,
@@ -162,7 +192,7 @@ export default async function OpenGraphImage({
               textTransform: "uppercase",
             }}
           >
-            for {verticalName.toLowerCase()}
+            {`for ${verticalName.toLowerCase()}`}
           </div>
         </div>
 

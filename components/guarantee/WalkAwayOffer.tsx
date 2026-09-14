@@ -15,6 +15,7 @@
  * nothing more to do here but leave.
  */
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { ApEyebrow, ApPaperCard } from "@/components/ui/ap";
 
@@ -60,13 +61,13 @@ export function WalkAwayOffer({
           stays on our systems. Thank you for giving {partner} a try.
         </p>
         <p className="mt-4">
-          <a
+          <Link
             href="/"
             className="inline-flex items-center gap-2 border border-ink bg-ink px-5 py-2.5 text-sm font-medium text-paper transition hover:bg-ink/90"
           >
             Back to agentplain.com
             <span aria-hidden>→</span>
-          </a>
+          </Link>
         </p>
       </ApPaperCard>
     );

@@ -109,9 +109,9 @@ export default function PrivacyPage() {
             Separately, we keep an internal access-pattern log — which workspace
             ran a chat or read from a connector, and when — strictly for
             security and abuse review (see our{" "}
-            <a className="underline text-clay" href="/aup">
+            <Link className="underline text-clay" href="/aup">
               acceptable use policy
-            </a>
+            </Link>
             ). That log records coarse metadata, never the contents of your
             chats or records, and it is never used for training.
           </p>

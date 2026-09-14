@@ -26,7 +26,7 @@ const ROI_LINE = "15–50× per workflow + the violations you don't pay for";
 
 export default async function OpenGraphImage() {
   const { colors } = tokens;
-  const h = headers();
+  const h = await headers();
   const host = h.get("host") ?? "agentplain.com";
   const proto = h.get("x-forwarded-proto") ?? "https";
   const heritageUrl = `${proto}://${host}/brand/plaino-system/heritage.png`;

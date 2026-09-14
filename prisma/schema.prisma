@@ -799,6 +799,7 @@ model User {
   scheduleWindows           SkillScheduleWindow[]        @relation("ScheduleWindowBy")
   auditEntriesActor         AuditLog[]                   @relation("AuditActor")
   auditEntriesActAs         AuditLog[]                   @relation("AuditActingAs")
+  approvalEvidenceDecided   ApprovalEvidence[]           @relation("ApprovalEvidenceDecidedBy")
   magicLinkTokens           MagicLinkToken[]
   triagedInquiries          Inquiry[]                    @relation("InquiryTriagedBy")
   passkeys                  WebAuthnCredential[]
@@ -888,6 +889,10 @@ model Workspace {
   capabilityProposals      CapabilityProposal[]
   invoices                 WorkspaceInvoice[]
   auditEntries             AuditLog[]
+  /// Append-only approval record. Survives teardown by design:
+  /// workspaceId is nullable + SetNull, and this relation is absent
+  /// from every delete path. See lib/approvals/evidence.ts.
+  approvalEvidence         ApprovalEvidence[]
   onboardingState          OnboardingState?
   subscription             Subscription?
   integrationCredentials   IntegrationCredential[]
@@ -3329,4 +3334,69 @@ model OutreachTouch {
   prospect   OutreachProspect  @relation(fields: [prospectId], references: [id], onDelete: Cascade)
 
   @@index([prospectId, occurredAt])
+}
+
+/// THE APPROVAL EVIDENCE LEDGER — append-only, discovery-facing.
+///
+/// Why this exists when AuditLog and WorkApprovalQueueItem both do:
+/// AuditLog holds NO BODY (only {kind, agentSlug}); the queue item's payload
+/// IS the body but is the MUTABLE pre-decision draft and is hard-deleted by
+/// three reachable paths. Neither answers "show us what your customer
+/// approved". This row is a frozen copy taken inside the decision's own
+/// transaction and never updated. Full detail: lib/approvals/evidence.ts.
+///
+/// APPEND-ONLY is enforced by a BEFORE UPDATE OR DELETE trigger in
+/// 20260914000000_approval_evidence, not by convention. Prisma does not model
+/// triggers; do not infer from this schema that update is possible.
+///
+/// NOTE: no relation to WorkApprovalQueueItem. An FK there would either
+/// cascade the evidence away with the item, or make the customer's own
+/// "delete my data" button fail. approvalItemId is a plain indexed UUID that
+/// survives the item's deletion. The migration states the full reasoning.
+model ApprovalEvidence {
+  id              String     @id @default(uuid()) @db.Uuid
+  /// Nullable + SetNull, exactly like AuditLog: the row outlives the
+  /// workspace. A NULL here means the workspace was torn down; the row is
+  /// then operator-visible only, which is intended.
+  workspaceId     String?    @db.Uuid
+  /// Which queue item was decided. Deliberately NOT a foreign key.
+  approvalItemId  String     @db.Uuid
+  kind            String
+  agentSlug       String
+  refTable        String
+  refId           String
+  /// APPROVED | AUTO_APPROVED | REJECTED. CHECK-constrained in SQL.
+  /// Declines are retained with their reason: a refusal is the evidence a
+  /// human was judging rather than rubber-stamping.
+  decision        String
+  decisionReason  String?
+  /// human | machine | operator — which of the three write seams decided.
+  /// Stored rather than inferred from a null actor id.
+  route           String
+  /// The decision's clock, copied from the status write — never defaulted.
+  decidedAt       DateTime
+  /// Distinct from decidedAt, and NULL unless the writing seam itself
+  /// performed the send. The fleet drafts; the customer's system sends.
+  /// A later confirmed send APPENDS A ROW rather than updating this one.
+  sentAt          DateTime?
+  decidedByUserId String?    @db.Uuid
+  /// True when the human rewrote the draft before approving it. Derived from
+  /// the payload's editedAt stamp that editApprovalDraft writes.
+  humanEdited     Boolean    @default(false)
+  subject         String?
+  /// Discrete addressees only, never a parsed display line.
+  recipients      String[]
+  fromAccount     String?
+  /// AES-256-GCM envelope ({ body }) — same crypto as the queue payload.
+  approvedBody    Json
+  /// AES-256-GCM envelope of the FULL decided payload. The rendered card is
+  /// a pure function of (kind, payload), so this reproduces what was shown.
+  payloadSnapshot Json
+  recordedAt      DateTime   @default(now())
+
+  workspace       Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  decidedBy       User?      @relation("ApprovalEvidenceDecidedBy", fields: [decidedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, decidedAt])
+  @@index([approvalItemId])
 }

@@ -33,6 +33,7 @@ import {
   encryptPayloadForWrite,
 } from '../security/payload-crypto';
 import { randomUUID } from 'node:crypto';
+import { recordApprovalEvidenceTx } from '@/lib/approvals/evidence';
 import { isAcceptedStatus } from '../approvals/executors';
 import { dispatchApprovalExecutorsForInsert } from '../approvals/dispatch';
 import { getVerticalContent } from '../verticals';
@@ -297,6 +298,30 @@ async function writeArtifacts(
     });
     approvalId = created.id;
     approvalsWritten = 1;
+    // EVIDENCE, site 1 of 2. Rows here are BORN accepted and never pass
+    // through applyApprovalDecisionTx, so the seam that covers the human and
+    // operator routes cannot see this one. Hooked at the create call for the
+    // same reason the executor dispatch is. Skipped while PENDING: nothing
+    // has been decided yet, and evidence of a non-decision is noise.
+    if (isAcceptedStatus(decision.status)) {
+      await recordApprovalEvidenceTx(tx, {
+        workspaceId,
+        approvalItemId: created.id,
+        kind: String(data.kind),
+        agentSlug: data.agentSlug,
+        refTable: data.refTable,
+        refId: data.refId,
+        decision: decision.status as 'APPROVED' | 'AUTO_APPROVED',
+        decisionReason: null,
+        decidedAt: new Date(),
+        // No human decided this. Recording null rather than inventing an
+        // actor is what keeps the record honest about auto-approval; the
+        // 'machine' route says so positively.
+        decidedByUserId: null,
+        route: 'machine',
+        payload: data.payload,
+      });
+    }
   }
 
   // Compliance sentinel: when the scanner found literal matches, write a
@@ -325,11 +350,30 @@ async function writeArtifacts(
       row: complianceApproval,
       decision,
     });
-    await tx.workApprovalQueueItem.create({
+    const createdCompliance = await tx.workApprovalQueueItem.create({
       data: complianceData,
       select: { id: true },
     });
     approvalsWritten += 1;
+    // EVIDENCE, site 2 of 2. Two create sites, two hooks; do not collapse
+    // them. Hooking the decision functions instead would silently drop every
+    // auto-approved compliance flag.
+    if (isAcceptedStatus(decision.status)) {
+      await recordApprovalEvidenceTx(tx, {
+        workspaceId,
+        approvalItemId: createdCompliance.id,
+        kind: String(complianceData.kind),
+        agentSlug: complianceData.agentSlug,
+        refTable: complianceData.refTable,
+        refId: complianceData.refId,
+        decision: decision.status as 'APPROVED' | 'AUTO_APPROVED',
+        decisionReason: null,
+        decidedAt: new Date(),
+        decidedByUserId: null,
+        route: 'machine',
+        payload: complianceData.payload,
+      });
+    }
   }
 
   return {

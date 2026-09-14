@@ -169,20 +169,31 @@ describe("marketplace catalog", () => {
   it("no available entry requests an outbound send scope", () => {
     // project_no_outbound_architecture.md — outbound is the customer's system,
     // never ours. Catalog enforces this; this test pins it.
-    const bannedFragments = ["send", "Mail.Send", "Send", "compose"];
+    // Matched on the scope's LAST path segment, not the whole string. The
+    // previous version of this check used `assert.notEqual(scope, "gmail.send")`,
+    // which only ever saw bare short names; a fully-qualified
+    // `https://www.googleapis.com/auth/gmail.send` is not equal to "gmail.send"
+    // and would have sailed straight through. Gmail's entry now carries
+    // fully-qualified URLs (as google-drive always did), so the exact-match
+    // form had become unable to fail in the direction that matters.
+    const BANNED_SEND_SCOPES = [/^gmail\.send$/, /^Mail\.Send$/, /^Mail\.Send\.Shared$/];
+    let examined = 0;
     for (const entry of listIntegrations().filter((e) => e.status === "available")) {
       // Gmail's `gmail.compose` is acceptable — Gmail's compose scope lets us
       // CREATE drafts, not SEND. Microsoft's Mail.Send / Gmail's gmail.send
       // are the banned scopes the architecture forbids.
       for (const scope of entry.scopes) {
-        assert.notEqual(scope, "Mail.Send", `${entry.id} requests Mail.Send`);
-        assert.notEqual(scope, "gmail.send", `${entry.id} requests gmail.send`);
-        assert.notEqual(scope, "Mail.Send.Shared", `${entry.id} requests Mail.Send.Shared`);
+        examined += 1;
+        const leaf = scope.split("/").pop() ?? scope;
+        for (const banned of BANNED_SEND_SCOPES) {
+          assert.ok(
+            !banned.test(leaf),
+            `${entry.id} requests an outbound send scope: ${scope}`,
+          );
+        }
       }
-      // The "send" fragment check is intentionally loose for available
-      // entries — `compose` ≠ send. Re-affirm bannedFragments is not unused.
-      void bannedFragments;
     }
+    assert.ok(examined > 0, `examined ${examined} scopes — corpus is empty, the check saw nothing`);
   });
 
   it("every entry exposes scope display + a /api/integrations/<slug>-mcp template", () => {
@@ -268,6 +279,27 @@ describe("OAuth start URL builders", () => {
       parsed.searchParams.get("redirect_uri"),
       "https://app.agentplain.test/api/auth/oauth/google/callback",
     );
+
+    // This test was named "...with the right scopes" and asserted nothing
+    // about scope, which is why the gmail branch could omit `scopes` entirely
+    // and silently fall back to GOOGLE_DEFAULT_SCOPES (readonly only) for its
+    // whole life. The assertions below are the ones the name always promised.
+    const requested = (parsed.searchParams.get("scope") ?? "").split(" ").filter(Boolean);
+    for (const expected of getMarketplaceEntry("gmail")!.scopes) {
+      assert.ok(
+        requested.includes(expected),
+        `authorize URL requests the tile's advertised scope ${expected} (got: ${requested.join(", ")})`,
+      );
+    }
+    // The write scopes specifically — these are the ones the tile advertises
+    // and the ones whose absence 403'd every draft and label write.
+    assert.ok(requested.includes("https://www.googleapis.com/auth/gmail.modify"));
+    assert.ok(requested.includes("https://www.googleapis.com/auth/gmail.compose"));
+    // Account identity: the callback keys IntegrationCredential off the
+    // userinfo `sub` claim, which needs `openid`.
+    assert.ok(requested.includes("openid"));
+    // No outbound, at the URL level and not just the catalog level.
+    assert.ok(!requested.some((s) => /(^|\/)gmail\.send$/.test(s)), "never requests gmail.send");
   });
 
   it("Outlook authorize URL targets login.microsoftonline.com without Mail.Send", () => {

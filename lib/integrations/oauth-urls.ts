@@ -49,9 +49,15 @@ export function buildAuthorizeUrl(args: BuildAuthorizeUrlArgs): string {
       "/api/auth/oauth/google/callback",
       args.origin,
     ).toString();
+    // Pass the marketplace entry's scopes through, same as the google-drive
+    // branch below. Omitting `scopes` here silently fell back to
+    // GOOGLE_DEFAULT_SCOPES (gmail.readonly only), so the tile advertised
+    // gmail.modify + gmail.compose while the consent screen only ever asked
+    // for read — every draft and every label write 403'd at Google.
     return oauth.buildAuthorizationUrl({
       redirectUri,
       state: args.state,
+      scopes: args.scopes,
     });
   }
   if (args.integrationId === "google-drive") {

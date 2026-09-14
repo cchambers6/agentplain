@@ -5,6 +5,19 @@ import { ApEyebrow, ApRootedEmptyState } from "@/components/ui/ap";
 import { asDisciplineId } from "@/lib/disciplines";
 import { renderApprovalPayload } from "./renderApprovalPayload";
 import { ApprovalsList, type ApprovalRow } from "./ApprovalsList";
+import { ACCEPTED_APPROVAL_STATUSES } from "@/lib/approvals/executors";
+import { buildApprovalArtifact } from "@/lib/approvals/artifact";
+import { readStoredApprovalArtifact } from "@/lib/approvals/stored-artifact";
+import {
+  ApprovedHandoffSection,
+  type ApprovedApprovalRow,
+} from "./ApprovedHandoffSection";
+import type { WorkApprovalKind } from "@prisma/client";
+
+/** How many accepted items the customer can still reach from this screen.
+ *  The queue is the working surface, not an archive, so this is a recent
+ *  tail rather than a full history. */
+const ACCEPTED_TAKE = 20;
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -27,7 +40,26 @@ export default async function ApprovalsPage({ params, searchParams }: PageProps)
   const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
   const ctx = { userId: member.userId, workspaceId, isOperator: false };
 
-  const [items, totalPending] = await withRls(ctx, (tx) =>
+  // Two lanes, one screen.
+  //
+  // PENDING is the deciding lane and is unchanged. The ACCEPTED lane is new,
+  // and it exists because approving used to be the act that took the work
+  // away: this query was `status: "PENDING"` only, so the card carrying the
+  // copy / download / mailto handoff disappeared the moment the row left
+  // PENDING, and the artifact ARTIFACT_HANDOFF had frozen to replace it had no
+  // reader anywhere in production.
+  //
+  // The accepted set comes from `ACCEPTED_APPROVAL_STATUSES`, the same
+  // constant `isAcceptedStatus` is built from, so AUTO_APPROVED rows are
+  // included. A hand-rolled `status: "APPROVED"` here would silently drop
+  // every row the confidence threshold accepted -- the specific mistake
+  // lib/approvals/executors.ts warns about -- and would look like it worked.
+  //
+  // Ordered by `proposedAt` rather than `decidedAt`: `decidedAt` is nullable,
+  // Postgres sorts NULLS FIRST on DESC, and a row accepted by the machine path
+  // need not carry one. Sorting on the non-null column keeps the order
+  // deterministic without depending on a nulls-ordering feature flag.
+  const [items, totalPending, acceptedItems] = await withRls(ctx, (tx) =>
     Promise.all([
       tx.workApprovalQueueItem.findMany({
         where: { workspaceId, status: "PENDING" },
@@ -36,6 +68,14 @@ export default async function ApprovalsPage({ params, searchParams }: PageProps)
       }),
       tx.workApprovalQueueItem.count({
         where: { workspaceId, status: "PENDING" },
+      }),
+      tx.workApprovalQueueItem.findMany({
+        where: {
+          workspaceId,
+          status: { in: [...ACCEPTED_APPROVAL_STATUSES] },
+        },
+        orderBy: { proposedAt: "desc" },
+        take: ACCEPTED_TAKE,
       }),
     ]),
   );
@@ -48,6 +88,41 @@ export default async function ApprovalsPage({ params, searchParams }: PageProps)
     proposedAtIso: item.proposedAt.toISOString(),
     rendered: renderApprovalPayload(item.kind, decryptPayloadForRead(item.payload)),
   }));
+
+  const acceptedRows: ApprovedApprovalRow[] = acceptedItems.map((item) => {
+    const payload = decryptPayloadForRead(item.payload);
+    const rendered = renderApprovalPayload(item.kind, payload);
+
+    // The stored artifact is the customer's record of WHAT THEY APPROVED. It
+    // wins, unconditionally.
+    const stored = readStoredApprovalArtifact(payload);
+
+    // LEGACY PATH — and deliberately only that.
+    //
+    // Rows accepted before ARTIFACT_HANDOFF shipped carry no stored artifact,
+    // so the only thing left is to rebuild one from the payload. That is a
+    // strictly weaker record: the payload is mutable and the renderer changes
+    // between releases, so a rebuild says "what this renders to now", not
+    // "what you said yes to". It is the fallback and never the preference,
+    // and the surface labels it so the customer is not shown a reconstruction
+    // and a frozen record as though they were the same thing.
+    const artifact =
+      stored ?? buildApprovalArtifact(item.kind as WorkApprovalKind, rendered);
+
+    return {
+      row: {
+        id: item.id,
+        agentSlug: item.agentSlug,
+        kind: item.kind,
+        discipline: asDisciplineId(item.discipline),
+        proposedAtIso: item.proposedAt.toISOString(),
+        rendered,
+      },
+      artifact,
+      artifactSource: stored ? "stored" : "legacy-rederived",
+      decidedAtIso: (item.decidedAt ?? item.proposedAt).toISOString(),
+    };
+  });
 
   return (
     <div>
@@ -64,7 +139,12 @@ export default async function ApprovalsPage({ params, searchParams }: PageProps)
 
       {rows.length === 0 ? (
         <div className="mt-8">
-          {initialFocusId ? (
+          {initialFocusId && acceptedRows.length > 0 ? (
+            <p className="mb-6 border border-rule bg-paper-deep px-4 py-3 text-[14px] leading-relaxed text-ink">
+              That draft has already cleared your queue. If you approved it,
+              it&rsquo;s below with its copy and download still attached.
+            </p>
+          ) : initialFocusId ? (
             <p className="mb-6 border border-rule bg-paper-deep px-4 py-3 text-[14px] leading-relaxed text-ink">
               That draft has already cleared your queue — it was approved or
               sent back, so there&rsquo;s nothing left to decide on it. New
@@ -93,6 +173,12 @@ export default async function ApprovalsPage({ params, searchParams }: PageProps)
           />
         </>
       )}
+
+      {/* Renders in BOTH branches — an empty pending queue is the most likely
+          moment for a customer to come looking for something they approved,
+          and it was previously the exact moment the screen had nothing to
+          give them. Returns null on its own when there is nothing accepted. */}
+      <ApprovedHandoffSection rows={acceptedRows} />
     </div>
   );
 }

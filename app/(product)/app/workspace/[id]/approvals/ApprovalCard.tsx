@@ -10,6 +10,7 @@ import {
   type ConfidenceView,
 } from "@/lib/approvals/presentation";
 import { buildApprovalArtifact } from "@/lib/approvals/artifact";
+import type { ApprovalArtifact } from "@/lib/approvals/artifact";
 import type { WorkApprovalKind } from "@prisma/client";
 import type { RenderedApproval } from "./renderApprovalPayload";
 import { ApprovalHandoff } from "./ApprovalHandoff";
@@ -53,6 +54,39 @@ interface ApprovalCardProps {
   /** When true, the card is the deep-link target (the onboarding first-draft).
    *  Renders a clay ring so the customer's eye lands on it immediately. */
   highlighted?: boolean;
+  /**
+   * The artifact to hand the customer, when the CALLER holds a better one
+   * than this card could derive.
+   *
+   * For a PENDING row this is omitted and the card derives the artifact live,
+   * which is correct -- nothing has been approved, so there is nothing frozen
+   * to show, and the derivation and the card are showing the same payload by
+   * construction.
+   *
+   * For an ACCEPTED row the caller passes the artifact ARTIFACT_HANDOFF froze
+   * at approval time, and it WINS over re-derivation. Re-deriving is the exact
+   * behaviour the stored artifact was built to replace: the payload is mutable
+   * (edit-before-approve rewrites it) and the renderer changes between
+   * releases, so a re-derivation can drift away from what the human actually
+   * said yes to while carrying the full authority of the real record. For
+   * something the customer may rely on as their record of a decision, a
+   * confident drift is worse than an obvious absence.
+   */
+  artifact?: ApprovalArtifact;
+  /**
+   * The decision has already been made on this row (APPROVED / AUTO_APPROVED).
+   *
+   * Suppresses every sentence that is only true BEFORE a decision -- the
+   * `chrome` pending-state promise and the two "approve to ..." persistence
+   * notes -- and states the post-decision truth instead. Those sentences are
+   * not merely stale once approved; "Nothing has been sent. Approve to send it
+   * through." under an item the customer already approved reads as a claim
+   * that approving DID send something, which is false: nothing in the executor
+   * registry reaches outside our own database today.
+   */
+  decided?: boolean;
+  /** ISO timestamp of the decision, shown on a decided card. */
+  decidedAtIso?: string;
 }
 
 /** Map internal agent slugs to readable display labels for the customer surface.
@@ -124,12 +158,24 @@ export function ApprovalCard({
   plainoState = "fetch",
   embedded = false,
   highlighted = false,
+  artifact: storedArtifact,
+  decided = false,
+  decidedAtIso,
 }: ApprovalCardProps) {
   const { rendered } = row;
   const confidence = resolveConfidence(rendered);
   // The take-it-with-you artifact. Pure + DB-free, so the card stays
   // renderable in a unit test; the interactive half lives in ApprovalHandoff.
-  const artifact = buildApprovalArtifact(row.kind as WorkApprovalKind, rendered);
+  //
+  // A caller-supplied artifact WINS. On an accepted row that is the artifact
+  // frozen at approval time, and it is the customer's actual record of what
+  // they said yes to; re-deriving here would quietly substitute "what this
+  // payload renders to now". The `??` is reached on a pending row (nothing is
+  // frozen yet, so deriving is right) and on the legacy path for rows accepted
+  // before ARTIFACT_HANDOFF shipped -- see ApprovedHandoffSection.
+  const artifact =
+    storedArtifact ??
+    buildApprovalArtifact(row.kind as WorkApprovalKind, rendered);
   // The highlight ring wins over the admin-priority border so the deep-link
   // target reads as "this one" even when it's also a critical admin card.
   const adminCardClass = highlighted
@@ -198,9 +244,12 @@ export function ApprovalCard({
         {/* Card chrome -- the pending-state promise ("Nothing has been
             sent."). It lives in its own field on RenderedApproval so that
             post-approval consumers drop it by identity instead of pattern-
-            matching customer prose; the CARD is precisely where it is still
-            true, so it renders here, first, ahead of the work product. */}
-        {(rendered.chrome ?? []).map((line, idx) => (
+            matching customer prose; the PENDING CARD is precisely where it is
+            still true, so it renders here, first, ahead of the work product.
+            A DECIDED card is the one place on this surface where it is not
+            true any more, so it is dropped -- by identity, by not reading the
+            field, the same discipline the artifact path uses. */}
+        {(decided ? [] : (rendered.chrome ?? [])).map((line, idx) => (
           <p
             key={`chrome-${idx}`}
             className="mt-3 max-w-prose whitespace-pre-wrap text-[15px] leading-relaxed text-ink first:mt-0"
@@ -264,7 +313,20 @@ export function ApprovalCard({
         </div>
       ) : null}
 
-      {rendered.persisted === false ? (
+      {/* Persistence notes. Both pending variants end in an instruction to
+          approve, which is not merely stale on a decided card — it implies
+          approving is what performs a send. It is not. Nothing in the executor
+          registry reaches outside our own database, so the decided variants
+          state only what is verifiably true: where the draft is, and that
+          agentplain has not sent it. */}
+      {decided ? (
+        rendered.persisted === true ? (
+          <p className="mt-4 text-[12px] leading-relaxed text-mute">
+            A draft of this is saved in your Gmail Drafts. agentplain has not
+            sent it — the send is yours to make.
+          </p>
+        ) : null
+      ) : rendered.persisted === false ? (
         <p className="mt-4 border border-rule bg-paper-deep px-3 py-2 text-[12px] leading-relaxed text-mute">
           Held for your review — confidence below the persist threshold, so we
           did not write to your Gmail Drafts. Approve to send it through.
@@ -273,6 +335,19 @@ export function ApprovalCard({
         <p className="mt-4 text-[12px] leading-relaxed text-mute">
           Saved to your Gmail Drafts. Approve here to confirm it ships on your
           side; reject to discard the draft.
+        </p>
+      ) : null}
+
+      {/* The post-decision state, in plain words. Deliberately NOT "sent" or
+          "delivered" — neither is true of anything agentplain does today. */}
+      {decided ? (
+        <p
+          data-approval-decided
+          className="mt-4 border-l-2 border-moss bg-paper-deep px-3 py-2 text-[13px] leading-relaxed text-ink"
+        >
+          Approved{decidedAtIso ? ` ${formatRelativeTime(decidedAtIso)}` : ""} —
+          ready to send from your account. agentplain has not sent anything;
+          your yes is recorded and the finished work is below.
         </p>
       ) : null}
 

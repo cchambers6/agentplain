@@ -99,13 +99,35 @@ import type { WorkApprovalKind, WorkApprovalStatus } from "@prisma/client";
 // path; keeping one convention rather than two.
 import type { RenderedApproval } from "@/app/(product)/app/workspace/[id]/approvals/renderApprovalPayload";
 
-/** The two statuses that mean "accepted". See the header. */
-const ACCEPTED_STATUSES: ReadonlySet<string> = new Set([
+export type AcceptedApprovalStatus = "APPROVED" | "AUTO_APPROVED";
+
+/**
+ * The two statuses that mean "accepted", as an ORDERED LIST. See the header.
+ *
+ * A list as well as a Set because consumers need both shapes and must not keep
+ * two copies. `isAcceptedStatus` answers "is THIS row accepted?" for code
+ * holding one status; a Prisma `where: { status: { in: ... } }` cannot call a
+ * predicate and needs the values themselves. The customer-facing approvals
+ * page is exactly that second consumer.
+ *
+ * Both derive from THIS array, so a third accepted status reaches the
+ * predicate and every query together. The alternative -- a query hand-rolling
+ * `["APPROVED"]` beside a predicate that also covers AUTO_APPROVED -- is the
+ * mistake this module's header already warns about, and it fails SILENTLY:
+ * the surface simply never shows threshold-accepted rows and looks correct.
+ *
+ * lib/approvals/__tests__/stored-artifact.test.ts asserts the two derivations
+ * agree, across every member of the generated Prisma enum.
+ */
+export const ACCEPTED_APPROVAL_STATUSES: readonly AcceptedApprovalStatus[] = [
   "APPROVED",
   "AUTO_APPROVED",
-]);
+];
 
-export type AcceptedApprovalStatus = "APPROVED" | "AUTO_APPROVED";
+/** The same two values as a membership set. Derived, never re-typed. */
+const ACCEPTED_STATUSES: ReadonlySet<string> = new Set(
+  ACCEPTED_APPROVAL_STATUSES,
+);
 
 /**
  * The single accepted-class predicate. Every seam and every consumer uses

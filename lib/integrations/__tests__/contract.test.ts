@@ -11,7 +11,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { GoogleOAuth } from '../google/oauth';
+import { GoogleOAuth, GOOGLE_GMAIL_SCOPES } from '../google/oauth';
 import { TestIntegrationProvider } from '../test-provider';
 import type { TokenSet } from '../types';
 
@@ -267,9 +267,14 @@ describe('GoogleOAuth — token exchange', () => {
 
   it('buildAuthorizationUrl encodes scopes + access_type=offline + prompt=consent', () => {
     const oauth = new GoogleOAuth({ clientId: 'cid', clientSecret: 's' });
+    // `scopes` became REQUIRED 2026-09-13. This case previously omitted it and
+    // asserted on the hardcoded fallback -- which is precisely the fallback
+    // that let the Gmail authorize branch discard its argument unnoticed, so
+    // the test was pinning the defect in place.
     const url = oauth.buildAuthorizationUrl({
       redirectUri: 'https://app.example/callback',
       state: 'nonce-1',
+      scopes: GOOGLE_GMAIL_SCOPES,
     });
     const parsed = new URL(url);
     assert.equal(parsed.origin, 'https://accounts.google.com');
@@ -278,7 +283,25 @@ describe('GoogleOAuth — token exchange', () => {
     assert.equal(parsed.searchParams.get('prompt'), 'consent');
     assert.equal(parsed.searchParams.get('state'), 'nonce-1');
     const scopes = (parsed.searchParams.get('scope') ?? '').split(' ');
-    assert.ok(scopes.includes('https://www.googleapis.com/auth/gmail.readonly'));
+    assert.ok(scopes.includes('https://www.googleapis.com/auth/gmail.modify'));
+    assert.ok(scopes.includes('https://www.googleapis.com/auth/calendar.events'));
+    // gmail.modify supersedes gmail.readonly -- we request one, not both.
+    assert.ok(!scopes.includes('https://www.googleapis.com/auth/gmail.readonly'));
+  });
+
+  it('buildAuthorizationUrl refuses to invent a scope set', () => {
+    // The silent default is gone on purpose. Consenting to something the
+    // caller never asked for is how the catalog and the wire drifted apart.
+    const oauth = new GoogleOAuth({ clientId: 'cid', clientSecret: 's' });
+    assert.throws(
+      () =>
+        oauth.buildAuthorizationUrl({
+          redirectUri: 'https://app.example/callback',
+          state: 'nonce-1',
+          scopes: [],
+        }),
+      /scopes.*required/i,
+    );
   });
 
   it('throws on construction without clientId / clientSecret', () => {

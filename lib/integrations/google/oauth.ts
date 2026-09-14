@@ -38,21 +38,91 @@ const GOOGLE_REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
 const GOOGLE_USERINFO_URL = 'https://openidconnect.googleapis.com/v1/userinfo';
 
 /**
- * Scopes requested at OAuth time. Least privilege for PR-B's plumbing
- * needs: read mailbox content + read-only userinfo. PR-C may add
- * `gmail.modify` to the OAuth consent screen when it lands the
- * draft-creation step — that requires a re-grant flow, surfaced to the
- * operator UI when PR-C ships.
+ * The Google scope sets agentplain requests at consent time.
  *
- * `openid` + `email` + `profile` are needed to receive an id_token with
- * the `sub` claim (stable account identifier) and the verified email.
+ * THIS IS THE SOURCE OF TRUTH FOR THE GOOGLE OAUTH VERIFICATION SUBMISSION.
+ * Google reviews each requested scope individually, and `gmail.modify` sits
+ * in Google's RESTRICTED tier (annual third-party security assessment).
+ * Every scope added here enlarges that review, so each one below names the
+ * feature that requires it. An unjustifiable scope is worse than a missing
+ * one.
+ *
+ *   openid / email / profile  -- tier: non-sensitive
+ *     Identity. `openid` + `profile` yield the id_token `sub` claim, which
+ *     is persisted as `IntegrationCredential.accountId` and is the upsert
+ *     key for the credential row. `email` yields the verified address shown
+ *     on the connections page and passed to `refreshTokens({ accountEmail })`.
+ *
+ *   gmail.modify  -- tier: RESTRICTED
+ *     Required by two live write paths, NEITHER of which `gmail.readonly`
+ *     can perform:
+ *       - `users.drafts.create` -- the approval draft handoff writes an
+ *         approved reply into the customer's own Gmail Drafts folder.
+ *         Caller: `client.users.drafts.create` in
+ *         lib/integrations/gmail-mcp/server.ts.
+ *       - `users.messages.modify` -- the `labelMessage` and `archive` MCP
+ *         tools apply triage labels. Caller:
+ *         `client.users.messages.modify` in the same file.
+ *     `gmail.modify` supersedes `gmail.readonly`; we request ONE, not both.
+ *     We deliberately do NOT request `gmail.send`, `gmail.compose` or
+ *     `https://mail.google.com/` -- per the no-outbound rule nothing is ever
+ *     sent unattended, and a draft is created with `gmail.modify` alone.
+ *
+ *   calendar.events  -- tier: sensitive
+ *     Required by the Google Calendar MCP tool surface
+ *     (lib/integrations/google-calendar-mcp/). There is no separate Calendar
+ *     tile, and the calendar MCP resolves the SAME GOOGLE credential row, so
+ *     this scope must ride on the Gmail consent or the calendar tools have
+ *     no grant to run under. We do NOT request the full `calendar` scope,
+ *     which additionally grants calendar-list management we never call.
+ *
+ *   drive.file  -- tier: non-sensitive
+ *     Required by the Google Drive MCP (lib/integrations/google-drive-mcp/)
+ *     for `files.create`, and for `permissions.create` on files this app
+ *     created. Per-file access only.
+ *
+ * REMOVED 2026-09-13 -- `drive.readonly`. It is RESTRICTED, it would pull an
+ * annual third-party security assessment into the verification review, and
+ * it buys a capability the product can live without. See GOOGLE_DRIVE_SCOPES
+ * for exactly what that costs.
+ *
+ * REMOVED 2026-09-13 -- `gmail.readonly`. Superseded by `gmail.modify`;
+ * requesting both asks the reviewer to justify the same access twice.
  */
-export const GOOGLE_DEFAULT_SCOPES = [
-  'openid',
-  'email',
-  'profile',
-  'https://www.googleapis.com/auth/gmail.readonly',
+export const GOOGLE_IDENTITY_SCOPES = ['openid', 'email', 'profile'] as const;
+
+/**
+ * Scopes transmitted by the Gmail tile.
+ */
+export const GOOGLE_GMAIL_SCOPES = [
+  ...GOOGLE_IDENTITY_SCOPES,
+  'https://www.googleapis.com/auth/gmail.modify',
+  'https://www.googleapis.com/auth/calendar.events',
 ] as const;
+
+/**
+ * Scopes transmitted by the Google Drive tile. Merges with the Gmail grant
+ * via `include_granted_scopes=true`, so one Google account powers both.
+ *
+ * CAPABILITY COST of dropping `drive.readonly`: `files.list`, `files.get`
+ * and `files.export` return ONLY files this app created or that the user
+ * explicitly opened with it, and `permissions.create` can share only those
+ * same files. Reading or sharing a pre-existing document the customer
+ * created elsewhere in their Drive is not possible under `drive.file`.
+ */
+export const GOOGLE_DRIVE_SCOPES = [
+  'https://www.googleapis.com/auth/drive.file',
+] as const;
+
+/**
+ * Every Google scope agentplain can transmit, across every tile. This list
+ * must match the Google Cloud Console consent-screen configuration exactly:
+ * a scope in the console that is not here is unjustifiable at review, and a
+ * scope here that is not in the console breaks the flow at consent.
+ */
+export const GOOGLE_ALL_SCOPES: readonly string[] = Array.from(
+  new Set<string>([...GOOGLE_GMAIL_SCOPES, ...GOOGLE_DRIVE_SCOPES]),
+);
 
 export interface GoogleOAuthConfig {
   clientId: string;
@@ -90,18 +160,32 @@ export class GoogleOAuth {
   /**
    * Build the URL the browser should redirect to. Compose with
    * `generateState()` upstream.
+   *
+   * `scopes` is REQUIRED and has deliberately NO default. It used to fall
+   * back to a hardcoded constant, which meant a caller could hand this
+   * method a scope set and have it silently ignored -- which is exactly what
+   * the Gmail branch of `buildAuthorizeUrl` did, so the marketplace catalog
+   * and the wire disagreed for the life of the connector. Measured
+   * 2026-09-13. Callers pass GOOGLE_GMAIL_SCOPES / GOOGLE_DRIVE_SCOPES.
    */
   buildAuthorizationUrl(args: {
     redirectUri: string;
     state: string;
-    scopes?: readonly string[];
+    scopes: readonly string[];
     loginHint?: string;
   }): string {
+    // Runtime guard as well as the type: the type does not bind a JS caller,
+    // and an empty array would transmit `scope=` and consent to nothing.
+    if (!args.scopes || args.scopes.length === 0) {
+      throw new Error(
+        'GoogleOAuth.buildAuthorizationUrl: `scopes` is required and must be non-empty. There is no default -- a silent fallback is how the catalog and the wire drifted apart.',
+      );
+    }
     const params = new URLSearchParams({
       client_id: this.clientId,
       redirect_uri: args.redirectUri,
       response_type: 'code',
-      scope: (args.scopes ?? GOOGLE_DEFAULT_SCOPES).join(' '),
+      scope: args.scopes.join(' '),
       access_type: 'offline',
       prompt: 'consent',
       state: args.state,

@@ -264,14 +264,46 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   const accountEmail = profile.mail ?? profile.userPrincipalName;
   const expiresInSec = typeof parsed.expires_in === "number" ? parsed.expires_in : 3600;
-  const scopes = (parsed.scope ?? "").split(/\s+/).filter(Boolean);
+  const grantedScopes = (parsed.scope ?? "").split(/\s+/).filter(Boolean);
+
+  // MERGE onto the shared M365 row rather than overwriting it.
+  //
+  // Outlook, Teams, OneDrive and Excel all persist to ONE
+  // IntegrationCredential row per workspace (provider=M365, keyed by
+  // accountId). This callback used to write `scopes: <this grant only>`
+  // while the sibling callback at /api/integrations/microsoft/oauth/callback
+  // merged -- so connecting Outlook AFTER Teams silently erased the Teams
+  // scopes from the row. Every Teams tool then read as authorized and 403'd
+  // at Graph. Measured 2026-09-13.
+  //
+  // We union ONLY what Microsoft actually granted with what the row already
+  // held. The previous fallback to a hardcoded
+  // ["Mail.Read", "Mail.ReadWrite", "offline_access"] when the token response
+  // carried no `scope` is gone: recording a scope the token may not carry is
+  // how a connector reads as live and then fails at the first call. An empty
+  // granted set is recorded as empty, which is the honest answer.
+  const existing = await withSystemContext((tx) =>
+    tx.integrationCredential.findUnique({
+      where: {
+        workspaceId_provider_accountId: {
+          workspaceId,
+          provider: "M365",
+          accountId: profile.id,
+        },
+      },
+      select: { scopes: true },
+    }),
+  );
+  const scopes = Array.from(
+    new Set([...(existing?.scopes ?? []), ...grantedScopes]),
+  );
 
   // Encrypt + persist.
   const enc = encryptTokenSet({
     accessToken: parsed.access_token,
     refreshToken: parsed.refresh_token,
     expiresAt: new Date(Date.now() + expiresInSec * 1000),
-    scopes: scopes.length > 0 ? scopes : ["Mail.Read", "Mail.ReadWrite", "offline_access"],
+    scopes,
     accountId: profile.id,
     accountEmail,
   });

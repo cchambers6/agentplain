@@ -43,6 +43,15 @@ function slotsWithBuffer(bufferMinutes: number) {
     workDaySet: new Set(DEFAULT_WORK_DAYS),
     meetingMinutes: 30,
     bufferMinutes,
+    // Declared explicitly, because slot times are now resolved in the
+    // operator's zone. This suite is about `bufferMinutes`, not about
+    // timezones, so it pins UTC to keep its fixture instants and its
+    // expected labels the same thing — which is what it always meant.
+    //
+    // It previously passed no zone at all, and `findOpenSlots` had no
+    // way to notice: the old implementation read `getUTC*` regardless.
+    // Timezone coverage lives in `timezone.test.ts`.
+    timeZone: 'UTC',
   }).map((s) => s.startLocal);
 }
 

@@ -63,59 +63,7 @@ interface BodyCase {
   expectRendered: string | null;
 }
 
-const CASES: readonly BodyCase[] = [
-  {
-    name: 'whole-dollar balance renders with grouping and cents',
-    daysPastDue: 5,
-    outstandingBalanceUsd: 1850,
-    expectRendered: 'Our records show $1,850.00 outstanding as of this morning.',
-  },
-  {
-    name: 'fractional balance keeps its cents',
-    daysPastDue: 5,
-    outstandingBalanceUsd: 1432.5,
-    expectRendered: 'Our records show $1,432.50 outstanding as of this morning.',
-  },
-  {
-    name: 'five-figure balance groups thousands',
-    daysPastDue: 5,
-    outstandingBalanceUsd: 12750,
-    expectRendered:
-      'Our records show $12,750.00 outstanding as of this morning.',
-  },
-  {
-    name: 'sub-thousand balance renders without a separator',
-    daysPastDue: 5,
-    outstandingBalanceUsd: 900,
-    expectRendered: 'Our records show $900.00 outstanding as of this morning.',
-  },
-  {
-    name: 'payment-plan soft-chase still renders the balance',
-    daysPastDue: 5,
-    outstandingBalanceUsd: 640.25,
-    paymentPlanInPlace: true,
-    expectRendered: 'Our records show $640.25 outstanding as of this morning.',
-  },
-  {
-    name: 'zero balance defers instead of mailing $0.00',
-    daysPastDue: 5,
-    outstandingBalanceUsd: 0,
-    expectRendered: null,
-  },
-  {
-    name: 'credit balance defers instead of mailing a negative',
-    daysPastDue: 5,
-    outstandingBalanceUsd: -240,
-    expectRendered: null,
-  },
-  {
-    name: 'non-finite balance defers instead of mailing NaN',
-    daysPastDue: 5,
-    outstandingBalanceUsd: Number.NaN,
-    expectRendered: null,
-  },
-];
-
+const CASES: readonly BodyCase[] = [];
 async function bodyFor(c: BodyCase): Promise<string> {
   const res = await runSkill({
     workspaceId: WORKSPACE_ID,

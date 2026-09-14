@@ -19,7 +19,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { randomBytes } from 'node:crypto';
 import { sealData } from 'iron-session';
-import { GoogleOAuth } from '@/lib/integrations/google/oauth';
+import { GoogleOAuth, GOOGLE_GMAIL_SCOPES } from '@/lib/integrations/google/oauth';
 import { requireUser } from '@/lib/auth/server';
 import { env } from '@/lib/env';
 
@@ -82,9 +82,16 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   });
 
   const redirectUri = new URL('/api/auth/oauth/google/callback', env.appPublicOrigin()).toString();
+  // This legacy operator connect route is a SECOND path that builds a Google
+  // authorize URL -- it does not go through `buildAuthorizeUrl` in
+  // lib/integrations/oauth-urls.ts, so fixing the dispatcher alone would have
+  // left this route still transmitting the old hardcoded default. It lands on
+  // the same /api/auth/oauth/google/callback as the Gmail tile, so it must
+  // request the same set. Found + fixed 2026-09-13.
   const authorizeUrl = oauth.buildAuthorizationUrl({
     redirectUri,
     state,
+    scopes: GOOGLE_GMAIL_SCOPES,
     loginHint: session.email,
   });
 

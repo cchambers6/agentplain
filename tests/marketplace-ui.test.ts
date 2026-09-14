@@ -196,6 +196,43 @@ describe("marketplace catalog", () => {
     assert.ok(examined > 0, `examined ${examined} scopes — corpus is empty, the check saw nothing`);
   });
 
+  it("the in-process calendar MCPs have a tile that actually requests a calendar scope", () => {
+    // `google-calendar-mcp` and `outlook-calendar-mcp` are consumed in-process
+    // (scheduler fetchers, b2b-sales-rep-pre-call-brief) and are NOT marketplace
+    // tiles of their own. Each resolves its credential by delegating to the mail
+    // MCP's resolver — google-calendar-mcp/auth.ts -> gmail-mcp/auth.ts, and
+    // outlook-calendar-mcp/auth.ts -> outlook-mcp/auth.ts — so the row they read
+    // is the one the Gmail / Outlook connect flow writes. If the tile that owns
+    // that row never asks for a calendar scope, every calendar call 403s at the
+    // provider and nothing in the catalog notices, because there is no calendar
+    // tile to check.
+    //
+    // This is deliberately keyed on the OWNING tile, not on a calendar tile
+    // existing. A calendar tile appearing is a separate (and currently guarded
+    // against) event — see marketplace-smoke.test.ts.
+    const OWNING_TILE_FOR_CALENDAR_MCP: ReadonlyArray<[string, string]> = [
+      ["google-calendar-mcp", "gmail"],
+      ["outlook-calendar-mcp", "outlook"],
+    ];
+    let checked = 0;
+    for (const [mcpModule, tileId] of OWNING_TILE_FOR_CALENDAR_MCP) {
+      const entry = getMarketplaceEntry(tileId);
+      assert.ok(entry, `${mcpModule} expects tile "${tileId}" to exist`);
+      assert.equal(entry.status, "available", `${tileId} is connectable`);
+      assert.ok(
+        entry.scopes.some((s) => /calendar/i.test(s)),
+        `${mcpModule} reads the credential written by the "${tileId}" connect flow, ` +
+          `but that flow requests no calendar scope (requested: ${entry.scopes.join(", ")})`,
+      );
+      checked += 1;
+    }
+    assert.equal(
+      checked,
+      OWNING_TILE_FOR_CALENDAR_MCP.length,
+      `examined ${checked} of ${OWNING_TILE_FOR_CALENDAR_MCP.length} calendar MCP pairings`,
+    );
+  });
+
   it("every entry exposes scope display + a /api/integrations/<slug>-mcp template", () => {
     // Wave-5 introduced API-key providers (TaxDome, Karbon) that do NOT
     // request OAuth scopes — they authenticate with a static key from the

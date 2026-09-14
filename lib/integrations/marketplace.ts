@@ -155,11 +155,14 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     id: 'gmail',
     name: 'Gmail',
     category: 'Email',
-    // "schedule" removed 2026-08-11: the Gmail connect flow requests no
-    // calendar scope, so every scheduling call through this connector fails
-    // at Google with a 403 the customer never sees. The claim comes back the
-    // day a calendar scope ships — `checkConnectorActionScopes` enforces the
-    // pairing now.
+    // "schedule" was removed from this copy 2026-08-11 because no calendar
+    // scope was requested. A calendar scope now IS requested (see `scopes`),
+    // but it is READ-only, and reading a calendar does not book a meeting —
+    // so the "schedule" claim deliberately stays off this tile. Note that
+    // `checkConnectorActionScopes` matches its calendar rule on /calendar/i,
+    // which `calendar.readonly` satisfies: the gate would NOT stop someone
+    // re-adding "schedule" to this copy today. Putting the claim back is a
+    // decision that needs write scope first, not just a green check.
     description:
       'Your service partner connects your Gmail to read, categorize, coordinate, and draft replies.',
     mcpEndpointTemplate: '/api/integrations/gmail-mcp/{workspaceId}',
@@ -178,6 +181,22 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     //
     // `gmail.send` is deliberately absent per `project_no_outbound_architecture.md`.
     // `gmail.compose` CREATES drafts; it does not send.
+    //
+    // `calendar.readonly` is here, on the GMAIL tile rather than on a calendar
+    // tile of its own, because `google-calendar-mcp` is built to ride this
+    // exact credential: `google-calendar-mcp/auth.ts` delegates straight to
+    // `gmail-mcp/auth.ts`, and IntegrationCredential is unique on
+    // (workspaceId, provider, accountId) — one Google account cannot hold a
+    // second GOOGLE row to put calendar scopes in. Google's
+    // `include_granted_scopes=true` (already set in `google/oauth.ts`) is the
+    // documented mechanism for exactly this.
+    //
+    // READ-only on purpose. The only production consumers are read paths
+    // (`lib/skills/scheduler/google-calendar-fetcher.ts` and
+    // `lib/inngest/functions/b2b-sales-rep-pre-call-brief.ts`).
+    // `BOOK_MEETING`/`RESCHEDULE_MEETING` exist in the MCP but have no caller
+    // outside their own module, so requesting `calendar.events` write access
+    // today would be privilege we do not use.
     scopes: [
       'openid',
       'email',
@@ -185,6 +204,7 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
       'https://www.googleapis.com/auth/gmail.readonly',
       'https://www.googleapis.com/auth/gmail.modify',
       'https://www.googleapis.com/auth/gmail.compose',
+      'https://www.googleapis.com/auth/calendar.readonly',
     ],
     oauthConfigKey: 'GMAIL_OAUTH',
     status: 'available',
@@ -199,9 +219,11 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     id: 'outlook',
     name: 'Outlook',
     category: 'Email',
-    // "schedule" removed 2026-08-11: no Calendars.* scope is requested (see
-    // `scopes` below), so scheduling through this connector fails at Graph.
-    // Same rule as Gmail — the claim returns with the scope.
+    // "schedule" was removed from this copy 2026-08-11 because no Calendars.*
+    // scope was requested. `Calendars.Read` is now requested (see `scopes`),
+    // but it is READ-only, so the "schedule" claim stays off — same rule as
+    // Gmail, and same caveat: the /calendar/i gate would not catch it coming
+    // back, so that decision needs write scope, not a green check.
     description:
       'Your service partner connects your Outlook mailbox to read, categorize, coordinate, and draft replies.',
     mcpEndpointTemplate: '/api/integrations/outlook-mcp/{workspaceId}',
@@ -209,7 +231,15 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     // for creating drafts via POST /me/messages; we deliberately do NOT
     // request `Mail.Send` (Outlook equivalent of `gmail.send`) per the
     // no-outbound rule. `offline_access` is required for refresh tokens.
-    scopes: ['Mail.Read', 'Mail.ReadWrite', 'offline_access'],
+    //
+    // `Calendars.Read` sits on this tile rather than a calendar tile of its
+    // own for the same reason Gmail carries the Google calendar scope:
+    // `outlook-calendar-mcp/auth.ts` delegates straight to
+    // `outlook-mcp/auth.ts`, so it reads the M365 row this connect writes.
+    // Read-only — `lib/skills/scheduler/outlook-calendar-fetcher.ts` is the
+    // consumer, and outlook-calendar-mcp is read-only by design (see the
+    // contract pinned in `lib/integrations/__tests__/marketplace-smoke.test.ts`).
+    scopes: ['Mail.Read', 'Mail.ReadWrite', 'Calendars.Read', 'offline_access'],
     oauthConfigKey: 'MICROSOFT_OAUTH',
     status: 'available',
     providerKey: 'M365',

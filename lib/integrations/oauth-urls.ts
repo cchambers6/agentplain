@@ -52,6 +52,11 @@ export function buildAuthorizeUrl(args: BuildAuthorizeUrlArgs): string {
     return oauth.buildAuthorizationUrl({
       redirectUri,
       state: args.state,
+      // Transmit the scopes we were handed. This branch previously omitted
+      // them, so `GoogleOAuth.buildAuthorizationUrl` fell through to a
+      // hardcoded default and Google was asked for `gmail.readonly` no
+      // matter what the marketplace catalog said. Measured 2026-09-13.
+      scopes: args.scopes,
     });
   }
   if (args.integrationId === "google-drive") {
@@ -193,6 +198,13 @@ export function buildAuthorizeUrl(args: BuildAuthorizeUrlArgs): string {
       "/api/integrations/notion/oauth/callback",
       args.origin,
     ).toString();
+    // Notion transmits NO scope parameter: capability is set by the
+    // integration type configured on Notion's side plus which pages the user
+    // shares, not by OAuth scopes. `args.scopes` is intentionally unused
+    // here, and the marketplace entry's `scopes` array is decorative. This
+    // is the one declared divergence between catalog and wire; it is
+    // asserted explicitly in tests/oauth-transmitted-scopes.test.ts so it
+    // stays a decision rather than a discovery.
     return buildNotionAuthorizeUrl({
       clientId: args.notionClientId,
       redirectUri,
@@ -227,6 +239,59 @@ export function buildAuthorizeUrl(args: BuildAuthorizeUrlArgs): string {
     });
   }
   throw new Error(`OAuth start not implemented for integration: ${args.integrationId}`);
+}
+
+/**
+ * The scope set `buildAuthorizeUrl` ACTUALLY transmits for a catalog entry.
+ *
+ * This exists because the catalog array and the wire disagreed: the Gmail
+ * branch discarded the `scopes` it was handed and fell back to a hardcoded
+ * default, so `marketplace.ts` declared one set and Google was asked for
+ * another. Any check that reads `entry.scopes` is checking the CLAIM, not
+ * the REQUEST, and would have passed that defect forever.
+ *
+ * Builds a throwaway authorize URL with placeholder client ids and reads the
+ * scope parameter back off it, so it measures the real code path rather than
+ * re-deriving what the code path ought to do.
+ *
+ * Returns `null` when the integration has no authorize-URL branch at all --
+ * nothing is transmitted because there is no OAuth start to transmit it.
+ * Callers decide what to do with that; it is NOT the same as "transmits
+ * nothing", which is `[]` (see Notion).
+ */
+export function transmittedScopes(entry: {
+  id: string;
+  scopes: readonly string[];
+}): string[] | null {
+  let url: string;
+  try {
+    url = buildAuthorizeUrl({
+      integrationId: entry.id,
+      scopes: [...entry.scopes],
+      state: "scope-probe",
+      origin: "https://scope-probe.invalid",
+      googleClientId: "scope-probe",
+      googleClientSecret: "scope-probe",
+      microsoftClientId: "scope-probe",
+      microsoftAuthority: "https://login.microsoftonline.com/common",
+      docusignClientId: "scope-probe",
+      docusignBaseUri: "https://account-d.docusign.com",
+      quickbooksClientId: "scope-probe",
+      slackClientId: "scope-probe",
+      hubspotClientId: "scope-probe",
+      salesforceClientId: "scope-probe",
+      salesforceLoginHost: "https://login.salesforce.com",
+      notionClientId: "scope-probe",
+    });
+  } catch {
+    return null;
+  }
+  const params = new URL(url).searchParams;
+  // Slack transmits user-token scopes as a comma-delimited `user_scope`;
+  // every other provider here uses a space-delimited `scope`.
+  const raw = params.get("scope") ?? params.get("user_scope");
+  if (raw === null) return [];
+  return raw.split(/[\s,]+/).filter(Boolean);
 }
 
 /**

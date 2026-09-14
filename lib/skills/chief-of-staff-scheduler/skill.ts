@@ -75,6 +75,26 @@ export async function runSkill(
   if (!snapshotRes.ok) return snapshotRes;
   const snapshot = snapshotRes.value;
 
+  // `localTimezone` is load-bearing from here down: business hours and
+  // every emitted slot string are expressed in it. Refuse rather than
+  // silently falling back to UTC.
+  //
+  // A fallback would be the worse failure by a wide margin. The wrong
+  // timezone does not look wrong — it produces well-formed proposals at
+  // plausible-looking times, which the operator then confirms. Six hours
+  // of silent error that reaches a customer's calendar beats a loud stop
+  // only if nobody notices, and this is exactly the class of defect that
+  // nobody notices.
+  if (!isValidTimeZone(snapshot.localTimezone)) {
+    return skillError(
+      'INVALID_INPUT',
+      `chief-of-staff snapshot carries an unusable IANA timezone ` +
+        `(${JSON.stringify(snapshot.localTimezone)}). Proposing nothing: ` +
+        `business hours and slot times are meaningless without it.`,
+      'INVALID_TIMEZONE',
+    );
+  }
+
   let meetingProposals = buildMeetingProposals({
     snapshot,
     now,
@@ -215,6 +235,8 @@ function buildMeetingProposals(args: BuildMeetingArgs): MeetingProposal[] {
     workDaySet,
     meetingMinutes,
     bufferMinutes,
+    // The operator's zone, not the server's and not UTC.
+    timeZone: snapshot.localTimezone,
   });
   const usedSlotKeys = new Set<string>();
 
@@ -273,19 +295,37 @@ interface FindSlotsArgs {
   meetingMinutes: number;
   /** Minutes of breathing room enforced on each side of a busy event. */
   bufferMinutes: number;
+  /**
+   * IANA zone from `ChiefOfStaffSnapshot.localTimezone`. Load-bearing:
+   * business hours and every emitted slot string are expressed in it.
+   */
+  timeZone: string;
 }
 
 /**
  * Walk every business-hour window in the lookahead range and return all
  * slots of `meetingMinutes` length that don't overlap a busy event.
- * Uses local UTC interpretation deliberately — production wiring will
- * pass timezone-aligned events; here we treat the calendar's `startUtc`
- * as the operator's local clock (the snapshot's `localTimezone` is
- * documentation for now — proper tz conversion lands when the calendar
- * adapter does).
+ *
+ * Business hours are the OPERATOR's wall clock, resolved through
+ * `args.timeZone`. Overlap is compared on absolute instants, which is
+ * timezone-independent and therefore unchanged.
  */
 function findOpenSlots(args: FindSlotsArgs): ProposedSlot[] {
   const { events, now, lookaheadDays, businessHours, workDaySet, meetingMinutes, bufferMinutes } = args;
+  // Guard, not a default. `new Intl.DateTimeFormat('en-US', { timeZone:
+  // undefined })` silently resolves to the HOST's zone, which would make
+  // every proposal depend on which machine the cron happened to run on —
+  // the same "plausible but wrong" failure this whole change removes,
+  // reintroduced one layer down. Caught by a pre-existing test that
+  // called this helper without a zone and passed on a developer box.
+  if (!isValidTimeZone(args.timeZone)) {
+    throw new Error(
+      `findOpenSlots: a valid IANA timeZone is required, got ` +
+        `${JSON.stringify(args.timeZone)}. Refusing to fall back to the ` +
+        `host timezone — slot times would depend on the machine.`,
+    );
+  }
+  const fmt = zonedFormatter(args.timeZone);
   const slots: ProposedSlot[] = [];
   // Sort busy events ascending — efficient overlap check. Each busy
   // interval is padded by `bufferMinutes` on BOTH sides so a proposed
@@ -308,8 +348,9 @@ function findOpenSlots(args: FindSlotsArgs): ProposedSlot[] {
   let cursor = cursorMs;
   while (cursor + slotMs <= endRangeMs) {
     const d = new Date(cursor);
-    const dayOfWeek = isoDayOfWeek(d);
-    const hour = d.getUTCHours();
+    const local = zonedParts(fmt, d);
+    const dayOfWeek = local.weekday;
+    const hour = local.hour;
     const inBusinessHours =
       hour >= businessHours.startLocalHour && hour < businessHours.endLocalHour;
     const onWorkDay = workDaySet.has(dayOfWeek);
@@ -325,8 +366,8 @@ function findOpenSlots(args: FindSlotsArgs): ProposedSlot[] {
     );
     if (!overlaps) {
       slots.push({
-        startLocal: formatLocal(new Date(slotStart)),
-        endLocal: formatLocal(new Date(slotEnd)),
+        startLocal: formatLocal(new Date(slotStart), fmt),
+        endLocal: formatLocal(new Date(slotEnd), fmt),
         dayOfWeek,
         rationale: 'First open window in business hours that does not overlap a busy event.',
       });
@@ -492,7 +533,8 @@ function buildTodoProposals(args: BuildTodoArgs): TodoProposal[] {
       sourceThreadId: msg.threadId,
       title: candidate.title,
       contextText: candidate.context,
-      suggestedDueLocal: candidate.suggestedDueLocal ?? suggestDueDate(now),
+      suggestedDueLocal:
+        candidate.suggestedDueLocal ?? suggestDueDate(now, snapshot.localTimezone),
       confidence: candidate.confidence,
       reasoning:
         'Inbound mentions a discrete action item; surfacing as a to-do for the ' +
@@ -559,53 +601,126 @@ function normalizeTitle(t: string): string {
   return t.toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
-function suggestDueDate(now: Date): string {
-  // Default suggested due: 3 business days out. Operator can edit.
+function suggestDueDate(now: Date, timeZone: string): string {
+  // Default suggested due: 3 business days out, counted on the
+  // OPERATOR's calendar. Near a date boundary the UTC day and the local
+  // day are different days, so counting in UTC could land a "Friday"
+  // due date on a Saturday for anyone west of Greenwich.
+  const fmt = zonedFormatter(timeZone);
   let d = new Date(now);
   let added = 0;
   while (added < 3) {
     d = new Date(d.getTime() + 24 * 60 * MS_PER_MIN);
-    const dow = isoDayOfWeek(d);
+    const dow = zonedParts(fmt, d).weekday;
     if (dow !== 'saturday' && dow !== 'sunday') added += 1;
   }
-  return formatLocalDateOnly(d);
+  return formatLocalDateOnly(d, fmt);
 }
 
 // ── Date / time helpers ─────────────────────────────────────────────────
+//
+// Everything below converts an absolute instant into the OPERATOR's wall
+// clock, using the IANA zone the fetcher resolved onto
+// `ChiefOfStaffSnapshot.localTimezone`.
+//
+// It used to use `getUTC*` accessors while naming the results "local".
+// The types were right all along — `ProposedSlot.startLocal` is documented
+// as "formatted YYYY-MM-DDTHH:MM in `localTimezone`", and `businessHours`
+// as "in `localTimezone`" — but the implementation read UTC and called it
+// local. For a Denver broker that is a six-hour error in both directions:
+// business hours 09:00–17:00 were enforced against 09:00–17:00 UTC
+// (02:00–10:00 Mountain), so proposals landed in the middle of the night
+// and every slot string was labelled with a wall-clock time the operator
+// does not keep.
+//
+// DST is handled by construction rather than by arithmetic: the cursor
+// walks ABSOLUTE instants and each one is re-projected into the zone, so
+// a spring-forward gap simply has no instants whose local hour falls in
+// it, and a fall-back repeat is visited twice at the correct local hour.
+
+const WEEKDAY_NAMES: readonly WorkDay[] = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+];
+
+/** True when the runtime's ICU accepts this IANA zone id. */
+export function isValidTimeZone(timeZone: string): boolean {
+  if (!timeZone) return false;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * One formatter per slot-finding run, not one per quarter-hour. Building
+ * an `Intl.DateTimeFormat` is expensive and the lookahead walk visits
+ * ~670 instants per fire. Deliberately NOT a module-level cache: per
+ * `feedback_cold_start_safe_agents.md` this file keeps no state between
+ * calls, and a formatter held across fires is state.
+ */
+function zonedFormatter(timeZone: string): Intl.DateTimeFormat {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    weekday: 'long',
+  });
+}
+
+interface ZonedParts {
+  year: string;
+  month: string;
+  day: string;
+  hour: number;
+  minute: string;
+  weekday: WorkDay;
+}
+
+function zonedParts(fmt: Intl.DateTimeFormat, d: Date): ZonedParts {
+  const parts = fmt.formatToParts(d);
+  const get = (type: string): string =>
+    parts.find((p) => p.type === type)?.value ?? '';
+  const weekday = get('weekday').toLowerCase() as WorkDay;
+  return {
+    year: get('year'),
+    month: get('month'),
+    day: get('day'),
+    // `hourCycle: 'h23'` keeps midnight at 00, not 24.
+    hour: Number(get('hour')),
+    minute: get('minute'),
+    weekday: WEEKDAY_NAMES.includes(weekday) ? weekday : 'monday',
+  };
+}
 
 function ceilToQuarterHour(ms: number): number {
   const fifteenMin = 15 * MS_PER_MIN;
   return Math.ceil(ms / fifteenMin) * fifteenMin;
 }
 
-function isoDayOfWeek(d: Date): WorkDay {
-  const dow = d.getUTCDay();
-  const names: WorkDay[] = [
-    'sunday',
-    'monday',
-    'tuesday',
-    'wednesday',
-    'thursday',
-    'friday',
-    'saturday',
-  ];
-  return names[dow];
+function isoDayOfWeek(d: Date, timeZone: string): WorkDay {
+  return zonedParts(zonedFormatter(timeZone), d).weekday;
 }
 
-function formatLocal(d: Date): string {
-  const yyyy = d.getUTCFullYear();
-  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const dd = String(d.getUTCDate()).padStart(2, '0');
-  const hh = String(d.getUTCHours()).padStart(2, '0');
-  const mi = String(d.getUTCMinutes()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+function formatLocal(d: Date, fmt: Intl.DateTimeFormat): string {
+  const p = zonedParts(fmt, d);
+  return `${p.year}-${p.month}-${p.day}T${String(p.hour).padStart(2, '0')}:${p.minute}`;
 }
 
-function formatLocalDateOnly(d: Date): string {
-  const yyyy = d.getUTCFullYear();
-  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const dd = String(d.getUTCDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
+function formatLocalDateOnly(d: Date, fmt: Intl.DateTimeFormat): string {
+  const p = zonedParts(fmt, d);
+  return `${p.year}-${p.month}-${p.day}`;
 }
 
 // ── Test helpers — exported for reuse in higher-level tests ─────────────
@@ -616,6 +731,9 @@ export const __testing = {
   mentionsScheduling,
   todoCandidateForMessage,
   normalizeTitle,
+  isoDayOfWeek,
+  isValidTimeZone,
+  suggestDueDate,
 };
 
 // Re-export TodoItem (silences "unused" linter under noUnusedLocals when

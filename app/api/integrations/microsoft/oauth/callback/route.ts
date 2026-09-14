@@ -265,6 +265,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   // Merge with any scopes already on the existing M365 row so subsequent
   // grants don't drop earlier consent. Each M365 integration adds its
   // scope set incrementally; the row's `scopes` is the running union.
+  //
+  // The union is over what was PREVIOUSLY HELD and what was ACTUALLY
+  // GRANTED. It deliberately no longer includes `entry.scopes` -- the
+  // catalog's REQUESTED set. Microsoft can grant less than was asked for
+  // (tenant policy routinely withholds OnlineMeetingTranscript.Read.All),
+  // and recording the request as though it were the grant is how a connector
+  // reads as live and then 403s at the first call. Fixed 2026-09-13.
   // IntegrationCredential is workspace-scoped RLS — system context for
   // the read so the policy resolves against app.is_operator='true'.
   const existing = await withSystemContext((tx) =>
@@ -280,7 +287,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     }),
   );
   const mergedScopes = Array.from(
-    new Set([...(existing?.scopes ?? []), ...grantedScopes, ...entry.scopes]),
+    new Set([...(existing?.scopes ?? []), ...grantedScopes]),
   );
 
   const enc = encryptTokenSet({

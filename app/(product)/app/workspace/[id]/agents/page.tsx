@@ -5,10 +5,16 @@ import { withRls } from "@/lib/db";
 import { listDisciplines, type DisciplineId } from "@/lib/disciplines";
 import { getActivationState } from "@/lib/disciplines/activation";
 import { AGENT_DISCIPLINE } from "@/lib/disciplines/skill-mapping";
+import { getCalendarConnectorState } from "@/lib/skills/scheduler/calendar-multiplex-fetcher";
 import { getVerticalContent } from "@/lib/verticals";
 import type { AgentRosterEntry } from "@/lib/verticals/types";
 import { AgentsFleetGrid } from "./AgentsFleetGrid";
-import { formatConnectors, liveRequiresSatisfied } from "./live-requires";
+import {
+  connectPrompt,
+  liveRequiresSatisfied,
+  needsCapabilityReconnect,
+  type RosterCapability,
+} from "./live-requires";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -28,39 +34,67 @@ export default async function AgentsPage({ params }: PageProps) {
   const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
   const ctx = { userId: member.userId, workspaceId, isOperator: false };
 
-  const [counts, workspace, activation, activeConnectorRows] = await Promise.all([
-    withRls(ctx, async (tx) => {
-      const grouped = await tx.handoffLogEntry.groupBy({
-        by: ["fromAgent"],
-        where: { workspaceId },
-        _count: { _all: true },
-      });
-      const byAgent = new Map<string, number>();
-      for (const row of grouped) {
-        byAgent.set(row.fromAgent, row._count._all);
-      }
-      return byAgent;
-    }),
-    withRls(ctx, (tx) =>
-      tx.workspace.findUniqueOrThrow({
-        where: { id: workspaceId },
-        select: { vertical: true },
+  const [counts, workspace, activation, activeConnectorRows, calendarState] =
+    await Promise.all([
+      withRls(ctx, async (tx) => {
+        const grouped = await tx.handoffLogEntry.groupBy({
+          by: ["fromAgent"],
+          where: { workspaceId },
+          _count: { _all: true },
+        });
+        const byAgent = new Map<string, number>();
+        for (const row of grouped) {
+          byAgent.set(row.fromAgent, row._count._all);
+        }
+        return byAgent;
       }),
-    ),
-    getActivationState(ctx, workspaceId),
-    // ACTIVE IntegrationCredential provider keys for this workspace.
-    // Powers the `liveRequires` check below — a roster card whose live
-    // status depends on a connector (e.g. chief-of-staff needs GOOGLE
-    // or M365 calendar) degrades honestly when nothing's connected.
-    withRls(ctx, (tx) =>
-      tx.integrationCredential.findMany({
-        where: { workspaceId, status: "ACTIVE" },
-        select: { provider: true },
+      withRls(ctx, (tx) =>
+        tx.workspace.findUniqueOrThrow({
+          where: { id: workspaceId },
+          select: { vertical: true },
+        }),
+      ),
+      getActivationState(ctx, workspaceId),
+      // ACTIVE IntegrationCredential provider keys for this workspace.
+      // Powers the `liveRequires` connector check below — a roster card
+      // whose live status depends on a connector degrades honestly when
+      // nothing's connected.
+      withRls(ctx, (tx) =>
+        tx.integrationCredential.findMany({
+          where: { workspaceId, status: "ACTIVE" },
+          select: { provider: true },
+        }),
+      ),
+      // CAPABILITY check, which the connector check above cannot make.
+      // Gmail and Google Calendar ride the same GOOGLE credential row, so
+      // "GOOGLE is connected" did NOT mean "we can read a calendar" — and
+      // this page rendered the Chief of Staff card LIVE on the strength
+      // of a mail connection while every calendar read 403'd at Google.
+      //
+      // `getCalendarConnectorState` is the function written for exactly
+      // this surface. It takes an injected reader so it runs under the
+      // MEMBER's RLS context here rather than the system context its cron
+      // caller uses — a page must not read wider than the person viewing
+      // it.
+      getCalendarConnectorState(workspaceId, {
+        readCredentials: (wsId) =>
+          withRls(ctx, (tx) =>
+            tx.integrationCredential.findMany({
+              where: {
+                workspaceId: wsId,
+                status: "ACTIVE",
+                provider: { in: ["GOOGLE", "M365"] },
+              },
+              select: { provider: true, scopes: true },
+            }),
+          ),
       }),
-    ),
-  ]);
+    ]);
   const activeConnectors = new Set<string>(
     activeConnectorRows.map((r) => r.provider),
+  );
+  const satisfiedCapabilities = new Set<RosterCapability>(
+    calendarState.readiness.ready ? (["calendar"] as const) : [],
   );
 
   const verticalSlug = verticalSlugFromEnum(workspace.vertical);
@@ -75,11 +109,24 @@ export default async function AgentsPage({ params }: PageProps) {
     // Truthful status — see prior derivation rules in
     // docs/realty-fleet-binding-2026-05-22.md.
     const isRooting = agent.runtime === "rooting";
-    const requiresOk = liveRequiresSatisfied(agent, activeConnectors);
+    const requiresOk = liveRequiresSatisfied(
+      agent,
+      activeConnectors,
+      satisfiedCapabilities,
+    );
     const requiresConnector =
       agent.runtime === "live" &&
       !requiresOk &&
       Array.isArray(agent.liveRequires?.connectors);
+    // Connector wired, capability missing — the customer already
+    // connected the account, so "connect X" would send them to a
+    // Connections page where everything looks green. They need to
+    // RE-consent with calendar access.
+    const capabilityMissing = needsCapabilityReconnect(
+      agent,
+      activeConnectors,
+      satisfiedCapabilities,
+    );
     const isLiveSkillBound =
       agent.runtime === "live" &&
       typeof agent.boundSkill === "string" &&
@@ -87,12 +134,11 @@ export default async function AgentsPage({ params }: PageProps) {
       requiresOk &&
       handoffCount === 0;
     // "connect to activate" wins over "ready/rooting" when a card's
-    // liveRequires connector list is unfulfilled. The customer's next
-    // step is to wire the integration; the agents page surfaces that
-    // explicitly with the connector list so the call to action is
-    // unambiguous.
+    // liveRequires precondition is unfulfilled. The customer's next
+    // step is to wire (or re-authorize) the integration; the agents page
+    // surfaces that explicitly so the call to action is unambiguous.
     const status = requiresConnector
-      ? `Connect ${formatConnectors(agent.liveRequires!.connectors)} to activate this capability`
+      ? connectPrompt(agent, { capabilityMissing })
       : isRooting
         ? agent.rootingNote ?? "Setting up — Plaino is getting ready."
         : isLiveSkillBound
@@ -149,8 +195,9 @@ export type AgentCard = {
   discipline: DisciplineId | null;
   disabled: boolean;
   /** True when the card's runtime is "live" but the workspace has not yet
-   *  connected one of the required integrations from `liveRequires`. The
-   *  grid renders this as a "connect to activate" affordance. */
+   *  satisfied its `liveRequires` precondition — either no connector is
+   *  wired, or a connector is wired without the scope the capability
+   *  needs. The grid renders this as a "connect to activate" affordance;
+   *  the card's `status` string says which of the two it is. */
   needsConnector: boolean;
 };
-

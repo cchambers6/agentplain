@@ -23,6 +23,7 @@
 
 import type { DisciplineId } from '@/lib/disciplines';
 import type { IntegrationSourcing } from './sourcing';
+import { GOOGLE_DRIVE_SCOPES, GOOGLE_GMAIL_SCOPES } from './google/oauth';
 
 export type MarketplaceStatus = 'available' | 'coming-soon' | 'beta';
 
@@ -155,15 +156,26 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     id: 'gmail',
     name: 'Gmail',
     category: 'Email',
-    // "schedule" removed 2026-08-11: the Gmail connect flow requests no
-    // calendar scope (GOOGLE_DEFAULT_SCOPES in lib/integrations/google/oauth.ts),
-    // so every scheduling call through this connector fails at Google with a
-    // 403 the customer never sees. The claim comes back the day a calendar
-    // scope ships — `checkConnectorActionScopes` enforces the pairing now.
+    // Scope history, 2026-09-13: this entry previously declared
+    // ['gmail.readonly', 'gmail.modify', 'gmail.compose'] -- bare short names
+    // that are not valid Google scope strings, and which were never
+    // transmitted anyway because the Gmail branch of `buildAuthorizeUrl`
+    // discarded them and fell back to a hardcoded `gmail.readonly` default.
+    // The catalog and the wire now cannot diverge: both read
+    // GOOGLE_GMAIL_SCOPES, and tests/oauth-transmitted-scopes.test.ts fails
+    // if the authorize URL stops carrying exactly this set.
+    //
+    // The "schedule" claim was removed from this copy on 2026-08-11 because
+    // no calendar scope was requested. `calendar.events` IS requested now
+    // (it is the only consent the Google Calendar MCP can run under), so the
+    // claim could return -- but restoring customer-facing copy is a product
+    // decision, not a plumbing one, so the copy is left alone here.
     description:
       'Your service partner connects your Gmail to read, categorize, coordinate, and draft replies.',
     mcpEndpointTemplate: '/api/integrations/gmail-mcp/{workspaceId}',
-    scopes: ['gmail.readonly', 'gmail.modify', 'gmail.compose'],
+    // Per-scope verification justification lives on GOOGLE_GMAIL_SCOPES in
+    // lib/integrations/google/oauth.ts. Do not hand-edit this array.
+    scopes: [...GOOGLE_GMAIL_SCOPES],
     oauthConfigKey: 'GMAIL_OAUTH',
     status: 'available',
     providerKey: 'GOOGLE',
@@ -228,13 +240,18 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
       'Your service partner reads the closing docs, contracts, and working files in your OneDrive and SharePoint libraries — then drops the next version back where you keep them.',
     mcpEndpointTemplate: '/api/integrations/onedrive-mcp/{workspaceId}',
     // Files.ReadWrite.All covers the user's personal OneDrive plus any
-    // SharePoint files they have access to via membership. Sites.ReadWrite.All
-    // is needed for SharePoint site-level operations (library listing,
-    // metadata reads) that ride alongside the file API. Shares the
+    // SharePoint files they have access to via membership. Shares the
     // Outlook OAuth app.
+    //
+    // `Sites.ReadWrite.All` was dropped 2026-09-13: it had NO caller. The
+    // OneDrive MCP only ever addresses `/me/drive/...` and
+    // `/drives/{driveId}/...` (lib/integrations/onedrive-mcp/server.ts); no
+    // code path calls a `/sites/` Graph endpoint. Site-level operations were
+    // described in this comment but never implemented, and a requested,
+    // unused, admin-consent-flavoured scope is exactly what a reviewer asks
+    // about. Restore it together with the caller, not before.
     scopes: [
       'Files.ReadWrite.All',
-      'Sites.ReadWrite.All',
       'offline_access',
     ],
     oauthConfigKey: 'MICROSOFT_OAUTH',
@@ -329,12 +346,16 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
     mcpEndpointTemplate: '/api/integrations/google-drive-mcp/{workspaceId}',
     // Drive reuses the Gmail Google OAuth app. These Drive scopes merge with
     // any already-granted Gmail scopes via include_granted_scopes, so one
-    // Google account can power both connectors. `drive.file` covers files we
-    // create/open; `drive.readonly` covers reading the customer's wider Drive.
-    scopes: [
-      'https://www.googleapis.com/auth/drive.file',
-      'https://www.googleapis.com/auth/drive.readonly',
-    ],
+    // Google account can power both connectors.
+    //
+    // `drive.readonly` was dropped 2026-09-13 ahead of Google verification:
+    // it is a RESTRICTED scope and would pull an annual third-party security
+    // assessment into the review. Under `drive.file` alone this connector
+    // can create files, and read/share the files it created -- it can NOT
+    // read or share a pre-existing document the customer created elsewhere
+    // in their Drive. That capability loss is deliberate and is recorded on
+    // GOOGLE_DRIVE_SCOPES.
+    scopes: [...GOOGLE_DRIVE_SCOPES],
     oauthConfigKey: 'GOOGLE_OAUTH',
     status: 'available',
     providerKey: 'GOOGLE',
@@ -358,6 +379,10 @@ export const MARKETPLACE_ENTRIES: MarketplaceEntry[] = [
       'groups:read',
       'groups:history',
       'chat:write',
+      // `im:write` KEPT 2026-09-13 -- it has a real caller. The Slack MCP
+      // opens a DM channel via `conversations.open` before posting
+      // (lib/integrations/slack-mcp/server.ts), which Slack requires
+      // `im:write` for. Audited as a drop candidate and retained.
       'im:write',
       'users:read',
       'search:read',

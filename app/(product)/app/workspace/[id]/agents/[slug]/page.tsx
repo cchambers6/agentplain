@@ -12,8 +12,14 @@ import {
   entryForProviderKey,
   type MarketplaceProviderKey,
 } from "@/lib/integrations/marketplace";
+import { getCalendarConnectorState } from "@/lib/skills/scheduler/calendar-multiplex-fetcher";
 import { getVerticalContent } from "@/lib/verticals";
-import { formatConnectors, liveRequiresSatisfied } from "../live-requires";
+import {
+  connectPrompt,
+  liveRequiresSatisfied,
+  needsCapabilityReconnect,
+  type RosterCapability,
+} from "../live-requires";
 
 interface PageProps {
   params: Promise<{ id: string; slug: string }>;
@@ -24,8 +30,13 @@ export default async function AgentDetailPage({ params }: PageProps) {
   const member = await requireWorkspaceMember(workspaceId, ["BROKER_OWNER"]);
   const ctx = { userId: member.userId, workspaceId, isOperator: false };
 
-  const [pendingItems, recentHandoffs, workspace, activeConnectorRows] =
-    await Promise.all([
+  const [
+    pendingItems,
+    recentHandoffs,
+    workspace,
+    activeConnectorRows,
+    calendarState,
+  ] = await Promise.all([
       withRls(ctx, (tx) =>
         tx.workApprovalQueueItem.findMany({
           where: { workspaceId, agentSlug, status: "PENDING" },
@@ -55,6 +66,21 @@ export default async function AgentDetailPage({ params }: PageProps) {
           select: { provider: true },
         }),
       ),
+      // Capability check — see the note on the fleet page. Runs under the
+      // MEMBER's RLS context, not the cron's system context.
+      getCalendarConnectorState(workspaceId, {
+        readCredentials: (wsId) =>
+          withRls(ctx, (tx) =>
+            tx.integrationCredential.findMany({
+              where: {
+                workspaceId: wsId,
+                status: "ACTIVE",
+                provider: { in: ["GOOGLE", "M365"] },
+              },
+              select: { provider: true, scopes: true },
+            }),
+          ),
+      }),
     ]);
 
   // Resolve the slug to its human name + job from the workspace's vertical
@@ -72,13 +98,23 @@ export default async function AgentDetailPage({ params }: PageProps) {
   const activeConnectors = new Set<string>(
     activeConnectorRows.map((r) => r.provider),
   );
+  const satisfiedCapabilities = new Set<RosterCapability>(
+    calendarState.readiness.ready ? (["calendar"] as const) : [],
+  );
   const neededConnectors =
     agent &&
     agent.runtime === "live" &&
     Array.isArray(agent.liveRequires?.connectors) &&
-    !liveRequiresSatisfied(agent, activeConnectors)
+    !liveRequiresSatisfied(agent, activeConnectors, satisfiedCapabilities)
       ? agent.liveRequires.connectors
       : null;
+  // Connector wired but capability missing: the customer already
+  // connected this account. Sending them to the same Connect button
+  // would show them a tile that already says "connected". They need to
+  // re-authorize with calendar access.
+  const capabilityMissing = agent
+    ? needsCapabilityReconnect(agent, activeConnectors, satisfiedCapabilities)
+    : false;
   const neededEntry =
     neededConnectors
       ?.map((key) =>
@@ -115,7 +151,7 @@ export default async function AgentDetailPage({ params }: PageProps) {
                 : `/app/workspace/${workspaceId}/integrations`
             }
           >
-            Connect {formatConnectors(neededConnectors)} to activate
+            {agent ? connectPrompt(agent, { capabilityMissing }) : null}
           </ApHeritageButton>
         </div>
       ) : null}

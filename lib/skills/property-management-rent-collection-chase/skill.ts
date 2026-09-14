@@ -11,7 +11,13 @@
  *   - friendly + direct
  *   - never commit to a repair / maintenance timeline — defer with
  *     `{{operator: maintenance ETA}}`
- *   - never quote a specific dollar amount in the body
+ *   - the dollar-amount deferral in that guidance is scoped to OWNER
+ *     conversations ("With owners: be plain-spoken about money; defer
+ *     specific dollar amounts to the operator."). These drafts go to
+ *     TENANTS, for whom the guidance sets no such rule. The soft-chase
+ *     body therefore renders the rent-roll balance inline when it is
+ *     positive, and defers to {{operator: amount due}} only when we do
+ *     not hold a figure worth quoting. See `renderBalanceLine` below.
  *
  * Per `project_no_outbound_architecture.md`: DRAFTS only.
  */
@@ -162,8 +168,7 @@ function renderTenantChase(args: {
       }
       lines.push('');
       lines.push(
-        'For balance and processing detail, the easiest source is your tenant ' +
-          'portal. {{operator: amount due}} on our side as of this morning.',
+        renderBalanceLine(unit.outstandingBalanceUsd),
       );
       break;
     case 'formal-notice':
@@ -241,6 +246,45 @@ function renderTenantChase(args: {
     confidence,
     persisted: false,
   };
+}
+
+/** USD formatter pinned to en-US so the rendered figure is byte-identical
+ *  regardless of the host locale the Inngest worker happens to run under. */
+const USD_FORMATTER = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/**
+ * The balance sentence in the soft-chase body.
+ *
+ * The rent roll already carries the figure, so blanking it out asks a human
+ * to re-key a number we are holding on the same record.
+ *
+ * The fallback is load-bearing, not decoration. `outstandingBalanceUsd` is
+ * `?? 0` on the JSON seed path (`json-fetcher.ts`), and Buildium can report a
+ * zero or credit balance for a lease that is past due on days but square on
+ * money. An unconditional render would mail a tenant "$0.00 outstanding".
+ * A non-positive or non-finite balance means we do not hold a figure worth
+ * quoting, and the operator merge field is the honest output for that case.
+ *
+ * The tenant portal stays named as the tenant-facing source of truth, and the
+ * figure is qualified "as of this morning": our number is a point-in-time read
+ * of the rent roll, not a live ledger.
+ */
+export function renderBalanceLine(outstandingBalanceUsd: number): string {
+  const prefix =
+    'For balance and processing detail, the easiest source is your tenant ' +
+    'portal. ';
+  if (!Number.isFinite(outstandingBalanceUsd) || outstandingBalanceUsd <= 0) {
+    return `${prefix}{{operator: amount due}} on our side as of this morning.`;
+  }
+  return (
+    `${prefix}Our records show ${USD_FORMATTER.format(outstandingBalanceUsd)} ` +
+    'outstanding as of this morning.'
+  );
 }
 
 function renderSubject(args: {

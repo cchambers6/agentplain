@@ -27,6 +27,12 @@
 
 import { buildQuickbooksMcpServer } from '@/lib/integrations/quickbooks-mcp';
 import type { QuickbooksMcpServer } from '@/lib/integrations/quickbooks-mcp';
+import { buildGmailMcpServer } from '@/lib/integrations/gmail-mcp';
+import type { GmailMcpServer } from '@/lib/integrations/gmail-mcp';
+import { readMonthEndCloseConfig } from '@/lib/skills/config';
+import type { MonthEndCloseConfig } from '@/lib/skills/config';
+import { GmailCloseFetcher } from './gmail-close-fetcher';
+import type { CloseFetcher } from './types';
 import { runSkill } from './skill';
 import { PrismaCloseApprovalPersister } from './prisma-approval-persister';
 import { QUICKBOOKS_NOT_CONNECTED_MESSAGE } from './quickbooks-fetcher';
@@ -34,12 +40,17 @@ import { QuickBooksCloseFetcher } from './quickbooks-fetcher';
 import type { DraftPersister } from '../types';
 import type { MonthEndCloseOutput } from './types';
 
-/** One client the firm services — enumerated from QuickBooks. */
+/** One client the firm services -- enumerated from QuickBooks. */
 export interface CpaClient {
   clientId: string;
-  /** Present only when QuickBooks has an email on file — clients without
+  /** Present only when QuickBooks has an email on file -- clients without
    *  one are skipped (the close needs a chase recipient). */
   hasEmail: boolean;
+  /** The email itself. Kept (it used to be discarded) because the Gmail
+   *  received-doc scan MUST be scoped to this client's correspondence --
+   *  an unscoped inbox scan would credit one client's bank statement to
+   *  another client's checklist. */
+  email?: string | null;
 }
 
 export interface RunMonthEndCloseForWorkspaceInput {
@@ -59,6 +70,32 @@ export interface RunMonthEndCloseForWorkspaceInput {
   buildPersister?: (workspaceId: string) => DraftPersister;
   /** Override the QuickBooks MCP server (tests inject a fixture server). */
   mcp?: QuickbooksMcpServer;
+  /**
+   * Gmail MCP server used to DETECT documents the client has already
+   * emailed. Production builds one per workspace; tests inject a fixture.
+   *
+   * Pass `null` to force the pre-fix QuickBooks-only behaviour (every
+   * checklist item pending-or-late). That is not a mode anyone should want;
+   * it exists so a test can pin the old shape.
+   */
+  gmail?: GmailMcpServer | null;
+  /** How far back the Gmail scan looks, in days. Default 60 -- a month-end
+   *  close runs on the PRIOR month, so a 30-day window can miss documents
+   *  emailed early in the period. */
+  gmailLookbackDays?: number;
+  /** Max messages scanned per client. Default 25 -- the GmailCloseFetcher's
+   *  own default. The scan is per-client (scoped `from:`), so a firm with
+   *  100 QuickBooks customers costs up to 100 list + 2,500 get calls per
+   *  monthly fire. Well inside Gmail quota at monthly cadence, but the
+   *  number is stated here rather than left to be discovered. */
+  gmailMaxMessages?: number;
+  /**
+   * Per-engagement scope source. Defaults to the workspace's SkillConfig
+   * row (`readMonthEndCloseConfig`), which is the only honest source that
+   * exists today -- QuickBooks carries no engagement-scope field. Injected
+   * in tests so no Postgres is required.
+   */
+  readConfig?: (workspaceId: string) => Promise<MonthEndCloseConfig>;
 }
 
 export interface MonthEndCloseForWorkspaceResult {
@@ -91,6 +128,7 @@ export async function runMonthEndCloseForWorkspace(
   const periodMonth = input.periodMonth ?? priorMonth(now);
   const mcp = input.mcp ?? buildQuickbooksMcpServer({ workspaceId: input.workspaceId });
   const listClients = input.listClients ?? defaultListClients(mcp);
+  const lookbackDays = input.gmailLookbackDays ?? 60;
   const buildPersister =
     input.buildPersister ?? (() => new PrismaCloseApprovalPersister());
 
@@ -118,16 +156,66 @@ export async function runMonthEndCloseForWorkspace(
   base.clientsConsidered = listed.clients.length;
   const persister = buildPersister(input.workspaceId);
 
+  // Read ONCE per fire, not per client: the scope map is workspace-scoped
+  // and a per-client read would be N decrypts for one row.
+  const readConfig = input.readConfig ?? ((ws: string) => readMonthEndCloseConfig(ws));
+  let scopeConfig: MonthEndCloseConfig;
+  try {
+    scopeConfig = await readConfig(input.workspaceId);
+  } catch (err) {
+    // A config read failure must not cancel a firm's close. Fall back to the
+    // documented default and say so.
+    console.warn(
+      `month-end-close-cpa: scope config read failed for ${input.workspaceId} (` +
+        `${err instanceof Error ? err.message : String(err)}) -- using full-stack-monthly`,
+    );
+    scopeConfig = { defaultScope: 'full-stack-monthly', scopeByClientId: {} };
+  }
+
+  const gmailServer =
+    input.gmail === null
+      ? null
+      : (input.gmail ?? buildGmailMcpServer({ workspaceId: input.workspaceId }));
+
   for (const client of listed.clients) {
     if (!client.hasEmail) {
       base.clientsSkippedNoEmail += 1;
       continue;
     }
     try {
-      const fetcher = new QuickBooksCloseFetcher({
+      // The engagement scope drives which documents the checklist
+      // enumerates. Without this, a tax-only client was chased for a
+      // payroll register and a sales-tax filing every single month: the
+      // option existed and was tested, and had no caller.
+      const scope =
+        scopeConfig.scopeByClientId[client.clientId] ?? scopeConfig.defaultScope;
+
+      // COMPOSITION, not replacement. QuickBooks owns the engagement and
+      // the checklist (it is the system of record for the customer); Gmail
+      // owns received-doc detection, because QuickBooksCloseFetcher's
+      // `fetchReceivedDocs` returns [] unconditionally and says so in its
+      // own header. Wiring QuickBooks alone made every item pending-or-late
+      // for every client, forever. `skill.ts` is unchanged -- the
+      // `CloseFetcher` port already permitted this.
+      const quickbooks = new QuickBooksCloseFetcher({
         workspaceId: input.workspaceId,
         mcp,
+        scope,
       });
+      const clientEmail = client.email?.trim();
+      const fetcher: CloseFetcher =
+        gmailServer && clientEmail
+          ? new GmailCloseFetcher({
+              base: quickbooks,
+              gmail: gmailServer,
+              // Scoped to THIS client's correspondence. An unscoped scan
+              // would credit one client's statement to another's checklist.
+              // No `has:attachment`: the extension allowlist is the real
+              // filter (see gmail-close-fetcher.ts).
+              query: `from:${clientEmail} newer_than:${lookbackDays}d`,
+              maxMessages: input.gmailMaxMessages ?? 25,
+            })
+          : quickbooks;
       const res = await runSkill({
         workspaceId: input.workspaceId,
         clientId: client.clientId,
@@ -197,6 +285,7 @@ function defaultListClients(mcp: QuickbooksMcpServer) {
       .map((c) => ({
         clientId: c.id,
         hasEmail: !!c.email && c.email.trim().length > 0,
+        email: c.email ?? null,
       }));
     return { ok: true as const, clients };
   };

@@ -303,6 +303,7 @@ export const STANDARDS: readonly StandardDescriptor[] = [
       blindTo: [
         'TWO VERBS. The rule vocabulary is deliberately tiny — "schedule" and "sign". Every other advertised action on every tile ("send", "file", "post", "sync") is unchecked. This is the standard in the roster with the narrowest declared coverage, and it is narrow on purpose: a fuzzy rule gets argued with and then ignored.',
         'Skips api-key tiles and coming-soon tiles entirely.',
+        'CORRECTED 2026-09-13: this checker previously validated the DECLARED scope array on the catalog entry. It now resolves what buildAuthorizeUrl actually transmits and validates that, because the two disagreed -- the Gmail branch discarded its scopes argument and fell through to a hardcoded default. It still falls back to the declaration for any tile with no authorize-URL branch, so a synthetic or unwired tile is judged on its claim, not on its request.',
         'Matches tile copy with a regex, so a claim phrased without the keyword ("get it on the calendar") is invisible.',
       ],
     }),

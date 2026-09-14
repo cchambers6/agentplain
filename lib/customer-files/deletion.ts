@@ -288,6 +288,29 @@ export interface TearDownWorkspaceDataResult {
  * shell would need to coordinate with billing reconciliation and is out of
  * scope here.
  */
+/**
+ * NOT DELETED HERE: ApprovalEvidence.
+ *
+ * The approval ledger is deliberately exempt from this teardown and from
+ * lib/storage/category-purge.ts. Conner, ratified: "we must save and track
+ * every single approval for legal reasons to save our hides if we get sued"
+ * -- which means the record has to outlive the workspace that produced it.
+ * Its workspaceId is nullable + SetNull (the shape AuditLog already uses),
+ * so closure severs the tenant link and leaves the row. Do not add
+ * `approvalEvidence` to the delete list below to make the counts symmetrical.
+ *
+ * While you are here: the header of this file claims the function is
+ * "Callable-only by design -- wired to nothing autoexec". THAT IS FALSE,
+ * verified at origin/main. THREE paths reach it:
+ *   1. cron '0 17 * * *' -- lib/inngest/functions/
+ *      unsupported-vertical-refund-sweep.ts -> closeLeakingWorkspace
+ *   2. cron '0 * * * *'  -- lib/customer-data/teardown-scheduler.ts
+ *   3. a CUSTOMER-FACING ONE-TAP BUTTON --
+ *      app/(product)/app/workspace/[id]/guarantee/actions.ts ->
+ *      lib/guarantee/walk-away.ts#executeWalkAway ->
+ *      lib/guarantee/delete-customer-data.ts
+ * The third is not a cron and not an admin action. It is the Day-7 walk-away.
+ */
 export async function tearDownWorkspaceData(
   args: TearDownWorkspaceDataArgs,
 ): Promise<TearDownWorkspaceDataResult> {

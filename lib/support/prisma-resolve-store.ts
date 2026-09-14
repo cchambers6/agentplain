@@ -150,6 +150,10 @@ export class PrismaSupportReplyStore implements SupportReplyStore {
       // PERSIST_FAILED so the operator sees it rather than a silent
       // double-approve.
       const decided = await applyApprovalDecisionTx(tx, {
+        // Operator context: ctx.userId is null under the system grant,
+        // so the evidence row records the SEAM explicitly rather than
+        // leaving a null actor to be misread as an auto-approval.
+        route: "operator",
         workspaceId: args.workspaceId,
         itemId: args.queueItemId,
         decision: "APPROVED",
@@ -228,6 +232,10 @@ export class PrismaSupportReplyStore implements SupportReplyStore {
       // racing an approve used to read PENDING, block on the lock, and
       // then overwrite the committed APPROVED row.
       await applyApprovalDecisionTx(tx, {
+        // Operator context: ctx.userId is null under the system grant,
+        // so the evidence row records the SEAM explicitly rather than
+        // leaving a null actor to be misread as an auto-approval.
+        route: "operator",
         workspaceId: args.workspaceId,
         itemId: args.queueItemId,
         decision: "REJECTED",

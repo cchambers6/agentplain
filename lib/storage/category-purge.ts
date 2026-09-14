@@ -119,6 +119,11 @@ export async function purgeCategory(
       }
       case 'approvals': {
         const approvals = (
+          // This deletes the DECIDED approvals — the evidence — from a
+          // self-serve control. ApprovalEvidence is deliberately NOT purged
+          // alongside it: the ledger is the legal record of what the customer
+          // approved and must survive their tidying up. See
+          // lib/approvals/evidence.ts. Do not add approvalEvidence here.
           await tx.workApprovalQueueItem.deleteMany({
             where: { workspaceId, status: { not: 'PENDING' } },
           })

@@ -15,6 +15,10 @@
 import type { Prisma } from "@prisma/client";
 import { withRls, type RlsContext } from "@/lib/db";
 import {
+  recordApprovalEvidenceTx,
+  type ApprovalEvidenceRoute,
+} from "./evidence";
+import {
   captureDraftEditSignal,
   captureDraftRejectSignal,
 } from "@/lib/preferences";
@@ -60,6 +64,13 @@ function clipNote(s: string): string {
 }
 
 export interface ApplyApprovalDecisionParams {
+  /**
+   * Which write seam is deciding, recorded on the evidence row so
+   * discovery can tell a named human from an agentplain operator
+   * without inferring it from a null actor id. Defaults to "human";
+   * lib/support/prisma-resolve-store.ts passes "operator".
+   */
+  route?: ApprovalEvidenceRoute;
   workspaceId: string;
   itemId: string;
   decision: ApprovalDecision;
@@ -170,6 +181,10 @@ export async function applyApprovalDecisionTx(
     );
   }
 
+  // Captured once so the evidence row carries the SAME instant as the
+  // queue item rather than a second `new Date()` microseconds later.
+  const decidedAt = new Date();
+
   // THE guard. `status: "PENDING"` in the WHERE is load-bearing -- see the
   // CONCURRENCY note above. Scoped by workspaceId as well as id so a
   // mismatched pair can never write across a tenant boundary even if RLS
@@ -182,7 +197,7 @@ export async function applyApprovalDecisionTx(
     },
     data: {
       status: params.decision,
-      decidedAt: new Date(),
+      decidedAt,
       decidedByUserId: params.actorUserId,
       decisionReason: params.reason,
     },
@@ -211,6 +226,39 @@ export async function applyApprovalDecisionTx(
         ...(params.auditPayloadExtra ?? {}),
       },
     },
+  });
+
+  // ── THE EVIDENCE WRITE ───────────────────────────────────────────────
+  // Inside this transaction, deliberately. A row written after the commit
+  // goes missing precisely when the transaction it describes failed and was
+  // retried — which is the case a plaintiff asks about. This is the carve-out
+  // executors.ts criterion A4 names: "If a kind's execution genuinely must be
+  // atomic with the decision, it does NOT belong here; it belongs inside
+  // `applyApprovalDecisionTx`."
+  //
+  // It is NOT wrapped in try/catch. A throw rolls this transaction back, so a
+  // decision never commits without its evidence. That is the whole design.
+  //
+  // REJECTED is recorded too, with its reason. A ledger containing only
+  // approvals reads, to opposing counsel, exactly like an auto-approver.
+  //
+  // `item.payload` is the payload AS DECIDED: the conditional updateMany above
+  // guarantees the row was PENDING at that instant, and editApprovalDraft
+  // cannot rewrite a non-PENDING row, so no edit can land between the read
+  // and this write.
+  await recordApprovalEvidenceTx(tx, {
+    workspaceId: params.workspaceId,
+    approvalItemId: params.itemId,
+    kind: item.kind,
+    agentSlug: item.agentSlug,
+    refTable: item.refTable,
+    refId: item.refId,
+    decision: params.decision as "APPROVED" | "REJECTED",
+    decisionReason: params.reason,
+    decidedAt,
+    decidedByUserId: params.actorUserId,
+    route: params.route ?? "human",
+    payload: item.payload,
   });
 
   const decrypted = decryptPayloadForRead(item.payload);

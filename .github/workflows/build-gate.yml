@@ -1,0 +1,62 @@
+# Build gate — the enforcement point for "does it compile".
+#
+# WHY THIS WORKFLOW EXISTS (2026-09-14): `next build` was enforced only by
+# .husky/pre-push Layer 2, added 2026-05-18 after two broken-main incidents in
+# one week (a TS error in scripts/verify-knowledge-seed.ts and the verify-page
+# cookie crash). That was the right check in the wrong place:
+#
+#   • pre-push is bypassable — HUSKY=0, --no-verify and fleet REST pushes all
+#     skip it, so it was never the boundary it looked like;
+#   • on the 16 GB fleet machine the build cannot reliably complete. OOM has
+#     been measured at 4, 6, 8 and 12 GB heap ceilings — the variable is free
+#     RAM, not the ceiling — so the gate mostly succeeded at making people
+#     reach for HUSKY=0, which disables EVERY layer of the hook including
+#     `npm run check:claims`, which is enforced in no workflow at all.
+#
+# So the check moved here, where it is unskippable and runs on a machine that
+# can finish it. Layer 2 remains available locally behind PREPUSH_BUILD_GATE=1
+# for machines with the headroom.
+#
+# `build:no-migrate` is `prisma generate && next build` — the production build
+# without `migrate deploy`, so this needs no live database.
+#
+# This is deliberately NOT the same signal as the Vercel preview deployment.
+# Vercel already builds every pushed branch, but its status is advisory here;
+# this job is a required-checkable GitHub Action, and it runs on pushes to main
+# as well as on pull requests.
+
+name: build-gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # The gate is a compile, not a test run. 20 minutes is generous for a cold
+    # cache and still bounds a hung build.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - name: Install dependencies
+        # `prisma generate` runs via postinstall; the build calls it again
+        # explicitly, which is idempotent.
+        run: npm ci
+      # NOT WIRED YET, on purpose: `npm run typecheck` (tsc --noEmit) would also
+      # cover scripts/ and tools/, which next build never compiles — and the
+      # 2026-05-18 incident was exactly such a file. It is omitted from this PR
+      # because a full typecheck cannot be run on the fleet machine (same OOM
+      # reason as the build), so nobody has confirmed the repo is currently
+      # tsc-clean. Adding an unvalidated step risks landing a permanently-red
+      # gate, which carries less information than no gate. Wire it in a
+      # follow-up once one CI run shows the baseline green.
+      - name: Build (no migrate)
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: npm run build:no-migrate

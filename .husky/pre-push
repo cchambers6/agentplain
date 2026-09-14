@@ -1,12 +1,24 @@
 #!/usr/bin/env sh
 # Pre-push hook — staleness gate + full-repo lint + build gate.
 #
-# Layer 0 (staleness gate): refuse pushes when the branch is too far behind origin/main.
-# Stale-base branches keep tripping Vercel preview lint with errors that are already fixed
-# on main (see ~/.claude/projects/C--agentplain/memory/feedback_code_tasks_rebase_first.md).
+# Layer 0 (staleness gate): refuse pushes when the branch BEING PUSHED is too far behind
+# origin/main. Stale-base branches keep tripping Vercel preview lint with errors that are
+# already fixed on main (see ~/.claude/projects/C--agentplain/memory/feedback_code_tasks_rebase_first.md).
 # Threshold is 5 commits — small enough to catch genuinely stale branches (the cases that
 # triggered this rule were 10+ behind), large enough to not nag on every-day work.
 # Emergency escape hatch: SKIP_PREPUSH_REBASE_GATE=1 git push ...
+#
+# 2026-09-14: the check is unchanged; its SUBJECT was wrong. It measured `HEAD..origin/main`,
+# and HEAD is whatever the checkout happens to be parked on — not the branch being pushed,
+# whenever that branch was authored in a separate worktree or built through a temporary
+# GIT_INDEX_FILE, which is the normal case on the fleet machine. With that checkout parked 79
+# commits behind, every correctly rebased push was refused, and the more correctly a session
+# worked the more surely it fired. Git hands pre-push the refs actually being pushed on stdin
+# (`<local ref> <local sha> <remote ref> <remote sha>`, one line per ref); the gate now
+# measures those. Logic moved to tools/prepush-staleness-gate.mjs so the two cases that matter
+# — a stale branch is rejected, a correctly based branch is accepted — are pinned by
+# tests/prepush-staleness-gate.test.ts instead of argued about. THE GATE WAS NOT LOOSENED:
+# threshold, reason and escape hatch are all unchanged.
 #
 # Layer 1 (full-repo lint): belt-and-suspenders against the per-file pre-commit pass.
 # Catches cross-file rule violations and bypassed pre-commits.
@@ -18,24 +30,27 @@
 # and the verify-page cookie crash both landed because the pre-push pipeline only ran
 # lint, not the full Next.js build. `build:no-migrate` is the build command without the
 # Prisma `migrate deploy` step, so it's safe to run from any developer machine and
-# doesn't require a live DATABASE_URL. Emergency escape hatch: HUSKY=0 git push ...
-# (documented in docs/incident-log.md alongside the broken-main entries).
+# doesn't require a live DATABASE_URL.
+#
+# 2026-09-14: Layer 2 is now OPT-IN (PREPUSH_BUILD_GATE=1) rather than always-on, and the
+# protection it provided moved to .github/workflows/build-gate.yml. The reason is not that the
+# check is unwanted — it is that on the 16 GB fleet machine `next build` cannot reliably
+# complete: OOM has been measured at 4, 6, 8 AND 12 GB heap ceilings, because the variable is
+# free RAM, not the ceiling. An always-on gate that cannot run is not protection, it is a wall
+# that pushes people to HUSKY=0 — which turns off EVERY layer in this file, including
+# check:claims, which appears in NO workflow and is enforced here and nowhere else.
+# WHAT MOVED, EXACTLY: a TS/compile error is now caught by the build-gate workflow (blocking,
+# on every PR and every push to main) and by the Vercel preview build (which already runs
+# `npm run build` on every pushed branch — verified 2026-09-14 against the deployments list),
+# instead of before the push leaves the machine. Cost: the feedback arrives minutes later and
+# after the commit exists, not before. Nothing reaches main uncompiled either way.
+# Machines that CAN run a build should set PREPUSH_BUILD_GATE=1 in their shell profile to keep
+# the fast local signal.
 
 # --- Layer 0: staleness gate ---
-if [ "${SKIP_PREPUSH_REBASE_GATE:-0}" != "1" ]; then
-  git fetch origin --quiet
-  THRESHOLD=5
-  BEHIND=$(git rev-list --count HEAD..origin/main 2>/dev/null || echo 0)
-  if [ "$BEHIND" -gt "$THRESHOLD" ]; then
-    echo ""
-    echo "❌ Push blocked: branch is $BEHIND commits behind origin/main."
-    echo "   Rebase before pushing to avoid stale-base CI failures (per feedback_code_tasks_rebase_first.md)."
-    echo "   Run:  git fetch origin && git rebase origin/main"
-    echo "   Or to skip this gate (escape hatch): SKIP_PREPUSH_REBASE_GATE=1 git push ..."
-    echo ""
-    exit 1
-  fi
-fi
+# Reads the pushed refs from stdin. Must come first: nothing downstream reads stdin,
+# and this consumes it.
+node tools/prepush-staleness-gate.mjs || exit 1
 
 # --- Layer 1: lint ---
 npm run lint || exit 1
@@ -87,6 +102,10 @@ npm run check:connector-dispatch || {
 # the build gate below would push people toward HUSKY=0 — which turns off
 # EVERY layer in this file. This is the sub-second slice worth paying for
 # locally; CI is the enforcement point.
+#
+# NOTE (2026-09-14): this check is enforced HERE AND NOWHERE ELSE — it appears in no
+# workflow. That is what makes HUSKY=0 expensive, and is the main reason Layer 2 became
+# opt-in rather than staying a wall people route around.
 npm run check:claims || {
   echo "❌ Push blocked: a customer surface claims something the code cannot do."
   echo "   See lib/claims/capability-claims.ts for what each check asserts."
@@ -94,18 +113,23 @@ npm run check:claims || {
   exit 1
 }
 
-# --- Layer 2: build gate ---
-echo ""
-echo "▶ Running build gate (npm run build:no-migrate) — catches TS errors + broken pages before push."
-echo "  Emergency bypass: HUSKY=0 git push ...  (document the bypass in docs/incident-log.md)"
-echo ""
-npm run build:no-migrate || {
+# --- Layer 2: build gate (opt-in — see the header note) ---
+if [ "${PREPUSH_BUILD_GATE:-0}" = "1" ]; then
   echo ""
-  echo "❌ Push blocked: build:no-migrate failed."
-  echo "   Fix the build before pushing, or bypass with HUSKY=0 git push ... (document in docs/incident-log.md)."
+  echo "▶ Running build gate (npm run build:no-migrate) — catches TS errors + broken pages before push."
   echo ""
-  exit 1
-}
+  npm run build:no-migrate || {
+    echo ""
+    echo "❌ Push blocked: build:no-migrate failed."
+    echo "   Fix the build before pushing."
+    echo ""
+    exit 1
+  }
+else
+  echo "ℹ Local build gate off (PREPUSH_BUILD_GATE != 1). Compile errors are caught by"
+  echo "  .github/workflows/build-gate.yml and the Vercel preview build. Set PREPUSH_BUILD_GATE=1"
+  echo "  to run it locally on a machine with the headroom."
+fi
 
 # --- Layer 3: schema-drift gate with raw-index auto-heal (Wave-7, theme #19) ---
 # When a SHADOW_DATABASE_URL is available, run the drift check in auto-heal

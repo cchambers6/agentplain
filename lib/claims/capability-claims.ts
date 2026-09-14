@@ -9,6 +9,7 @@
  * violating fixtures for the deliberate-failure assertions.
  */
 
+import { transmittedScopes } from '../integrations/oauth-urls';
 import type { ClaimViolation } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -223,9 +224,24 @@ export const ADVERTISED_ACTION_RULES: readonly AdvertisedActionRule[] = [
  * connect flow to be wrong about, and an api-key tile does not negotiate
  * scopes at all.
  */
+/**
+ * Resolve the scope set a tile's connect flow ACTUALLY transmits.
+ *
+ * Injected so tests can plant a resolver, but the DEFAULT is the real one:
+ * a default that read `tile.scopes` would silently reintroduce the very
+ * defect this parameter exists to close.
+ *
+ * Returns `null` for a tile with no authorize-URL branch (synthetic
+ * fixtures, and any id `buildAuthorizeUrl` does not handle).
+ */
+export type TransmittedScopeResolver = (
+  tile: ConnectorTileLike,
+) => readonly string[] | null;
+
 export function checkConnectorActionScopes(
   tiles: readonly ConnectorTileLike[],
   rules: readonly AdvertisedActionRule[] = ADVERTISED_ACTION_RULES,
+  resolveScopes: TransmittedScopeResolver = transmittedScopes,
 ): ClaimViolation[] {
   const violations: ClaimViolation[] = [];
 
@@ -234,9 +250,21 @@ export function checkConnectorActionScopes(
     if (tile.connectMode === 'api-key') continue;
 
     const copy = `${tile.name} ${tile.description}`;
+
+    // The TRANSMITTED scope set, not the catalog array. Until 2026-09-13
+    // this checker read `tile.scopes` -- the DECLARATION. The Gmail branch
+    // of `buildAuthorizeUrl` discarded the declaration and transmitted a
+    // hardcoded default instead, so a tile could declare every scope its
+    // copy implied and still ask Google for none of them, and this checker
+    // would pass. Validating the claim against another claim is not a check.
+    //
+    // Falls back to the declaration ONLY when there is no authorize-URL
+    // branch to measure (synthetic fixtures), never as a convenience.
+    const requested = resolveScopes(tile) ?? tile.scopes;
+
     for (const rule of rules) {
       if (!rule.claimPattern.test(copy)) continue;
-      const satisfied = tile.scopes.some((s) => rule.scopePattern.test(s));
+      const satisfied = requested.some((s) => rule.scopePattern.test(s));
       if (satisfied) continue;
 
       violations.push({
@@ -245,7 +273,7 @@ export function checkConnectorActionScopes(
         detail:
           `Connector tile "${tile.name}" advertises "${rule.action}" in its ` +
           `customer-facing copy, but the connect flow requests no matching scope ` +
-          `(requested: ${tile.scopes.length > 0 ? tile.scopes.join(', ') : 'none'}). ` +
+          `(actually transmitted: ${requested.length > 0 ? requested.join(', ') : 'none'}). ` +
           `Every ${rule.action} call through this connector fails at the provider.`,
         remedy:
           `Add ${rule.scopeDescription} to the entry's scopes and wire the adapter, ` +

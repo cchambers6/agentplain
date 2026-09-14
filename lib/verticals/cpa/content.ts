@@ -38,8 +38,16 @@ export const cpa: VerticalContent = {
   tier: "plus",
   missionSubject: "CPAs and tax practices",
 
+  // TRUTH BAR (2026-09-14): this answer names capabilities, and a named
+  // capability must resolve to a `SKILL_CATALOG` entry with a production
+  // caller. `vertical: 'cpa'` currently has exactly ONE such entry,
+  // `month-end-close-cpa`. Engagement onboarding, books reconciliation,
+  // milestone billing and the federal+state checklist have NO catalog
+  // entry - the agentRoster below already declares them `rooting`, and
+  // `roi.math` already says so in writing. Before adding a capability to
+  // this sentence, grep the catalog for the skill that does it.
   directAnswer:
-    "agentplain for CPA and tax firms is a managed AI service partnership for small accounting practices. A service team installs a fleet that runs engagement onboarding, chases client documents, reconciles books, handles milestone billing, and runs a federal-plus-state checklist before a return reaches the partner's desk — working inside Outlook, OneDrive, QuickBooks Online, and DocuSign. The partner reviews and signs every return; the fleet drafts and proposes but never sends or files on its own.",
+    "agentplain for CPA and tax firms is a managed AI service partnership for small accounting practices. One capability runs today: the month-end close document chase. For each client the fleet builds the engagement's document checklist, buckets every item as received, pending, or past-target, drafts an individualized chase email for what is still outstanding, drafts a client-facing status update, and proposes the follow-up reminders — reading QuickBooks Online and the firm's email, and landing every draft in the approval queue for review. Engagement onboarding, books reconciliation, milestone billing, and the federal-plus-state compliance checklist are not running yet; they show as \"setting up\" on the agents page and come online as the practice-management and tax-software connectors land. The partner reviews and signs everything; the fleet drafts and proposes but never sends or files on its own.",
 
   verticalFaq: [
     {
@@ -48,7 +56,7 @@ export const cpa: VerticalContent = {
     },
     {
       q: "Is agentplain a replacement for my tax or practice-management software?",
-      a: "No. agentplain works inside the Outlook, OneDrive, QuickBooks Online, and DocuSign you already run and replaces the manual work between them — engagement onboarding, document chase, books reconciliation, milestone billing. It isn't tax-prep or practice-management software, and there's nothing to migrate.",
+      a: "No. agentplain works inside the Outlook, OneDrive, QuickBooks Online, and DocuSign you already run, and replaces the manual work between them. What runs today is the month-end close document chase — the per-engagement checklist, the received/pending/past-target bucketing, the chase drafts, and the client status update. It isn't tax-prep or practice-management software, and there's nothing to migrate.",
     },
     {
       q: "How much does agentplain cost for a CPA firm?",
@@ -152,14 +160,14 @@ export const cpa: VerticalContent = {
     // live in the per-vertical integration roadmap below and surface honestly
     // there as planned, not in this present-tense hero clause.
     valueProp:
-      "agentplain REPLACES the 8-week document-chase cycle, INTEGRATES with Outlook, OneDrive, QuickBooks Online, and DocuSign on day one, and AUGMENTS the partner's review on every return with a federal + state checklist run before the file hits the desk.",
+      "agentplain REPLACES the 8-week document-chase cycle, INTEGRATES with Outlook, OneDrive, QuickBooks Online, and DocuSign on day one, and AUGMENTS the partner's review with a close that arrives already bucketed — every checklist item marked received, pending, or past-target, and every receipt named against the item it satisfied.",
     sbmSubhead:
       "The tax-season skills, agents, and memory you'd otherwise have to build yourself",
   },
 
   metaTitle: "for CPA firms — 2–10 person practices",
   metaDescription:
-    "1040s, 1120-S, and bookkeeping retainers, drafted for the partner — engagement onboarding, document chase, compliance, books, and milestone billing.",
+    "Month-end close document chase for small CPA and tax practices — the per-engagement checklist, received/pending/past-target bucketing, and chase drafts staged for the partner.",
 
   jtbdTables: [
     {
@@ -310,11 +318,20 @@ export const cpa: VerticalContent = {
       "Tax and advisory correspondence is governed by the AICPA Code of Professional Conduct and Treasury Circular 230 — a preparer position that understates a client's liability carries an IRC §6694 penalty of $1,000 (unreasonable position) or $5,000 (willful or reckless conduct) per return, on top of Circular 230 censure, suspension, or disbarment from practice before the IRS. The fleet drafts client letters, engagement notes, and filing-ready work; a credentialed person approves before anything is sent or filed, so a Circular 230 slip is corrected at the draft stage rather than assessed as a preparer penalty. That avoided exposure is real ROI the sourced 9x hours math leaves out, and it only holds because nothing auto-executes.",
   },
 
+  // Every string in `replace` / `augment` names work the fleet takes off a
+  // human today. The bar is a `SKILL_CATALOG` entry with a production
+  // caller, NOT an agentRoster card (a `rooting` card is a roadmap item).
+  // Removed 2026-09-14: the engagement-letter/doc-checklist entry and
+  // the books-reconciliation entry. Neither capability exists in the
+  // catalog, which `roi.math` above has said in writing since the ROI
+  // remediation - the numbers were fixed and the claims were left
+  // standing. Deliberately not quoting the dead strings here: a grep
+  // for them must return zero across the repo.
+  // Doc-chase is backed by `month-end-close-cpa`; aged AR by
+  // `invoice-chase-general` (vertical `all`, live, QuickBooks-backed).
   claims: {
     replace: [
-      "Manual engagement-letter and doc-checklist customization",
       "8 weeks of document-chase phone tag and email reminders",
-      "Manual books reconciliation against bank feeds",
       "Spreadsheet-driven aged AR — replaced by drafted 30/60/90 escalations",
     ],
     integrate: [
@@ -324,10 +341,8 @@ export const cpa: VerticalContent = {
       "DocuSign (engagement letters + 8879 routing)",
     ],
     augment: [
-      "Partner review on every return — staff prep is pre-flagged against federal + state checklist",
+      "Month-end close status — every checklist item arrives bucketed received / pending / past-target with the receipt that satisfied it named, so staff review exceptions instead of rebuilding the list",
       "State-specific rule compliance (activating after counsel review) — every flag will cite the rule text, not invented",
-      "Engagement letter language — drafted with engagement-type-specific scope language",
-      "Books JE drafting — drafted with bank-feed evidence; partner approves",
     ],
   },
 

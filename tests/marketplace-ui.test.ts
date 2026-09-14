@@ -171,13 +171,30 @@ describe("marketplace catalog", () => {
     // never ours. Catalog enforces this; this test pins it.
     const bannedFragments = ["send", "Mail.Send", "Send", "compose"];
     for (const entry of listIntegrations().filter((e) => e.status === "available")) {
-      // Gmail's `gmail.compose` is acceptable — Gmail's compose scope lets us
-      // CREATE drafts, not SEND. Microsoft's Mail.Send / Gmail's gmail.send
-      // are the banned scopes the architecture forbids.
+      // Microsoft's Mail.Send and Gmail's gmail.send are the banned scopes the
+      // architecture forbids. As of 2026-09-13 Gmail requests `gmail.modify`
+      // and nothing else on the write side: modify alone creates drafts, so
+      // `gmail.compose` was dropped rather than justified at verification.
+      // Both the bare name and the full URL form are checked -- the catalog
+      // used bare names until 2026-09-13 and full URLs after.
       for (const scope of entry.scopes) {
         assert.notEqual(scope, "Mail.Send", `${entry.id} requests Mail.Send`);
-        assert.notEqual(scope, "gmail.send", `${entry.id} requests gmail.send`);
         assert.notEqual(scope, "Mail.Send.Shared", `${entry.id} requests Mail.Send.Shared`);
+        assert.doesNotMatch(
+          scope,
+          /(^|\/)gmail\.send$/,
+          `${entry.id} requests a Gmail send scope`,
+        );
+        assert.doesNotMatch(
+          scope,
+          /(^|\/)gmail\.compose$/,
+          `${entry.id} requests gmail.compose -- dropped 2026-09-13, gmail.modify already creates drafts`,
+        );
+        assert.notEqual(
+          scope,
+          "https://mail.google.com/",
+          `${entry.id} requests full-mailbox access`,
+        );
       }
       // The "send" fragment check is intentionally loose for available
       // entries — `compose` ≠ send. Re-affirm bannedFragments is not unused.
@@ -264,6 +281,14 @@ describe("OAuth start URL builders", () => {
     assert.equal(parsed.searchParams.get("client_id"), "google-client-test");
     assert.equal(parsed.searchParams.get("state"), "deadbeef".repeat(8));
     assert.equal(parsed.searchParams.get("access_type"), "offline");
+    // This test was named "with the right scopes" and asserted nothing about
+    // scopes for its whole life, which is how the Gmail branch discarded its
+    // scopes argument undetected. It asserts them now.
+    assert.deepEqual(
+      (parsed.searchParams.get("scope") ?? "").split(" ").filter(Boolean).sort(),
+      [...getMarketplaceEntry("gmail")!.scopes].sort(),
+      "Gmail authorize URL must carry exactly the catalog's scopes",
+    );
     assert.equal(
       parsed.searchParams.get("redirect_uri"),
       "https://app.agentplain.test/api/auth/oauth/google/callback",
@@ -360,7 +385,12 @@ describe("OAuth start URL builders", () => {
       parsed.searchParams.get("redirect_uri"),
       "https://app.agentplain.test/api/integrations/google-drive/oauth/callback",
     );
-    assert.match(parsed.searchParams.get("scope") ?? "", /drive\.readonly/);
+    // drive.readonly was dropped 2026-09-13 (RESTRICTED tier; would pull an
+    // annual security assessment into Google verification). Pin BOTH
+    // directions: drive.file present, drive.readonly absent. A one-sided
+    // assertion here is what let the scope sit unexamined.
+    assert.match(parsed.searchParams.get("scope") ?? "", /drive\.file/);
+    assert.doesNotMatch(parsed.searchParams.get("scope") ?? "", /drive\.readonly/);
   });
 
   it("Slack authorize URL targets slack.com with user_scope, never bot scope", () => {

@@ -84,3 +84,154 @@ test("recovery closes both open issues", () => {
     ]
   );
 });
+
+// ---------------------------------------------------------------------------
+// Deliberate-failure tests for the THIRD outcome.
+//
+// Motivating incident: run 34846542924 (2026-09-14T12:59Z) died 29s into a
+// 141-call walk with `deploy-state failed: fetch failed` and exit 1 — byte for
+// byte the same red X as the 19 surrounding runs that had actually measured
+// production and found it red. The crash was indistinguishable from a verdict.
+// These tests exist to make that specific confusion impossible.
+// ---------------------------------------------------------------------------
+
+import { classifyThrown, EXIT_BROKEN, EXIT_HEALTHY, EXIT_UNDETERMINED } from "./deploy-state.mjs";
+import { ghApi, UndeterminedError, isTransientError, RETRY_ATTEMPTS } from "./lib.mjs";
+
+test("the three outcomes have three distinct exit codes", () => {
+  const codes = [EXIT_HEALTHY, EXIT_BROKEN, EXIT_UNDETERMINED];
+  assert.equal(new Set(codes).size, 3, "outcomes must not share an exit code");
+});
+
+test("the real `fetch failed` crash classifies as UNDETERMINED, never as a verdict", () => {
+  // Exactly what undici throws, reproduced rather than described.
+  const real = new TypeError("fetch failed");
+  real.cause = { code: "ECONNRESET" };
+  const c = classifyThrown(real);
+  assert.equal(c.label, "UNDETERMINED");
+  assert.equal(c.code, EXIT_UNDETERMINED);
+  assert.notEqual(c.code, EXIT_BROKEN, "a crash must never exit as BROKEN");
+  assert.notEqual(c.code, EXIT_HEALTHY, "a crash must never exit as HEALTHY");
+});
+
+test("an exhausted-retry UndeterminedError classifies as UNDETERMINED", () => {
+  assert.equal(classifyThrown(new UndeterminedError("no answer after 4 attempts")).code, EXIT_UNDETERMINED);
+});
+
+test("KNOWN-POSITIVE CONTROL: a genuine programming error is NOT laundered into UNDETERMINED", () => {
+  // If this ever flips, the classifier has become a catch-all and the
+  // UNDETERMINED signal is worthless — the failure mode this file guards.
+  const bug = new ReferenceError("x is not defined");
+  assert.equal(classifyThrown(bug).label, "ERROR");
+  assert.notEqual(classifyThrown(bug).code, EXIT_UNDETERMINED);
+});
+
+test("isTransientError does not treat an authoritative 4xx Error as transient", () => {
+  assert.equal(isTransientError(new Error("GET https://api.github.com/x -> 404: Not Found")), false);
+});
+
+// --- ghApi retry behaviour: stub fetch, count calls -------------------------
+
+function withFetch(impl, fn) {
+  const original = globalThis.fetch;
+  globalThis.fetch = impl;
+  return fn().finally(() => {
+    globalThis.fetch = original;
+  });
+}
+
+const json = (body, status = 200) =>
+  ({ ok: status >= 200 && status < 300, status, json: async () => body, text: async () => JSON.stringify(body) });
+
+test("ghApi RETRIES a transient fetch failure and then succeeds", async () => {
+  let calls = 0;
+  await withFetch(
+    async () => {
+      calls++;
+      if (calls < 3) {
+        const e = new TypeError("fetch failed");
+        e.cause = { code: "ECONNRESET" };
+        throw e;
+      }
+      return json({ ok: true });
+    },
+    async () => {
+      const out = await ghApi("/x", { sleepFn: async () => {} });
+      assert.deepEqual(out, { ok: true });
+      assert.equal(calls, 3, "should have retried twice before succeeding");
+    }
+  );
+});
+
+test("ghApi gives up as UndeterminedError — the alarm says 'I do not know', not 'it is broken'", async () => {
+  let calls = 0;
+  await withFetch(
+    async () => {
+      calls++;
+      const e = new TypeError("fetch failed");
+      e.cause = { code: "ENOTFOUND" };
+      throw e;
+    },
+    async () => {
+      await assert.rejects(
+        () => ghApi("/x", { sleepFn: async () => {} }),
+        (err) => {
+          assert.ok(err instanceof UndeterminedError, "must be UndeterminedError");
+          assert.equal(classifyThrown(err).code, EXIT_UNDETERMINED);
+          return true;
+        }
+      );
+      assert.equal(calls, RETRY_ATTEMPTS, `should have tried exactly ${RETRY_ATTEMPTS} times`);
+    }
+  );
+});
+
+test("ghApi retries a 500 but NOT a 404 — a 4xx is an authoritative answer", async () => {
+  let calls = 0;
+  await withFetch(
+    async () => {
+      calls++;
+      return json({ message: "server error" }, 500);
+    },
+    async () => {
+      await assert.rejects(() => ghApi("/x", { sleepFn: async () => {} }), (e) => e instanceof UndeterminedError);
+      assert.equal(calls, RETRY_ATTEMPTS);
+    }
+  );
+
+  let calls404 = 0;
+  await withFetch(
+    async () => {
+      calls404++;
+      return json({ message: "Not Found" }, 404);
+    },
+    async () => {
+      await assert.rejects(
+        () => ghApi("/x", { sleepFn: async () => {} }),
+        (e) => !(e instanceof UndeterminedError)
+      );
+      assert.equal(calls404, 1, "a 404 must be answered once, never retried");
+    }
+  );
+});
+
+test("no token in any thrown message, including the give-up path", async () => {
+  const SECRET = "ghs_THISMUSTNEVERAPPEAR";
+  await withFetch(
+    async () => {
+      const e = new TypeError("fetch failed");
+      e.cause = { code: "ECONNRESET" };
+      throw e;
+    },
+    async () => {
+      await assert.rejects(
+        () => ghApi("/repos/o/r/x", { token: SECRET, sleepFn: async () => {} }),
+        (err) => {
+          assert.ok(!err.message.includes(SECRET), "token leaked into error message");
+          assert.ok(!String(err.stack).includes(SECRET), "token leaked into stack");
+          return true;
+        }
+      );
+    }
+  );
+});

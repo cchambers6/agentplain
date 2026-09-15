@@ -39,7 +39,38 @@ jobs:
         with:
           node-version: "22"
       # No npm ci: the checker and its helpers are dependency-free by design.
+      # Three outcomes, three exit codes, three different-looking runs:
+      #   0 HEALTHY      — production measured, and it is fine
+      #   1 BROKEN       — production measured, and it is not fine
+      #   2 UNDETERMINED — production was NOT measured; this is not a verdict
+      # Both 1 and 2 fail the run (an unmeasurable alarm must never sit green),
+      # but they are never confusable in the output: the step name that fails,
+      # the annotation, and the job summary all say which one happened.
       - name: Evaluate production deploy state
+        id: evaluate
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/ops/deploy-state.mjs check
+        run: |
+          set +e
+          node scripts/ops/deploy-state.mjs check
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: UNDETERMINED - production was not measured
+        if: steps.evaluate.outputs.code == '2'
+        run: |
+          echo "deploy-state could not reach the GitHub Deployments API after retries."
+          echo "This run says NOTHING about production: not healthy, not broken."
+          echo "No alarm issue was opened or closed. Re-run before drawing any conclusion."
+          exit 1
+
+      - name: BROKEN - production deploy state is red
+        if: steps.evaluate.outputs.code == '1'
+        run: |
+          echo "deploy-state MEASURED production and it is red. See issues labelled deploy-dead."
+          exit 1
+
+      - name: Unexpected exit code
+        if: steps.evaluate.outputs.code != '0' && steps.evaluate.outputs.code != '1' && steps.evaluate.outputs.code != '2'
+        run: |
+          echo "deploy-state exited ${{ steps.evaluate.outputs.code }}, which is not a defined outcome."
+          exit 1

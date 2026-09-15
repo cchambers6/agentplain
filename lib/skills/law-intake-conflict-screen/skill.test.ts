@@ -42,8 +42,21 @@ describe('law-intake-conflict-screen — clear path', () => {
     if (!res.ok) return;
     assert.equal(res.value.status, 'clear');
     assert.equal(res.value.conflicts.length, 0);
-    assert.match(res.value.attorneyNotice.subject, /Conflict screen — clear/);
-    assert.match(res.value.attorneyNotice.body, /No prospect \/ opposing-party overlaps/);
+    assert.match(
+      res.value.attorneyNotice.subject,
+      /Conflict screen — 0 ledger name matches/,
+      'the subject reports what the name pass matched, never a clearance',
+    );
+    assert.match(
+      res.value.attorneyNotice.body,
+      /No ledger entry matched the prospect or a named opposing party/,
+      'the body reports the name-pass result, not a conflict verdict',
+    );
+    assert.match(
+      res.value.attorneyNotice.body,
+      /it is not a conflict determination/,
+      'the body must disclaim that it is making the determination',
+    );
     assert.equal(res.value.attorneyNotice.tone, 'formal');
   });
 });
@@ -195,6 +208,6 @@ describe('law-intake-conflict-screen — empty ledger is never a clearance', () 
     assert.equal(res.ok, true);
     if (!res.ok) return;
     assert.equal(res.value.status, 'clear');
-    assert.match(res.value.attorneyNotice.body, /Screened against 2 ledger entries/);
+    assert.match(res.value.attorneyNotice.body, /Compared against 2 ledger entries/);
   });
 });

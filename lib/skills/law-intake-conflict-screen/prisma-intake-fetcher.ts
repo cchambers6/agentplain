@@ -109,7 +109,17 @@ export class PrismaIntakeFetcher implements IntakeFetcher {
     maxRows: number,
   ): Promise<ProspectiveIntake[]> {
     const rows = await tx.knowledgeDocument.findMany({
-      where: { workspaceId, contextKind: 'CUSTOMER' },
+      // Exclude seeded demo rows (metadata.isDemo = true, written by
+      // lib/onboarding/demo-seed.ts). parseIntake already rejects them
+      // because they lack metadata.docType === 'intake', but that is
+      // incidental to how the demo seeder happens to be shaped today.
+      // Make the exclusion explicit at the query so a future demo record
+      // that gained a docType could not become a screened intake.
+      where: {
+        workspaceId,
+        contextKind: 'CUSTOMER',
+        NOT: { metadata: { path: ['isDemo'], equals: true } },
+      },
       select: { metadata: true },
       orderBy: { updatedAt: 'desc' },
       take: maxRows,

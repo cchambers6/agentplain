@@ -125,6 +125,14 @@ async function queryDocs(
     where: {
       workspaceId,
       contextKind: 'CUSTOMER',
+      // Exclude seeded demo rows. They are written with metadata.isDemo =
+      // true by lib/onboarding/demo-seed.ts and carry fabricated party
+      // names in their titles ("Pending intake · Priya Raman"). They have no
+      // clientName / matterParty metadata, so extractPartyName falls back to
+      // the title and the fabricated name enters the conflict ledger. A real
+      // intake would then be screened against invented parties. Clause
+      // mirrors countRealCustomerRecords in lib/onboarding/demo-seed.ts.
+      NOT: { metadata: { path: ['isDemo'], equals: true } },
     },
     select: {
       title: true,

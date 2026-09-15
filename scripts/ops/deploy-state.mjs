@@ -36,6 +36,8 @@ import {
   daysBetween,
   hasFlag,
   argValue,
+  isTransientError,
+  UndeterminedError,
 } from "./lib.mjs";
 import { fetchOpenIssues, findBySlug, executeActions } from "./upsert-issue.mjs";
 
@@ -47,17 +49,22 @@ const FAILED_STATES = new Set(["failure", "error"]);
 // Walk production deployments newest-first until the first success.
 // One statuses call per deployment: expensive only while production is
 // broken, which is exactly when the calls are worth it.
+// Retries are normal and must be visible: a run that quietly retried 30 times
+// is a run whose next transient blip will exhaust the budget.
+const logRetry = ({ attempt, method, url, reason }) =>
+  process.stderr.write(`retry ${attempt}: ${method} ${url} — ${reason}\n`);
+
 export async function fetchDeployState({ token }) {
   const walked = [];
   let lastSuccess = null;
   for (let page = 1; page <= MAX_DEPLOYMENTS_WALKED / 100 && !lastSuccess; page++) {
     const deployments = await ghApi(
       `/repos/${REPO}/deployments?environment=${ENVIRONMENT}&per_page=100&page=${page}`,
-      { token }
+      { token, onRetry: logRetry }
     );
     if (!deployments.length) break;
     for (const d of deployments) {
-      const statuses = await ghApi(`${d.statuses_url}?per_page=1`, { token });
+      const statuses = await ghApi(`${d.statuses_url}?per_page=1`, { token, onRetry: logRetry });
       const state = statuses[0]?.state ?? "unknown";
       walked.push({ sha: d.sha, created_at: d.created_at, state });
       if (state === "success") {
@@ -194,6 +201,29 @@ export function evaluate(report, { openErrorIssue = null, openStaleIssue = null 
   return { red: Boolean(errorActive || staleActive), actions };
 }
 
+// The three outcomes, as distinct process exit codes. Before this existed, a
+// crash and a verdict both exited 1 and rendered the same red X: on
+// 2026-09-14 one transient `fetch failed` was visually identical to 19 runs
+// that had actually measured production. An alarm that cannot say "I do not
+// know" is an alarm you cannot trust when it finally goes green.
+export const EXIT_HEALTHY = 0;
+export const EXIT_BROKEN = 1;
+export const EXIT_UNDETERMINED = 2;
+
+// GitHub Actions workflow-command annotations, so the three outcomes are
+// distinguishable on the Actions tab and not just in the log body.
+function annotate(level, title, message) {
+  process.stdout.write(`::${level} title=${title}::${message}\n`);
+  const summary = process.env.GITHUB_STEP_SUMMARY;
+  if (summary) {
+    try {
+      fs.appendFileSync(summary, `### deploy-state: ${title}\n\n${message}\n`);
+    } catch {
+      /* summary is a convenience, never a dependency */
+    }
+  }
+}
+
 async function main() {
   const cmd = process.argv[2];
   const dryRun = hasFlag("--dry-run");
@@ -228,21 +258,42 @@ async function main() {
 
     const result = evaluate(report, { openErrorIssue, openStaleIssue });
     await executeActions(result.actions, { token, dryRun: dryRun || Boolean(fixtureFile) });
-    process.stdout.write(
-      `deploy-state: ${result.red ? "RED" : "green"} — origin/main deployed: ${report.origin_main.deployed_to_production}, last success: ${
-        report.last_successful_production_deployment?.created_at ?? "none"
-      }\n`
-    );
-    process.exit(result.red ? 1 : 0);
+    const verdict = result.red ? "BROKEN" : "HEALTHY";
+    const detail = `origin/main deployed: ${report.origin_main.deployed_to_production}, last success: ${
+      report.last_successful_production_deployment?.created_at ?? "none"
+    }`;
+    process.stdout.write(`deploy-state: ${verdict} — ${detail}\n`);
+    annotate(result.red ? "error" : "notice", verdict, `Production was MEASURED. ${detail}`);
+    process.exit(result.red ? EXIT_BROKEN : EXIT_HEALTHY);
   }
 
   process.stderr.write("usage: node scripts/ops/deploy-state.mjs <report|check> [--json] [--dry-run] [--fixture <f>] [--now <iso>] [--token-file <p>]\n");
-  process.exit(2);
+  process.exit(64); // EX_USAGE — must not collide with EXIT_UNDETERMINED
+}
+
+// Classify a thrown error into an outcome. The load-bearing rule: anything we
+// could not measure exits EXIT_UNDETERMINED and says so in those words. It
+// must never be possible to read a crash as "production is broken", because
+// the whole point of this check is to be trustworthy on the day it goes green.
+export function classifyThrown(err) {
+  const undetermined = err instanceof UndeterminedError || isTransientError(err);
+  return {
+    code: undetermined ? EXIT_UNDETERMINED : EXIT_BROKEN,
+    label: undetermined ? "UNDETERMINED" : "ERROR",
+  };
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((e) => {
-    process.stderr.write(`deploy-state failed: ${e.message}\n`);
-    process.exit(1);
+    const { code, label } = classifyThrown(e);
+    if (label === "UNDETERMINED") {
+      const msg = `could NOT determine production deploy state: ${e.message}. This is NOT a verdict about production — it is the absence of one. Do not read this run as either healthy or broken.`;
+      process.stderr.write(`deploy-state: UNDETERMINED — ${msg}\n`);
+      annotate("warning", "UNDETERMINED", msg);
+    } else {
+      process.stderr.write(`deploy-state failed: ${e.message}\n`);
+      annotate("error", "ERROR", `deploy-state crashed: ${e.message}`);
+    }
+    process.exit(code);
   });
 }

@@ -51,16 +51,23 @@ describe('engagement-letter — basic rendering', () => {
     assert.ok(letter.body.includes('Georgia'), 'state of practice in body');
   });
 
-  it('cites the conflict-screen verdict explicitly (audit trail)', () => {
+  it('states NO conflict-screen outcome to the client', () => {
     const letter = renderEngagementLetter({
       intake: intake(),
       matterId: 'matter-2026-0042',
       firmContext: null,
       now: FIXED_NOW,
     });
+    // This letter is addressed to the prospective client and signed by
+    // the attorney. Whether the firm may take a matter is the attorney's
+    // professional determination; software must not assert it to a
+    // client, and an attorney approving a send is not the same as the
+    // attorney having made that determination. The deterministic match
+    // report stays in the internal attorney notice, which is never sent
+    // to the client. See no-clearance-assertion.test.ts for the corpus.
     assert.ok(
-      letter.body.includes('conflict screen'),
-      'letter must reference the conflict screen for audit trail',
+      !/conflict/i.test(letter.body),
+      `client-facing engagement letter must not mention the conflict screen at all; body was:\n${letter.body}`,
     );
     assert.ok(
       letter.body.includes('matter-2026-0042'),

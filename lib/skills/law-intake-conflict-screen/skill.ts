@@ -9,6 +9,11 @@
  *   2. A formal internal-notice draft for the responsible attorney —
  *      with `{{operator: ...}}` merge fields for the legal conclusion
  *      so the attorney signs off before anything sends.
+ *   NOTE: no rendered draft from this skill states a conflict-check
+ *   outcome, a clearance, or fitness to represent. Those are the
+ *   attorney's professional determination. The drafts report what the
+ *   deterministic name pass matched and route the decision to a human.
+ *
  *   3. On CLEAR: a deterministic engagement-letter draft surfaced as a
  *      PROCESS_DOC_DRAFT WorkApprovalQueueItem for attorney review.
  *   4. On FLAG / NEEDS-COUNSEL-REVIEW: a conflict-review card surfaced as
@@ -231,17 +236,19 @@ function renderAttorneyNotice(args: {
   ledgerSize: number;
 }): IntakeNoticeDraft {
   const { intake, conflicts, status, ledgerSize } = args;
+  const matchCount = conflicts.length;
+  const matchWord = matchCount === 1 ? 'match' : 'matches';
   const subject = (() => {
     if (ledgerSize === 0) {
       return `Conflict screen — UNSCREENED (no matter ledger) — ${intake.prospectName} (matter ${intake.matterId})`;
     }
     switch (status) {
       case 'clear':
-        return `Conflict screen — clear — ${intake.prospectName} (matter ${intake.matterId})`;
+        return `Conflict screen — 0 ledger name matches — ${intake.prospectName} (matter ${intake.matterId})`;
       case 'flagged':
-        return `Conflict screen — review recommended — ${intake.prospectName} (matter ${intake.matterId})`;
+        return `Conflict screen — ${matchCount} ledger name ${matchWord} to review — ${intake.prospectName} (matter ${intake.matterId})`;
       case 'needs-counsel-review':
-        return `Conflict screen — counsel review REQUIRED — ${intake.prospectName} (matter ${intake.matterId})`;
+        return `Conflict screen — ${matchCount} ledger name ${matchWord}, counsel review REQUIRED — ${intake.prospectName} (matter ${intake.matterId})`;
     }
   })();
 
@@ -250,7 +257,10 @@ function renderAttorneyNotice(args: {
   lines.push('');
   lines.push(
     `New-matter intake for ${intake.prospectName} (matter ${intake.matterId}) ` +
-      `ran through the deterministic conflict screen. Result: ${status}.`,
+      'was compared against the firm ledger by deterministic name match. ' +
+      `${matchCount} ledger ${matchCount === 1 ? 'entry' : 'entries'} matched. ` +
+      'This report states what was matched. It does not state whether the ' +
+      'firm may take the matter.',
   );
   lines.push('');
   lines.push('Intake summary:');
@@ -270,10 +280,11 @@ function renderAttorneyNotice(args: {
     );
   } else if (conflicts.length === 0) {
     lines.push(
-      `Screened against ${ledgerSize} ledger ${ledgerSize === 1 ? 'entry' : 'entries'}. ` +
-        'No prospect / opposing-party overlaps with the firm ledger were found ' +
-        'on the deterministic pass. {{operator: confirm no hand-off conflicts ' +
-        'and clear the screen}}.',
+      `Compared against ${ledgerSize} ledger ${ledgerSize === 1 ? 'entry' : 'entries'}. ` +
+        'No ledger entry matched the prospect or a named opposing party on the ' +
+        'deterministic name pass. A name pass cannot see relationships that are ' +
+        'absent from the ledger, and it is not a conflict determination. ' +
+        '{{operator: determine whether the firm may take this matter}}.',
     );
   } else {
     lines.push('Potential conflicts surfaced:');

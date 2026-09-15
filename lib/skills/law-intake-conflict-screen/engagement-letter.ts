@@ -14,8 +14,12 @@
  *   - No representation guarantee language without attorney sign-off.
  *   - All fee / scope / jurisdiction fields are `{{operator: ...}}`
  *     placeholders — the attorney supplies the binding terms.
- *   - The letter cites the conflict-screen verdict explicitly so the
- *     audit trail is self-contained.
+ *   - The letter states NO conflict-screen outcome. Whether the firm
+ *     may take a matter is the attorney's professional determination;
+ *     software must not assert it to a client, and an attorney
+ *     approving a send is not the same as the attorney having made
+ *     that determination. The deterministic match report stays in the
+ *     internal attorney notice, which is not sent to the client.
  */
 
 import { randomUUID } from 'node:crypto';
@@ -114,14 +118,6 @@ export function renderEngagementLetter(
   lines.push('');
   lines.push(
     `This engagement is governed by the laws of the State of ${stateOfPractice} and the applicable Rules of Professional Conduct.`,
-  );
-  lines.push('');
-
-  // Conflict screen reference
-  lines.push('CONFLICT CHECK');
-  lines.push('');
-  lines.push(
-    `Prior to extending this engagement, ${firmName} conducted a deterministic conflict screen of our existing client and matter records. No conflicts were identified on the automated pass (matter ${matterId}). {{operator: confirm no hand-delivered or relationship-based conflicts exist that are not captured in the digital ledger}}`,
   );
   lines.push('');
 

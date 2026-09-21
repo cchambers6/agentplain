@@ -1,0 +1,227 @@
+# production-deploy — apply migrations off the Vercel builder, then ship.
+#
+# WHY THIS WORKFLOW EXISTS
+# ------------------------
+# Production last deployed successfully on 2026-06-17 (`d5fcfad9`). The 140
+# production deployments after it all failed, because the production build ran
+# `prisma migrate deploy` and could not open a socket to Neon:
+#
+#     Error: P1001: Can't reach database server at
+#       ep-aged-snow-aq0e4b6k.c-8.us-east-1.aws.neon.tech:5432
+#
+# One network-path problem became a total shipping freeze, because "the builder
+# can reach the database" had been made a precondition of "we can ship at all".
+# This workflow breaks that coupling: migrations are applied HERE, on a
+# GitHub-hosted runner, and the production deploy is only triggered once they
+# succeed.
+#
+# ORDERING IS THE GUARANTEE
+# -------------------------
+# migrate -> verify -> deploy, in that order, in one job. If migration fails,
+# no deploy is triggered, so production code can never run ahead of its schema.
+# That guarantee used to live inside scripts/prisma-migrate-gate.mjs; it now
+# lives here, where a failure is attributable and alarmed.
+#
+# THIS DOES NOT ASSUME THE IPv6 HYPOTHESIS IS RIGHT
+# -------------------------------------------------
+# The leading explanation for a 103ms P1001 is that the Vercel builder resolves
+# the Neon host to AAAA and gets an instant ENETUNREACH. That is a hypothesis.
+# Nothing here depends on it:
+#
+#   - If it IS right, this is fixed by construction: GitHub-hosted runners are
+#     IPv4-only, so the AAAA path cannot be taken.
+#   - If it is NOT right, the "neon-reachability" step below fails on this
+#     runner too — and that FALSIFIES the hypothesis in one run, cheaply, with
+#     a named cause, without spending a production build to learn it.
+#
+# Either way the coupling is gone and migration failures become legible. The
+# preflight step exists specifically so the first run is a real experiment
+# rather than a hopeful retry.
+#
+# WHY IT CREATES ITS OWN GitHub DEPLOYMENT RECORD
+# -----------------------------------------------
+# vercel.json now disables Vercel's own git auto-deploy for `main`, so that
+# Vercel and this workflow cannot race each other to deploy the same commit.
+# But `scripts/ops/deploy-state.mjs` — the alarm that finally caught this
+# outage — reads production deploy state from GitHub's Deployments API, which
+# was populated by the Vercel GitHub app. Turning that off without replacing it
+# would blind the alarm and reproduce the original bug (a shipping path that
+# can fail unseen) in a new place.
+#
+# So this workflow creates the Deployment and posts its own success/failure
+# status under the same environment name ("Production") that deploy-state.mjs
+# reads. The alarm's data contract is preserved, unchanged, and keeps its
+# teeth: latest-deploy-failed and no-success-in-7-days both still fire.
+
+name: production-deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+# Never cancel a run in progress: it may be mid-`migrate deploy`, and killing
+# that is how you get a half-applied migration and a P3009 to clean up.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Open a GitHub Deployment for this commit
+        id: deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const d = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha,
+              environment: 'Production',
+              required_contexts: [],
+              auto_merge: false,
+              description: 'migrate-then-deploy (production-deploy.yml)',
+            });
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: d.data.id,
+              state: 'in_progress',
+              description: 'Applying migrations before deploy',
+            });
+            core.setOutput('id', String(d.data.id));
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          PRISMA_GENERATE_NO_ENGINE: "1"
+
+      # The experiment. Prints ONLY the hostname (never the credentials) and
+      # reports per-family reachability, so the first run tells us whether the
+      # IPv6 read was right instead of leaving it a theory.
+      - name: Preflight — Neon reachability from this runner
+        env:
+          DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
+        run: |
+          node -e '
+          const net=require("node:net"), dns=require("node:dns").promises;
+          const raw=process.env.DATABASE_URL_DIRECT;
+          if(!raw){console.log("::error::DATABASE_URL_DIRECT is not set");process.exit(1);}
+          const host=new URL(raw).hostname, port=Number(new URL(raw).port||5432);
+          console.log("neon host:", host, "port:", port);
+          (async()=>{
+            for (const [rr,fn] of [["A",dns.resolve4],["AAAA",dns.resolve6]]) {
+              try { console.log(rr+":", (await fn(host)).join(", ")); }
+              catch(e){ console.log(rr+": none ("+e.code+")"); }
+            }
+            for (const family of [4,6]) {
+              await new Promise(res=>{
+                const t0=Date.now(), s=net.connect({host,port,family});
+                s.setTimeout(8000);
+                s.on("connect",()=>{console.log(`IPv${family}: connected in ${Date.now()-t0}ms`);s.destroy();res();});
+                s.on("timeout",()=>{console.log(`IPv${family}: TIMEOUT ${Date.now()-t0}ms`);s.destroy();res();});
+                s.on("error",e=>{console.log(`IPv${family}: ${e.code} after ${Date.now()-t0}ms`);res();});
+              });
+            }
+          })();'
+
+      - name: Apply migrations (prisma migrate deploy)
+        id: migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
+        run: |
+          set -o pipefail
+          npx prisma migrate deploy 2>&1 | tee migrate.log
+
+      - name: Interpret a migration failure
+        if: failure() && steps.migrate.outcome == 'failure'
+        run: |
+          if grep -q "P1001" migrate.log 2>/dev/null; then
+            echo "::error::P1001 from a GitHub-hosted runner. GitHub runners are IPv4-only,"
+            echo "::error::so this FALSIFIES the IPv6 hypothesis. The cause is Neon-side:"
+            echo "::error::check a Neon IP allowlist, the project/branch state, or the"
+            echo "::error::DATABASE_URL_DIRECT credentials. Do NOT retry into the same wall."
+          elif grep -q "P3009" migrate.log 2>/dev/null; then
+            echo "::error::P3009 — a previous migration is recorded as failed. Resolve it with"
+            echo "::error::\`prisma migrate resolve --applied <name>\` (or --rolled-back) before retrying."
+          else
+            echo "::error::migrate deploy failed for a reason other than connectivity. Read migrate.log above."
+          fi
+
+      # Only reached when migrations applied cleanly.
+      - name: Deploy to production
+        id: vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -o pipefail
+          npx vercel@latest deploy --prod --yes --token="$VERCEL_TOKEN" 2>&1 | tee deploy.log
+          url="$(grep -Eo 'https://[a-z0-9.-]+\.vercel\.app' deploy.log | tail -1)"
+          if [ -z "$url" ]; then
+            echo "::error::Could not determine the deployment URL from the CLI output."
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      # Do not trust "the command returned". Ask Vercel what state the
+      # deployment actually reached. A deploy path that reports success without
+      # checking is the same silent-failure bug this whole change is about.
+      - name: Verify the deployment reached READY
+        id: verify
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          URL: ${{ steps.vercel.outputs.url }}
+        run: |
+          for i in $(seq 1 40); do
+            state="$(npx vercel@latest inspect "$URL" --token="$VERCEL_TOKEN" 2>&1 \
+              | grep -Eo 'status[[:space:]]+●?[[:space:]]*[A-Za-z]+' | awk '{print $NF}' | tail -1)"
+            echo "attempt $i: state=${state:-unknown}"
+            case "$state" in
+              Ready)  echo "Deployment is READY."; exit 0 ;;
+              Error|Canceled)
+                echo "::error::Deployment finished in state $state."
+                npx vercel@latest inspect --logs "$URL" --token="$VERCEL_TOKEN" 2>&1 | tail -40
+                exit 1 ;;
+            esac
+            sleep 15
+          done
+          echo "::error::Deployment did not reach a terminal state within the timeout."
+          exit 1
+
+      # Always runs, both paths, so GitHub's Deployments API — and therefore
+      # scripts/ops/deploy-state.mjs — sees the true outcome of every attempt.
+      - name: Record deployment outcome
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const ok = '${{ steps.verify.outcome }}' === 'success';
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: Number('${{ steps.deployment.outputs.id }}'),
+              state: ok ? 'success' : 'failure',
+              environment_url: '${{ steps.vercel.outputs.url }}' || undefined,
+              log_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              description: ok
+                ? 'Migrations applied and production deploy READY'
+                : 'Production deploy did not reach READY — see the workflow run',
+            });

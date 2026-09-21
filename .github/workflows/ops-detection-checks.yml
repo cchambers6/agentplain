@@ -37,4 +37,6 @@ jobs:
       - name: Run ops detection tests
         # Unquoted so bash expands the glob to explicit files (node's --test
         # glob support varies by version).
-        run: node --test scripts/ops/*.test.mjs
+        # scripts/*.test.mjs covers the production build's migration gate, which
+        # is part of the same shipping-path safety net as the ops checks.
+        run: node --test scripts/ops/*.test.mjs scripts/*.test.mjs

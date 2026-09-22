@@ -1,17 +1,41 @@
 # Nightly customer-path E2E.
 #
 # Runs the Playwright smoke + visual suite (tests/e2e) against a deployed
-# preview/prod URL once a night, plus on-demand. The specs SELF-SKIP when their
-# env tier isn't configured (no E2E_BASE_URL → clean no-op; no session → authed
-# specs skip), so this never false-reds — it only goes red on a real regression
-# in a path that IS configured to run.
+# preview/prod URL once a night, plus on-demand.
+#
+# 2026-09-21 — THIS WORKFLOW USED TO LIE.
+#
+# The header here previously described self-skipping as a feature: "the specs
+# SELF-SKIP when their env tier isn't configured ... so this never false-reds".
+# What that produced in practice: E2E_PREVIEW_URL, E2E_SESSION_COOKIE and
+# E2E_WORKSPACE_ID have NEVER existed as repository secrets (verified by
+# presence probe, 2026-09-21), so E2E_BASE_URL resolved empty, every spec
+# skipped, Playwright exited 0, and this job reported success on its last five
+# runs while testing precisely nothing.
+#
+# That is the same defect that hid 140 failed production deploys: a pipeline
+# that passes while unable to do its job. rls-live.yml already learned it the
+# hard way ("no database, so it reported exit 0 - 5,928 tests, 0 fail, and that
+# line among the 21 skips") and was fixed by giving it a real database. This is
+# that fix, applied here.
+#
+# Two guards now stand between this workflow and a false green:
+#
+#   1. Preflight. No E2E_BASE_URL -> FAIL immediately, naming what is missing.
+#      This job is RED until its secrets exist, which is the honest state.
+#   2. Evidence. After the run, scripts/ops/assert-e2e-executed.mjs asserts
+#      that a non-zero number of specs actually executed. This catches the
+#      general case: a base URL that is set but resolves to a suite where
+#      everything still skips.
+#
+# An unreadable report is treated as INCONCLUSIVE and fails, never as a pass.
 #
 # On failure it runs scripts/playwright-failures-to-inbox.ts, which renders
 # audit-queue entries. In CI the local autofire INBOX is unreachable, so those
 # entries land in the job summary + an artifact for visibility. The LOCAL
 # audit-queue-seeder (run on a 30-min cadence) independently catches THIS run's
-# failure via the GitHub Actions API and writes it to the real INBOX — that's
-# the bridge that actually feeds the autofire task. See docs/e2e/README.md.
+# failure via the GitHub Actions API and writes it to the real INBOX. See
+# docs/e2e/README.md.
 
 name: e2e-nightly
 
@@ -43,6 +67,26 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Install Playwright browser (chromium)
         run: npx playwright install --with-deps chromium
+      - name: Preflight — a target URL must exist
+        env:
+          RESOLVED: ${{ github.event.inputs.base_url || secrets.E2E_PREVIEW_URL || vars.E2E_PREVIEW_URL }}
+          CONTROL: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -z "$CONTROL" ]; then
+            echo "::error::GITHUB_TOKEN control is empty — the secrets context is not"
+            echo "::error::behaving as expected. INCONCLUSIVE, not a pass."
+            exit 1
+          fi
+          if [ -z "$RESOLVED" ]; then
+            echo "::error::No E2E target URL. Every spec would self-skip and this job"
+            echo "::error::would report success while testing nothing."
+            echo "::error::Set the E2E_PREVIEW_URL repository secret (or the repo variable,"
+            echo "::error::or pass base_url via workflow_dispatch)."
+            echo "::error::Declared in ops/key-registry.yaml. Verified absent 2026-09-21."
+            exit 1
+          fi
+          echo "E2E target is configured."
+
       - name: Run E2E suite
         env:
           CI: "1"
@@ -54,6 +98,12 @@ jobs:
           E2E_SESSION_COOKIE: ${{ secrets.E2E_SESSION_COOKIE }}
           E2E_AUTH_FLOW: ${{ vars.E2E_AUTH_FLOW }}
         run: npm run test:e2e:nightly
+      # A pass must be backed by a count of work done. Runs even when the
+      # suite failed, so "0 executed" is never mistaken for "all green".
+      - name: Evidence — specs actually executed
+        if: always()
+        run: node scripts/ops/assert-e2e-executed.mjs
+
       - name: Seed audit-queue from failures
         if: failure()
         env:

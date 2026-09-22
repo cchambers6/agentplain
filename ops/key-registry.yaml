@@ -1,0 +1,178 @@
+# key-registry — every credential name this repo depends on, and where it lives.
+#
+# NAMES AND SCOPES ONLY. No values, ever. Nothing in this file is secret; it is
+# a map of which drawer each key is supposed to be in.
+#
+# WHY THIS EXISTS
+# ---------------
+# On 2026-09-21 we spent a cycle on "we have those repo secrets, where did they
+# go". The answer was that DATABASE_URL and DATABASE_URL_DIRECT exist as VERCEL
+# project environment variables and have never existed as GITHUB ACTIONS
+# secrets. Two different stores, same names, no map. Separately, e2e-nightly
+# has been referencing three secrets that do not exist while reporting success.
+#
+# Both are the same defect: a dependency on a credential with nothing checking
+# that the credential is actually there.
+#
+# HOW IT IS CHECKED
+# -----------------
+# `scripts/ops/key-registry.mjs check` does the STATIC half with no network and
+# no credentials, so it is always conclusive:
+#   - a workflow references a secret that is not declared here -> FAIL
+#   - a key declared here is referenced by no workflow          -> WARN (orphan)
+#
+# The PRESENCE half runs in .github/workflows/key-registry.yml as a matrix over
+# `github_actions: required` entries, using `${{ secrets[matrix.name] }}`.
+#
+# THIS IS DELIBERATE: the REST secrets endpoints (actions/secrets,
+# dependabot/secrets, environment secrets) return 403 to the default Actions
+# GITHUB_TOKEN *and* to the fleet app token. An API-based registry could only
+# ever report "I could not look", and a check that reports absent when it means
+# could-not-look is the same class of bug as everything else we found. Expanding
+# the secrets context is the only method that yields a true answer from inside
+# CI, so that is the method used.
+#
+# WHAT IT STILL CANNOT SEE — stated rather than papered over:
+#   - Dependabot secrets. Actions cannot read them BY DESIGN, so no check from
+#     inside CI can see them. Equally, they can never satisfy a workflow, so a
+#     key stored only there is misfiled by definition.
+#   - Vercel-side values. The `vercel:` blocks below are a hand-maintained
+#     record of names verified with `vercel env ls production`, with the date.
+#     They are documentation, not a live check.
+#   - Whether a present secret is CORRECT. Presence is not validity. A wrong
+#     DATABASE_URL passes this check and fails at connect time.
+
+version: 1
+
+# Verified 2026-09-21 by presence probe (3 scopes, GITHUB_TOKEN control
+# reported present, so the probe was sound). Every entry below marked
+# `present: false` was confirmed absent at repository scope AND at both the
+# Production and Preview environment scopes.
+keys:
+  - name: DATABASE_URL
+    pending_pr: 641
+    purpose: Pooled Postgres connection for the app and for migrate deploy.
+    github_actions: required
+    referenced_by: [production-deploy.yml]
+    vercel:
+      scope: Production
+      present: true
+      verified: 2026-09-21
+    github:
+      present: false
+      verified: 2026-09-21
+    note: >-
+      Exists in Vercel, not in GitHub. Copy the value across; Actions cannot
+      read Vercel env vars.
+
+  - name: DATABASE_URL_DIRECT
+    pending_pr: 641
+    purpose: Non-pooled connection. This is the one `prisma migrate deploy` uses.
+    github_actions: required
+    referenced_by: [production-deploy.yml]
+    vercel:
+      scope: Production
+      present: true
+      verified: 2026-09-21
+    github:
+      present: false
+      verified: 2026-09-21
+
+  - name: VERCEL_TOKEN
+    pending_pr: 641
+    purpose: Deploy and inspect deployments from CI.
+    github_actions: required
+    referenced_by: [production-deploy.yml]
+    vercel:
+      scope: n/a
+      present: false
+    github:
+      present: false
+      verified: 2026-09-21
+    note: Minted at Vercel -> Account Settings -> Tokens. Not a project env var.
+
+  - name: VERCEL_ORG_ID
+    pending_pr: 641
+    purpose: Identifies the Vercel team for the CLI.
+    github_actions: required
+    referenced_by: [production-deploy.yml]
+    github:
+      present: false
+      verified: 2026-09-21
+    note: Not sensitive; an identifier. Stored as a secret by convention.
+
+  - name: VERCEL_PROJECT_ID
+    pending_pr: 641
+    purpose: Identifies the Vercel project for the CLI.
+    github_actions: required
+    referenced_by: [production-deploy.yml]
+    github:
+      present: false
+      verified: 2026-09-21
+    note: Not sensitive; an identifier.
+
+  - name: E2E_PREVIEW_URL
+    purpose: Target origin for the nightly Playwright run.
+    github_actions: required
+    referenced_by: [e2e-nightly.yml]
+    github:
+      present: false
+      verified: 2026-09-21
+    note: >-
+      Referenced by e2e-nightly.yml, which has been reporting success while
+      this has never existed. See the preflight in that workflow.
+
+  - name: E2E_SESSION_COOKIE
+    purpose: Pre-minted session for authenticated nightly E2E paths.
+    github_actions: required
+    referenced_by: [e2e-nightly.yml]
+    github:
+      present: false
+      verified: 2026-09-21
+
+  - name: E2E_WORKSPACE_ID
+    purpose: Workspace the nightly E2E run exercises.
+    github_actions: required
+    referenced_by: [e2e-nightly.yml]
+    github:
+      present: false
+      verified: 2026-09-21
+
+# Names GitHub never needs, recorded so the next person does not re-run the
+# "where did they go" investigation. Verified with `vercel env ls production`
+# on 2026-09-21. NAMES ONLY — values were never read.
+vercel_only:
+  verified: 2026-09-21
+  scope: Production
+  names:
+    - ANTHROPIC_API_KEY
+    - APP_PUBLIC_ORIGIN
+    - ENCRYPTION_KEY
+    - FLEET_TRUSTED_HUMAN_EMAIL
+    - GMAIL_WEBHOOK_OIDC_AUDIENCE
+    - GMAIL_WEBHOOK_SERVICE_ACCOUNT_EMAIL
+    - GOOGLE_OAUTH_CLIENT_ID
+    - GOOGLE_OAUTH_CLIENT_SECRET
+    - GOOGLE_PUBSUB_TOPIC
+    - INNGEST_EVENT_KEY
+    - INNGEST_SIGNING_KEY
+    - MCP_API_KEY
+    - MICROSOFT_OAUTH_CLIENT_ID
+    - MICROSOFT_OAUTH_CLIENT_SECRET
+    - NEXT_PUBLIC_SENTRY_DSN
+    - NOTION_API_KEY
+    - OPERATOR_EMAIL_ALLOWLIST
+    - RESEND_API_KEY
+    - SENTRY_AUTH_TOKEN
+    - SENTRY_DSN
+    - SENTRY_ORG_SLUG
+    - SENTRY_PROJECT
+    - SESSION_PASSWORD
+    - STRIPE_CHECKOUT_ENABLED
+    - STRIPE_PUBLISHABLE_KEY
+    - STRIPE_SECRET_KEY
+    - STRIPE_WEBHOOK_SECRET
+
+# Provided by the platform. Never declared, never checked, never stored.
+ambient:
+  - GITHUB_TOKEN

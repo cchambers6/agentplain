@@ -1,0 +1,105 @@
+# key-registry — does every credential a workflow depends on actually exist?
+#
+# Two halves, deliberately separated by what each can actually prove.
+#
+# STATIC (job: declared) — no network, no credentials, always conclusive.
+#   Fails when a workflow references a secret that ops/key-registry.yaml does
+#   not declare. Catches the "someone added a secrets.FOO and nobody wrote down
+#   what FOO is or where it lives" drift.
+#
+# PRESENCE (job: present) — the half that actually answers the question.
+#   A matrix over the registry's `github_actions: required` entries, reading
+#   `${{ secrets[matrix.name] }}`. Prints present/absent ONLY — never a value,
+#   never a length. Fails the leg when a required secret is empty.
+#
+# WHY A MATRIX AND NOT THE REST API
+# ---------------------------------
+# /repos/{}/actions/secrets returns 403 to the default GITHUB_TOKEN and to the
+# fleet app token alike — neither has `secrets: read`. An API-based check could
+# only ever report "I could not look". Rendering that as "absent" would be the
+# same defect that let 140 production deploys fail unseen, so it is not done.
+# Expanding the secrets context is the only method that returns a true answer
+# from inside CI, so that is the method used.
+#
+# WHAT THIS STILL CANNOT SEE, stated plainly:
+#   - Dependabot secrets: invisible to Actions by design. A key stored only
+#     there can never satisfy a workflow, so it is misfiled by definition.
+#   - Whether a present secret is CORRECT. Presence is not validity.
+#
+# EXPECTED TO BE RED ON MAIN TODAY. E2E_PREVIEW_URL, E2E_SESSION_COOKIE and
+# E2E_WORKSPACE_ID are referenced by e2e-nightly.yml and do not exist (verified
+# 2026-09-21). That red is the finding, not a bug in this workflow.
+
+name: key-registry
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "37 7 * * *" # daily; secrets can be deleted long after a merge
+  workflow_dispatch: {}
+
+concurrency:
+  group: key-registry-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  declared:
+    name: every referenced secret is declared
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.matrix.outputs.names }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+        env:
+          PRISMA_GENERATE_NO_ENGINE: "1"
+      - name: Static reference check
+        run: node scripts/ops/key-registry.mjs check
+      - name: Emit presence matrix
+        id: matrix
+        run: echo "names=$(node scripts/ops/key-registry.mjs matrix)" >> "$GITHUB_OUTPUT"
+
+  present:
+    name: "present: ${{ matrix.name }}"
+    needs: declared
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Keep going so one missing key does not mask the others: a partial answer
+    # here is how you end up fixing one secret at a time across three days.
+    strategy:
+      fail-fast: false
+      matrix:
+        name: ${{ fromJSON(needs.declared.outputs.matrix) }}
+    steps:
+      - name: Check presence
+        env:
+          # The only dynamic secrets lookup in the repo. Prints nothing itself.
+          VALUE: ${{ secrets[matrix.name] }}
+          CONTROL: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -z "$CONTROL" ]; then
+            echo "::error::CONTROL GITHUB_TOKEN is empty — the secrets context is not"
+            echo "::error::behaving as expected, so this job cannot distinguish absent"
+            echo "::error::from could-not-look. Treating as INCONCLUSIVE, not as absent."
+            exit 1
+          fi
+          if [ -n "$VALUE" ]; then
+            echo "${{ matrix.name }} = present"
+          else
+            echo "::error::${{ matrix.name }} = absent. A workflow depends on this secret"
+            echo "::error::and it does not exist at repository scope. See ops/key-registry.yaml"
+            echo "::error::for where it is supposed to live — several of these exist as Vercel"
+            echo "::error::project env vars, which GitHub Actions cannot read."
+            exit 1
+          fi

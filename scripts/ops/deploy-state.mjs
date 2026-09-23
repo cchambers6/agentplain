@@ -44,6 +44,38 @@ const ENVIRONMENT = "Production";
 const MAX_DEPLOYMENTS_WALKED = 500; // 5 pages; if no success in 500, that IS the finding
 const FAILED_STATES = new Set(["failure", "error"]);
 
+/**
+ * Is this Deployment record actually evidence that MAIN is in production?
+ *
+ * WHY THIS EXISTS — a real incident, 2026-09-23.
+ * ---------------------------------------------
+ * Any Actions job that declares `environment: Production` makes GitHub create a
+ * Production *deployment record*. On 2026-09-21 a throwaway secret-presence
+ * probe did exactly that on branch `chore/secret-presence-probe`. The job
+ * passed, so the record read `success`, and this walk — which stops at the
+ * first success — concluded that production had deployed successfully 1.77 days
+ * earlier. BOTH alarms went quiet while production was still serving the
+ * 2026-06-17 build and every real deploy was failing.
+ *
+ * A green alarm over a dead production is the precise failure this checker
+ * exists to prevent, so the walk now ignores records that cannot be evidence
+ * about main:
+ *
+ *   ref === default branch   the Vercel git integration deploys `main`
+ *   ref is a 40-char SHA     production-deploy.yml deploys `context.sha`
+ *   anything else            a job on some other branch. Not evidence.
+ *
+ * This filters on WHAT WAS DEPLOYED, never on who wrote the record — the
+ * handover test in deploy-state-handover.test.mjs pins that distinction,
+ * because a creator filter would blind this alarm the moment the writer
+ * changed.
+ */
+export function isProductionDeployOfMain(deployment, defaultBranch = "main") {
+  const ref = String(deployment?.ref ?? "");
+  if (ref === defaultBranch) return true;
+  return /^[0-9a-f]{40}$/i.test(ref);
+}
+
 // Walk production deployments newest-first until the first success.
 // One statuses call per deployment: expensive only while production is
 // broken, which is exactly when the calls are worth it.
@@ -57,6 +89,7 @@ export async function fetchDeployState({ token }) {
     );
     if (!deployments.length) break;
     for (const d of deployments) {
+      if (!isProductionDeployOfMain(d)) continue;
       const statuses = await ghApi(`${d.statuses_url}?per_page=1`, { token });
       const state = statuses[0]?.state ?? "unknown";
       walked.push({ sha: d.sha, created_at: d.created_at, state });

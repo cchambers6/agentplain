@@ -81,11 +81,20 @@ test("the alarm never depends on WHO wrote the record", () => {
   // The reader must select on environment alone. A creator filter — even one
   // added later in good faith, e.g. to ignore bots — would silently blind this
   // alarm the moment the writer changed. Guard it statically.
-  const src = fs.readFileSync(new URL("./deploy-state.mjs", import.meta.url), "utf8");
+  const raw = fs.readFileSync(new URL("./deploy-state.mjs", import.meta.url), "utf8");
   assert.ok(
-    /deployments\?environment=\$\{?ENVIRONMENT\}?|deployments\?environment=/.test(src),
+    /deployments\?environment=\$\{?ENVIRONMENT\}?|deployments\?environment=/.test(raw),
     "deploy-state must select deployments by environment",
   );
+  // Strip comments before scanning. Prose that EXPLAINS why creator-filtering
+  // is wrong is not creator-filtering — this assertion failed on exactly that
+  // on 2026-09-23, the same way the key-registry checker tripped over its own
+  // header. Scan the code, not the commentary.
+  const src = raw
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .split("\n")
+    .filter((l) => !/^\s*\/\//.test(l))
+    .join("\n");
   assert.ok(
     !/creator|\bactor\b|vercel\[bot\]|performed_via/i.test(src),
     "deploy-state must NOT filter on who created the deployment — that couples the alarm to its writer",

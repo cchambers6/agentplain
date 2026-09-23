@@ -1,38 +1,48 @@
 /**
  * lib/llm/model-tiers.ts
  *
- * Single source of truth for the per-skill model tier strings. Skills set
- * `model: MODEL_OPUS` / `MODEL_SONNET` / `MODEL_HAIKU` on their
- * `LlmCompletionRequest` so the per-call model is explicit at the call
- * site, not hidden in the global default.
+ * BACK-COMPAT SHIM. The three tier constants below are now DERIVED from
+ * `lib/llm/routing/policy.ts`, which is the single place model choice lives.
  *
- * Why this file exists (wave 8, 2026-05-29): every skill used to fall
- * through to `lib/llm/anthropic-provider.ts`'s `DEFAULT_MODEL`, which is
- * a single global string. That meant internal classifiers (Plaino
- * dispatcher, office-admin) paid the same per-token rate as customer-
- * facing drafts (Draft, support-handler, briefings). Conner's calibration
- * — "keep Opus on every surface customers READ, downgrade only where
- * Haiku/Sonnet reach the same answer" — needs per-call routing. See
- * `docs/skill-model-routing-2026-05-29.md` for the full audit.
+ * WHY THIS FILE STILL EXISTS
+ * ──────────────────────────
+ * 169 usages across 33 files import `MODEL_OPUS` / `MODEL_SONNET` /
+ * `MODEL_HAIKU`. Rewriting all of them in the same change that introduces the
+ * seam would make the diff unreviewable and couple a mechanical rename to a
+ * routing decision that has not been ratified. So the constants stay, the
+ * values come from the policy, and call sites migrate to `routeFor(jobClass)`
+ * one surface at a time.
  *
- * If a customer ever wants a premium tier on a Sonnet/Haiku-tier skill,
- * the `SkillConfig` per-skill override is the escape hatch — it can pass
- * a different `model` value at construction time.
+ * WHY THE TIER NAMES ARE THE PROBLEM
+ * ──────────────────────────────────
+ * `MODEL_OPUS` names the ANSWER, not the question. A new workload cannot be
+ * routed by it without someone deciding by feel whether the job "feels like an
+ * Opus job", and the name goes stale the moment the model list moves — as it
+ * has: this file pinned `claude-opus-4-7` and `claude-sonnet-4-6`, both
+ * previous-generation, plus a date-suffixed Haiku id that is not the API's
+ * canonical form. `routing/job-classes.ts` replaces the feel with four axes
+ * scored from facts about the work.
  *
- * Per `feedback_no_silent_vendor_lock`: this file is the in-house tier
- * surface above the provider. If Anthropic ships a new model tomorrow,
- * one file changes; the 19 skill call sites stay put.
+ * New code should import `routeFor` from `./routing/policy` and pass a
+ * `JobClass`. These three exports are for the existing call sites only.
  */
 
-/** Customer-facing draft / brief / synthesis. Quality over cost. */
-export const MODEL_OPUS = 'claude-opus-4-7';
+import { POLICY_CURRENT, routeFor } from './routing/policy';
 
-/** Customer-adjacent moderate-reasoning work (extraction, refine, schedule
- *  proposals). Same wall-clock quality bar as today's default; ~5×
- *  cheaper than Opus. */
-export const MODEL_SONNET = 'claude-sonnet-4-6';
+/**
+ * Customer-facing draft / brief / synthesis. Quality over cost.
+ * Now: whatever the active policy assigns to the COMPOSE class.
+ */
+export const MODEL_OPUS: string = routeFor('COMPOSE', POLICY_CURRENT).model;
 
-/** Internal narrow classifier — discrete categorical / binary decisions
- *  (dispatcher path, office-admin kind, categorize bin). Haiku reaches
- *  the same answer as Opus on these and is ~25× cheaper. */
-export const MODEL_HAIKU = 'claude-haiku-4-5-20251001';
+/**
+ * Customer-adjacent moderate-reasoning work (extraction, refine, schedule
+ * proposals). Now: whatever the active policy assigns to TRANSFORM.
+ */
+export const MODEL_SONNET: string = routeFor('TRANSFORM', POLICY_CURRENT).model;
+
+/**
+ * Internal narrow classifier — discrete categorical / binary decisions.
+ * Now: whatever the active policy assigns to TRIAGE.
+ */
+export const MODEL_HAIKU: string = routeFor('TRIAGE', POLICY_CURRENT).model;

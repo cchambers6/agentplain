@@ -50,7 +50,6 @@ version: 1
 # Production and Preview environment scopes.
 keys:
   - name: DATABASE_URL
-    pending_pr: 641
     purpose: Pooled Postgres connection for the app and for migrate deploy.
     github_actions: required
     referenced_by: [production-deploy.yml]
@@ -66,7 +65,6 @@ keys:
       read Vercel env vars.
 
   - name: DATABASE_URL_DIRECT
-    pending_pr: 641
     purpose: Non-pooled connection. This is the one `prisma migrate deploy` uses.
     github_actions: required
     referenced_by: [production-deploy.yml]
@@ -79,7 +77,6 @@ keys:
       verified: 2026-09-21
 
   - name: VERCEL_TOKEN
-    pending_pr: 641
     purpose: Deploy and inspect deployments from CI.
     github_actions: required
     referenced_by: [production-deploy.yml]
@@ -92,7 +89,6 @@ keys:
     note: Minted at Vercel -> Account Settings -> Tokens. Not a project env var.
 
   - name: VERCEL_ORG_ID
-    pending_pr: 641
     purpose: Identifies the Vercel team for the CLI.
     github_actions: required
     referenced_by: [production-deploy.yml]
@@ -102,7 +98,6 @@ keys:
     note: Not sensitive; an identifier. Stored as a secret by convention.
 
   - name: VERCEL_PROJECT_ID
-    pending_pr: 641
     purpose: Identifies the Vercel project for the CLI.
     github_actions: required
     referenced_by: [production-deploy.yml]

@@ -122,6 +122,72 @@ export function classifyStatus({ status, output }) {
   return { verdict: "unknown" };
 }
 
+/**
+ * What to do when the builder cannot see the database at all.
+ *
+ * The first cut of this file warned and continued unconditionally, which was
+ * wrong in a way worth recording. With the database unreachable the build has
+ * NO evidence about schema state, so "continue" means shipping code that may be
+ * ahead of its schema — and Vercel would mark that deploy Ready, which closes
+ * the deploy-state alarms while the app's database-backed routes 500. That is
+ * the same green-while-broken shape this whole change set exists to remove, and
+ * it would have been introduced by the fix for it.
+ *
+ * So unverifiable now FAILS unless something explicitly vouches for the schema:
+ *
+ *   workflow  - production-deploy.yml already ran `migrate deploy` successfully
+ *               moments ago and passes SCHEMA_VERIFIED_BY_WORKFLOW=1 as a build
+ *               env. The ordering guarantee holds; continue.
+ *   override  - a human deliberately shipping without verified migrations
+ *               (ALLOW_UNVERIFIED_SCHEMA=1), e.g. to get static pages live while
+ *               the database path is still blocked. Allowed, but loud, and never
+ *               the default.
+ *   block     - nobody vouched. Fail, and say exactly what to do.
+ */
+export function unreachablePolicy(env = process.env) {
+  if (env.SCHEMA_VERIFIED_BY_WORKFLOW === "1") return "workflow";
+  if (env.ALLOW_UNVERIFIED_SCHEMA === "1") return "override";
+  return "block";
+}
+
+function handleUnreachable() {
+  switch (unreachablePolicy()) {
+    case "workflow":
+      console.warn(
+        "[migrate-gate] Could not reach the database from the builder (P1001), but " +
+          "SCHEMA_VERIFIED_BY_WORKFLOW=1 — production-deploy.yml applied migrations " +
+          "before triggering this deploy. Builder connectivity is deliberately not a " +
+          "shipping precondition. Continuing.",
+      );
+      return 0;
+
+    case "override":
+      console.warn(
+        "[migrate-gate] ALLOW_UNVERIFIED_SCHEMA=1 — shipping WITHOUT confirming the " +
+          "database schema is current. This is a deliberate override.\n" +
+          "[migrate-gate] Expect any route that touches an unapplied table or column " +
+          "to fail at runtime. Static and marketing pages are unaffected.\n" +
+          "[migrate-gate] The deploy will be marked Ready, which will CLOSE the " +
+          "deploy-state alarms. Do not mistake that for a healthy application.",
+      );
+      return 0;
+
+    default:
+      console.error(
+        "[migrate-gate] FAIL: cannot reach the database (P1001), so this build has no " +
+          "evidence that the schema is current, and nothing vouched for it.\n" +
+          "[migrate-gate] Shipping anyway would mark the deploy Ready and close the " +
+          "deploy-state alarms while database-backed routes fail — green while broken.\n" +
+          "[migrate-gate] Choose one:\n" +
+          "[migrate-gate]   - run the `production-deploy` workflow, which applies " +
+          "migrations first and sets SCHEMA_VERIFIED_BY_WORKFLOW=1; or\n" +
+          "[migrate-gate]   - deploy deliberately without verified migrations:\n" +
+          "[migrate-gate]       vercel deploy --prod --build-env ALLOW_UNVERIFIED_SCHEMA=1",
+      );
+      return 1;
+  }
+}
+
 function runLegacyApply() {
   console.log(
     "[migrate-gate] MIGRATE_ON_BUILD=1 — running `prisma migrate deploy` in the build " +
@@ -166,15 +232,7 @@ function runVerify() {
       return 0;
 
     case "unreachable":
-      console.warn(
-        "[migrate-gate] WARNING: could not reach the database from the Vercel builder " +
-          "(P1001). NOT failing the build — applying migrations is the deploy workflow's " +
-          "job, and builder-to-database connectivity is deliberately no longer a " +
-          "precondition for shipping. If this deploy was triggered by " +
-          "production-deploy.yml, migrations already applied successfully before it " +
-          "started.",
-      );
-      return 0;
+      return handleUnreachable();
 
     case "pending":
       console.error(

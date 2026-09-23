@@ -173,7 +173,12 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           set -o pipefail
-          npx vercel@latest deploy --prod --yes --token="$VERCEL_TOKEN" 2>&1 | tee deploy.log
+          # SCHEMA_VERIFIED_BY_WORKFLOW vouches for the schema to the build-time
+          # gate: migrations applied successfully in the step above, so the gate
+          # may continue even though the Vercel builder cannot reach Neon. Without
+          # this the gate fails closed, which is what stops a manual deploy from
+          # silently shipping code ahead of its schema.
+          npx vercel@latest deploy --prod --yes --token="$VERCEL_TOKEN" --build-env SCHEMA_VERIFIED_BY_WORKFLOW=1 2>&1 | tee deploy.log
           url="$(grep -Eo 'https://[a-z0-9.-]+\.vercel\.app' deploy.log | tail -1)"
           if [ -z "$url" ]; then
             echo "::error::Could not determine the deployment URL from the CLI output."

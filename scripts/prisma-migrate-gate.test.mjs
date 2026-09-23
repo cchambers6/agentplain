@@ -11,6 +11,7 @@ import assert from "node:assert/strict";
 import {
   decide,
   classifyStatus,
+  unreachablePolicy,
   OUTCOME,
 } from "./prisma-migrate-gate.mjs";
 
@@ -88,4 +89,41 @@ test("a failed migration (P3009) is reported as such, not as pending", () => {
 test("unparseable non-zero output refuses to guess", () => {
   const { verdict } = classifyStatus({ status: 2, output: "something odd" });
   assert.equal(verdict, "unknown");
+});
+
+// The unreachable branch. First cut of this file warned and continued
+// unconditionally; that would have let a manual `vercel --prod` ship code ahead
+// of its schema, be marked Ready, and CLOSE the deploy-state alarms while
+// database-backed routes 500 — recreating green-while-broken inside the fix for
+// it. Unverifiable now fails closed unless something explicitly vouches.
+
+test("unreachable + nothing vouching = blocked", () => {
+  assert.equal(unreachablePolicy({}), "block");
+});
+
+test("the workflow vouches for the schema it just migrated", () => {
+  assert.equal(
+    unreachablePolicy({ SCHEMA_VERIFIED_BY_WORKFLOW: "1" }),
+    "workflow",
+  );
+});
+
+test("a human can deliberately ship without verified migrations", () => {
+  assert.equal(unreachablePolicy({ ALLOW_UNVERIFIED_SCHEMA: "1" }), "override");
+});
+
+test("only the exact value 1 vouches — no truthy-string accidents", () => {
+  // "0", "false" and "true" must all fail closed. A gate that opens on any
+  // non-empty value opens by accident.
+  for (const v of ["0", "false", "true", "yes", ""]) {
+    assert.equal(unreachablePolicy({ SCHEMA_VERIFIED_BY_WORKFLOW: v }), "block", `value ${v}`);
+    assert.equal(unreachablePolicy({ ALLOW_UNVERIFIED_SCHEMA: v }), "block", `value ${v}`);
+  }
+});
+
+test("the workflow vouch wins over the manual override", () => {
+  assert.equal(
+    unreachablePolicy({ SCHEMA_VERIFIED_BY_WORKFLOW: "1", ALLOW_UNVERIFIED_SCHEMA: "1" }),
+    "workflow",
+  );
 });

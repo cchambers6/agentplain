@@ -127,3 +127,27 @@ test("the workflow vouch wins over the manual override", () => {
     "workflow",
   );
 });
+
+// A stale credential used to surface as "could not interpret `prisma migrate
+// status`" — the same illegible shape that let a 96-day outage hide behind a
+// P1001 nobody re-read. Once the builder can actually reach Neon, rejected
+// credentials are the next thing it will hit, so it gets a name.
+test("rejected credentials are named, not filed under unknown", () => {
+  const { verdict } = classifyStatus({
+    status: 1,
+    output:
+      "Error: P1000: Authentication failed against database server, the provided " +
+      "database credentials for `(not available)` are not valid.",
+  });
+  assert.equal(verdict, "auth-failed");
+});
+
+test("unreachable still wins over an auth message in the same output", () => {
+  // A P1001 run tells us nothing about credentials either, so it must not be
+  // reclassified as an auth problem just because the word appears.
+  const { verdict } = classifyStatus({
+    status: 1,
+    output: "Error: P1001: Can't reach database server\nAuthentication failed against database server",
+  });
+  assert.equal(verdict, "unreachable");
+});

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && node scripts/prisma-migrate-gate.mjs && node tools/brand/brand-gate.mjs && next build",
+    "build": "node scripts/with-ipv4-db.mjs -- npm run build:app",
     "build:no-migrate": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
@@ -28,7 +28,8 @@
     "migrate:deploy": "prisma migrate deploy",
     "migrate:status": "prisma migrate status",
     "postinstall": "prisma generate",
-    "prepare": "husky"
+    "prepare": "husky",
+    "build:app": "prisma generate && node scripts/prisma-migrate-gate.mjs && node tools/brand/brand-gate.mjs && next build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.2",

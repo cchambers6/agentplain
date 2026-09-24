@@ -1,7 +1,5 @@
 {
   "fleet-down": 406,
-  "deploy:error": 408,
-  "deploy:stale": 409,
   "decision:revoke-flatsbo-pat": 410,
   "decision:design-partners-on-record": 411,
   "decision:legal-entity-ip": 412,

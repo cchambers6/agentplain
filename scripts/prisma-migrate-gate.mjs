@@ -111,6 +111,9 @@ export function classifyStatus({ status, output }) {
   if (/\bP3009\b|failed migrations|migrate resolve/i.test(text)) {
     return { verdict: "failed-migration" };
   }
+  if (/\bP1000\b|Authentication failed against database server/i.test(text)) {
+    return { verdict: "auth-failed" };
+  }
   if (
     /not yet been applied|following migrations? have not yet been applied|pending/i.test(
       text,
@@ -243,6 +246,17 @@ function runVerify() {
           "dashboard), which skips the migrate-then-deploy ordering.\n" +
           "[migrate-gate] Fix: run the `production-deploy` workflow, which applies " +
           "migrations first and then deploys.",
+      );
+      return 1;
+
+    case "auth-failed":
+      console.error(
+        "[migrate-gate] FAIL: reached the database, but the stored credentials were " +
+          "rejected (P1000). The server is up and routable, so this is a credential " +
+          "problem — not connectivity, and not schema." + "\n" +
+          "[migrate-gate] Fix: reset the database role password in the Neon console, " +
+          "then update DATABASE_URL and DATABASE_URL_DIRECT in the Vercel project " +
+          "(Production scope). Both must be updated together.",
       );
       return 1;
 
